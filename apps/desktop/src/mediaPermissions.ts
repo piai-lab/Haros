@@ -11,7 +11,7 @@ export interface MediaPermissionRequester {
 
 // Electron marks `mediaTypes` as optional, so audio-only requests may omit it.
 // Treat a missing value as "potentially audio" only after the caller has proved
-// that the request came from HarnessOS's own renderer. Mixed camera/microphone
+// that the request came from Haros's own renderer. Mixed camera/microphone
 // requests are rejected instead of silently granting the broader capability.
 export function shouldAllowMediaPermissionRequest(details: unknown): boolean {
   if (typeof details !== "object" || details === null) {

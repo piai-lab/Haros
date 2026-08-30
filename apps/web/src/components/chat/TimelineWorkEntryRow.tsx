@@ -61,7 +61,7 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { LinkChipIcon } from "../LinkChipIcon";
 import { normalizeCompactToolLabel } from "./MessagesTimeline.logic";
-import { HarnessOSLogo } from "../HarnessOSLogo";
+import { HarosLogo } from "../HarosLogo";
 import { ToolCallDetailsContent } from "./ToolCallDetailsDialog";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -73,13 +73,13 @@ import {
 } from "../../lib/toolArgumentSummary";
 import {
   deriveFriendlyCommandTarget,
-  deriveHarnessOSMcpToolTitle,
+  deriveHarosMcpToolTitle,
   extractWebFetchUrl,
-  isHarnessOSBrowserToolCall,
+  isHarosBrowserToolCall,
   normalizeToolTextForComparison,
   resolveCommandVisualKind,
-  sanitizeHarnessOSMcpToolPreview,
-  type HarnessOSMcpToolStatus,
+  sanitizeHarosMcpToolPreview,
+  type HarosMcpToolStatus,
 } from "../../lib/toolCallLabel";
 import { formatLiveActivityMeta, useLiveActivityNow } from "../../lib/liveActivityPresentation";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
@@ -102,8 +102,8 @@ type TimelineWorkEntry = WorkLogEntry;
 
 const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
 
-const HarnessOSToolIcon: LucideIcon = ({ className, ...props }) => (
-  <HarnessOSLogo {...props} className={cn("scale-[1.15] text-current", className)} />
+const HarosToolIcon: LucideIcon = ({ className, ...props }) => (
+  <HarosLogo {...props} className={cn("scale-[1.15] text-current", className)} />
 );
 
 function workToneIcon(tone: TimelineWorkEntry["tone"]): {
@@ -299,8 +299,8 @@ export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
     return AskUserIcon;
   }
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
-  if (isHarnessOSBrowserWorkEntry(workEntry)) return GlobeIcon;
-  if (isHarnessOSToolCall(workEntry)) return HarnessOSToolIcon;
+  if (isHarosBrowserWorkEntry(workEntry)) return GlobeIcon;
+  if (isHarosToolCall(workEntry)) return HarosToolIcon;
   if (workEntry.itemType === "mcp_tool_call") return McpIcon;
   return workEntryIcon(workEntry);
 }
@@ -310,20 +310,20 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// HarnessOS's own host-gateway tools (harnessos_list_threads, harnessos_create_thread,
-// ...) get the HarnessOS mark instead of the generic MCP glyph. Engines report
+// Haros's own host-gateway tools (harnessos_list_threads, harnessos_create_thread,
+// ...) get the Haros mark instead of the generic MCP glyph. Engines report
 // the call differently: Claude prefixes the MCP server (mcp__harnessos__*), ACP
 // agents surface the bare tool name (harnessos_*), and Codex reports server/tool
-// pairs that the label humanizer renders as "HarnessOS: ...".
-function toolWorkEntryStatus(workEntry: TimelineWorkEntry): HarnessOSMcpToolStatus {
+// pairs that the label humanizer renders as "Haros: ...".
+function toolWorkEntryStatus(workEntry: TimelineWorkEntry): HarosMcpToolStatus {
   if (workEntry.toolStatus) return workEntry.toolStatus;
   return workEntry.activityKind !== undefined && workEntry.activityKind !== "tool.completed"
     ? "running"
     : "completed";
 }
 
-function isHarnessOSBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
-  return isHarnessOSBrowserToolCall({
+function isHarosBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
+  return isHarosBrowserToolCall({
     toolName: workEntry.toolName,
     title: workEntry.toolTitle,
     fallbackLabel: workEntry.label,
@@ -331,9 +331,9 @@ function isHarnessOSBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
   });
 }
 
-function isHarnessOSToolCall(workEntry: TimelineWorkEntry): boolean {
+function isHarosToolCall(workEntry: TimelineWorkEntry): boolean {
   return (
-    deriveHarnessOSMcpToolTitle({
+    deriveHarosMcpToolTitle({
       toolName: workEntry.toolName,
       title: workEntry.toolTitle,
       fallbackLabel: workEntry.label,
@@ -398,7 +398,7 @@ function normalizeBundledWebAccessToolName(value: string | null | undefined): st
 }
 
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
-  const harnessosTitle = deriveHarnessOSMcpToolTitle({
+  const harnessosTitle = deriveHarosMcpToolTitle({
     toolName: workEntry.toolName,
     title: workEntry.toolTitle,
     fallbackLabel: workEntry.label,
@@ -598,22 +598,21 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // Standard tool rows keep one discoverable left glyph. Codex status rows
   // deliberately skip it and reuse only the shared tool-label typography.
   const isGitHubToolRow = isGitHubMcpToolCall(workEntry);
-  const isHarnessOSBrowserToolRow = !isGitHubToolRow && isHarnessOSBrowserWorkEntry(workEntry);
-  const isHarnessOSToolRow =
-    !isGitHubToolRow && !isHarnessOSBrowserToolRow && isHarnessOSToolCall(workEntry);
+  const isHarosBrowserToolRow = !isGitHubToolRow && isHarosBrowserWorkEntry(workEntry);
+  const isHarosToolRow = !isGitHubToolRow && !isHarosBrowserToolRow && isHarosToolCall(workEntry);
   const isMcpToolRow =
     workEntry.itemType === "mcp_tool_call" &&
     !isGitHubToolRow &&
-    !isHarnessOSBrowserToolRow &&
-    !isHarnessOSToolRow;
+    !isHarosBrowserToolRow &&
+    !isHarosToolRow;
   const LeftIcon = workEntryLeftIcon(workEntry);
   const leftIconKind = webFetchUrl
     ? "web-fetch"
     : isGitHubToolRow || EntryIcon === GitHubIcon
       ? "github"
-      : isHarnessOSBrowserToolRow
+      : isHarosBrowserToolRow
         ? "browser"
-        : isHarnessOSToolRow
+        : isHarosToolRow
           ? "oa"
           : isMcpToolRow
             ? "mcp"
@@ -665,8 +664,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       ? ""
       : workEntryPreview(workEntry);
   const preview =
-    isHarnessOSBrowserToolRow || isHarnessOSToolRow
-      ? sanitizeHarnessOSMcpToolPreview({
+    isHarosBrowserToolRow || isHarosToolRow
+      ? sanitizeHarosMcpToolPreview({
           preview: rawPreview,
           heading,
           status: toolWorkEntryStatus(workEntry),

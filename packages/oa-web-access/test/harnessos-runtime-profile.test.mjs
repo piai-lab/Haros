@@ -11,7 +11,7 @@ import { makeOAWebAccessExtension, OA_WEB_ACCESS_EXTENSION_PATH } from "../index
 
 const CANONICAL_TOOLS = ["web_search", "source_check", "fetch_content", "get_search_content"];
 
-test("HarnessOS profile respects file-level tool switches while keeping canonical names and no TUI surfaces", async () => {
+test("Haros profile respects file-level tool switches while keeping canonical names and no TUI surfaces", async () => {
   const root = await mkdtemp(join(tmpdir(), "harnessos-web-profile-"));
   const service = createWebSearchConfigService(join(root, "agent"));
   const initial = service.ensureDefault();
@@ -183,7 +183,7 @@ test("transient, named, and foreign-collision failures never remove tools global
   assert.ok(!active.includes("source_check"), "owned source_check follows global route exhaustion");
 });
 
-test("HarnessOS route exhaustion points to Settings and never leaks Pi slash commands", async () => {
+test("Haros route exhaustion points to Settings and never leaks Pi slash commands", async () => {
   const root = await mkdtemp(join(tmpdir(), "harnessos-web-error-copy-"));
   const service = createWebSearchConfigService(join(root, "agent"));
   const initial = service.ensureDefault();

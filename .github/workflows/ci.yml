@@ -67,6 +67,14 @@ jobs:
         if: matrix.suite == 'static'
         run: bun run typecheck
 
+      - name: Verify public identity
+        if: matrix.suite == 'static'
+        run: bun run public-surface:check
+
+      - name: Verify source-adoption paths
+        if: matrix.suite == 'static'
+        run: bun run source-adoptions:check
+
       - name: Unit and contract tests
         if: matrix.suite == 'unit'
         run: bun run test:unit

@@ -10,7 +10,7 @@ export async function dispatchThreadGoal(
 ): Promise<void> {
   const api = readNativeApi();
   if (!api) {
-    throw new Error("HarnessOS API is unavailable.");
+    throw new Error("Haros API is unavailable.");
   }
   await api.orchestration.dispatchCommand({
     type: "thread.meta.update",
@@ -24,7 +24,7 @@ export async function dispatchThreadGoal(
 export async function dispatchThreadGoalPaused(threadId: ThreadId, paused: boolean): Promise<void> {
   const api = readNativeApi();
   if (!api) {
-    throw new Error("HarnessOS API is unavailable.");
+    throw new Error("Haros API is unavailable.");
   }
   await api.orchestration.dispatchCommand({
     type: "thread.meta.update",

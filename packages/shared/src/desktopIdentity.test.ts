@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  resolveHarnessOSDesktopFlavor,
+  resolveHarosDesktopFlavor,
   HARNESSOS_CANARY_BUNDLE_ID,
   HARNESSOS_CANARY_DESKTOP_ENTRY_URL,
   HARNESSOS_CANARY_DESKTOP_ORIGIN,
@@ -44,12 +44,12 @@ describe("desktopIdentity", () => {
   });
 
   it("selects Canary explicitly without changing normal dev and production defaults", () => {
-    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: false })).toBe("production");
-    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: true })).toBe("development");
-    expect(
-      resolveHarnessOSDesktopFlavor({ isDevelopment: false, requestedFlavor: " canary " }),
-    ).toBe("canary");
-    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: true, requestedFlavor: "canary" })).toBe(
+    expect(resolveHarosDesktopFlavor({ isDevelopment: false })).toBe("production");
+    expect(resolveHarosDesktopFlavor({ isDevelopment: true })).toBe("development");
+    expect(resolveHarosDesktopFlavor({ isDevelopment: false, requestedFlavor: " canary " })).toBe(
+      "canary",
+    );
+    expect(resolveHarosDesktopFlavor({ isDevelopment: true, requestedFlavor: "canary" })).toBe(
       "canary",
     );
   });

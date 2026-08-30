@@ -16,7 +16,7 @@ afterEach(() => {
   }
 });
 
-describe("bundled HarnessOS Web Access composition", () => {
+describe("bundled Haros Web Access composition", () => {
   it("creates canonical config only when the Session extension factory starts", async () => {
     const root = mkdtempSync(join(tmpdir(), "harnessos-web-composition-"));
     compositionRoots.add(root);

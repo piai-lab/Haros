@@ -112,7 +112,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("replaces a user-defined HarnessOS MCP table only inside the session overlay", async () => {
+  it("replaces a user-defined Haros MCP table only inside the session overlay", async () => {
     const sourceHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-source-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-runtime-"));
     const sourceConfig = [
@@ -158,7 +158,7 @@ describe("buildCodexProcessEnv", () => {
       });
       const overlayHome = env.CODEX_HOME;
       if (!overlayHome) {
-        throw new Error("Expected a HarnessOS Codex home overlay.");
+        throw new Error("Expected a Haros Codex home overlay.");
       }
       const overlayConfig = readFileSync(path.join(overlayHome, "config.toml"), "utf8");
 

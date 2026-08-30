@@ -1,16 +1,16 @@
 // FILE: OAModelServices.ts
-// Purpose: Declares the credential-blind HarnessOS Agent model-services query owner.
+// Purpose: Declares the credential-blind Haros Agent model-services query owner.
 // Layer: Server provider service contract
 
 import type {
-  HarnessOSCustomModelServiceRemoveInput,
-  HarnessOSCustomModelServiceRemoveResult,
-  HarnessOSCustomModelServiceDiscoverInput,
-  HarnessOSCustomModelServiceDiscoverResult,
-  HarnessOSCustomModelServiceSaveInput,
-  HarnessOSCustomModelServiceSaveResult,
-  HarnessOSCustomModelServiceTestInput,
-  HarnessOSCustomModelServiceTestResult,
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceTestInput,
+  HarosCustomModelServiceTestResult,
   OAModelServiceAnswerLoginInput,
   OAModelServiceAuthResult,
   OAModelServiceBeginLoginInput,
@@ -57,17 +57,17 @@ export interface OAModelServicesShape {
     input: OAModelServiceRefreshInput,
   ) => Effect.Effect<OAModelServiceRefreshResult>;
   readonly testCustom: (
-    input: HarnessOSCustomModelServiceTestInput,
-  ) => Effect.Effect<HarnessOSCustomModelServiceTestResult>;
+    input: HarosCustomModelServiceTestInput,
+  ) => Effect.Effect<HarosCustomModelServiceTestResult>;
   readonly discoverCustom: (
-    input: HarnessOSCustomModelServiceDiscoverInput,
-  ) => Effect.Effect<HarnessOSCustomModelServiceDiscoverResult>;
+    input: HarosCustomModelServiceDiscoverInput,
+  ) => Effect.Effect<HarosCustomModelServiceDiscoverResult>;
   readonly saveCustom: (
-    input: HarnessOSCustomModelServiceSaveInput,
-  ) => Effect.Effect<HarnessOSCustomModelServiceSaveResult>;
+    input: HarosCustomModelServiceSaveInput,
+  ) => Effect.Effect<HarosCustomModelServiceSaveResult>;
   readonly removeCustom: (
-    input: HarnessOSCustomModelServiceRemoveInput,
-  ) => Effect.Effect<HarnessOSCustomModelServiceRemoveResult>;
+    input: HarosCustomModelServiceRemoveInput,
+  ) => Effect.Effect<HarosCustomModelServiceRemoveResult>;
 }
 
 export class OAModelServices extends ServiceMap.Service<OAModelServices, OAModelServicesShape>()(

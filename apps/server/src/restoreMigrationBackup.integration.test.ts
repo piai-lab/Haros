@@ -31,7 +31,7 @@ describe("migration backup recovery CLI", () => {
     );
   });
 
-  it("rejects relative database paths and warns operators to stop HarnessOS", async () => {
+  it("rejects relative database paths and warns operators to stop Haros", async () => {
     const capture = captureOutput();
 
     const exitCode = await runRestoreMigrationBackupCli(["state.sqlite"], capture.output);
@@ -39,7 +39,7 @@ describe("migration backup recovery CLI", () => {
     expect(exitCode).toBe(2);
     expect(capture.errors.join("\n")).toContain("Database path must be absolute");
     expect(capture.errors.join("\n")).toContain("harnessos-restore-migration-backup");
-    expect(capture.warnings.join("\n")).toContain("Stop every HarnessOS process");
+    expect(capture.warnings.join("\n")).toContain("Stop every Haros process");
     expect(capture.logs).toEqual([]);
   });
 });

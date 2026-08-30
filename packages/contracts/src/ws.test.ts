@@ -113,7 +113,7 @@ it.effect("accepts bounded workspace content search requests", () =>
   }),
 );
 
-it.effect("accepts credential-blind HarnessOS model-services requests", () =>
+it.effect("accepts credential-blind Haros model-services requests", () =>
   Effect.gen(function* () {
     const list = yield* decode(WebSocketRequest, {
       id: "req-model-services-list",
@@ -143,7 +143,7 @@ it.effect("accepts credential-blind HarnessOS model-services requests", () =>
   }),
 );
 
-it.effect("accepts typed HarnessOS model-service credential operations", () =>
+it.effect("accepts typed Haros model-service credential operations", () =>
   Effect.gen(function* () {
     const requestId = "00000000-0000-4000-8000-000000000031";
     const promptId = "00000000-0000-4000-8000-000000000032";

@@ -1,5 +1,5 @@
 // FILE: PromptsSettingsPanel.tsx
-// Purpose: Edit HarnessOS Agent's native default instruction segment and global custom rules.
+// Purpose: Edit Haros Agent's native default instruction segment and global custom rules.
 // Layer: Settings UI composition
 
 import {

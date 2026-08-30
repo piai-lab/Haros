@@ -667,7 +667,7 @@ export function renderLegalMetadata(
     specVersion: "1.6",
     version: 1,
     metadata: {
-      component: { type: "application", name: "HarnessOS", version: appVersion, "bom-ref": appRef },
+      component: { type: "application", name: "Haros", version: appVersion, "bom-ref": appRef },
       properties: [
         { name: "harnessos:derivation", value: inventory.derivation },
         { name: "harnessos:target-kind", value: inventory.target.kind },
@@ -717,7 +717,7 @@ export function renderLegalMetadata(
   };
 
   const notices: string[] = [
-    "HarnessOS third-party notices",
+    "Haros third-party notices",
     "==============================",
     "",
     `Application version: ${appVersion}`,

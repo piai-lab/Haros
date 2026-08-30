@@ -25,11 +25,11 @@ import { summarizeToolRawOutput } from "@harnessos/shared/toolOutputSummary";
 import { pluralize } from "@harnessos/shared/text";
 import {
   deriveReadableToolTitle,
-  deriveHarnessOSMcpToolTitle,
+  deriveHarosMcpToolTitle,
   isGenericToolTitle,
   normalizeCompactToolLabel,
   normalizeToolTextForComparison,
-  type HarnessOSMcpToolStatus,
+  type HarosMcpToolStatus,
 } from "./lib/toolCallLabel";
 import {
   deriveToolInvocationPreview,
@@ -63,7 +63,7 @@ export interface WorkLogEntry {
   toolTitle?: string;
   toolName?: string;
   toolCallId?: string;
-  toolStatus?: HarnessOSMcpToolStatus;
+  toolStatus?: HarosMcpToolStatus;
   liveActivity?: WorkLogLiveActivity;
   toolDetails?: WorkLogToolDetails;
   itemType?: ToolLifecycleItemType;
@@ -71,7 +71,7 @@ export interface WorkLogEntry {
   subagents?: ReadonlyArray<WorkLogSubagent>;
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
-  harnessosThreadCreation?: WorkLogHarnessOSThreadCreation;
+  harosThreadCreation?: WorkLogHarosThreadCreation;
   engineWebSurface?: {
     status: "waiting-for-user" | "unavailable" | "completed";
     provenance: "engine-native";
@@ -178,7 +178,7 @@ export interface WorkLogAutomation {
   proposalState?: "pending" | "accepted" | "dismissed";
 }
 
-export interface WorkLogHarnessOSCreatedThread {
+export interface WorkLogHarosCreatedThread {
   threadId: string;
   title: string;
   engine: EngineKind;
@@ -187,11 +187,11 @@ export interface WorkLogHarnessOSCreatedThread {
   status: string;
 }
 
-export interface WorkLogHarnessOSThreadCreation {
+export interface WorkLogHarosThreadCreation {
   operationId: string;
   requestedCount: number;
   createdCount: number;
-  threads: ReadonlyArray<WorkLogHarnessOSCreatedThread>;
+  threads: ReadonlyArray<WorkLogHarosCreatedThread>;
 }
 
 export interface WorkLogSubagent {
@@ -435,9 +435,9 @@ function extractWorkLogAutomation(
   };
 }
 
-function extractWorkLogHarnessOSThreadCreation(
+function extractWorkLogHarosThreadCreation(
   payload: Record<string, unknown> | null,
-): WorkLogHarnessOSThreadCreation | null {
+): WorkLogHarosThreadCreation | null {
   if (!payload) {
     return null;
   }
@@ -446,7 +446,7 @@ function extractWorkLogHarnessOSThreadCreation(
   if (!operationId || rawThreads.length === 0) {
     return null;
   }
-  const threads = rawThreads.flatMap((value): WorkLogHarnessOSCreatedThread[] => {
+  const threads = rawThreads.flatMap((value): WorkLogHarosCreatedThread[] => {
     const thread = asRecord(value);
     const threadId = asTrimmedString(thread?.threadId);
     const title = asTrimmedString(thread?.title);
@@ -857,14 +857,14 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     }
   }
   if (activity.kind === "harnessos.threads.created") {
-    const harnessosThreadCreation = extractWorkLogHarnessOSThreadCreation(payload);
-    if (harnessosThreadCreation) {
-      entry.harnessosThreadCreation = harnessosThreadCreation;
+    const harosThreadCreation = extractWorkLogHarosThreadCreation(payload);
+    if (harosThreadCreation) {
+      entry.harosThreadCreation = harosThreadCreation;
     }
   }
   const readableTitle =
     extractCollabActionTitle(payload) ??
-    deriveHarnessOSMcpToolTitle({
+    deriveHarosMcpToolTitle({
       toolName,
       title: commandActionDisplay?.title ?? title,
       fallbackLabel: activity.summary,
@@ -983,7 +983,7 @@ function deriveEngineRuntimeReconciliationCollapseKey(
 function deriveToolLifecycleStatus(
   activityKind: OrchestrationThreadActivity["kind"],
   payload: Record<string, unknown> | null,
-): HarnessOSMcpToolStatus | undefined {
+): HarosMcpToolStatus | undefined {
   if (!isRenderableToolLifecycleActivity(activityKind)) return undefined;
   if (isFailedToolLifecyclePayload(payload)) return "failed";
   if (isCancelledToolLifecyclePayload(payload)) return "cancelled";
@@ -1460,7 +1460,7 @@ function mergeDerivedWorkLogEntries(
     : (next.requestKind ?? previous.requestKind);
   const subagents = next.subagents ?? previous.subagents;
   const subagentAction = next.subagentAction ?? previous.subagentAction;
-  const harnessosThreadCreation = next.harnessosThreadCreation ?? previous.harnessosThreadCreation;
+  const harosThreadCreation = next.harosThreadCreation ?? previous.harosThreadCreation;
   const collapseKey = next.collapseKey ?? previous.collapseKey;
   const toolName = next.toolName ?? previous.toolName;
   const toolCallId = next.toolCallId ?? previous.toolCallId;
@@ -1489,7 +1489,7 @@ function mergeDerivedWorkLogEntries(
     ...(requestKind ? { requestKind } : {}),
     ...(subagents ? { subagents } : {}),
     ...(subagentAction ? { subagentAction } : {}),
-    ...(harnessosThreadCreation ? { harnessosThreadCreation } : {}),
+    ...(harosThreadCreation ? { harosThreadCreation } : {}),
     ...(collapseKey ? { collapseKey } : {}),
     ...(toolName ? { toolName } : {}),
     ...(toolCallId ? { toolCallId } : {}),

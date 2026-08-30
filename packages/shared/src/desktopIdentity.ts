@@ -11,10 +11,10 @@ export const HARNESSOS_CANARY_DESKTOP_SCHEME = "harnessos-canary";
 export const HARNESSOS_CANARY_DESKTOP_ORIGIN = `${HARNESSOS_CANARY_DESKTOP_SCHEME}://app`;
 export const HARNESSOS_CANARY_DESKTOP_ENTRY_URL = `${HARNESSOS_CANARY_DESKTOP_ORIGIN}/index.html`;
 
-export type HarnessOSDesktopFlavor = "production" | "development" | "canary";
+export type HarosDesktopFlavor = "production" | "development" | "canary";
 
-export interface HarnessOSDesktopIdentity {
-  readonly flavor: HarnessOSDesktopFlavor;
+export interface HarosDesktopIdentity {
+  readonly flavor: HarosDesktopFlavor;
   readonly displayName: string;
   readonly bundleId: string;
   readonly scheme: string;
@@ -25,17 +25,17 @@ export interface HarnessOSDesktopIdentity {
   readonly usesScriptedUpdates: boolean;
 }
 
-export function resolveHarnessOSDesktopFlavor(input: {
+export function resolveHarosDesktopFlavor(input: {
   readonly isDevelopment: boolean;
   readonly requestedFlavor?: string | undefined;
-}): HarnessOSDesktopFlavor {
+}): HarosDesktopFlavor {
   if (input.requestedFlavor?.trim().toLowerCase() === "canary") {
     return "canary";
   }
   return input.isDevelopment ? "development" : "production";
 }
 
-export function harnessOSDesktopIdentity(flavor: HarnessOSDesktopFlavor): HarnessOSDesktopIdentity {
+export function harnessOSDesktopIdentity(flavor: HarosDesktopFlavor): HarosDesktopIdentity {
   if (flavor === "canary") {
     return {
       flavor,

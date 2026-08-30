@@ -1,5 +1,5 @@
 /**
- * HostGatewayCredentials - Per-session credentials for the HarnessOS agent
+ * HostGatewayCredentials - Per-session credentials for the Haros agent
  * gateway.
  *
  * Small service split out from the gateway itself so engine adapters can
@@ -35,7 +35,7 @@ export interface HostGatewayStdioProxySpawn {
 }
 
 export interface HostGatewayCredentialsShape {
-  /** Streamable-HTTP MCP endpoint served by this HarnessOS instance. */
+  /** Streamable-HTTP MCP endpoint served by this Haros instance. */
   readonly mcpEndpointUrl: string;
   /** Update the endpoint after the HTTP server resolves a dynamic listen port. */
   readonly setListeningPort: (port: number) => void;

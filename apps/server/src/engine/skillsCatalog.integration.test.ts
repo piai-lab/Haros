@@ -92,17 +92,13 @@ describe("pathIsWithin", () => {
 });
 
 describe("discoverSkillsCatalog", () => {
-  it("creates the HarnessOS skills folder on first discovery", async () => {
+  it("creates the Haros skills folder on first discovery", async () => {
     await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     await expect(access(path.join(harnessosBaseDir, "skills"))).resolves.toBeUndefined();
   });
 
   it("aggregates shared engine homes without touching stock Pi state", async () => {
-    await writeSkill(
-      path.join(harnessosBaseDir, "skills", "portable"),
-      "portable",
-      "HarnessOS skill",
-    );
+    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "Haros skill");
     await writeSkill(path.join(homeDir, ".codex", "skills", "codex-only"), "codex-only", "Codex");
     await writeSkill(
       path.join(homeDir, ".claude", "skills", "claude-only"),
@@ -375,8 +371,8 @@ describe("discoverSkillsCatalog", () => {
     expect(settingsCatalog.map((skill) => skill.scope).sort()).toEqual(["claude", "codex"]);
   });
 
-  it("prefers the engine-native copy and falls back to HarnessOS for that engine", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
+  it("prefers the engine-native copy and falls back to Haros for that engine", async () => {
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "Haros copy");
     await writeSkill(path.join(homeDir, ".codex", "skills", "shared"), "shared", "Codex copy");
     await writeSkill(
       path.join(harnessosBaseDir, "skills", "only-harnessos"),
@@ -390,7 +386,7 @@ describe("discoverSkillsCatalog", () => {
     expect(codexShared?.path).toContain(path.join(".codex", "skills"));
     expect(codexView.some((skill) => skill.name === "only-harnessos")).toBe(true);
 
-    // A engine without its own copy resolves the HarnessOS fallback.
+    // A engine without its own copy resolves the Haros fallback.
     const claudeView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
@@ -400,8 +396,8 @@ describe("discoverSkillsCatalog", () => {
     expect(claudeShared?.scope).toBe("oa");
   });
 
-  it("uses documented engine alias roots before HarnessOS fallbacks", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
+  it("uses documented engine alias roots before Haros fallbacks", async () => {
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "Haros copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     const antigravityView = await discoverSkillsCatalog({
       homeDir,
@@ -413,7 +409,7 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("uses engine-native roots before shared aliases for Grok and Pi", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "Haros copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     await writeSkill(path.join(homeDir, ".grok", "skills", "shared"), "shared", "Grok copy");
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "shared"), "shared", "Pi copy");
@@ -510,7 +506,7 @@ description: Direct Pi markdown skill
     const cwd = path.join(homeDir, "projects", "app");
     await mkdir(cwd, { recursive: true });
     await writeSkill(path.join(homeDir, ".codex", "skills", "from-codex"), "from-codex", "Codex");
-    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "HarnessOS");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "Haros");
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
 
@@ -583,7 +579,7 @@ describe("mergeSkillsIntoCatalog", () => {
 });
 
 describe("filterDisabledSkills", () => {
-  it("filters HarnessOS-owned skills without disabling Engine-native copies", () => {
+  it("filters Haros-owned skills without disabling Engine-native copies", () => {
     const skills: EngineSkillDescriptor[] = [
       {
         name: "Reviewer",

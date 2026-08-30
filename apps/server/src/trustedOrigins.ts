@@ -1,6 +1,6 @@
 // FILE: trustedOrigins.ts
 // Purpose: Shared origin checks for browser-facing HTTP/WS routes that expose
-//          local machine data only to HarnessOS's own app surfaces.
+//          local machine data only to Haros's own app surfaces.
 // Layer: Server HTTP/security utility
 // Exports: normalizeCorsOrigin, isTrustedAppOrigin,
 //          shouldRejectUntrustedRequestOrigin

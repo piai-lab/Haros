@@ -60,7 +60,7 @@ describe("desktop app icons", () => {
     ).toBe("icon.icns");
   });
 
-  it("uses HarnessOS dark artwork for macOS dark appearance and explicit preference", () => {
+  it("uses Haros dark artwork for macOS dark appearance and explicit preference", () => {
     expect(
       desktopAppIconResourceName({
         icon: "default",

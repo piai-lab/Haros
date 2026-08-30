@@ -103,7 +103,7 @@ export function isEngineUpdateActive(engine: ServerEngineStatus): boolean {
   return engine.updateState?.status === "queued" || engine.updateState?.status === "running";
 }
 
-// A engine whose latest version HarnessOS cannot look up (self-updating CLIs such as
+// A engine whose latest version Haros cannot look up (self-updating CLIs such as
 // `cursor-agent`) is permanently "unknown". Treating that as an update prompt made its
 // row nag forever, so those engines get the update offered as a manual action instead.
 export function isEngineLatestVersionKnowable(engine: ServerEngineStatus): boolean {
@@ -119,7 +119,7 @@ export function shouldOfferEngineUpdateAction(engine: ServerEngineStatus): boole
   );
 }
 
-// Header affordance: reserved for engines HarnessOS can actually assert are outdated.
+// Header affordance: reserved for engines Haros can actually assert are outdated.
 export function shouldPromptEngineUpdate(engine: ServerEngineStatus): boolean {
   return shouldOfferEngineUpdateAction(engine) && isEngineLatestVersionKnowable(engine);
 }

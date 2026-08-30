@@ -1,5 +1,5 @@
 // FILE: importedThreadMessages.test.ts
-// Purpose: Verifies engine transcript snapshots become stable HarnessOS import messages.
+// Purpose: Verifies engine transcript snapshots become stable Haros import messages.
 // Layer: Orchestration mapping tests
 // Depends on: importedThreadMessages.
 

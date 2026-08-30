@@ -330,7 +330,7 @@ function SettingsRouteView() {
       title: t("settings.customTitleBarRestartToastTitle"),
       description: t("settings.customTitleBarRestartToastDescription"),
       actionProps: {
-        "aria-label": t("settings.restartHarnessOS"),
+        "aria-label": t("settings.restartHaros"),
         children: t("common.restart"),
         onClick: () => {
           void window.desktopBridge?.customTitleBar?.relaunch();

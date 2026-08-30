@@ -970,7 +970,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const buildConfig = createBuildConfig(
     options.platform,
     options.target,
-    desktopPackageJson.productName ?? "HarnessOS",
+    desktopPackageJson.productName ?? "Haros",
   );
 
   const stagePackageJson: StagePackageJson = {
@@ -1093,10 +1093,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
 
   if (options.platform === "mac") {
-    yield* assertPackagedMacDeviceHelper(
-      stageDistDir,
-      desktopPackageJson.productName ?? "HarnessOS",
-    );
+    yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "Haros");
   }
 
   const stageEntries = yield* fs.readDirectory(stageDistDir);
@@ -1173,7 +1170,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for HarnessOS."),
+  Command.withDescription("Build a desktop artifact for Haros."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

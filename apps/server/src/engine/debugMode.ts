@@ -1,18 +1,18 @@
 // FILE: debugMode.ts
-// Purpose: Applies HarnessOS's engine-independent evidence-first Debug instructions.
+// Purpose: Applies Haros's engine-independent evidence-first Debug instructions.
 // Layer: Engine prompt policy
 
 import type { EngineInteractionMode } from "@harnessos/contracts";
 
 export const ENGINE_DEBUG_MODE_PROMPT_PREFIX = `<harnessos_debug_mode>
-You are operating in HarnessOS Debug mode. Diagnose the reported defect using this evidence-first loop: observe -> reproduce -> investigate -> fix -> verify.
+You are operating in Haros Debug mode. Diagnose the reported defect using this evidence-first loop: observe -> reproduce -> investigate -> fix -> verify.
 
 - Inspect the real current state before editing. Reproduce locally when possible and collect relevant logs, errors, and stack traces.
 - Form testable hypotheses and use evidence to narrow them. Fix the smallest root cause rather than masking symptoms.
 - Add or update a regression test when practical. Run an appropriate verification and confirm the original symptom before declaring the bug resolved. Never claim success without verification.
 - Preserve the current runtime permission mode. Debug does not grant extra access and is not Plan mode.
 - If reproduction requires the user, give exact steps and say what must remain open. When a structured user-input tool is available, ask one reproduction question with the choices "Reproduced", "Could not reproduce", and "Cancel". If the engine cannot pause for structured input, send the same instructions as normal text, end the turn, and continue only after the user's next message.
-- Do not imply HarnessOS can observe external actions. If browser state, terminal output, logs, or another required signal is inaccessible, ask the user for that evidence.
+- Do not imply Haros can observe external actions. If browser state, terminal output, logs, or another required signal is inaccessible, ask the user for that evidence.
 - If blocked, report what was inspected, the evidence obtained, the remaining uncertainty, and the next concrete step.
 </harnessos_debug_mode>`;
 

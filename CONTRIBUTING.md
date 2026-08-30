@@ -1,12 +1,12 @@
-# Contributing to HarnessOS
+# Contributing to Haros
 
-Thanks for helping improve HarnessOS. Keep each contribution focused on one user-visible result or
+Thanks for helping improve Haros. Keep each contribution focused on one user-visible result or
 one clear lifecycle responsibility.
 
 ## Before you start
 
 - Search existing Issues and Discussions.
-- For a bug, include a minimal reproduction and the exact HarnessOS commit or version.
+- For a bug, include a minimal reproduction and the exact Haros commit or version.
 - For a larger change, open a focused proposal describing the user result, the existing owner, and
   the smallest complete change.
 - Do not include credentials, private endpoints, user data, generated build output, caches, or test
@@ -37,9 +37,11 @@ Run `bun run build:desktop` when the change crosses Desktop packaging or shipped
 - Preserve Engine isolation. Product Threads and native Engine Sessions are different facts.
 - Route system capabilities through HostGateway instead of reproducing file, Git, terminal,
   browser, device, permission, or receipt logic in an Engine adapter.
-- User-visible HarnessOS copy must ship in both English and Simplified Chinese.
-- Keep third-party identities accurate only where functionality, diagnostics, or legal provenance
-  requires them. HarnessOS remains the product identity on normal surfaces.
+- User-visible Haros copy must ship in both English and Simplified Chinese.
+- Keep runtime and third-party identities accurate only where a functional selector, diagnostic,
+  or legal provenance requires them. Haros remains the only identity on normal surfaces.
+- Treat `@harnessos/*`, `HARNESSOS_*`, `.harnessos`, `harnessos://`, and `ai.piai.harnessos` as
+  stable machine contracts. Do not create cosmetic aliases or user-state migrations for them.
 - Source adoption changes must update `source-adoptions.json`, required license text, deterministic
   artifact checks, and focused evidence together.
 

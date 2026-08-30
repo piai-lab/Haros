@@ -104,7 +104,7 @@ export function startClaudeCredentialKeepalive(input?: {
   const log = input?.log ?? (() => {});
 
   // Only run when explicitly enabled. The check touches Claude Code auth data, so
-  // HarnessOS should not do it as background work merely because the app opened.
+  // Haros should not do it as background work merely because the app opened.
   if (!isClaudeCredentialKeepaliveEnabled({ platform, env })) {
     return { stop: () => {} };
   }

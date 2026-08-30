@@ -24,8 +24,8 @@ import {
   HARNESSOS_HOST_GATEWAY_URL_ENV,
 } from "../../hostGateway/mcpInjection.ts";
 import {
-  type HarnessOSHarnessPolicyDeliveryState,
-  takeHarnessOSHarnessPolicyForEngineSession,
+  type HarosHarnessPolicyDeliveryState,
+  takeHarosHarnessPolicyForEngineSession,
 } from "../../hostGateway/harnessPolicy.ts";
 import {
   HostGatewayCredentials,
@@ -225,7 +225,7 @@ function shellQuote(value: string, platform: NodeJS.Platform = process.platform)
 }
 
 /**
- * Hook output when capture is inactive (the session is not HarnessOS-managed).
+ * Hook output when capture is inactive (the session is not Haros-managed).
  * Antigravity requires PreToolUse output to carry a `decision`: an empty
  * object is treated as a denial with an empty reason, which blocks every tool
  * call because the hook is installed globally with `matcher: "*"` (#490).
@@ -236,7 +236,7 @@ function shellQuote(value: string, platform: NodeJS.Platform = process.platform)
  * denial that aborts the invocation. The CLI raises a PreInvocation for the
  * subagent's first model call when the parent agent invokes a subagent, so
  * `{}` there denies the subagent launch and the parent CLI exits with code 1
- * ("Antigravity CLI exited with code 1."). HarnessOS-managed sessions spawn
+ * ("Antigravity CLI exited with code 1."). Haros-managed sessions spawn
  * subagents deliberately, so pre-invocation must answer "allow".
  *
  * `{}` stays correct for the other hook points, including Stop, where an
@@ -344,7 +344,7 @@ process.stdin.on("end", () => {
     const decision = process.env.HARNESSOS_ANTIGRAVITY_HOOK_DECISION === "allow" ? "allow" : "ask";
     process.stdout.write(JSON.stringify({ decision }) + "\\n");
   } else if (event === "pre-invocation") {
-    // PreInvocation vetoes the upcoming LLM invocation; HarnessOS-managed
+    // PreInvocation vetoes the upcoming LLM invocation; Haros-managed
     // sessions run subagents deliberately, so never block them here. An
     // empty object would deny the launch and the parent CLI exits 1.
     process.stdout.write('{"decision":"allow"}\\n');
@@ -475,7 +475,7 @@ export async function ensureCapturePlugin(
       {
         $schema: "https://antigravity.google/schemas/v1/plugin.json",
         name: "harnessos-capture",
-        description: "Streams Antigravity CLI lifecycle events to HarnessOS when requested.",
+        description: "Streams Antigravity CLI lifecycle events to Haros when requested.",
       },
       null,
       2,
@@ -527,7 +527,7 @@ export function buildAntigravityTurnProcessEnvironment(input: {
   return buildEngineChildEnvironment({
     engine: ENGINE,
     ...(input.baseEnv === undefined ? {} : { baseEnv: input.baseEnv }),
-    inheritedHarnessOSKeys: [
+    inheritedHarosKeys: [
       "HARNESSOS_ANTIGRAVITY_EVENTS",
       "HARNESSOS_ANTIGRAVITY_HOOK_DECISION",
       ...gatewayKeys,
@@ -541,13 +541,13 @@ export function buildAntigravityTurnProcessEnvironment(input: {
 }
 
 export function buildAntigravityTurnPrompt(
-  state: HarnessOSHarnessPolicyDeliveryState,
+  state: HarosHarnessPolicyDeliveryState,
   input: {
     readonly prompt: string;
     readonly hasGatewaySessionLease: boolean;
   },
 ): string {
-  const harnessPolicy = takeHarnessOSHarnessPolicyForEngineSession(state, {
+  const harnessPolicy = takeHarosHarnessPolicyForEngineSession(state, {
     scopedGatewayConnectionAvailable: input.hasGatewaySessionLease,
   });
   return [harnessPolicy, input.prompt].filter(Boolean).join("\n\n");
@@ -583,7 +583,7 @@ export function parseAntigravityCliModelLabel(
 
   // Newer `agy models` rows are `slug<TAB>Display Name (Effort)`. Older builds
   // printed only the display label. Prefer the display column when present so
-  // HarnessOS never treats `slug\tName` as a single model id at dispatch.
+  // Haros never treats `slug\tName` as a single model id at dispatch.
   const tabIndex = stripped.indexOf("\t");
   const labelColumn =
     tabIndex >= 0 ? stripped.slice(tabIndex + 1).trim() : stripped.replace(/^(?:[*•-]\s+)+/u, "");
@@ -1943,7 +1943,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             new EngineAdapterRequestError({
               engine: ENGINE,
               method: "plugin/install",
-              detail: messageFromCause(cause, "Failed to install the HarnessOS capture hook."),
+              detail: messageFromCause(cause, "Failed to install the Haros capture hook."),
               cause,
             }),
         });
@@ -2106,7 +2106,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           return yield* new EngineAdapterRequestError({
             engine: ENGINE,
             method: "turn/prepare",
-            detail: "The HarnessOS gateway credential is no longer active for this engine turn.",
+            detail: "The Haros gateway credential is no longer active for this engine turn.",
           });
         }
         if (gatewaySessionLease) context.gatewaySessionLease = gatewaySessionLease;
@@ -2467,7 +2467,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: true,
-        // Antigravity can consume the unified HarnessOS skill projection, but it does
+        // Antigravity can consume the unified Haros skill projection, but it does
         // not expose a engine-native listSkills() seam.
         supportsSkillDiscovery: false,
         supportsNativeSlashCommandDiscovery: false,

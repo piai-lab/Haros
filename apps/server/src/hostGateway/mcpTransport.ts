@@ -217,7 +217,7 @@ export function makeHostGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This HarnessOS tool call was rejected because this credential had no authority for the exact active turn when the MCP request arrived.",
+                "This Haros tool call was rejected because this credential had no authority for the exact active turn when the MCP request arrived.",
                 {
                   callerThreadId,
                   latestTurnId: callerThread.value.latestTurn?.turnId ?? null,
@@ -229,7 +229,7 @@ export function makeHostGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_session_inactive",
-                "This HarnessOS tool call was rejected because its engine-session authority is no longer active.",
+                "This Haros tool call was rejected because its engine-session authority is no longer active.",
                 { callerThreadId },
               ),
             );
@@ -241,7 +241,7 @@ export function makeHostGatewayMcpTransport(input: {
                 (error) =>
                   new GatewayToolError(
                     "caller_turn_inactive",
-                    "This HarnessOS tool call was rejected because the caller thread could no longer be verified.",
+                    "This Haros tool call was rejected because the caller thread could no longer be verified.",
                     { callerThreadId, error: errorText(error) },
                   ),
               ),
@@ -253,7 +253,7 @@ export function makeHostGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This HarnessOS tool call was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
+                "This Haros tool call was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
                 {
                   callerThreadId,
                   authorizedTurnId: callerTurnAuthority.turnId,

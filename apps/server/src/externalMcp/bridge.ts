@@ -106,7 +106,7 @@ class ExternalMcpRequestCancelledError extends Error {
 
 class ExternalMcpRequestTimeoutError extends ExternalMcpBridgeError {
   constructor(timeoutMs: number) {
-    super(`HarnessOS did not respond within ${timeoutMs} ms.`);
+    super(`Haros did not respond within ${timeoutMs} ms.`);
     this.name = "ExternalMcpRequestTimeoutError";
   }
 }
@@ -182,7 +182,7 @@ function parseRuntimeState(
     }
     return state as PersistedServerRuntimeState;
   } catch (cause) {
-    throw new ExternalMcpBridgeError(`Invalid HarnessOS runtime-state file: ${sourcePath}`, {
+    throw new ExternalMcpBridgeError(`Invalid Haros runtime-state file: ${sourcePath}`, {
       cause,
     });
   }
@@ -315,12 +315,12 @@ function discoverRunningRuntime(
   });
   if (candidates.length === 0) {
     throw new ExternalMcpBridgeError(
-      `No running HarnessOS instance was found under ${baseDir}. Start HarnessOS first or pass --home-dir for the intended instance.`,
+      `No running Haros instance was found under ${baseDir}. Start Haros first or pass --home-dir for the intended instance.`,
     );
   }
   if (candidates.length > 1) {
     throw new ExternalMcpBridgeError(
-      `Multiple running HarnessOS instances were found under ${baseDir}: ${candidates.map((candidate) => candidate.state.origin).join(", ")}. Stop one instance or pass a distinct --home-dir.`,
+      `Multiple running Haros instances were found under ${baseDir}: ${candidates.map((candidate) => candidate.state.origin).join(", ")}. Stop one instance or pass a distinct --home-dir.`,
     );
   }
   return candidates[0]!;
@@ -404,7 +404,7 @@ export function writeExternalMcpClientCredential(
     const existing = readExternalMcpClientCredential(baseDir, paired.integrationId);
     if (existing.credential !== paired.credential) {
       throw new ExternalMcpBridgeError(
-        `Integration ${paired.integrationId} already has a different stored credential. Revoke it in HarnessOS before replacing the local secret.`,
+        `Integration ${paired.integrationId} already has a different stored credential. Revoke it in Haros before replacing the local secret.`,
       );
     }
     return filePath;
@@ -437,8 +437,8 @@ export function readExternalMcpClientCredential(
   if (candidates.length === 0 || !fs.existsSync(candidates[0]!)) {
     throw new ExternalMcpBridgeError(
       integrationId
-        ? `No paired external MCP credential was found for integration ${integrationId}. Run its pairing command from HarnessOS Settings.`
-        : `No paired external MCP credential was found under ${directory}. Create an integration in HarnessOS Settings, then run its pairing command.`,
+        ? `No paired external MCP credential was found for integration ${integrationId}. Run its pairing command from Haros Settings.`
+        : `No paired external MCP credential was found under ${directory}. Create an integration in Haros Settings, then run its pairing command.`,
     );
   }
   if (candidates.length > 1) {
@@ -564,7 +564,7 @@ export async function readExternalMcpResponseText(
   const timeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
       void reader.cancel().catch(() => undefined);
-      reject(new ExternalMcpBridgeError(`HarnessOS response body stalled for ${timeoutMs} ms.`));
+      reject(new ExternalMcpBridgeError(`Haros response body stalled for ${timeoutMs} ms.`));
     }, timeoutMs);
   });
   try {
@@ -607,7 +607,7 @@ async function verifyPersistedServerRuntime(
     !runtimeProofsMatch(expected, body.proof)
   ) {
     throw new ExternalMcpBridgeError(
-      "The loopback endpoint did not prove it is the HarnessOS process named by the private runtime-state file.",
+      "The loopback endpoint did not prove it is the Haros process named by the private runtime-state file.",
     );
   }
 }
@@ -697,7 +697,7 @@ async function fetchWithRestartRecovery(input: {
     }
   } while (Date.now() < deadline);
   throw new ExternalMcpBridgeError(
-    "Could not authenticate and reconnect to HarnessOS. Ensure exactly one intended instance is running.",
+    "Could not authenticate and reconnect to Haros. Ensure exactly one intended instance is running.",
     { cause: lastCause },
   );
 }
@@ -739,7 +739,7 @@ export async function pairExternalMcpClient(input: {
   } while (Date.now() < deadline);
   if (!response) {
     throw new ExternalMcpBridgeError(
-      "Could not reconnect to HarnessOS to complete pairing. The private pending credential was preserved for a safe retry.",
+      "Could not reconnect to Haros to complete pairing. The private pending credential was preserved for a safe retry.",
       { cause: lastCause },
     );
   }
@@ -754,13 +754,11 @@ export async function pairExternalMcpClient(input: {
   if (!response.ok || !body || !("credential" in body)) {
     throw new ExternalMcpBridgeError(
       (body && "error" in body && body.error) ||
-        `HarnessOS rejected external MCP pairing with HTTP ${response.status}.`,
+        `Haros rejected external MCP pairing with HTTP ${response.status}.`,
     );
   }
   if (body.credential !== pending.value.credential) {
-    throw new ExternalMcpBridgeError(
-      "HarnessOS returned a different pairing credential; refusing it.",
-    );
+    throw new ExternalMcpBridgeError("Haros returned a different pairing credential; refusing it.");
   }
   const storePath = writeExternalMcpClientCredential(input.baseDir, body);
   fs.rmSync(pending.path, { force: true });
@@ -897,7 +895,7 @@ export async function serveExternalMcpStdio(input: {
     }
     if (response.status === 401) {
       const message =
-        "HarnessOS rejected the stored external MCP credential because it was revoked, expired, or replaced. Pair the integration again from Settings.";
+        "Haros rejected the stored external MCP credential because it was revoked, expired, or replaced. Pair the integration again from Settings.";
       await emit(stderr, `[harnessos mcp] ${message}\n`);
       return localErrorResponse(line, -32001, message);
     }
@@ -910,7 +908,7 @@ export async function serveExternalMcpStdio(input: {
           // Fall through to a transport error that preserves request ids.
         }
       }
-      const message = `HarnessOS external MCP request failed with HTTP ${response.status}.`;
+      const message = `Haros external MCP request failed with HTTP ${response.status}.`;
       await emit(stderr, `[harnessos mcp] ${message}\n`);
       return localErrorResponse(line, -32603, message);
     }
@@ -967,7 +965,7 @@ export async function serveExternalMcpStdio(input: {
         if (Array.isArray(decoded)) responses.push(...decoded);
         else responses.push(decoded);
       } catch {
-        const fallback = localErrorResponse(entry.line, -32603, "Invalid HarnessOS response");
+        const fallback = localErrorResponse(entry.line, -32603, "Invalid Haros response");
         if (fallback) responses.push(JSON.parse(fallback) as unknown);
       }
     }

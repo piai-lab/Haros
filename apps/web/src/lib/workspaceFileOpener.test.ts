@@ -26,7 +26,7 @@ describe("resolveWorkspaceFileOpenTarget", () => {
     );
   });
 
-  it("maps HarnessOS public asset URLs to their workspace files", () => {
+  it("maps Haros public asset URLs to their workspace files", () => {
     expect(
       resolveWorkspaceFileOpenTarget("/central-icons-reversed/magnifying-glass.svg", "/repo/app"),
     ).toBe("apps/web/public/central-icons-reversed/magnifying-glass.svg");

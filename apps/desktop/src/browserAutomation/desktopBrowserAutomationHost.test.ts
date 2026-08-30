@@ -437,7 +437,7 @@ describe("DesktopBrowserAutomationHost", () => {
         {
           id: internalTabId,
           url: "harnessos://temporary-page",
-          title: "HarnessOS Web Access",
+          title: "Haros Web Access",
           status: "live" as const,
           isLoading: false,
           canGoBack: false,

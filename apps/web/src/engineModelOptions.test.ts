@@ -314,7 +314,7 @@ describe("engineModelOptionProvenanceLabel", () => {
     ).toBe("OpenCode Go");
   });
 
-  it("falls back to a humanized slug engine, then the HarnessOS engine", () => {
+  it("falls back to a humanized slug engine, then the Haros engine", () => {
     expect(
       engineModelOptionProvenanceLabel({
         engine: "opencode",

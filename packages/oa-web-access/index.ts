@@ -269,7 +269,7 @@ type ToolNames = {
   getSearchContent: string;
 };
 
-/** Canonical bundled names used by the HarnessOS Product profile. */
+/** Canonical bundled names used by the Haros Product profile. */
 export const OA_WEB_ACCESS_TOOL_NAMES: Readonly<ToolNames> = Object.freeze({
   webSearch: "web_search",
   sourceCheck: "source_check",
@@ -1773,7 +1773,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           content: [
             {
               type: "text",
-              text: "HarnessOS Web Access could not start source review because the Browser presenter is unavailable.",
+              text: "Haros Web Access could not start source review because the Browser presenter is unavailable.",
             },
           ],
           details: { phase: "curator-presentation-error", error: "Browser presenter unavailable" },
@@ -1787,7 +1787,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           content: [
             {
               type: "text",
-              text: "HarnessOS Web Access could not resolve the current language and theme for source review.",
+              text: "Haros Web Access could not resolve the current language and theme for source review.",
             },
           ],
           details: {
@@ -2091,7 +2091,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           content: [
             {
               type: "text",
-              text: "HarnessOS Web Access could not present source review. Open Development > Web search and retry.",
+              text: "Haros Web Access could not present source review. Open Development > Web search and retry.",
             },
           ],
           details: { phase: "curator-presentation-error", error: result.message },
@@ -2134,7 +2134,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           content: [
             {
               type: "text",
-              text: "HarnessOS Web Access could not start source review. Open Development > Web search and retry.",
+              text: "Haros Web Access could not start source review. Open Development > Web search and retry.",
             },
           ],
           details: { phase: "curator-presentation-error", error: message },
@@ -2249,7 +2249,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
         workflow: Type.Optional(
           StringEnum(["none", "summary-review", "auto-summary"], {
             description:
-              "Search workflow mode: auto-summary = generate a summary without waiting for review (HarnessOS default; an independent display preference may show a nonblocking observer), summary-review = pause for interactive source review, none = return raw results",
+              "Search workflow mode: auto-summary = generate a summary without waiting for review (Haros default; an independent display preference may show a nonblocking observer), summary-review = pause for interactive source review, none = return raw results",
           }),
         ),
         proxy: Type.Optional(
@@ -4733,7 +4733,7 @@ export function inspectOAWebAccessRegistration(
     collidedToolNames,
     diagnostics: collidedToolNames.map(
       (name) =>
-        `Pi selected a foreign source or no definition for HarnessOS Web Access tool "${name}".`,
+        `Pi selected a foreign source or no definition for Haros Web Access tool "${name}".`,
     ),
   };
 }
@@ -4769,7 +4769,7 @@ export function makeOAWebAccessInlineExtension(
 
 export default function upstreamWebAccessExtension(pi: ExtensionAPI): void {
   // Preserve the exact upstream registration semantics for the retained author
-  // harness. Bundled HarnessOS Sessions must use makeOAWebAccessExtension,
+  // harness. Bundled Haros Sessions must use makeOAWebAccessExtension,
   // which supplies the instance boundary and canonical config owner.
   registerWebAccessExtension(pi);
 }

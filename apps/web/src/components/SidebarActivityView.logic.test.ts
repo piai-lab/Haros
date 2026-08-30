@@ -470,7 +470,7 @@ describe("project filter", () => {
     ]);
   });
 
-  it("merges every project-less chat container into one HarnessOS scope", () => {
+  it("merges every project-less chat container into one Haros scope", () => {
     const CHAT_PROJECT_A = ProjectId.makeUnsafe("chat-project-a");
     const CHAT_PROJECT_B = ProjectId.makeUnsafe("chat-project-b");
     const realProject = makeThread({
@@ -578,7 +578,7 @@ describe("resolveActivityScope", () => {
     });
   });
 
-  it("expands the HarnessOS chats scope to its container projects", () => {
+  it("expands the Haros chats scope to its container projects", () => {
     expect(resolveActivityScope("chats", options)).toEqual({
       scope: "chats",
       projectFilterIds: new Set([OTHER_PROJECT_ID]),
@@ -789,13 +789,13 @@ describe("collectUnreadActivityThreads", () => {
 });
 
 describe("resolveThreadProjectLabel", () => {
-  it("uses the project name for real projects and HarnessOS otherwise", () => {
+  it("uses the project name for real projects and Haros otherwise", () => {
     expect(
-      resolveThreadProjectLabel({ kind: "project", name: "HarnessOS App", folderName: "oa" }),
-    ).toBe("HarnessOS App");
+      resolveThreadProjectLabel({ kind: "project", name: "Haros App", folderName: "oa" }),
+    ).toBe("Haros App");
     expect(resolveThreadProjectLabel({ kind: "chat", name: "Chats", folderName: "chats" })).toBe(
-      "HarnessOS",
+      "Haros",
     );
-    expect(resolveThreadProjectLabel(undefined)).toBe("HarnessOS");
+    expect(resolveThreadProjectLabel(undefined)).toBe("Haros");
   });
 });

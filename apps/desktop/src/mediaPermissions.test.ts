@@ -58,7 +58,7 @@ describe("isTrustedMediaPermissionRequest", () => {
     );
   });
 
-  it("rejects subframes and origins other than the live HarnessOS renderer", () => {
+  it("rejects subframes and origins other than the live Haros renderer", () => {
     const trusted = {
       isDestroyed: () => false,
       getURL: () => "harnessos://app/index.html",

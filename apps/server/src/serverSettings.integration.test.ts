@@ -136,7 +136,7 @@ describe("ServerSettingsService", () => {
     });
   });
 
-  it("retires only the old HarnessOS model hint field on the next normal settings save", async () => {
+  it("retires only the old Haros model hint field on the next normal settings save", async () => {
     const retiredKey = ["custom", "Models"].join("");
     const result = await runWithSettings(
       Effect.gen(function* () {
@@ -229,7 +229,7 @@ describe("ServerSettingsService", () => {
       },
     },
     {
-      name: "the disabled legacy HarnessOS aggregate",
+      name: "the disabled legacy Haros aggregate",
       disabledBuiltInGroups: ["oa", "future-group"],
       expected: {
         agent: {
@@ -734,7 +734,7 @@ describe("ServerSettingsService", () => {
         const streamedViewFiber = yield* Stream.runHead(service.streamViews).pipe(
           Effect.forkChild({ startImmediately: true }),
         );
-        const mutation = yield* service.mutateHarnessOSDefaultPrompt("private one", "private two");
+        const mutation = yield* service.mutateHarosDefaultPrompt("private one", "private two");
         const streamedView = Option.getOrThrow(yield* Fiber.join(streamedViewFiber));
         return { initialView, mutation, streamedView };
       }).pipe(
@@ -759,8 +759,8 @@ describe("ServerSettingsService", () => {
         const service = yield* ServerSettingsService;
         const mutations = yield* Effect.all(
           [
-            service.mutateHarnessOSDefaultPrompt(null, "first"),
-            service.mutateHarnessOSDefaultPrompt(null, "second"),
+            service.mutateHarosDefaultPrompt(null, "first"),
+            service.mutateHarosDefaultPrompt(null, "second"),
           ],
           { concurrency: "unbounded" },
         );

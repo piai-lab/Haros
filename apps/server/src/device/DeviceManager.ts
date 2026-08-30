@@ -9,7 +9,7 @@
  * - Boot source. The backend cannot tell who booted a device, so the manager
  *   records the devices it booted itself. Only those are ever auto-shut-down;
  *   anything the user started (pane picker, Simulator.app) outlives us.
- * - The HarnessOS boot cap (`DEVICE_HARNESSOS_BOOT_LIMIT`). Boot past the cap is
+ * - The Haros boot cap (`DEVICE_HARNESSOS_BOOT_LIMIT`). Boot past the cap is
  *   refusable rather than fatal: the caller is handed the shutdown candidates
  *   so the pane can prompt.
  * - Shutdown triggers: app quit (`dispose`), thread removal
@@ -64,7 +64,7 @@ import {
   type DeviceUiTargetMatch,
 } from "./uiTreeTargeting.ts";
 
-/** How long a HarnessOS-booted device stays up with no thread attached. */
+/** How long a Haros-booted device stays up with no thread attached. */
 export const DEVICE_IDLE_SHUTDOWN_MS = 10 * 60 * 1000;
 
 /**
@@ -117,7 +117,7 @@ export interface DeviceManagerOptions {
   readonly transport?: DeviceFrameTransport;
   readonly idleShutdownMs?: number;
   readonly bootLimit?: number;
-  /** Remembers HarnessOS's boots across a crash; defaults to remembering nothing. */
+  /** Remembers Haros's boots across a crash; defaults to remembering nothing. */
   readonly bootOwnership?: BootOwnershipStore;
   readonly attachDeadlineMs?: number;
   readonly attachRetryMs?: number;
@@ -276,7 +276,7 @@ export class DeviceManager {
   /** Devices the pane may offer as shutdown candidates when the cap is hit. */
   async harnessosBootedDevices(): Promise<readonly DeviceDescriptor[]> {
     const devices = await this.backend.listDevices({ includeShutdown: true }).catch(() => []);
-    this.reconcileHarnessOSBooted(devices);
+    this.reconcileHarosBooted(devices);
     return devices
       .filter((device) => this.harnessosBooted.has(device.udid))
       .map((device) => this.describe(device));
@@ -285,7 +285,7 @@ export class DeviceManager {
   /**
    * Forget devices that are no longer running.
    *
-   * The set is HarnessOS's own bookkeeping, but the simulators are not HarnessOS's to
+   * The set is Haros's own bookkeeping, but the simulators are not Haros's to
    * keep: `simctl shutdown all` from a shell, Simulator.app quitting, a crashed
    * runtime, or the agent tidying up all shut a device down without telling us.
    * Every one of those left a phantom holding a slot, and three phantoms made
@@ -295,7 +295,7 @@ export class DeviceManager {
    * Reconciled from the listing every caller already has rather than by polling:
    * the cap is only consulted on boot, and that path lists devices anyway.
    */
-  private reconcileHarnessOSBooted(devices: readonly DeviceDescriptor[]): void {
+  private reconcileHarosBooted(devices: readonly DeviceDescriptor[]): void {
     const running = new Set(
       devices
         .filter((device) => device.state === "booted" || device.state === "booting")
@@ -312,12 +312,12 @@ export class DeviceManager {
 
   async boot(udid: string): Promise<DeviceBootResult> {
     const devices = await this.backend.listDevices({ includeShutdown: true }).catch(() => []);
-    // Devices that stopped without HarnessOS doing it still held their slots, so
+    // Devices that stopped without Haros doing it still held their slots, so
     // three shutdowns from a shell were enough to make every later boot refuse.
-    this.reconcileHarnessOSBooted(devices);
+    this.reconcileHarosBooted(devices);
     const known = devices.find((device) => device.udid === udid) ?? null;
     // Viewing an already-booted device is uncapped: the cap exists to stop
-    // HarnessOS from accumulating simulators, not to limit what the user watches.
+    // Haros from accumulating simulators, not to limit what the user watches.
     if (known?.state === "booted") {
       return { kind: "booted", device: this.describe(known) };
     }
@@ -332,7 +332,7 @@ export class DeviceManager {
     // The slot is taken before the await, not after it. A boot runs for the
     // better part of a minute, so two threads asking for different simulators
     // would both read a size under the limit and both proceed, and the cap that
-    // exists to stop HarnessOS accumulating multi-gigabyte simulators would be
+    // exists to stop Haros accumulating multi-gigabyte simulators would be
     // exceeded by however many requests arrived inside that window.
     this.harnessosBooted.add(udid);
     let device: DeviceDescriptor;
@@ -771,7 +771,7 @@ export class DeviceManager {
   // ── Lifecycle ──────────────────────────────────────────────────────
 
   /**
-   * App quit: shut down everything HarnessOS booted, leave the user's devices
+   * App quit: shut down everything Haros booted, leave the user's devices
    * alone, and release the backend.
    */
   async dispose(): Promise<void> {
@@ -936,10 +936,10 @@ export class DeviceManager {
 
   /**
    * Nobody is watching this device any more. Stop the stream, and either shut
-   * the device down or start the idle countdown if HarnessOS booted it.
+   * the device down or start the idle countdown if Haros booted it.
    *
    * A switch shuts down immediately rather than waiting out the idle window.
-   * The cap is three HarnessOS-booted devices, and each one costs a couple of GB
+   * The cap is three Haros-booted devices, and each one costs a couple of GB
    * of RAM, so trying three simulators in a row filled every slot with devices
    * nobody was looking at and made the fourth pick prompt for a shutdown the
    * user had effectively already asked for. A plain detach still uses the idle

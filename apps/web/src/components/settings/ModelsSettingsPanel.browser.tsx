@@ -8,7 +8,7 @@ import {
   ThreadId,
   type NativeApi,
   type EngineSelection,
-  type HarnessOSCustomModelServiceModelInput,
+  type HarosCustomModelServiceModelInput,
   type OAModelServiceAuthResult,
   type OAModelServiceDescriptor,
   type OAModelServicesGetResult,
@@ -171,7 +171,7 @@ function setNativeApi(input: {
     input.testCustom ??
       (async ({ config }) => ({
         state: "success",
-        models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
+        models: config.models.map((model: HarosCustomModelServiceModelInput) => ({
           modelId: model.modelId,
           displayName: model.displayName ?? model.modelId,
           available: true,
@@ -1088,7 +1088,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarosCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.displayName ?? model.modelId,
         available: true,
@@ -1389,7 +1389,7 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarosCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.displayName ?? model.modelId,
         available: true,
@@ -1522,7 +1522,7 @@ describe("ModelsSettingsPanel model services", () => {
   it("keeps command credentials in the advanced path and does not repeat endpoint trust on save", async () => {
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarosCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.modelId,
         available: true,
@@ -1636,7 +1636,7 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarosCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.modelId,
         available: true,

@@ -29,7 +29,7 @@ const DIAGNOSTICS: FeedbackDiagnostics = {
   ...CONTEXT,
   appVersion: "0.1.0-alpha.0",
   submittedAt: "2026-07-15T18:00:00.000Z",
-  userAgent: "HarnessOS test agent",
+  userAgent: "Haros test agent",
   platform: "MacIntel",
   language: "en-US",
   viewport: "1440x900",
@@ -38,14 +38,14 @@ const DIAGNOSTICS: FeedbackDiagnostics = {
 describe("formatFeedbackSummary", () => {
   it("lists only typed runtime diagnostics", () => {
     const summary = formatFeedbackSummary({ category: "bug", diagnostics: DIAGNOSTICS });
-    expect(summary).toContain("I ran into a bug in HarnessOS 0.1.0-alpha.0");
+    expect(summary).toContain("I ran into a bug in Haros 0.1.0-alpha.0");
     expect(summary).toContain("Engine: codex");
     expect(summary).toContain("At submission: the thread was in an error state");
   });
 
   it.each(FEEDBACK_CATEGORIES)("renders the $label category", ({ value, label, lead }) => {
     const summary = formatFeedbackSummary({ category: value, diagnostics: DIAGNOSTICS });
-    expect(summary.startsWith(`${lead} in HarnessOS`)).toBe(true);
+    expect(summary.startsWith(`${lead} in Haros`)).toBe(true);
     expect(summary).toContain(`Report type: ${label}`);
   });
 });
@@ -63,17 +63,17 @@ describe("GitHub feedback draft", () => {
       details: "The composer stopped responding.",
       context: hostileContext,
       now: new Date("2026-07-15T18:00:00.000Z"),
-      userAgent: "HarnessOS test agent",
+      userAgent: "Haros test agent",
       platform: "MacIntel",
       language: "en-US",
       viewport: { width: 1_440, height: 900 },
     });
     const issue = new URL(buildFeedbackIssueUrl(submission));
 
-    expect(issue.origin + issue.pathname).toBe("https://github.com/piai-lab/HarnessOS/issues/new");
+    expect(issue.origin + issue.pathname).toBe("https://github.com/piai-lab/Haros/issues/new");
     expect(issue.searchParams.get("title")).toBe("[Bug] The composer stopped responding.");
     expect(issue.searchParams.get("labels")).toBe("bug,needs-triage");
-    expect(issue.searchParams.get("body")).toContain("HarnessOS diagnostics");
+    expect(issue.searchParams.get("body")).toContain("Haros diagnostics");
     expect(issue.href).not.toContain("secret-token");
     expect(issue.href).not.toContain("private%20prompt");
     expect(issue.href).not.toContain("%2Fsecret%2Fproject");

@@ -4,7 +4,7 @@
 import { forwardRef, type ReactNode } from "react";
 import type { ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 
-import { HarnessOSLogo } from "~/components/HarnessOSLogo";
+import { HarosLogo } from "~/components/HarosLogo";
 import { useI18n } from "~/i18n";
 import { ActivityHeatmap, CARD_HEATMAP_INTENSITY_CLASSES } from "./ActivityHeatmap";
 import { formatCompact, formatNumber, formatShortDate } from "./profileFormatting";
@@ -54,8 +54,8 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
           <p className="mt-3 text-xl text-muted-foreground">{t("settings.profileDescription")}</p>
         </div>
         <div className="flex items-center gap-3 text-foreground">
-          <HarnessOSLogo size={30} />
-          <span className="text-2xl tracking-tight">HarnessOS</span>
+          <HarosLogo size={30} />
+          <span className="text-2xl tracking-tight">Haros</span>
         </div>
       </header>
 
@@ -240,7 +240,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
 
       <footer className="mt-auto flex items-center justify-between border-t border-border pt-7 text-sm text-muted-foreground">
         <span>{stats.timezone.today}</span>
-        <span>HarnessOS</span>
+        <span>Haros</span>
       </footer>
     </div>
   );

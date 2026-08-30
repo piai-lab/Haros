@@ -39,10 +39,10 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpHarnessOSMcpServers } from "../../hostGateway/mcpInjection.ts";
+import { buildAcpHarosMcpServers } from "../../hostGateway/mcpInjection.ts";
 import {
-  type HarnessOSHarnessPolicyDeliveryState,
-  takeHarnessOSHarnessPolicyTextPartForEngineSession,
+  type HarosHarnessPolicyDeliveryState,
+  takeHarosHarnessPolicyTextPartForEngineSession,
 } from "../../hostGateway/harnessPolicy.ts";
 import { HostGatewayCredentials } from "../../hostGateway/Services/HostGatewayCredentials.ts";
 import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
@@ -133,11 +133,11 @@ import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
 const ENGINE = "cursor" as const;
 
-export const takeCursorHarnessOSHarnessPolicyTextPart = (
-  state: HarnessOSHarnessPolicyDeliveryState,
+export const takeCursorHarosHarnessPolicyTextPart = (
+  state: HarosHarnessPolicyDeliveryState,
   scopedGatewayConnectionAvailable: boolean,
 ) =>
-  takeHarnessOSHarnessPolicyTextPartForEngineSession(state, {
+  takeHarosHarnessPolicyTextPartForEngineSession(state, {
     scopedGatewayConnectionAvailable,
   });
 const CURSOR_RESUME_VERSION = 1 as const;
@@ -171,7 +171,7 @@ const CURSOR_ACP_SESSION_MODE_ALIASES = {
   approval: ACP_APPROVAL_MODE_ALIASES,
 } as const;
 const CURSOR_PLAN_MODE_PROMPT_PREFIX = [
-  "HarnessOS Cursor plan mode is active.",
+  "Haros Cursor plan mode is active.",
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -742,12 +742,12 @@ export function makeCursorAdapter(
             childProcessSpawner,
             cwd,
             ...(resumeSessionId ? { resumeSessionId } : {}),
-            clientInfo: { name: "HarnessOS", version: "0.0.0" },
+            clientInfo: { name: "Haros", version: "0.0.0" },
             startupTimeouts: CURSOR_ACP_STARTUP_TIMEOUTS,
             ...(hostGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult) =>
-                    buildAcpHarnessOSMcpServers({
+                    buildAcpHarosMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: hostGatewayCredentials.stdioProxy,
@@ -1259,7 +1259,7 @@ export function makeCursorAdapter(
             issue: "Turn requires non-empty text or attachments.",
           });
         }
-        const harnessPolicy = takeCursorHarnessOSHarnessPolicyTextPart(
+        const harnessPolicy = takeCursorHarosHarnessPolicyTextPart(
           ctx,
           hostGatewayCredentials !== undefined,
         );
@@ -1635,7 +1635,7 @@ export function makeCursorAdapter(
           cursorSettings: effectiveAcpSettings,
           childProcessSpawner,
           cwd: process.cwd(),
-          clientInfo: { name: "HarnessOS", version: "0.0.0" },
+          clientInfo: { name: "Haros", version: "0.0.0" },
         });
         const started = yield* runtime.start();
         const models = yield* fetchCursorAcpModelDescriptors(runtime, started.sessionId);
@@ -1726,7 +1726,7 @@ export function makeCursorAdapter(
             runtime,
             targetCwd,
             unsupportedIssue:
-              "This Cursor ACP version does not advertise session/fork; HarnessOS will rebuild the fork from its retained transcript.",
+              "This Cursor ACP version does not advertise session/fork; Haros will rebuild the fork from its retained transcript.",
             requestTimeoutMs: CURSOR_ACP_FORK_TIMEOUT_MS,
             timeoutError: cursorForkTimeoutError,
           });
@@ -1739,7 +1739,7 @@ export function makeCursorAdapter(
             engine: ENGINE,
             operation: "forkThread",
             issue:
-              "The source Cursor session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.",
+              "The source Cursor session has a turn in flight; Haros will rebuild the fork from its retained transcript.",
           });
         }
         const forked = activeSource
@@ -1772,7 +1772,7 @@ export function makeCursorAdapter(
                 childProcessSpawner,
                 cwd: sourceCwd,
                 resumeSessionId: sourceSessionId,
-                clientInfo: { name: "HarnessOS Fork", version: "0.0.0" },
+                clientInfo: { name: "Haros Fork", version: "0.0.0" },
                 startupTimeouts: CURSOR_ACP_STARTUP_TIMEOUTS,
               });
               yield* runtime.start().pipe(

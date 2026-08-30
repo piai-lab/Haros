@@ -82,7 +82,7 @@ function makeBoardInput(overrides: Partial<BuildKanbanBoardInput> = {}): BuildKa
       newThread: "New thread",
       newTerminal: "New terminal",
     },
-    projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "HarnessOS" }],
+    projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "Haros" }],
     threads: [],
     draftThreads: [],
     composerDraftByThreadId: {},
@@ -991,7 +991,7 @@ describe("flattenProjectBoardForOverview", () => {
     const done = columns.done ?? [];
     return {
       projectId: ProjectId.makeUnsafe("project-1"),
-      projectName: "HarnessOS",
+      projectName: "Haros",
       projectKind: "project" as const,
       draft,
       inProgress,

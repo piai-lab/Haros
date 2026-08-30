@@ -253,7 +253,7 @@ type MessagesTimelineRowContent =
       createdAt: string;
       message: ChatMessage;
       // Read-only response metadata used by final-result projections (image-only
-      // responses and HarnessOS creation recaps). These entries render only in
+      // responses and Haros creation recaps). These entries render only in
       // the sibling turn-process row unless they are explicit result receipts.
       turnWorkEntries?: WorkLogEntry[];
       durationStart: string;
@@ -503,7 +503,7 @@ export function deriveTerminalAssistantMessageIds(
 function isOutsideTurnProcessWork(entry: WorkLogEntry): boolean {
   return Boolean(
     entry.automation ||
-    entry.harnessosThreadCreation ||
+    entry.harosThreadCreation ||
     isVisibleGeneratedImageEntry(entry) ||
     entry.attachmentTransferFailures ||
     entry.engineWebSurface?.status === "waiting-for-user",
@@ -722,7 +722,7 @@ export function deriveMessagesTimelineRows(input: {
       latestTimestamp = entry.createdAt;
       if (entry.kind === "work") {
         allWorkEntries.push(entry.entry);
-        if (entry.entry.harnessosThreadCreation) {
+        if (entry.entry.harosThreadCreation) {
           // The structured creation recap is a final result rendered beside
           // the terminal answer; its milestone is metadata, not a second row.
         } else if (isOutsideTurnProcessWork(entry.entry)) {
@@ -959,9 +959,9 @@ function workLogAutomationsEqual(a: WorkLogEntry["automation"], b: WorkLogEntry[
   );
 }
 
-function workLogHarnessOSThreadCreationsEqual(
-  a: WorkLogEntry["harnessosThreadCreation"],
-  b: WorkLogEntry["harnessosThreadCreation"],
+function workLogHarosThreadCreationsEqual(
+  a: WorkLogEntry["harosThreadCreation"],
+  b: WorkLogEntry["harosThreadCreation"],
 ) {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -1124,7 +1124,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&
     workLogSubagentsEqual(a.subagents, b.subagents) &&
     workLogAutomationsEqual(a.automation, b.automation) &&
-    workLogHarnessOSThreadCreationsEqual(a.harnessosThreadCreation, b.harnessosThreadCreation) &&
+    workLogHarosThreadCreationsEqual(a.harosThreadCreation, b.harosThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails)
   );

@@ -36,7 +36,7 @@ import {
 
 const temporaryDirectories: string[] = [];
 const artifact = {
-  path: Path.resolve("/tmp/HarnessOS-update.zip"),
+  path: Path.resolve("/tmp/Haros-update.zip"),
   size: 123,
   sha512: "a".repeat(128),
 } as const;

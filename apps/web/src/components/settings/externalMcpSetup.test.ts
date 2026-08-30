@@ -10,7 +10,7 @@ import {
 } from "./externalMcpSetup";
 
 const stdio = {
-  command: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
+  command: "/Applications/Haros.app/Contents/MacOS/Haros",
   args: [
     "server.js",
     "mcp",
@@ -18,7 +18,7 @@ const stdio = {
     "--integration",
     "mcp_int_example",
     "--home-dir",
-    "/tmp/HarnessOS home",
+    "/tmp/Haros home",
   ],
   env: { ELECTRON_RUN_AS_NODE: "1" },
 };
@@ -29,10 +29,10 @@ describe("external MCP guided setup", () => {
     const claude = buildExternalMcpClientConfiguration("claudeCode", stdio);
 
     expect(codex.value).toBe(
-      "codex mcp add harnessos --env ELECTRON_RUN_AS_NODE=1 -- /Applications/HarnessOS.app/Contents/MacOS/HarnessOS server.js mcp serve --integration mcp_int_example --home-dir '/tmp/HarnessOS home'",
+      "codex mcp add harnessos --env ELECTRON_RUN_AS_NODE=1 -- /Applications/Haros.app/Contents/MacOS/Haros server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Haros home'",
     );
     expect(claude.value).toBe(
-      "claude mcp add --scope user harnessos -e ELECTRON_RUN_AS_NODE=1 -- /Applications/HarnessOS.app/Contents/MacOS/HarnessOS server.js mcp serve --integration mcp_int_example --home-dir '/tmp/HarnessOS home'",
+      "claude mcp add --scope user harnessos -e ELECTRON_RUN_AS_NODE=1 -- /Applications/Haros.app/Contents/MacOS/Haros server.js mcp serve --integration mcp_int_example --home-dir '/tmp/Haros home'",
     );
     expect(`${codex.value}${claude.value}`).not.toContain("syn_mcp_v1_");
   });
@@ -50,15 +50,15 @@ describe("external MCP guided setup", () => {
   it("builds terminal commands for PowerShell on Windows", () => {
     const codex = buildExternalMcpClientConfiguration("codex", stdio, "Win32");
     expect(codex.value).toBe(
-      "& 'codex' 'mcp' 'add' 'harnessos' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/HarnessOS home'",
+      "& 'codex' 'mcp' 'add' 'harnessos' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/Haros.app/Contents/MacOS/Haros' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/Haros home'",
     );
     expect(codex.instruction).toContain("PowerShell");
   });
 
   it("builds a project-specific prompt without exposing implementation identifiers", () => {
-    const prompt = buildExternalMcpExamplePrompt("HarnessOS app");
+    const prompt = buildExternalMcpExamplePrompt("Haros app");
 
-    expect(prompt).toContain('project named "HarnessOS app"');
+    expect(prompt).toContain('project named "Haros app"');
     expect(prompt).toContain("managed worktree");
     expect(prompt).toContain("approval-required");
     expect(prompt).not.toContain("projectId");

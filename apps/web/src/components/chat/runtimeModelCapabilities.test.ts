@@ -26,7 +26,7 @@ describe("resolveRuntimeModelDescriptor", () => {
     ).toBe(runtimeModels[0]);
   });
 
-  it("keeps HarnessOS Agent runtime reasoning options", () => {
+  it("keeps Haros Agent runtime reasoning options", () => {
     const capabilities = getRuntimeAwareModelCapabilities({
       engine: "oa",
       model: "deepseek/deepseek-v4-pro",

@@ -63,8 +63,8 @@ describe("agent tool settings contract", () => {
   });
 });
 
-describe("server-only HarnessOS default prompt settings", () => {
-  it("ignores retired HarnessOS model hints in persisted settings and public patches", () => {
+describe("server-only Haros default prompt settings", () => {
+  it("ignores retired Haros model hints in persisted settings and public patches", () => {
     const retiredKey = ["custom", "Models"].join("");
     const settings = Schema.decodeUnknownSync(ServerSettings)({
       engines: {

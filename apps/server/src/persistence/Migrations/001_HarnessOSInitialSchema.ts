@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-// Fresh HarnessOS baseline. This repository does not import or upgrade
+// Fresh Haros baseline. This repository does not import or upgrade
 // predecessor-product databases; future schema changes start at migration 2.
 const INITIAL_SCHEMA_STATEMENTS = [
   `CREATE TABLE auth_pairing_links (

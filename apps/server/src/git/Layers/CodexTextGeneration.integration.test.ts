@@ -152,7 +152,7 @@ function withFakeCodexEnv<A, E, R>(
       const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-codex-text-" });
       const binDir = yield* makeFakeCodexBinary(tempDir);
       const previousPath = process.env.PATH;
-      const previousHarnessOSHome = process.env.HARNESSOS_HOME;
+      const previousHarosHome = process.env.HARNESSOS_HOME;
       const previousOutput = process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64;
       const previousExitCode = process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE;
       const previousStderr = process.env.HARNESSOS_FAKE_CODEX_STDERR;
@@ -247,7 +247,7 @@ function withFakeCodexEnv<A, E, R>(
 
       return {
         previousPath,
-        previousHarnessOSHome,
+        previousHarosHome,
         previousOutput,
         previousExitCode,
         previousStderr,
@@ -267,10 +267,10 @@ function withFakeCodexEnv<A, E, R>(
     (previous) =>
       Effect.sync(() => {
         process.env.PATH = previous.previousPath;
-        if (previous.previousHarnessOSHome === undefined) {
+        if (previous.previousHarosHome === undefined) {
           delete process.env.HARNESSOS_HOME;
         } else {
-          process.env.HARNESSOS_HOME = previous.previousHarnessOSHome;
+          process.env.HARNESSOS_HOME = previous.previousHarosHome;
         }
 
         if (previous.previousOutput === undefined) {

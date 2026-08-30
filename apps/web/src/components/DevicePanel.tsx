@@ -196,7 +196,7 @@ export default function DevicePanel(props: {
       if (state === "open") seed();
     });
     // Setup progress is the one state nothing pushes. Installing Xcode,
-    // accepting its licence or downloading a runtime all happen outside HarnessOS
+    // accepting its licence or downloading a runtime all happen outside Haros
     // and raise no device event, so a pane opened on the checklist would sit on
     // a stale list and a spinner forever on a perfectly healthy connection.
     // Polling only while the checklist is up and retryable, and only every few
@@ -603,7 +603,7 @@ export default function DevicePanel(props: {
         if (direction === "down") pressButton(hardwareButton);
         return;
       }
-      // Every other Cmd chord belongs to HarnessOS (Cmd+W, Cmd+R, the dock
+      // Every other Cmd chord belongs to Haros (Cmd+W, Cmd+R, the dock
       // shortcuts), so it is deliberately not injected.
       if (event.metaKey || event.ctrlKey) return;
 

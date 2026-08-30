@@ -646,7 +646,7 @@ export const MODEL_OPTIONS_BY_ENGINE = {
     },
   ],
   // Antigravity owns its model catalog. The web app populates this provider from
-  // `agy models` so CLI updates appear without a HarnessOS release.
+  // `agy models` so CLI updates appear without a Haros release.
   antigravity: [],
   grok: [
     {

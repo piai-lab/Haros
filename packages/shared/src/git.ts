@@ -71,7 +71,7 @@ export function resolveAutoFeatureBranchName(
   return resolveUniqueBranchName(existingBranchNames, resolvedBase);
 }
 
-export function buildHarnessOSBranchName(preferredBranch?: string | null): string {
+export function buildHarosBranchName(preferredBranch?: string | null): string {
   const preferred = preferredBranch?.trim() ?? "";
   const separatorIndex = preferred.indexOf("/");
   const existingNamespace =
@@ -85,11 +85,11 @@ export function buildHarnessOSBranchName(preferredBranch?: string | null): strin
   )}`;
 }
 
-export function resolveUniqueHarnessOSBranchName(
+export function resolveUniqueHarosBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string | null,
 ): string {
-  const resolvedBase = buildHarnessOSBranchName(preferredBranch);
+  const resolvedBase = buildHarosBranchName(preferredBranch);
   return resolveUniqueBranchName(existingBranchNames, resolvedBase);
 }
 

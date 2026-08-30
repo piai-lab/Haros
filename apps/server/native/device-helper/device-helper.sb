@@ -86,7 +86,7 @@
   (subpath (param "XCODE_APP"))
   (subpath "/Library/Developer"))
 
-;; Only itself. A bare `(allow signal)` would let the helper SIGKILL the HarnessOS
+;; Only itself. A bare `(allow signal)` would let the helper SIGKILL the Haros
 ;; server, the user's shell, or anything else they own.
 (allow signal (target self))
 (allow sysctl-read)

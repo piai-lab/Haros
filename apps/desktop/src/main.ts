@@ -55,7 +55,7 @@ import { isKeyboardShortcutsHelpChord } from "@harnessos/shared/browserShortcuts
 import { getMacTrafficLightPosition } from "@harnessos/shared/desktopChrome";
 import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@harnessos/shared/deviceHelperCache";
 import {
-  resolveHarnessOSDesktopFlavor,
+  resolveHarosDesktopFlavor,
   harnessOSDesktopIdentity,
 } from "@harnessos/shared/desktopIdentity";
 import { NetService } from "@harnessos/shared/Net";
@@ -276,7 +276,7 @@ const IPC = DESKTOP_IPC_CHANNELS;
 const startupPresentationOwner = makeStartupPresentationOwner();
 const MAX_CLIPBOARD_IMAGE_DATA_URL_LENGTH = 16 * 1024 * 1024;
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
-const desktopFlavor = resolveHarnessOSDesktopFlavor({
+const desktopFlavor = resolveHarosDesktopFlavor({
   isDevelopment,
   requestedFlavor: process.env.HARNESSOS_DESKTOP_FLAVOR,
 });
@@ -336,7 +336,7 @@ const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
-const HARNESSOS_BROWSER_LABEL = "HarnessOS browser";
+const HARNESSOS_BROWSER_LABEL = "Haros browser";
 const DESKTOP_STATUS_ITEM_GUID = "3f07c178-5d42-4f43-8ae4-6c8d7ed286b2";
 const browserPerfLoggingEnabled = process.env.HARNESSOS_BROWSER_PERF === "1";
 
@@ -1143,7 +1143,7 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
     requiresRecovery: () => requiresDesktopMigrationRecovery(paths),
     markerRemains: () => hasPendingDesktopMigrationRecovery(paths),
     choose: async ({ previousFailure }) => {
-      // The user is here because HarnessOS cannot open its database, so the
+      // The user is here because Haros cannot open its database, so the
       // in-app update button is unreachable by definition. A newer build is
       // often the actual fix, and this dialog is the only surface left to
       // offer it from: installing it in place when the updater can reach the
@@ -1170,15 +1170,15 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
       ];
       if (canInstallUpdate) {
         choices.push({
-          label: "Update HarnessOS and restart",
-          detail: "install the newest HarnessOS release, which may already contain the fix",
+          label: "Update Haros and restart",
+          detail: "install the newest Haros release, which may already contain the fix",
           decision: "install-update",
         });
       }
       if (releaseUrl !== null) {
         choices.push({
           label: "Download latest release",
-          detail: `${canInstallUpdate ? "download that release" : "download the latest HarnessOS release"} in a browser`,
+          detail: `${canInstallUpdate ? "download that release" : "download the latest Haros release"} in a browser`,
           decision: "open-release-page",
         });
       }
@@ -1193,16 +1193,16 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
         type: previousFailure === null ? "warning" : "error",
         title:
           previousFailure === null
-            ? "HarnessOS needs to recover its database"
+            ? "Haros needs to recover its database"
             : restoreFailed
               ? "Migration recovery failed"
-              : "HarnessOS could not update itself",
+              : "Haros could not update itself",
         message:
           previousFailure === null
-            ? "HarnessOS stopped a database migration before it could finish safely."
+            ? "Haros stopped a database migration before it could finish safely."
             : restoreFailed
               ? "The saved database backup could not be restored."
-              : "The newest HarnessOS release could not be installed.",
+              : "The newest Haros release could not be installed.",
         detail: `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}You can ${options}. No provider or chat process will start until recovery succeeds.`,
         buttons: choices.map((choice) => choice.label),
         defaultId: 0,
@@ -1377,7 +1377,7 @@ function handleFatalStartupError(stage: string, error: unknown): void {
   console.error(`[desktop] fatal startup error (${stage})`, error);
   if (!isQuitting) {
     isQuitting = true;
-    dialog.showErrorBox("HarnessOS failed to start", `Stage: ${stage}\n${message}${detail}`);
+    dialog.showErrorBox("Haros failed to start", `Stage: ${stage}\n${message}${detail}`);
   }
   if (process.platform === "win32") {
     requestGracefulAppQuit(`fatal startup (${stage})`);
@@ -1541,14 +1541,14 @@ async function checkForUpdatesFromMenu(): Promise<void> {
     void dialog.showMessageBox({
       type: "info",
       title: "You're up to date!",
-      message: `HarnessOS ${updateState.currentVersion} is currently the newest version available.`,
+      message: `Haros ${updateState.currentVersion} is currently the newest version available.`,
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloading" || updateState.status === "available") {
     void dialog.showMessageBox({
       type: "info",
       title: "Update found",
-      message: "HarnessOS is preparing the update in the background.",
+      message: "Haros is preparing the update in the background.",
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloaded") {
@@ -1952,7 +1952,7 @@ function showDesktopNotification(input: {
  * Resolve the Electron userData directory path.
  *
  * Electron derives the default userData path from `productName` in
- * package.json. We override it to a clean lowercase HarnessOS name.
+ * package.json. We override it to a clean lowercase Haros name.
  */
 function resolveUserDataPath(): string {
   const appDataBase = resolveDesktopAppDataBase();
@@ -1970,7 +1970,7 @@ function configureAppIdentity(): void {
     applicationName: APP_DISPLAY_NAME,
     applicationVersion: app.getVersion(),
     version: commitHash ?? "unknown",
-    copyright: `© ${new Date().getFullYear()} HarnessOS`,
+    copyright: `© ${new Date().getFullYear()} Haros`,
   });
 
   if (process.platform === "win32") {
@@ -2433,11 +2433,11 @@ function restartAfterStartupBundleSwap(error: BundleChangedDuringStartupError): 
   void dialog
     .showMessageBox({
       type: "warning",
-      title: "HarnessOS needs to restart",
-      message: "HarnessOS changed while it was opening.",
+      title: "Haros needs to restart",
+      message: "Haros changed while it was opening.",
       detail:
-        "The current process cannot safely read the replaced application bundle. Restart HarnessOS to finish opening with one consistent version.",
-      buttons: ["Restart HarnessOS"],
+        "The current process cannot safely read the replaced application bundle. Restart Haros to finish opening with one consistent version.",
+      buttons: ["Restart Haros"],
       defaultId: 0,
     })
     .catch(() => undefined)
@@ -2489,8 +2489,8 @@ function startBundleSwapWatcher(): void {
     void dialog
       .showMessageBox({
         type: "warning",
-        title: "HarnessOS was replaced on disk",
-        message: "The installed HarnessOS app changed while it was running.",
+        title: "Haros was replaced on disk",
+        message: "The installed Haros app changed while it was running.",
         detail:
           "The interface keeps running from a safeguarded copy, but parts of the app loaded later can still read the replaced file. Restart now to pick up the new version safely.",
         buttons: ["Restart Now", "Later"],
@@ -2659,7 +2659,7 @@ function processInstallMarkerOnStartup(): void {
   }
 
   automaticUpdateActivitySuppressed = true;
-  const message = `HarnessOS restarted, but update ${marker.toVersion} was not installed. Try again.`;
+  const message = `Haros restarted, but update ${marker.toVersion} was not installed. Try again.`;
   setUpdateState(
     reduceDesktopUpdateStateOnInstallRestartFailure(
       updateState,
@@ -3089,7 +3089,7 @@ async function installLatestUpdateForMigrationRecovery(): Promise<string | null>
   }
 
   if (updateState.status === "up-to-date") {
-    return `HarnessOS ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
+    return `Haros ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
   }
   if (updateState.status !== "downloaded") {
     return updateState.message ?? "The update could not be downloaded.";
@@ -3450,7 +3450,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so provider/tool children do not inherit HarnessOS's heap guard.
+// Builds process-local Node args so provider/tool children do not inherit Haros's heap guard.
 function backendNodeArgs(): string[] {
   const configuredMaxOldSpaceMb =
     BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
@@ -3558,7 +3558,7 @@ function backendFailureDialogDetail(reason: string): string {
   const cause = summary.length > 0 ? summary : reason;
   return [
     cause,
-    "HarnessOS paused automatic restarts so a failing backend can't keep respawning in the background.",
+    "Haros paused automatic restarts so a failing backend can't keep respawning in the background.",
     `Log file:\n${Path.join(LOG_DIR, BACKEND_LOG_FILE_NAME)}`,
   ].join("\n\n");
 }
@@ -3587,8 +3587,8 @@ function presentBackendStartupGiveUp(reason: string): void {
     for (;;) {
       const result = await dialog.showMessageBox({
         type: "error",
-        title: "HarnessOS's backend didn't start",
-        message: `HarnessOS's backend failed to start ${BACKEND_MAX_CONSECUTIVE_START_FAILURES} times in a row.`,
+        title: "Haros's backend didn't start",
+        message: `Haros's backend failed to start ${BACKEND_MAX_CONSECUTIVE_START_FAILURES} times in a row.`,
         detail,
         buttons: ["Try again", "Open logs", "Quit"],
         defaultId: 0,
@@ -3627,10 +3627,10 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
     if (block.kind === "migration-recovery-required") {
       const result = await dialog.showMessageBox({
         type: "warning",
-        title: "HarnessOS needs to recover its database",
+        title: "Haros needs to recover its database",
         message: "A database migration did not finish safely.",
         detail:
-          "Restart HarnessOS to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
+          "Restart Haros to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
         buttons: ["Restart and recover", "Quit"],
         defaultId: 0,
         cancelId: 1,
@@ -3647,13 +3647,13 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
 
     const processDetail =
       block.ownerPid === null
-        ? "Another HarnessOS server is already using this database."
-        : `Another HarnessOS server (process ${block.ownerPid}) is already using this database.`;
+        ? "Another Haros server is already using this database."
+        : `Another Haros server (process ${block.ownerPid}) is already using this database.`;
     const result = await dialog.showMessageBox({
       type: "warning",
-      title: "HarnessOS is already running elsewhere",
-      message: "Your local HarnessOS data is in use by another process.",
-      detail: `${processDetail}\n\nStop the other HarnessOS app or development server, then try again. Your data has not been changed.`,
+      title: "Haros is already running elsewhere",
+      message: "Your local Haros data is in use by another process.",
+      detail: `${processDetail}\n\nStop the other Haros app or development server, then try again. Your data has not been changed.`,
       buttons: ["Try again", "Quit"],
       defaultId: 0,
       cancelId: 1,
@@ -4738,13 +4738,13 @@ function presentRendererCrashRecovery(
 
   const message =
     response.cause === "reload-budget-exhausted"
-      ? `HarnessOS's window crashed ${response.crashes} times in a row.`
-      : "HarnessOS's window stopped unexpectedly.";
+      ? `Haros's window crashed ${response.crashes} times in a row.`
+      : "Haros's window stopped unexpectedly.";
   const detail = [
     `The window's renderer process exited (${reason}).`,
     response.cause === "reload-budget-exhausted"
-      ? "HarnessOS paused automatic reloads so a repeating crash can't keep reloading in the background."
-      : "This exit reason repeats on reload, so HarnessOS did not retry automatically.",
+      ? "Haros paused automatic reloads so a repeating crash can't keep reloading in the background."
+      : "This exit reason repeats on reload, so Haros did not retry automatically.",
     `Log file:\n${Path.join(LOG_DIR, DESKTOP_LOG_FILE_NAME)}`,
   ].join("\n\n");
 
@@ -4752,7 +4752,7 @@ function presentRendererCrashRecovery(
     for (;;) {
       const result = await dialog.showMessageBox({
         type: "error",
-        title: "HarnessOS's window stopped",
+        title: "Haros's window stopped",
         message,
         detail,
         buttons: ["Reload", "Open logs", "Quit"],
@@ -4798,7 +4798,7 @@ function configureMediaPermissions(): void {
     },
     {
       // Browser pages are untrusted web origins. They must never inherit the
-      // microphone grant used by HarnessOS's own voice-composer renderer.
+      // microphone grant used by Haros's own voice-composer renderer.
       targetSession: session.fromPartition(BROWSER_SESSION_PARTITION),
       trustedRequester: () => null,
     },
@@ -4890,7 +4890,7 @@ async function bootstrap(): Promise<void> {
   try {
     await ensureBrowserHostPipeServer();
   } catch (error) {
-    console.warn("[HarnessOS browser] Failed to start browser host pipe", error);
+    console.warn("[Haros browser] Failed to start browser host pipe", error);
   }
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");

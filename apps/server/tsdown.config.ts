@@ -1,5 +1,5 @@
 // FILE: tsdown.config.ts
-// Purpose: Builds the HarnessOS server CLI and controls diagnostic source maps.
+// Purpose: Builds the Haros server CLI and controls diagnostic source maps.
 // Layer: Server build config
 // Depends on: tsdown.
 
@@ -24,7 +24,7 @@ export default defineConfig({
   // `jsonc-parser` advertises a UMD file as `main`. Bundling that file into a
   // lazy server chunk preserves its relative `require("./impl/*")` calls while
   // dropping the sibling implementation files, so the packaged Electron/Node
-  // server cannot load the HarnessOS Pi runtime. Keep the package intact and let
+  // server cannot load the Haros Pi runtime. Keep the package intact and let
   // the desktop dependency closure ship it with its relative files.
   external: [/^bun:/u, /^jsonc-parser(?:\/|$)/u],
   sourcemap: buildSourcemap,

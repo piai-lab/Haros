@@ -41,7 +41,7 @@ export function makeBrowserAutomationHost(
   const unavailable = () =>
     new BrowserHostRpcError(
       "unavailable",
-      "The visible HarnessOS browser is only available in the desktop app.",
+      "The visible Haros browser is only available in the desktop app.",
     );
   const runPrivate = <T>(operation: (signal: AbortSignal) => Promise<T>) => {
     if (!pipePath || !capability) return Effect.fail(unavailable());

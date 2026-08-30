@@ -320,7 +320,7 @@ describe("prefetchEngineModelsForNewThread", () => {
     expect(prefetchQuery).not.toHaveBeenCalled();
   });
 
-  it("reuses one HarnessOS discovery when explicit new-thread intent crosses Projects", async () => {
+  it("reuses one Haros discovery when explicit new-thread intent crosses Projects", async () => {
     const listModels = vi.fn(async () => ({
       source: "pi.sdk",
       models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],

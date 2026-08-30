@@ -62,8 +62,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows images written to the HARNESSOS_HOME codex-home-overlay generated_images root", async () => {
-    // Codex app-server is launched with CODEX_HOME pointing at a HarnessOS overlay
-    // directory (see resolveHarnessOSCodexHomeOverlayPath). Generated images therefore
+    // Codex app-server is launched with CODEX_HOME pointing at a Haros overlay
+    // directory (see resolveHarosCodexHomeOverlayPath). Generated images therefore
     // live under <HARNESSOS_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
     // root. The allowlist must still serve them.
@@ -84,7 +84,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousHarnessOSHome = process.env.HARNESSOS_HOME;
+    const previousHarosHome = process.env.HARNESSOS_HOME;
     process.env.HARNESSOS_HOME = harnessosHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
@@ -95,10 +95,10 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
-      if (previousHarnessOSHome === undefined) {
+      if (previousHarosHome === undefined) {
         delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.HARNESSOS_HOME = previousHarnessOSHome;
+        process.env.HARNESSOS_HOME = previousHarosHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }

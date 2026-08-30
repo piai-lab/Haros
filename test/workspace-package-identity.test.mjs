@@ -27,7 +27,7 @@ async function readAdoptedDonorIdentity() {
   return repositoryName;
 }
 
-test("private workspace packages use the HarnessOS namespace without aliases", async () => {
+test("private workspace packages use the stable @harnessos machine namespace without aliases", async () => {
   for (const [relativePath, expectedName] of EXPECTED_WORKSPACE_PACKAGES) {
     const manifest = JSON.parse(await readFile(path.join(root, relativePath), "utf8"));
     assert.equal(manifest.name, expectedName, relativePath);

@@ -1,7 +1,7 @@
 /**
  * Copied-adapted from Percho splash.ts at
  * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
- * HarnessOS deliberately replaces donor allSettled/max-timeout completion with
+ * Haros deliberately replaces donor allSettled/max-timeout completion with
  * readiness reports from the existing transport, settings, Engine, and Composer owners.
  */
 

@@ -150,7 +150,7 @@ describe("browser host RPC client", () => {
             threadId: "thread-engine-surface" as never,
             surfaceId: "surface-opaque-123",
             url: "http://127.0.0.1:43123/?session=private-token",
-            title: "HarnessOS 网络访问",
+            title: "Haros 网络访问",
             expiresAt: Date.now() + 60_000,
           }),
         ).resolves.toEqual({ surfaceId: "surface-opaque-123", tabId: "tab-1" });

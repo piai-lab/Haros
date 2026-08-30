@@ -1,4 +1,4 @@
-# HarnessOS Repository Instructions
+# Haros Repository Instructions
 
 These instructions apply to automated contributors and coding agents working in this repository.
 
@@ -12,7 +12,11 @@ These instructions apply to automated contributors and coding agents working in 
 
 ## Product and architecture
 
-- HarnessOS is the only product identity. OA is the built-in default Engine.
+- Haros is the only product identity. Normal repository and product surfaces do not advertise an
+  internal runtime, donor project, or third-party product as a second brand.
+- Existing machine contracts remain stable: `@harnessos/*`, `HARNESSOS_*`, `.harnessos`,
+  `harnessos://`, and `ai.piai.harnessos`. They are implementation identities, not user-facing
+  product names; do not add aliases, dual reads, or migrations merely to restyle them.
 - Use **Engine** for a complete agent runtime. Use **Provider** only inside a model-service or search
   service domain where it is the accurate upstream concept.
 - `ENGINE_DESCRIPTORS` is the sole owner of Engine identity, registration, display name, capability
@@ -27,8 +31,8 @@ These instructions apply to automated contributors and coding agents working in 
 
 ## User-visible work
 
-- Ship HarnessOS-owned copy in both English and Simplified Chinese in the same change.
-- Keep normal product and repository surfaces focused on HarnessOS and OA. Third-party identities
+- Ship Haros-owned copy in both English and Simplified Chinese in the same change.
+- Keep normal product and repository surfaces focused on Haros. Runtime and third-party identities
   appear only where a functional selector, diagnostic, or legal provenance requires accuracy.
 - Preserve keyboard, focus, responsive, light/dark, reduced-motion, failure, and recovery behavior
   when changing UI.

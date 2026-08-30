@@ -1,7 +1,7 @@
 import {
   DEFAULT_MODEL_BY_ENGINE,
-  HarnessOSCreateThreadsInput,
-  HarnessOSWaitForThreadsInput,
+  HarosCreateThreadsInput,
+  HarosWaitForThreadsInput,
   ENGINE_KINDS,
   type EngineSelection,
   type EngineKind,
@@ -134,16 +134,16 @@ export function buildEngineSelection(
 
 export function decodeCreateThreadsInput(value: unknown) {
   try {
-    return Schema.decodeUnknownSync(HarnessOSCreateThreadsInput)(value);
+    return Schema.decodeUnknownSync(HarosCreateThreadsInput)(value);
   } catch (error) {
-    throw new ToolInputError(`Invalid HarnessOS creation plan: ${errorText(error)}`);
+    throw new ToolInputError(`Invalid Haros creation plan: ${errorText(error)}`);
   }
 }
 
 export function decodeWaitForThreadsInput(value: unknown) {
   try {
-    return Schema.decodeUnknownSync(HarnessOSWaitForThreadsInput)(value);
+    return Schema.decodeUnknownSync(HarosWaitForThreadsInput)(value);
   } catch (error) {
-    throw new ToolInputError(`Invalid HarnessOS wait request: ${errorText(error)}`);
+    throw new ToolInputError(`Invalid Haros wait request: ${errorText(error)}`);
   }
 }

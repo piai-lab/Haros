@@ -14,7 +14,7 @@ const defaultPromptInput = (content: string) => ({
   content,
 });
 
-describe("HarnessOS Agent prompt contracts", () => {
+describe("Haros Agent prompt contracts", () => {
   it("accepts product intents without accepting renderer-selected paths", () => {
     expect(
       Schema.decodeUnknownSync(OAAgentPromptMutationInput)({

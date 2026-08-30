@@ -141,7 +141,7 @@ export function makeCursorSafeSnapshotLiveStream<Snapshot, E>(input: {
           return yield* new WsRpcError({
             message:
               `Orchestration snapshot is still ${replayCount} events behind after a restart; ` +
-              "the snapshot fence is not advancing. Restart HarnessOS or repair local state.",
+              "the snapshot fence is not advancing. Restart Haros or repair local state.",
             code: "ORCHESTRATION_SNAPSHOT_STALLED",
             retryable: false,
           });

@@ -1,10 +1,10 @@
 // FILE: skillsCatalog.ts
 // Purpose: Generic Agent Skill discovery primitives (frontmatter parsing, SKILL.md
-//          walking) plus the selected Engine's native skill roots and HarnessOS
+//          walking) plus the selected Engine's native skill roots and Haros
 //          Library skills. Distinct same-named files retain their own identity.
 // Layer: Server engine discovery helper
 // Exports: parseSkillFrontmatter, collectSkillsFromRoots, discoverSkillsCatalog,
-//          mergeSkillsIntoCatalog, filterDisabledSkills, ensureHarnessOSSkillsDir
+//          mergeSkillsIntoCatalog, filterDisabledSkills, ensureHarosSkillsDir
 
 import { existsSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
@@ -349,7 +349,7 @@ export interface SkillsCatalogDiscoveryInput {
   /** Optional workspace cwd; when present, project-level skill folders are included. */
   readonly cwd?: string | null;
   readonly homeDir: string;
-  /** HarnessOS base dir (usually `~/.harnessos`); skills live in `{base}/skills`. */
+  /** Haros base dir (usually `~/.harnessos`); skills live in `{base}/skills`. */
   readonly harnessosBaseDir: string;
   /** Engine whose native copies should win when the same skill exists in several roots. */
   readonly engine?: EngineKind | null;
@@ -360,8 +360,8 @@ export interface SkillsCatalogDiscoveryInput {
 }
 
 export interface SkillsCatalogRootInput extends SkillsCatalogDiscoveryInput {
-  /** Native engine scans can opt out; the catalog itself always includes HarnessOS. */
-  readonly includeHarnessOSRoot?: boolean;
+  /** Native engine scans can opt out; the catalog itself always includes Haros. */
+  readonly includeHarosRoot?: boolean;
 }
 
 const HOME_ORIGIN_ORDER = [
@@ -390,12 +390,12 @@ interface SkillsCatalogCacheEntry {
 
 const skillsCatalogCache = new Map<string, SkillsCatalogCacheEntry>();
 const skillsCatalogInflight = new Map<string, Promise<ReadonlyArray<EngineSkillDescriptor>>>();
-const ensuredHarnessOSSkillsDirs = new Set<string>();
+const ensuredHarosSkillsDirs = new Set<string>();
 
 export function clearSkillsCatalogCacheForTests(): void {
   skillsCatalogCache.clear();
   skillsCatalogInflight.clear();
-  ensuredHarnessOSSkillsDirs.clear();
+  ensuredHarosSkillsDirs.clear();
 }
 
 export function harnessosSkillsDir(harnessosBaseDir: string): string {
@@ -403,14 +403,14 @@ export function harnessosSkillsDir(harnessosBaseDir: string): string {
 }
 
 // Creates the portable skills folder on first use so users have a drop-in target.
-export async function ensureHarnessOSSkillsDir(harnessosBaseDir: string): Promise<string> {
+export async function ensureHarosSkillsDir(harnessosBaseDir: string): Promise<string> {
   const dir = harnessosSkillsDir(harnessosBaseDir);
-  if (ensuredHarnessOSSkillsDirs.has(dir)) {
+  if (ensuredHarosSkillsDirs.has(dir)) {
     return dir;
   }
   try {
     await fs.mkdir(dir, { recursive: true });
-    ensuredHarnessOSSkillsDirs.add(dir);
+    ensuredHarosSkillsDirs.add(dir);
   } catch {
     // Discovery still works without the folder; reads simply return nothing.
   }
@@ -430,7 +430,7 @@ const SKILL_ORIGIN_ROOTS = {
     projectRootNames: [".harnessos"],
   },
   codex: {
-    // Keep HarnessOS's existing Codex-local root. Official Codex discovery uses
+    // Keep Haros's existing Codex-local root. Official Codex discovery uses
     // `.agents/skills`, which is represented separately by the shared origin.
     homeRoots: (input) => [nodePath.join(input.homeDir, ".codex", "skills")],
     projectRootNames: [".codex"],
@@ -497,7 +497,7 @@ function projectRootNamesForOrigin(origin: SkillsHomeOrigin): readonly string[] 
 }
 
 // Keep each selected Engine's documented compatible native roots together. The
-// HarnessOS Library root is added separately; unrelated Engine homes stay out.
+// Haros Library root is added separately; unrelated Engine homes stay out.
 function preferredOriginsForProvider(
   engine: EngineKind | null | undefined,
 ): ReadonlyArray<SkillsHomeOrigin> {
@@ -506,16 +506,16 @@ function preferredOriginsForProvider(
 
 function orderedOriginsForProvider(
   engine: EngineKind | null | undefined,
-  includeHarnessOSRoot = true,
+  includeHarosRoot = true,
   includeRemainingOrigins = true,
 ): SkillsHomeOrigin[] {
   const preferred = preferredOriginsForProvider(engine);
   const ordered = [...preferred];
-  if (includeHarnessOSRoot && !ordered.includes("oa")) {
+  if (includeHarosRoot && !ordered.includes("oa")) {
     ordered.push("oa");
   }
   if (!includeRemainingOrigins) {
-    return ordered.filter((origin) => includeHarnessOSRoot || origin !== "oa");
+    return ordered.filter((origin) => includeHarosRoot || origin !== "oa");
   }
   for (const origin of HOME_ORIGIN_ORDER) {
     // Stock Pi owns `.pi`. Do not enumerate its roots until the user has
@@ -523,7 +523,7 @@ function orderedOriginsForProvider(
     if (origin === "pi" && engine !== "pi") {
       continue;
     }
-    if (!includeHarnessOSRoot && origin === "oa") {
+    if (!includeHarosRoot && origin === "oa") {
       continue;
     }
     if (!ordered.includes(origin)) {
@@ -583,7 +583,7 @@ export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
     input,
     orderedOriginsForProvider(
       input.engine,
-      input.includeHarnessOSRoot !== false,
+      input.includeHarosRoot !== false,
       input.engine === null || input.engine === undefined,
     ),
   );
@@ -617,7 +617,7 @@ export async function discoverSkillsCatalog(
   }
 
   const scan = (async () => {
-    await ensureHarnessOSSkillsDir(input.harnessosBaseDir);
+    await ensureHarosSkillsDir(input.harnessosBaseDir);
     const includesClaudeNativeRoots =
       input.engine === null ||
       input.engine === undefined ||
@@ -678,7 +678,7 @@ export function mergeSkillsIntoCatalog(input: {
   return [...byIdentity.values()];
 }
 
-export function isHarnessOSLibrarySkill(skill: EngineSkillDescriptor): boolean {
+export function isHarosLibrarySkill(skill: EngineSkillDescriptor): boolean {
   if (skill.scope === "oa") {
     return true;
   }
@@ -694,6 +694,6 @@ export function filterDisabledSkills(
   }
   const disabled = new Set(disabledNames.map((name) => skillNameKey(name)));
   return skills.filter(
-    (skill) => !isHarnessOSLibrarySkill(skill) || !disabled.has(skillNameKey(skill.name)),
+    (skill) => !isHarosLibrarySkill(skill) || !disabled.has(skillNameKey(skill.name)),
   );
 }

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { createOAPlanModeController, makeOAPlanModeExtension } from "./oaPlanModeExtension.ts";
 
-describe("HarnessOS Plan mode tool guard", () => {
+describe("Haros Plan mode tool guard", () => {
   it("allows only the fixed read, Product interaction, task, and Web Access tools", async () => {
     const controller = createOAPlanModeController();
     const extension = makeOAPlanModeExtension(controller) as Exclude<

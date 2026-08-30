@@ -165,7 +165,7 @@ function parseConfig(
     throw new WebSearchConfigError(
       "future-schema",
       configPath,
-      "Web search settings were written by a newer HarnessOS version. Update HarnessOS before editing this file.",
+      "Web search settings were written by a newer Haros version. Update Haros before editing this file.",
     );
   }
   return { config, schemaVersion };
@@ -372,7 +372,7 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
     if (!before.isDirectory() || before.isSymbolicLink()) {
       throw unsafePath(
         configPath,
-        "The HarnessOS Agent settings directory is not a private directory.",
+        "The Haros Agent settings directory is not a private directory.",
       );
     }
 
@@ -384,7 +384,7 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
         if (!opened.isDirectory() || !sameIdentity(before, opened)) {
           throw unsafePath(
             configPath,
-            "The HarnessOS Agent settings directory changed while it was being opened.",
+            "The Haros Agent settings directory changed while it was being opened.",
           );
         }
         fchmodSync(fd, PRIVATE_DIRECTORY_MODE);
@@ -398,19 +398,19 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
       if (!after.isDirectory() || after.isSymbolicLink() || !sameIdentity(before, after)) {
         throw unsafePath(
           configPath,
-          "The HarnessOS Agent settings directory changed while it was being secured.",
+          "The Haros Agent settings directory changed while it was being secured.",
         );
       }
       if (agentDirectoryIdentity && !sameIdentity(agentDirectoryIdentity, after)) {
         throw unsafePath(
           configPath,
-          "The HarnessOS Agent settings directory was replaced during this process.",
+          "The Haros Agent settings directory was replaced during this process.",
         );
       }
       if (agentDirectoryPhysicalPath && agentDirectoryPhysicalPath !== physical) {
         throw unsafePath(
           configPath,
-          "The HarnessOS Agent settings directory resolved to a different location.",
+          "The Haros Agent settings directory resolved to a different location.",
         );
       }
       agentDirectoryIdentity ??= { dev: after.dev, ino: after.ino };
@@ -420,7 +420,7 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
       if (["ELOOP", "ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) {
         throw unsafePath(
           configPath,
-          "The HarnessOS Agent settings directory changed while it was being secured.",
+          "The Haros Agent settings directory changed while it was being secured.",
         );
       }
       throw error;

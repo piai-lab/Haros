@@ -12,16 +12,16 @@ import {
   scopeDroidRuntimeItemIdForTurn,
   scopeDroidToolCallStateForTurn,
   shouldIgnoreDroidInterrupt,
-  takeDroidHarnessOSHarnessPolicyTextPart,
+  takeDroidHarosHarnessPolicyTextPart,
 } from "./DroidAdapter.ts";
 
-describe("Droid HarnessOS harness policy", () => {
+describe("Droid Haros harness policy", () => {
   it("delivers private scoped host context once", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
-    expect(takeDroidHarnessOSHarnessPolicyTextPart(state, true)?.text).toContain(
+    expect(takeDroidHarosHarnessPolicyTextPart(state, true)?.text).toContain(
       HARNESSOS_HARNESS_POLICY_MARKER,
     );
-    expect(takeDroidHarnessOSHarnessPolicyTextPart(state, true)).toBeNull();
+    expect(takeDroidHarosHarnessPolicyTextPart(state, true)).toBeNull();
   });
 });
 

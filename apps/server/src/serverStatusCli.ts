@@ -3,7 +3,7 @@ const DEFAULT_SERVER_STATUS_TIMEOUT_MS = 3_000;
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export interface HarnessOSServerHealthSnapshot {
+export interface HarosServerHealthSnapshot {
   readonly status: string;
   readonly startupReady: boolean;
   readonly pushBusReady?: boolean;
@@ -21,12 +21,12 @@ export interface HarnessOSServerHealthSnapshot {
   };
 }
 
-export type HarnessOSServerStatusResult =
+export type HarosServerStatusResult =
   | {
       readonly reachable: true;
       readonly ready: boolean;
       readonly url: string;
-      readonly health: HarnessOSServerHealthSnapshot;
+      readonly health: HarosServerHealthSnapshot;
     }
   | {
       readonly reachable: false;
@@ -35,7 +35,7 @@ export type HarnessOSServerStatusResult =
       readonly error: string;
     };
 
-export interface FetchHarnessOSServerStatusOptions {
+export interface FetchHarosServerStatusOptions {
   readonly url?: string;
   readonly timeoutMs?: number;
   readonly fetch?: FetchLike;
@@ -68,7 +68,7 @@ function healthUrlFromBaseUrl(rawUrl: string): {
   return { displayUrl, url: url.toString() };
 }
 
-function decodeHealthSnapshot(value: unknown): HarnessOSServerHealthSnapshot | null {
+function decodeHealthSnapshot(value: unknown): HarosServerHealthSnapshot | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
@@ -76,12 +76,12 @@ function decodeHealthSnapshot(value: unknown): HarnessOSServerHealthSnapshot | n
   if (typeof snapshot.status !== "string" || typeof snapshot.startupReady !== "boolean") {
     return null;
   }
-  return snapshot as unknown as HarnessOSServerHealthSnapshot;
+  return snapshot as unknown as HarosServerHealthSnapshot;
 }
 
-export async function fetchHarnessOSServerStatus(
-  options: FetchHarnessOSServerStatusOptions = {},
-): Promise<HarnessOSServerStatusResult> {
+export async function fetchHarosServerStatus(
+  options: FetchHarosServerStatusOptions = {},
+): Promise<HarosServerStatusResult> {
   const rawUrl = options.url ?? DEFAULT_SERVER_STATUS_URL;
   let healthUrl: { readonly displayUrl: string; readonly url: string };
   try {
@@ -138,7 +138,7 @@ export async function fetchHarnessOSServerStatus(
   }
 }
 
-export function formatHarnessOSServerStatus(result: HarnessOSServerStatusResult): string {
+export function formatHarosServerStatus(result: HarosServerStatusResult): string {
   if (!result.reachable) {
     return `Haros server: unreachable\nURL: ${result.url}\nError: ${result.error}`;
   }

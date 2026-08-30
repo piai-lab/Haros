@@ -13,11 +13,11 @@ const secondGroupId = SpaceId.makeUnsafe("group-release");
 const project: Project = {
   id: ProjectId.makeUnsafe("project-harnessos"),
   kind: "project",
-  name: "HarnessOS",
-  remoteName: "HarnessOS",
-  folderName: "HarnessOS",
+  name: "Haros",
+  remoteName: "Haros",
+  folderName: "Haros",
   localName: null,
-  cwd: "/tmp/HarnessOS",
+  cwd: "/tmp/Haros",
   defaultEngineSelection: null,
   expanded: true,
   spaceId: null,
@@ -109,7 +109,7 @@ describe("ConversationGroupPickerDialog", () => {
     await expect
       .element(page.getByRole("checkbox", { name: /Polish conversation groups/ }))
       .toHaveAttribute("aria-checked", "true");
-    expect(document.body.textContent).toContain("HarnessOS");
+    expect(document.body.textContent).toContain("Haros");
   });
 
   it("reports a partial multi-conversation save and restores last confirmed selections", async () => {

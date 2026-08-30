@@ -1,5 +1,5 @@
-// FILE: HarnessOSLogoButton.tsx
-// Purpose: Expose the canonical HarnessOS mark as an accessible Soft Orbit button.
+// FILE: HarosLogoButton.tsx
+// Purpose: Expose the canonical Haros mark as an accessible Soft Orbit button.
 // Layer: Shared app branding primitive
 
 import { useEffect, useRef, type ButtonHTMLAttributes, type PointerEvent } from "react";
@@ -9,9 +9,9 @@ import {
   type SoftOrbitController,
   type SoftOrbitSnapshot,
 } from "~/motion/softOrbit";
-import { HarnessOSLogo } from "./HarnessOSLogo";
+import { HarosLogo } from "./HarosLogo";
 
-export interface HarnessOSLogoButtonProps extends Omit<
+export interface HarosLogoButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
 > {
@@ -21,7 +21,7 @@ export interface HarnessOSLogoButtonProps extends Omit<
   readonly onMotionStateChange?: (snapshot: SoftOrbitSnapshot) => void;
 }
 
-export function HarnessOSLogoButton({
+export function HarosLogoButton({
   size = 32,
   duration = 650,
   reducedMotion = "auto",
@@ -32,10 +32,10 @@ export function HarnessOSLogoButton({
   onPointerDown,
   onPointerLeave,
   onPointerCancel,
-  "aria-label": ariaLabel = "Activate HarnessOS",
+  "aria-label": ariaLabel = "Activate Haros",
   type = "button",
   ...buttonProps
-}: HarnessOSLogoButtonProps) {
+}: HarosLogoButtonProps) {
   const markRef = useRef<HTMLSpanElement>(null);
   const controllerRef = useRef<SoftOrbitController | null>(null);
   const stateChangeRef = useRef(onMotionStateChange);
@@ -82,7 +82,7 @@ export function HarnessOSLogoButton({
       }}
     >
       <span ref={markRef} className="harnessos-logo-motion-target" aria-hidden="true">
-        <HarnessOSLogo size={size} />
+        <HarosLogo size={size} />
       </span>
     </button>
   );

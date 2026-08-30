@@ -16,7 +16,7 @@ const EngineSettingsBase = {
   customModels: CustomModels,
 };
 
-export const HarnessOSServerEngineSettings = Schema.Struct({
+export const HarosServerEngineSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultPrompt: Schema.NullOr(
     Schema.String.check(
@@ -25,7 +25,7 @@ export const HarnessOSServerEngineSettings = Schema.Struct({
     ),
   ).pipe(Schema.withDecodingDefault(() => null)),
 });
-export type HarnessOSServerEngineSettings = typeof HarnessOSServerEngineSettings.Type;
+export type HarosServerEngineSettings = typeof HarosServerEngineSettings.Type;
 
 export const CodexServerEngineSettings = Schema.Struct({
   ...EngineSettingsBase,
@@ -122,7 +122,7 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarnessOSServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: HarosServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -140,12 +140,12 @@ export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
-const HarnessOSServerEngineSettingsView = Schema.Struct({
+const HarosServerEngineSettingsView = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
 });
 
 // Public settings deliberately omit the customized default prompt. Its only
-// projection and mutation authority is the dedicated HarnessOS prompt contract.
+// projection and mutation authority is the dedicated Haros prompt contract.
 export const ServerSettingsView = Schema.Struct({
   defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -159,7 +159,7 @@ export const ServerSettingsView = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarnessOSServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: HarosServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),

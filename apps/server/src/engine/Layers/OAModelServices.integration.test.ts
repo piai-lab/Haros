@@ -1145,7 +1145,7 @@ describe("OAModelServicesLive", () => {
     });
     expect(JSON.stringify(result)).not.toContain("test-code");
     expect(JSON.stringify(result)).not.toContain("refresh-secret");
-    expect(callbackHtml).toContain("HarnessOS");
+    expect(callbackHtml).toContain("Haros");
     expect(callbackHtml).toContain("Authorization from OpenAI Codex was received");
     expect(callbackHtml).toContain("已收到来自 OpenAI Codex 的授权");
     expect(callbackHtml).not.toContain("Signed in");
@@ -2813,7 +2813,7 @@ describe("OAModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("persisted-custom-key");
   });
 
-  it("refuses to hot-remove a custom service owned by a ready HarnessOS session", async () => {
+  it("refuses to hot-remove a custom service owned by a ready Haros session", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");

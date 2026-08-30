@@ -22,9 +22,7 @@ describe("bundleSignatureFromStats", () => {
 
 describe("isWatchableBundlePath", () => {
   it("accepts a packaged asar app path", () => {
-    expect(isWatchableBundlePath("/Applications/HarnessOS.app/Contents/Resources/app.asar")).toBe(
-      true,
-    );
+    expect(isWatchableBundlePath("/Applications/Haros.app/Contents/Resources/app.asar")).toBe(true);
   });
 
   it("rejects an unpackaged directory app path", () => {

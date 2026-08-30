@@ -85,7 +85,7 @@ describe("localServerMonitor", () => {
     );
   });
 
-  it("keeps dev servers and ignores Electron/HarnessOS-style application listeners", () => {
+  it("keeps dev servers and ignores Electron/Haros-style application listeners", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
@@ -96,14 +96,14 @@ describe("localServerMonitor", () => {
     expect(
       isIgnoredLocalServerProcess({
         command: "Electron",
-        args: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
+        args: "/Applications/Haros.app/Contents/MacOS/Haros",
         ports: [61449],
       }),
     ).toBe(true);
     expect(
       isIgnoredLocalServerProcess({
-        command: "HarnessOS",
-        args: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
+        command: "Haros",
+        args: "/Applications/Haros.app/Contents/MacOS/Haros",
         ports: [61449],
       }),
     ).toBe(true);

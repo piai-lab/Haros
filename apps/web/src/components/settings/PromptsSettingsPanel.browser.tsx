@@ -110,7 +110,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "Haros built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -217,7 +217,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "Haros built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -243,7 +243,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "Haros built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -260,7 +260,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "Customized for HarnessOS Agent. Saved changes apply to tasks and conversations started afterward.",
+          "Customized for Haros Agent. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -275,7 +275,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "Haros built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();

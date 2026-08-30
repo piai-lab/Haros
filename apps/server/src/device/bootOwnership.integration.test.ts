@@ -74,7 +74,7 @@ describe("deciding which boots to reclaim", () => {
   });
 
   it("leaves a live sibling server's devices alone", () => {
-    // Two HarnessOS processes can run at once; the older record belongs to the
+    // Two Haros processes can run at once; the older record belongs to the
     // one still running, and shutting its simulators down would be a bug.
     expect(orphanedBootUdids({ pid: 123, udids: ["A"] }, ["A"], alive)).toEqual([]);
   });

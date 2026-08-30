@@ -1,5 +1,5 @@
 // FILE: goalMode.ts
-// Purpose: Injects HarnessOS's engine-independent persistent task objective.
+// Purpose: Injects Haros's engine-independent persistent task objective.
 // Layer: Engine prompt policy
 
 /** Exact Gateway closure named by the synthetic goal-continuation prompt. */
@@ -64,7 +64,7 @@ export function buildGoalContinuationInput(): string {
 
 The goal persists across turns. Make concrete progress toward the full objective and do not redefine success around a smaller task that fits this turn.
 
-Before claiming completion, inspect the current state and verify every requirement against authoritative evidence. When the full objective is complete, call harnessos_set_thread_goal with achieved: true before ending the turn so HarnessOS can stop the continuation loop and record the achievement.
+Before claiming completion, inspect the current state and verify every requirement against authoritative evidence. When the full objective is complete, call harnessos_set_thread_goal with achieved: true before ending the turn so Haros can stop the continuation loop and record the achievement.
 
-If the same external blocker prevents meaningful progress for three consecutive goal turns, call harnessos_set_thread_goal with blocked: true so HarnessOS pauses the goal instead of looping. Do not mark the goal blocked merely because the work is difficult, incomplete, or would benefit from clarification.`;
+If the same external blocker prevents meaningful progress for three consecutive goal turns, call harnessos_set_thread_goal with blocked: true so Haros pauses the goal instead of looping. Do not mark the goal blocked merely because the work is difficult, incomplete, or would benefit from clarification.`;
 }

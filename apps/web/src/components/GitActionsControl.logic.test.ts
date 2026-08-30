@@ -2144,7 +2144,7 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("resolveDefaultCreateBranchName", () => {
-  it("uses HarnessOS as the default namespace", () => {
+  it("uses Haros as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
     assert.equal(branch, "harnessos/fix-toast-copy");
   });
@@ -2154,12 +2154,12 @@ describe("resolveDefaultCreateBranchName", () => {
     assert.equal(branch, "harnessos/refine-toolbar-actions");
   });
 
-  it("preserves nested namespaces under HarnessOS", () => {
+  it("preserves nested namespaces under Haros", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
     assert.equal(branch, "harnessos/feature/refine-toolbar-actions");
   });
 
-  it("increments suffix when the HarnessOS branch already exists", () => {
+  it("increments suffix when the Haros branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
       ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
       "fix toast copy",

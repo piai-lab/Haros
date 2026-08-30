@@ -4,7 +4,7 @@ Private workspace component for OA web access. It is composed explicitly when an
 and is not registered in other Engines.
 
 This package owns search and fetch routing, bounded result storage, source projection, and its
-credential-blind settings contract. HarnessOS owns the Timeline presentation and Session lifecycle;
+credential-blind settings contract. Haros owns the Timeline presentation and Session lifecycle;
 HostGateway remains the authority for local system capabilities.
 
 The package does not expose an npm release, install command, global state root, or ambient runtime

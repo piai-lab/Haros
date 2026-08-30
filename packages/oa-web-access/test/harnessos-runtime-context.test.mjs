@@ -87,7 +87,7 @@ test("Pi callbacks, promises, timers, and external EventEmitters retain exact in
   assert.equal(await rightResult, rightContext.configService.configPath);
 });
 
-test("HarnessOS injected config never falls back to the upstream Pi directory", async () => {
+test("Haros injected config never falls back to the upstream Pi directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "harnessos-web-config-boundary-"));
   const previous = process.env.PI_CODING_AGENT_DIR;
   process.env.PI_CODING_AGENT_DIR = join(root, "legacy-pi");
@@ -107,7 +107,7 @@ test("HarnessOS injected config never falls back to the upstream Pi directory", 
   }
 });
 
-test("HarnessOS profile ignores retained upstream remote Curator binding", async () => {
+test("Haros profile ignores retained upstream remote Curator binding", async () => {
   const root = await mkdtemp(join(tmpdir(), "harnessos-web-curator-bind-"));
   const service = createWebSearchConfigService(join(root, "agent"));
   const initial = service.ensureDefault();

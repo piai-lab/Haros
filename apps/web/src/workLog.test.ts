@@ -1151,12 +1151,12 @@ describe("deriveWorkLogEntries", () => {
         id: "automation-created",
         createdAt: "2026-02-23T00:00:05.000Z",
         kind: "automation.created",
-        summary: "Created automation: Watch HarnessOS PR 231 - Every 5m",
+        summary: "Created automation: Watch Haros PR 231 - Every 5m",
         tone: "info",
         payload: {
           source: "chat-composer",
           automationId: "automation-7",
-          automationName: "Watch HarnessOS PR 231",
+          automationName: "Watch Haros PR 231",
           cadenceLabel: "Every 5m",
         },
       }),
@@ -1170,7 +1170,7 @@ describe("deriveWorkLogEntries", () => {
     expect(automationEntry).toBeDefined();
     expect(automationEntry?.automation).toEqual({
       id: "automation-7",
-      name: "Watch HarnessOS PR 231",
+      name: "Watch Haros PR 231",
       cadenceLabel: "Every 5m",
     });
   });
@@ -1201,14 +1201,14 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("exposes a engine-independent HarnessOS thread creation recap", () => {
+  it("exposes a engine-independent Haros thread creation recap", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "harnessos-created-threads",
         createdAt: "2026-02-23T00:00:05.000Z",
         turnId: "turn-1",
         kind: "harnessos.threads.created",
-        summary: "Created 2 HarnessOS threads",
+        summary: "Created 2 Haros threads",
         tone: "info",
         payload: {
           operationId: "gateway:create:two-workers",
@@ -1237,7 +1237,7 @@ describe("deriveWorkLogEntries", () => {
     ];
 
     const [entry] = deriveWorkLogEntries(activities, TurnId.makeUnsafe("turn-1"));
-    expect(entry?.harnessosThreadCreation).toEqual({
+    expect(entry?.harosThreadCreation).toEqual({
       operationId: "gateway:create:two-workers",
       requestedCount: 2,
       createdCount: 2,
@@ -1395,7 +1395,7 @@ describe("deriveWorkLogEntries", () => {
         id: "recovery-first",
         createdAt: "2026-02-23T00:00:01.000Z",
         kind: "engine.runtime.reconciled",
-        summary: "HarnessOS recovered a stale running state",
+        summary: "Haros recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
       }),
@@ -1409,7 +1409,7 @@ describe("deriveWorkLogEntries", () => {
         id: "recovery-repeat",
         createdAt: "2026-02-23T00:00:03.000Z",
         kind: "engine.runtime.reconciled",
-        summary: "HarnessOS recovered a stale running state",
+        summary: "Haros recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
       }),
@@ -3206,11 +3206,11 @@ describe("deriveWorkLogEntries", () => {
           id: "cancelled-harnessos-start",
           createdAt: "2026-02-23T00:00:01.000Z",
           kind: "tool.started",
-          summary: "HarnessOS create thread",
+          summary: "Haros create thread",
           turnId,
           payload: {
             itemType: "mcp_tool_call",
-            title: "HarnessOS create thread",
+            title: "Haros create thread",
             data: {
               toolCallId: "cancelled-harnessos-call",
               toolName: "mcp__harnessos__harnessos_create_thread",
@@ -3241,10 +3241,10 @@ describe("deriveWorkLogEntries", () => {
           id: "interrupted-tool",
           createdAt: "2026-02-23T00:00:01.000Z",
           kind: "tool.completed",
-          summary: "HarnessOS create thread",
+          summary: "Haros create thread",
           payload: {
             itemType: "mcp_tool_call",
-            title: "HarnessOS create thread",
+            title: "Haros create thread",
             status: "interrupted",
             data: {
               toolCallId: "interrupted-harnessos-call",
@@ -3508,7 +3508,7 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("presents HarnessOS MCP activity consistently across engine item shapes", () => {
+  it("presents Haros MCP activity consistently across engine item shapes", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "harnessos-mcp-create-thread-progress",
@@ -3529,7 +3529,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "Tool call",
         payload: {
           itemType: "dynamic_tool_call",
-          title: "HarnessOS__harnessos_send_message",
+          title: "Haros__harnessos_send_message",
           data: {
             toolCallId: "harnessos-dynamic-send",
           },
@@ -3541,7 +3541,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "File change",
         payload: {
           itemType: "file_change",
-          title: "mcp__HarnessOS__harnessos_list_threads",
+          title: "mcp__Haros__harnessos_list_threads",
           data: {
             toolCallId: "harnessos-file-change-list",
           },
@@ -3552,15 +3552,15 @@ describe("deriveWorkLogEntries", () => {
     const entries = deriveWorkLogEntries(activities, undefined);
     expect(entries.map((entry) => [entry.itemType, entry.toolTitle])).toEqual(
       expect.arrayContaining([
-        ["mcp_tool_call", "HarnessOS is creating a thread"],
-        ["dynamic_tool_call", "HarnessOS is sending a message"],
-        ["file_change", "HarnessOS is listing threads"],
+        ["mcp_tool_call", "Haros is creating a thread"],
+        ["dynamic_tool_call", "Haros is sending a message"],
+        ["file_change", "Haros is listing threads"],
       ]),
     );
     expect(entries).toHaveLength(3);
   });
 
-  it("preserves a failed HarnessOS MCP result as a failed activity sentence", () => {
+  it("preserves a failed Haros MCP result as a failed activity sentence", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
@@ -3588,7 +3588,7 @@ describe("deriveWorkLogEntries", () => {
 
     expect(entry).toMatchObject({
       toolStatus: "failed",
-      toolTitle: "HarnessOS couldn't create threads",
+      toolTitle: "Haros couldn't create threads",
       detail: "Invalid target options",
     });
   });

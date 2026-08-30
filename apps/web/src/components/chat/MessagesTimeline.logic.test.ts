@@ -573,7 +573,7 @@ describe("computeStableMessagesTimelineRows", () => {
             tone: "info",
             automation: {
               id: "automation-7",
-              name: "Watch HarnessOS PR 231",
+              name: "Watch Haros PR 231",
               cadenceLabel: "Every 5m",
             },
           },
@@ -1642,11 +1642,11 @@ describe("deriveMessagesTimelineRows", () => {
     expect(processSignature(rows)).toEqual(["narration:a1", "work:w1"]);
   });
 
-  it("preserves HarnessOS tool calls when a separate creation recap is present", () => {
+  it("preserves Haros tool calls when a separate creation recap is present", () => {
     const createTool = workEntry(
       "harnessos-create-tool",
       "2026-01-01T00:00:01Z",
-      "HarnessOS created threads",
+      "Haros created threads",
     );
     const creationRecap: TimelineEntry = {
       id: "entry-harnessos-create-recap",
@@ -1655,9 +1655,9 @@ describe("deriveMessagesTimelineRows", () => {
       entry: {
         id: "harnessos-create-recap",
         createdAt: "2026-01-01T00:00:02Z",
-        label: "Created 2 HarnessOS threads",
+        label: "Created 2 Haros threads",
         tone: "info",
-        harnessosThreadCreation: {
+        harosThreadCreation: {
           operationId: "gateway:create:two",
           requestedCount: 2,
           createdCount: 2,

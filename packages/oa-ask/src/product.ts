@@ -132,7 +132,7 @@ export function validateAskUserToolInput(input: AskUserToolInput): AskUserToolIn
       }
       if (option.value === ASK_USER_RESERVED_CUSTOM_VALUE) {
         throw new AskUserProductValidationError(
-          `Option value "${ASK_USER_RESERVED_CUSTOM_VALUE}" is reserved by HarnessOS.`,
+          `Option value "${ASK_USER_RESERVED_CUSTOM_VALUE}" is reserved by Haros.`,
         );
       }
       if (values.has(option.value) || labels.has(option.label)) {

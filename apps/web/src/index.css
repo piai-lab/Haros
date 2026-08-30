@@ -1461,8 +1461,8 @@ label:has(> select#reasoning-effort) select {
     0 1px 4px -2px color-mix(in srgb, var(--color-black, #000) 16%, transparent);
 }
 
-/* Rounded chip holding the HarnessOS mark in the box header, echoing the source
-   file's row gutter badge so the comment reads as "from HarnessOS". */
+/* Rounded chip holding the Haros mark in the box header, echoing the source
+   file's row gutter badge so the comment reads as "from Haros". */
 .editor-file-viewer__comment-badge {
   display: inline-flex;
   align-items: center;
@@ -2538,7 +2538,7 @@ label:has(> select#reasoning-effort) select {
 
 /* Live-status choreography. The hint entry/breathe timing is copied-adapted
    from BitFun commit f9aebc102b21d6d4ac3ffd4088defebf7f4baff1
-   (ProcessingIndicator.scss, MIT). The symmetric tide is HarnessOS-owned.
+   (ProcessingIndicator.scss, MIT). The symmetric tide is Haros-owned.
    Source and rights: LICENSES/bitfun-MIT.txt. */
 .harnessos-thinking-status {
   width: 100%;
@@ -3375,7 +3375,7 @@ diffs-container {
   --picker-option-py: 0.3125rem;
 }
 
-/* Sidebar HarnessOS/Studio surface switcher: tight shell inset, airy option rows.
+/* Sidebar Haros/Studio surface switcher: tight shell inset, airy option rows.
    Composer picker tokens otherwise pin option py to ~1px and win over Tailwind. */
 .sidebar-surface-picker-menu {
   --picker-menu-body-p: 0.25rem;

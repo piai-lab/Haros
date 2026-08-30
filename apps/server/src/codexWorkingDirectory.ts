@@ -6,7 +6,7 @@ import { statSync } from "node:fs";
  * missing Codex installation so the UI can prompt relocate/reconnect.
  */
 export function formatMissingCodexWorkingDirectoryError(cwd: string): string {
-  return `Project working directory no longer exists: ${cwd}. Relocate or reconnect the project in HarnessOS.`;
+  return `Project working directory no longer exists: ${cwd}. Relocate or reconnect the project in Haros.`;
 }
 
 export function assertCodexWorkingDirectoryExists(cwd: string): void {
@@ -14,7 +14,7 @@ export function assertCodexWorkingDirectoryExists(cwd: string): void {
     const stats = statSync(cwd);
     if (!stats.isDirectory()) {
       throw new Error(
-        `Project working directory is not a directory: ${cwd}. Relocate or reconnect the project in HarnessOS.`,
+        `Project working directory is not a directory: ${cwd}. Relocate or reconnect the project in Haros.`,
       );
     }
   } catch (error) {

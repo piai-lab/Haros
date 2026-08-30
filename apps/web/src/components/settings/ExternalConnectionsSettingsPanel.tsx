@@ -264,12 +264,12 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
             }
           />
           <SettingsRow
-            title={t("settings.accessAllHarnessOS")}
-            description={t("settings.accessAllHarnessOSDescription")}
+            title={t("settings.accessAllHaros")}
+            description={t("settings.accessAllHarosDescription")}
             control={
               <Switch
                 checked={allProjects}
-                aria-label={t("settings.accessAllHarnessOS")}
+                aria-label={t("settings.accessAllHaros")}
                 onCheckedChange={setAllProjects}
               />
             }

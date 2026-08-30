@@ -396,7 +396,7 @@ describe("production Effect HTTP routes", () => {
 
     const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app.js"), "globalThis.oa = true;");
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
       const asset = await fetch(`${origin}/assets/app.js`);
@@ -406,7 +406,7 @@ describe("production Effect HTTP routes", () => {
       const fallback = await fetch(`${origin}/chat/thread-id`);
       expect(fallback.status).toBe(200);
       expect(fallback.headers.get("content-type")).toContain("text/html");
-      await expect(fallback.text()).resolves.toContain("HarnessOS shell");
+      await expect(fallback.text()).resolves.toContain("Haros shell");
     });
   });
 
@@ -472,7 +472,7 @@ describe("production Effect HTTP routes", () => {
     const parentDir = makeTempDir("harnessos-effect-static-");
     const staticDir = path.join(parentDir, "static");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     const secretPath = path.join(parentDir, "secret.js");
     writeFileSync(secretPath, "outside root");
     writeFileSync(`${secretPath}.gz`, zlib.gzipSync("outside root"));
@@ -503,7 +503,7 @@ describe("production Effect HTTP routes", () => {
     const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     const source = "globalThis.oa = true;".repeat(64);
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     writeFileSync(path.join(staticDir, "assets", "plain-def456.js"), source);
 
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
@@ -528,7 +528,7 @@ describe("production Effect HTTP routes", () => {
     const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     const source = "globalThis.oa = true;".repeat(64);
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), source);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js.gz"), zlib.gzipSync(source));
 
@@ -565,7 +565,7 @@ describe("production Effect HTTP routes", () => {
   it("marks hashed assets immutable and keeps index.html revalidating", async () => {
     const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), "globalThis.oa = true;");
 
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
@@ -585,7 +585,7 @@ describe("production Effect HTTP routes", () => {
     const parentDir = makeTempDir("harnessos-effect-static-");
     const staticDir = path.join(parentDir, "static");
     mkdirSync(staticDir, { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>Haros shell</main>");
     writeFileSync(path.join(parentDir, "secret.js"), "outside root");
     writeFileSync(path.join(parentDir, "secret.js.gz"), zlib.gzipSync("outside root"));
     writeFileSync(path.join(parentDir, "secret.js.br"), zlib.brotliCompressSync("outside root"));
@@ -632,7 +632,7 @@ describe("production Effect HTTP routes", () => {
         expect([200, 400, 404], traversal).toContain(response.status);
         expect(response.body, traversal).not.toContain("outside root");
         if (response.status === 200) {
-          expect(response.body, traversal).toContain("HarnessOS shell");
+          expect(response.body, traversal).toContain("Haros shell");
         }
       }
     });

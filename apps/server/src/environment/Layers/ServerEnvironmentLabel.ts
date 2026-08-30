@@ -10,8 +10,6 @@ export function resolveServerEnvironmentLabel(input: {
   readonly hostname?: string | null;
 }): string {
   return (
-    normalizeLabel(input.hostname ?? OS.hostname()) ??
-    normalizeLabel(input.cwdBaseName) ??
-    "HarnessOS"
+    normalizeLabel(input.hostname ?? OS.hostname()) ?? normalizeLabel(input.cwdBaseName) ?? "Haros"
   );
 }

@@ -124,7 +124,7 @@ describe("isInitialModelDiscoveryPending", () => {
 });
 
 describe("engineModelsQueryOptions", () => {
-  it("shares passive HarnessOS discovery across Projects without sending a cwd", async () => {
+  it("shares passive Haros discovery across Projects without sending a cwd", async () => {
     const catalog = {
       models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
       source: "pi.sdk",
@@ -194,7 +194,7 @@ describe("engineModelsQueryOptions", () => {
     );
   });
 
-  it("refreshes the shared HarnessOS catalog after engine-prefix invalidation", async () => {
+  it("refreshes the shared Haros catalog after engine-prefix invalidation", async () => {
     const listModels = mockListModels(
       vi.fn().mockResolvedValue({ models: [], source: "pi.sdk", cached: false }),
     );

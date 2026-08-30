@@ -100,7 +100,7 @@ export const SETTINGS_NAV_ITEMS = [
         id: "shortcuts:keyboard-shortcuts",
         titleKey: "settings.keybindings",
         keywords:
-          "Every keyboard shortcut available in HarnessOS, grouped by context. keybindings hotkeys key combo cmd ctrl reference",
+          "Every keyboard shortcut available in Haros, grouped by context. keybindings hotkeys key combo cmd ctrl reference",
       }),
     ],
   },
@@ -137,7 +137,7 @@ export const SETTINGS_NAV_ITEMS = [
         id: "built-in-tools:groups",
         titleKey: "settings.builtInTools",
         keywords:
-          "Agent capabilities HarnessOS Browser Device availability enabled disabled exposure tools",
+          "Agent capabilities Haros Browser Device availability enabled disabled exposure tools",
       }),
     ],
   },
@@ -175,7 +175,7 @@ export const SETTINGS_NAV_ITEMS = [
         id: "models:model-services",
         titleKey: "settings.models",
         keywords:
-          "Configure HarnessOS model services credentials authentication available models catalog engine API key OAuth.",
+          "Configure Haros model services credentials authentication available models catalog engine API key OAuth.",
       }),
     ],
   },
@@ -219,7 +219,7 @@ export const SETTINGS_NAV_ITEMS = [
       defineSettingsSearchPanel({
         id: "worktrees:managed-worktrees",
         titleKey: "settings.worktrees",
-        keywords: "Review and clean up the worktrees created by HarnessOS. git branch remove",
+        keywords: "Review and clean up the worktrees created by Haros. git branch remove",
       }),
     ],
   },

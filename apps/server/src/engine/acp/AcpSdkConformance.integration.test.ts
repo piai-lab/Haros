@@ -1,4 +1,4 @@
-// Verifies the current HarnessOS ACP boundary against an official-SDK subprocess.
+// Verifies the current Haros ACP boundary against an official-SDK subprocess.
 
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -116,7 +116,7 @@ afterEach(() => {
   }
 });
 
-describe("official ACP SDK conformance at the current HarnessOS boundary", () => {
+describe("official ACP SDK conformance at the current Haros boundary", () => {
   it.effect("negotiates initialize and authentication using official SDK handlers", () => {
     const logPath = createFixtureLog();
     return Effect.gen(function* () {

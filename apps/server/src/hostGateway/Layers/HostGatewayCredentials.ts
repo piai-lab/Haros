@@ -2,7 +2,7 @@
  * HostGatewayCredentialsLive - Live layer for HostGateway credentials.
  *
  * Issues opaque in-memory credentials. Tokens live for the engine session,
- * can be revoked independently, and intentionally do not survive a HarnessOS
+ * can be revoked independently, and intentionally do not survive a Haros
  * restart.
  *
  * @module hostGateway/Layers/HostGatewayCredentials

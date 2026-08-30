@@ -323,7 +323,7 @@ const make = Effect.gen(function* () {
   });
 
   const processProviderEvent = (event: EngineRuntimeEvent) => {
-    // Native subagent lifecycle events carry the parent HarnessOS thread id and the child identity
+    // Native subagent lifecycle events carry the parent Haros thread id and the child identity
     // in engineRefs. Treating them as parent turns would make shared-root ownership ambiguous
     // and suppress reconciliation when the actual parent turn completes.
     if (event.engineRefs?.nativeParentThreadId !== undefined) return Effect.void;

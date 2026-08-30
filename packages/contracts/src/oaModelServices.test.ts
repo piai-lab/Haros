@@ -2,11 +2,11 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
-  HarnessOSCustomModelServiceDiscoverInput,
-  HarnessOSCustomModelServiceDiscoverResult,
-  HarnessOSCustomModelServiceRemoveResult,
-  HarnessOSCustomModelServiceSaveResult,
-  HarnessOSCustomModelServiceTestInput,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceTestInput,
   OAModelServiceAnswerLoginInput,
   OAModelServiceAuthResult,
   OAModelServiceBeginLoginInput,
@@ -38,10 +38,10 @@ const descriptor = {
   catalogErrorCode: null,
 } as const;
 
-describe("HarnessOS model-services contracts", () => {
+describe("Haros model-services contracts", () => {
   it("decodes an active-session removal block without exposing runtime details", () => {
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceRemoveResult)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceRemoveResult)({
         state: "blocked_active_operation",
         serviceId: "custom-gateway",
       }),
@@ -169,7 +169,7 @@ describe("HarnessOS model-services contracts", () => {
 
   it("accepts typed credential intents without returning their private values", () => {
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: "custom",
           displayName: "Custom",
@@ -191,14 +191,14 @@ describe("HarnessOS model-services contracts", () => {
       }).credential,
     ).toEqual({ type: "preserve" });
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {},
         credential: { type: "stored_key", apiKey: "" },
         testModelId: "model-one",
       }),
     ).toThrow();
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: "custom",
           displayName: "Custom",
@@ -220,7 +220,7 @@ describe("HarnessOS model-services contracts", () => {
       }).credential,
     ).toEqual({ type: "environment", variableName: "CUSTOM_API_KEY" });
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: null,
           displayName: "Basic only",
@@ -233,7 +233,7 @@ describe("HarnessOS model-services contracts", () => {
       }).config.models,
     ).toEqual([{ modelId: "model-one" }]);
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: null,
           displayName: "Invalid env",
@@ -246,7 +246,7 @@ describe("HarnessOS model-services contracts", () => {
       }),
     ).toThrow();
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: null,
           displayName: "Invalid command",
@@ -259,7 +259,7 @@ describe("HarnessOS model-services contracts", () => {
       }),
     ).toThrow();
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceSaveResult)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceSaveResult)({
         state: "config_saved_sync_failed",
         service: null,
       }),
@@ -267,7 +267,7 @@ describe("HarnessOS model-services contracts", () => {
   });
 
   it("admits only the closed credential-blind advanced model surface", () => {
-    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+    const decoded = Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
       config: {
         serviceId: "custom",
         displayName: "Custom",
@@ -338,7 +338,7 @@ describe("HarnessOS model-services contracts", () => {
     });
 
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: "custom",
           displayName: "Custom",
@@ -356,7 +356,7 @@ describe("HarnessOS model-services contracts", () => {
       }),
     ).toThrow();
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: "custom",
           displayName: "Custom",
@@ -379,7 +379,7 @@ describe("HarnessOS model-services contracts", () => {
   });
 
   it("admits only write-only environment header mutations and public metadata", () => {
-    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+    const decoded = Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
       config: {
         serviceId: "custom",
         displayName: "Custom",
@@ -461,7 +461,7 @@ describe("HarnessOS model-services contracts", () => {
     expect(JSON.stringify(projected)).not.toContain("MUST_NOT_DECODE");
 
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceTestInput)({
         config: {
           serviceId: "custom",
           displayName: "Custom",
@@ -478,7 +478,7 @@ describe("HarnessOS model-services contracts", () => {
 
   it("keeps generic model discovery bounded and credential-blind", () => {
     expect(
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverInput)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceDiscoverInput)({
         config: {
           serviceId: null,
           displayName: "Private gateway",
@@ -494,7 +494,7 @@ describe("HarnessOS model-services contracts", () => {
       baseUrl: "https://gateway.example.test/v1",
     });
 
-    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverResult)({
+    const decoded = Schema.decodeUnknownSync(HarosCustomModelServiceDiscoverResult)({
       state: "success",
       models: [{ modelId: "model-one", displayName: "Model One" }],
       errorCode: null,
@@ -508,7 +508,7 @@ describe("HarnessOS model-services contracts", () => {
     });
     expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
     expect(() =>
-      Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverResult)({
+      Schema.decodeUnknownSync(HarosCustomModelServiceDiscoverResult)({
         state: "success",
         models: [],
         errorCode: null,

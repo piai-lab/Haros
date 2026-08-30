@@ -1,11 +1,11 @@
 // FILE: CrossTaskOriginLabel.tsx
-// Purpose: Identify the source thread for conversations created by another HarnessOS agent.
+// Purpose: Identify the source thread for conversations created by another Haros agent.
 // Layer: Chat transcript UI
 
 import { type EngineKind, type ThreadId } from "@harnessos/contracts";
 import { memo, type ReactNode } from "react";
 
-import { HarnessOSLogo } from "../HarnessOSLogo";
+import { HarosLogo } from "../HarosLogo";
 import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
@@ -14,15 +14,15 @@ export interface CrossTaskOrigin {
 }
 
 // A single, app-level attribution: the message reached this thread from another
-// HarnessOS thread, so it always reads as "Sent by HarnessOS" with the HarnessOS mark
+// Haros thread, so it always reads as "Sent by Haros" with the Haros mark
 // (the origin engine is not surfaced here to keep one consistent label).
 function OriginContent(): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <HarnessOSLogo size={16} aria-label="HarnessOS" />
+        <HarosLogo size={16} aria-label="Haros" />
       </span>
-      <span className="truncate">Sent by HarnessOS from another thread</span>
+      <span className="truncate">Sent by Haros from another thread</span>
     </>
   );
 }

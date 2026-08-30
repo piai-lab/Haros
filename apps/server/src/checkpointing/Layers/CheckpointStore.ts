@@ -153,9 +153,9 @@ const makeCheckpointStore = Effect.gen(function* () {
             const commitEnv: NodeJS.ProcessEnv = {
               ...process.env,
               GIT_INDEX_FILE: tempIndexPath,
-              GIT_AUTHOR_NAME: "HarnessOS",
+              GIT_AUTHOR_NAME: "Haros",
               GIT_AUTHOR_EMAIL: "harnessos@users.noreply.github.com",
-              GIT_COMMITTER_NAME: "HarnessOS",
+              GIT_COMMITTER_NAME: "Haros",
               GIT_COMMITTER_EMAIL: "harnessos@users.noreply.github.com",
             };
 
@@ -220,7 +220,7 @@ const makeCheckpointStore = Effect.gen(function* () {
               });
             }
 
-            const message = `HarnessOS checkpoint ref=${input.checkpointRef}`;
+            const message = `Haros checkpoint ref=${input.checkpointRef}`;
             const commitTreeResult = yield* git.execute({
               operation,
               cwd: input.cwd,

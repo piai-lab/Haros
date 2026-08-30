@@ -6,7 +6,7 @@ import {
   resolveActiveCodexHomeWritePath,
   resolveBaseCodexHomePath,
   resolveCodexHomeAllowlistCandidates,
-  resolveHarnessOSCodexHomeOverlayPath,
+  resolveHarosCodexHomeOverlayPath,
 } from "./codexHomePaths.ts";
 
 describe("Codex home paths", () => {
@@ -21,7 +21,7 @@ describe("Codex home paths", () => {
 
   it("anchors the overlay under HARNESSOS_HOME", () => {
     assert.equal(
-      resolveHarnessOSCodexHomeOverlayPath(
+      resolveHarosCodexHomeOverlayPath(
         { HARNESSOS_HOME: "/harnessos/runtime" },
         "/users/me/.codex",
       ),
@@ -31,7 +31,7 @@ describe("Codex home paths", () => {
 
   it("derives a default overlay beside the source home", () => {
     assert.equal(
-      resolveHarnessOSCodexHomeOverlayPath({}, "/users/me/.codex"),
+      resolveHarosCodexHomeOverlayPath({}, "/users/me/.codex"),
       path.join("/users/me", ".harnessos", "runtime", "codex-home-overlay"),
     );
   });

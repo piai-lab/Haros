@@ -12,7 +12,7 @@ function redirectUrlFromHtml(html) {
   }
 }
 
-class HarnessOSEngineWebSurfaceWindow {
+class HarosEngineWebSurfaceWindow {
   #listeners = new Map();
   #closed = false;
 
@@ -40,10 +40,10 @@ export function open(html) {
   const url = redirectUrlFromHtml(html);
   const presenter = globalThis[presenterSymbol];
   if (!url || !presenter || typeof presenter.claim !== "function" || !presenter.claim(url)) {
-    // This optional module is process-visible, but HarnessOS must consume only an
+    // This optional module is process-visible, but Haros must consume only an
     // exact current-session intent registered by an Engine adapter. Throwing for
     // every other Glimpse request preserves that extension's native fallback.
-    throw new Error("No matching HarnessOS Engine web-surface intent is active.");
+    throw new Error("No matching Haros Engine web-surface intent is active.");
   }
-  return new HarnessOSEngineWebSurfaceWindow();
+  return new HarosEngineWebSurfaceWindow();
 }

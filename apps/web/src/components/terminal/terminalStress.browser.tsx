@@ -10,7 +10,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { afterEach, describe, expect, it } from "vitest";
 
-type HarnessOSTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
+type HarosTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
   vtExtensions?: { kittyKeyboard?: boolean };
 };
 
@@ -61,7 +61,7 @@ describe("terminal browser stress", () => {
     document.body.append(host);
 
     const fitAddon = new FitAddon();
-    const terminalOptions: HarnessOSTerminalOptions = {
+    const terminalOptions: HarosTerminalOptions = {
       allowProposedApi: true,
       cols: 120,
       cursorBlink: false,

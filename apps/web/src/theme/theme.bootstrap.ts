@@ -1,5 +1,5 @@
 // FILE: theme.bootstrap.ts
-// Purpose: Applies the persisted HarnessOS theme before React and keeps that DOM projection canonical.
+// Purpose: Applies the persisted Haros theme before React and keeps that DOM projection canonical.
 // Layer: Web appearance bootstrap
 
 import { isElectron } from "../env";

@@ -151,7 +151,7 @@ describe("OAEcosystemLive", () => {
           enabled: false,
         }),
       ),
-    ).rejects.toThrow("HarnessOS ecosystem operation failed");
+    ).rejects.toThrow("Haros ecosystem operation failed");
     expect(harness.setPublicPackageResourceEnabled).not.toHaveBeenCalled();
     expect(harness.flush).not.toHaveBeenCalled();
   });

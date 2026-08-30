@@ -11,7 +11,7 @@ import {
   type HostGatewayMcpToolDescriptor,
 } from "../hostGateway/mcpInjection.ts";
 import type { HostGatewayMcpConnection } from "../hostGateway/Services/HostGatewayCredentials.ts";
-import { renderHarnessOSHarnessPolicy } from "../hostGateway/harnessPolicy.ts";
+import { renderHarosHarnessPolicy } from "../hostGateway/harnessPolicy.ts";
 import { buildHostGatewayPiToolDefinitions } from "./hostGatewayPiProjection.ts";
 
 export const HOST_GATEWAY_HOST_EXTENSION_NAME = "harnessos-host-gateway-host";
@@ -57,7 +57,7 @@ export class HostGatewayHostCapabilityUnavailableError extends Error {
   readonly unavailableNames: ReadonlyArray<string>;
 
   constructor(unavailableNames: ReadonlyArray<string>) {
-    super(`Required HarnessOS Host tools are unavailable: ${unavailableNames.join(", ")}`);
+    super(`Required Haros Host tools are unavailable: ${unavailableNames.join(", ")}`);
     this.name = "HostGatewayHostCapabilityUnavailableError";
     this.unavailableNames = unavailableNames;
   }
@@ -141,7 +141,7 @@ export function renderDeliveredHostGatewayHostGuidance(input: {
   if (deliveredGroups.size === 0) return "";
   return [
     "<harnessos_host_context>",
-    renderHarnessOSHarnessPolicy({
+    renderHarosHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: [...deliveredGroups] },
     }),

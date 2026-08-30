@@ -19,16 +19,16 @@ import type {
 } from "@earendil-works/pi-ai";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import type {
-  HarnessOSCustomModelServiceDiscoveryConfigInput,
-  HarnessOSCustomModelServiceCredentialInput,
-  HarnessOSCustomModelServiceDiscoverResult,
-  HarnessOSCustomModelServiceConfigInput,
-  HarnessOSCustomModelServiceConfig,
-  HarnessOSCustomModelServiceModelInput,
-  HarnessOSCustomModelServiceApi,
-  HarnessOSCustomModelServiceRemoveResult,
-  HarnessOSCustomModelServiceSaveResult,
-  HarnessOSCustomModelServiceTestResult,
+  HarosCustomModelServiceDiscoveryConfigInput,
+  HarosCustomModelServiceCredentialInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceConfigInput,
+  HarosCustomModelServiceConfig,
+  HarosCustomModelServiceModelInput,
+  HarosCustomModelServiceApi,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceTestResult,
   OAModelServiceAuthEvent,
   OAModelServiceAuthPrompt,
   OAModelServiceAuthResult,
@@ -61,8 +61,8 @@ import {
   type OAPrivateRuntimeFilename,
 } from "../oaRuntime.ts";
 import {
-  createHarnessOSOAuthPageRenderer,
-  loadHarnessOSOAuthLogoDataUrl,
+  createHarosOAuthPageRenderer,
+  loadHarosOAuthLogoDataUrl,
 } from "../harnessosOAuthCallbackPage.ts";
 import { publishOAModelRuntimeMutation } from "../oaModelRuntimeMutation.ts";
 import { OAModelServices, type OAModelServicesShape } from "../Services/OAModelServices.ts";
@@ -181,7 +181,7 @@ type CustomCompatField =
   (typeof HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API)[keyof typeof HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API][number];
 
 function projectCustomCompat(
-  api: HarnessOSCustomModelServiceApi,
+  api: HarosCustomModelServiceApi,
   compat: Record<string, unknown> | undefined,
 ): Record<string, boolean | string> | undefined {
   if (!compat) return undefined;
@@ -202,7 +202,7 @@ function projectCustomCompat(
 }
 
 function customCompatForMutation(
-  api: HarnessOSCustomModelServiceApi,
+  api: HarosCustomModelServiceApi,
   compat: Readonly<Record<string, boolean | string | undefined>> | undefined,
 ): Record<string, boolean | string> | undefined {
   if (!compat) return undefined;
@@ -217,7 +217,7 @@ function customCompatForMutation(
   );
 }
 
-function customProviderConfig(input: HarnessOSCustomModelServiceConfigInput) {
+function customProviderConfig(input: HarosCustomModelServiceConfigInput) {
   return {
     name: input.displayName,
     baseUrl: normalizedCustomBaseUrl(input.baseUrl),
@@ -257,9 +257,9 @@ function customProviderConfig(input: HarnessOSCustomModelServiceConfigInput) {
 }
 
 function clearOmittedCompatAfterApiChange(
-  input: HarnessOSCustomModelServiceConfigInput,
+  input: HarosCustomModelServiceConfigInput,
   previous: ReturnType<OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]>,
-): HarnessOSCustomModelServiceConfigInput {
+): HarosCustomModelServiceConfigInput {
   if (!previous || !isCustomApiProtocol(previous.api)) return input;
   const previousModels = new Map((previous.models ?? []).map((model) => [model.id, model]));
   let changed = false;
@@ -276,7 +276,7 @@ function clearOmittedCompatAfterApiChange(
   return changed ? { ...input, models } : input;
 }
 
-function customProviderDiscoveryConfig(input: HarnessOSCustomModelServiceDiscoveryConfigInput) {
+function customProviderDiscoveryConfig(input: HarosCustomModelServiceDiscoveryConfigInput) {
   return {
     name: input.displayName,
     baseUrl: normalizedCustomBaseUrl(input.baseUrl),
@@ -285,7 +285,7 @@ function customProviderDiscoveryConfig(input: HarnessOSCustomModelServiceDiscove
 }
 
 function headerReferencesForMutation(
-  input: HarnessOSCustomModelServiceConfigInput | HarnessOSCustomModelServiceDiscoveryConfigInput,
+  input: HarosCustomModelServiceConfigInput | HarosCustomModelServiceDiscoveryConfigInput,
 ): ReadonlyArray<import("@harnessos/oa-runtime").ModelConfigHeaderReferenceMutation> {
   const providerReferences = (input.headerMutations ?? []).map((mutation) => ({
     scope: { type: "provider" as const },
@@ -318,7 +318,7 @@ function headerReferencesForMutation(
 }
 
 function credentialReferenceMutation(
-  credential: HarnessOSCustomModelServiceCredentialInput,
+  credential: HarosCustomModelServiceCredentialInput,
 ):
   | { readonly type: "environment"; readonly variableName: string }
   | { readonly type: "command"; readonly command: string }
@@ -369,7 +369,7 @@ function projectCustomConfig(
   headerMetadata: ReturnType<
     OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProviderHeaderMetadata"]
   >,
-): HarnessOSCustomModelServiceConfig | undefined {
+): HarosCustomModelServiceConfig | undefined {
   if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
     return undefined;
   }
@@ -384,7 +384,7 @@ function projectCustomConfig(
   const modelHeaders = new Map(
     (headerMetadata?.models ?? []).map((entry) => [entry.modelId, entry.headers]),
   );
-  const models = provider.models.flatMap<HarnessOSCustomModelServiceModelInput>((model) => {
+  const models = provider.models.flatMap<HarosCustomModelServiceModelInput>((model) => {
     const modelId = safeModelId(model.id);
     if (!modelId) return [];
     const thinkingLevelMap = compactThinkingLevelMap(model.thinkingLevelMap);
@@ -792,16 +792,14 @@ function environmentVariablesFromAuthStatus(input: {
 }
 
 type OAModelRuntime = Awaited<ReturnType<OARuntimeModule["ModelRuntime"]["create"]>>;
-type HarnessOSExtensionServices = Awaited<
-  ReturnType<OARuntimeModule["createAgentSessionServices"]>
->;
+type HarosExtensionServices = Awaited<ReturnType<OARuntimeModule["createAgentSessionServices"]>>;
 
 async function loadIntentScopedExtensionServices(input: {
   readonly sdk: OARuntimeModule;
   readonly runtime: OAModelRuntime;
   readonly agentDir: string;
   readonly signal: AbortSignal;
-}): Promise<HarnessOSExtensionServices> {
+}): Promise<HarosExtensionServices> {
   const services = await input.sdk.createAgentSessionServices({
     cwd: input.agentDir,
     agentDir: input.agentDir,
@@ -831,7 +829,7 @@ async function loadIntentScopedExtensionServices(input: {
   }
 }
 
-function retireIntentScopedExtensionServices(services: HarnessOSExtensionServices | undefined) {
+function retireIntentScopedExtensionServices(services: HarosExtensionServices | undefined) {
   if (!services) return;
   services.resourceLoader
     .getExtensions()
@@ -851,7 +849,7 @@ async function projectModelServices(input: {
   readonly listed: ReadonlyArray<OAModelServiceDescriptor>;
   readonly connectable: ReadonlyArray<OAModelServiceDescriptor>;
   readonly modelsByServiceId: ReadonlyMap<string, ReadonlyArray<OAModelServiceModel>>;
-  readonly customConfigsByServiceId: ReadonlyMap<string, HarnessOSCustomModelServiceConfig>;
+  readonly customConfigsByServiceId: ReadonlyMap<string, HarosCustomModelServiceConfig>;
   readonly extensionProjectionState?: OAModelServicesExtensionProjectionState;
 }> {
   input.signal.throwIfAborted();
@@ -908,7 +906,7 @@ async function projectModelServices(input: {
     // ModelConfig deliberately retains path-rich parse/composition diagnostics.
     // The read projection cannot serialize those; fail this query with a fixed code.
     if (runtime.getError() !== undefined) {
-      throw new Error("HarnessOS model-services configuration is unavailable");
+      throw new Error("Haros model-services configuration is unavailable");
     }
     const refresh = await runtime.refresh({
       allowNetwork: false,
@@ -916,7 +914,7 @@ async function projectModelServices(input: {
     });
     if (refresh.aborted) input.signal.throwIfAborted();
     if (runtime.getError() !== undefined) {
-      throw new Error("HarnessOS model-services availability is unavailable");
+      throw new Error("Haros model-services availability is unavailable");
     }
     return refresh;
   };
@@ -929,11 +927,11 @@ async function projectModelServices(input: {
     ? { aborted: false, errors: new Map<string, Error>() }
     : await refreshProjectionRuntime(runtime);
   if (input.preparedRuntime && runtime.getError() !== undefined) {
-    throw new Error("HarnessOS model-services prepared runtime is unavailable");
+    throw new Error("Haros model-services prepared runtime is unavailable");
   }
   let extensionProjectionState = input.preparedExtensionProjectionState;
   if (input.intent === "add_service" && !input.preparedRuntime) {
-    let extensionServices: HarnessOSExtensionServices | undefined;
+    let extensionServices: HarosExtensionServices | undefined;
     try {
       extensionServices = await loadIntentScopedExtensionServices({
         sdk,
@@ -972,12 +970,12 @@ async function projectModelServices(input: {
   }
 
   const modelsByServiceId = new Map<string, ReadonlyArray<OAModelServiceModel>>();
-  const customConfigsByServiceId = new Map<string, HarnessOSCustomModelServiceConfig>();
+  const customConfigsByServiceId = new Map<string, HarosCustomModelServiceConfig>();
 
   const descriptors = runtime.getProviders().map<OAModelServiceDescriptor>((provider) => {
     const providerId = safeIdentifier(provider.id);
     if (!providerId) {
-      throw new Error("HarnessOS model-services provider identity is invalid");
+      throw new Error("Haros model-services provider identity is invalid");
     }
     const knownModelCount = runtime.getModels(provider.id).length;
     const projectedModels = runtime.getModels(provider.id).flatMap<OAModelServiceModel>((model) => {
@@ -1002,7 +1000,7 @@ async function projectModelServices(input: {
       ];
     });
     if (projectedModels.length > HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT) {
-      throw new Error("HarnessOS model-service catalog is too large");
+      throw new Error("Haros model-service catalog is too large");
     }
     modelsByServiceId.set(providerId, projectedModels);
     const customConfig = projectCustomConfig(
@@ -1092,7 +1090,7 @@ async function projectModelServices(input: {
     left.displayName.localeCompare(right.displayName, "en"),
   );
   if (sorted.length > HARNESSOS_MODEL_SERVICES_MAX_COUNT) {
-    throw new Error("HarnessOS model-services projection is too large");
+    throw new Error("Haros model-services projection is too large");
   }
   return {
     all: sorted,
@@ -1132,7 +1130,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
       const config = yield* ServerConfig;
       const engineService = yield* EngineService;
       const authRequests = new Map<string, ModelServiceAuthRequest>();
-      const oauthLogoDataUrl = loadHarnessOSOAuthLogoDataUrl(config.staticDir);
+      const oauthLogoDataUrl = loadHarosOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
       const project = (signal: AbortSignal, intent?: OAModelServicesProjectionIntent) =>
         projectModelServices({
@@ -1179,7 +1177,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
         }) => Promise<A>,
       ): Promise<A> => {
         const mutationRuntime = await createMutationRuntime(signal);
-        let extensionServices: HarnessOSExtensionServices | undefined;
+        let extensionServices: HarosExtensionServices | undefined;
         try {
           if (origin === "extension") {
             extensionServices = await loadIntentScopedExtensionServices({
@@ -1238,7 +1236,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
 
       const createCustomPreviewRuntime = async (input: {
         readonly serviceId: string | null;
-        readonly credential: HarnessOSCustomModelServiceCredentialInput;
+        readonly credential: HarosCustomModelServiceCredentialInput;
         readonly signal: AbortSignal;
       }) => {
         if (input.serviceId === null && input.credential.type === "preserve") {
@@ -1389,7 +1387,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                 });
                 const interaction: AuthInteraction = {
                   signal: request.controller.signal,
-                  renderOAuthPage: createHarnessOSOAuthPageRenderer({
+                  renderOAuthPage: createHarosOAuthPageRenderer({
                     serviceName: safeDisplayName(provider.name, request.serviceId),
                     logoDataUrl: oauthLogoDataUrl,
                   }),
@@ -1837,7 +1835,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                 state: "failed",
                 models: [],
                 errorCode: "authentication_failed",
-              } satisfies HarnessOSCustomModelServiceDiscoverResult;
+              } satisfies HarosCustomModelServiceDiscoverResult;
             }
             const timeoutSignal = AbortSignal.timeout(
               options.customModelDiscoveryTimeoutMs ?? CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS,
@@ -1859,7 +1857,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   state: "failed",
                   models: [],
                   errorCode: "invalid_configuration",
-                } satisfies HarnessOSCustomModelServiceDiscoverResult;
+                } satisfies HarosCustomModelServiceDiscoverResult;
               }
               preview.runtime.registerModelConfigProviderPreview(
                 preview.providerId,
@@ -1883,40 +1881,40 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   state: "failed",
                   models: [],
                   errorCode: "catalog_unavailable",
-                } satisfies HarnessOSCustomModelServiceDiscoverResult;
+                } satisfies HarosCustomModelServiceDiscoverResult;
               }
               return {
                 state: "success",
                 models,
                 errorCode: null,
-              } satisfies HarnessOSCustomModelServiceDiscoverResult;
+              } satisfies HarosCustomModelServiceDiscoverResult;
             } catch (error) {
               if (requestSignal.aborted) {
                 return {
                   state: "cancelled",
                   models: [],
                   errorCode: "cancelled",
-                } satisfies HarnessOSCustomModelServiceDiscoverResult;
+                } satisfies HarosCustomModelServiceDiscoverResult;
               }
               if (sdk && error instanceof sdk.ModelConfigProviderDiscoveryError) {
                 return {
                   state: "failed",
                   models: [],
                   errorCode: error.code === "request_failed" ? "connection_failed" : error.code,
-                } satisfies HarnessOSCustomModelServiceDiscoverResult;
+                } satisfies HarosCustomModelServiceDiscoverResult;
               }
               if (error instanceof InvalidCustomServiceEditError) {
                 return {
                   state: "failed",
                   models: [],
                   errorCode: "invalid_configuration",
-                } satisfies HarnessOSCustomModelServiceDiscoverResult;
+                } satisfies HarosCustomModelServiceDiscoverResult;
               }
               return {
                 state: "failed",
                 models: [],
                 errorCode: "connection_failed",
-              } satisfies HarnessOSCustomModelServiceDiscoverResult;
+              } satisfies HarosCustomModelServiceDiscoverResult;
             }
           }),
         testCustom: (input) =>
@@ -1931,7 +1929,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   state: "failed",
                   models: [],
                   errorCode: "authentication_failed",
-                } satisfies HarnessOSCustomModelServiceTestResult;
+                } satisfies HarosCustomModelServiceTestResult;
               }
               const preview = await createCustomPreviewRuntime({
                 serviceId: input.config.serviceId,
@@ -1950,7 +1948,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   state: "failed",
                   models: [],
                   errorCode: "model_unavailable",
-                } satisfies HarnessOSCustomModelServiceTestResult;
+                } satisfies HarosCustomModelServiceTestResult;
               }
               const response = await preview.runtime.complete(
                 model,
@@ -1970,7 +1968,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   state: requestSignal.aborted ? "cancelled" : "failed",
                   models: [],
                   errorCode: requestSignal.aborted ? "cancelled" : "connection_failed",
-                } satisfies HarnessOSCustomModelServiceTestResult;
+                } satisfies HarosCustomModelServiceTestResult;
               }
               const testedModels = input.config.models.flatMap<OAModelServiceModel>(
                 ({ modelId }) => {
@@ -1995,27 +1993,27 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                 state: "success",
                 models: testedModels,
                 errorCode: null,
-              } satisfies HarnessOSCustomModelServiceTestResult;
+              } satisfies HarosCustomModelServiceTestResult;
             } catch (error) {
               if (requestSignal.aborted) {
                 return {
                   state: "cancelled",
                   models: [],
                   errorCode: "cancelled",
-                } satisfies HarnessOSCustomModelServiceTestResult;
+                } satisfies HarosCustomModelServiceTestResult;
               }
               if (error instanceof InvalidCustomServiceEditError) {
                 return {
                   state: "failed",
                   models: [],
                   errorCode: "invalid_configuration",
-                } satisfies HarnessOSCustomModelServiceTestResult;
+                } satisfies HarosCustomModelServiceTestResult;
               }
               return {
                 state: "failed",
                 models: [],
                 errorCode: "connection_failed",
-              } satisfies HarnessOSCustomModelServiceTestResult;
+              } satisfies HarosCustomModelServiceTestResult;
             }
           }),
         saveCustom: (input) =>
@@ -2064,7 +2062,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                     return {
                       state: "credential_unchanged",
                       service: previous,
-                    } satisfies HarnessOSCustomModelServiceSaveResult;
+                    } satisfies HarosCustomModelServiceSaveResult;
                   }
                 }
                 if (removedStoredCredential) {
@@ -2100,7 +2098,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                       ? "credential_removed_retry_required"
                       : "credential_unchanged",
                     service,
-                  } satisfies HarnessOSCustomModelServiceSaveResult;
+                  } satisfies HarosCustomModelServiceSaveResult;
                 }
                 throw error;
               }
@@ -2139,25 +2137,25 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                 return {
                   state: "config_saved_auth_failed",
                   service,
-                } satisfies HarnessOSCustomModelServiceSaveResult;
+                } satisfies HarosCustomModelServiceSaveResult;
               }
               if (synchronizationFailed) {
                 return {
                   state: "config_saved_sync_failed",
                   service,
-                } satisfies HarnessOSCustomModelServiceSaveResult;
+                } satisfies HarosCustomModelServiceSaveResult;
               }
               if (!service) throw new Error("Saved custom model service could not be projected");
               if (credentialSynchronizationWarning) {
                 return {
                   state: "complete_with_sync_warning",
                   service,
-                } satisfies HarnessOSCustomModelServiceSaveResult;
+                } satisfies HarosCustomModelServiceSaveResult;
               }
               return {
                 state: "complete",
                 service,
-              } satisfies HarnessOSCustomModelServiceSaveResult;
+              } satisfies HarosCustomModelServiceSaveResult;
             }),
           ),
         removeCustom: (input) =>
@@ -2180,7 +2178,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                   return {
                     state: "blocked_active_operation",
                     serviceId: input.serviceId,
-                  } satisfies HarnessOSCustomModelServiceRemoveResult;
+                  } satisfies HarosCustomModelServiceRemoveResult;
                 }
                 const previous = await getProjectedService(input.serviceId, signal);
                 if (previous.origin !== "models_json") {
@@ -2216,7 +2214,7 @@ export function makeOAModelServicesLive(options: OAModelServicesLiveOptions = {}
                 return {
                   state: synchronizationFailed ? "complete_with_sync_warning" : "complete",
                   serviceId: input.serviceId,
-                } satisfies HarnessOSCustomModelServiceRemoveResult;
+                } satisfies HarosCustomModelServiceRemoveResult;
               }),
             ),
           ),

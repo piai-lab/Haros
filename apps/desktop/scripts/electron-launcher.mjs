@@ -1,4 +1,4 @@
-// This file mostly exists because we want dev mode to say "HarnessOS (Dev)" instead of "electron"
+// This file mostly exists because we want dev mode to say "Haros (Dev)" instead of "electron"
 
 import { spawnSync } from "node:child_process";
 import {
@@ -13,14 +13,14 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import {
-  resolveHarnessOSDesktopFlavor,
+  resolveHarosDesktopFlavor,
   harnessOSDesktopIdentity,
 } from "@harnessos/shared/desktopIdentity";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
-const desktopFlavor = resolveHarnessOSDesktopFlavor({
+const desktopFlavor = resolveHarosDesktopFlavor({
   isDevelopment,
   requestedFlavor: process.env.HARNESSOS_DESKTOP_FLAVOR,
 });
@@ -29,7 +29,7 @@ const APP_DISPLAY_NAME = desktopIdentity.displayName;
 const APP_BUNDLE_ID = desktopIdentity.bundleId;
 const LAUNCHER_VERSION = 3;
 const MICROPHONE_USAGE_DESCRIPTION =
-  "HarnessOS needs microphone access so you can record voice notes and transcribe them into the chat composer.";
+  "Haros needs microphone access so you can record voice notes and transcribe them into the chat composer.";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const desktopDir = resolve(__dirname, "..");

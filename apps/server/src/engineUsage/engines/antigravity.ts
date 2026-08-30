@@ -34,7 +34,7 @@ const LOAD_URL = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"
 const QUOTA_URL = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota";
 const REFRESH_URL = "https://oauth2.googleapis.com/token";
 const CLOUD_CODE_ORIGIN = new URL(LOAD_URL).origin;
-// Public Gemini CLI installed-app OAuth client (not an HarnessOS-issued secret).
+// Public Gemini CLI installed-app OAuth client (not an Haros-issued secret).
 // Assembled so GitHub push protection does not treat the published CLI client as a leak.
 const GEMINI_OAUTH_CLIENT_ID = [
   "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j",

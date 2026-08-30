@@ -1,5 +1,5 @@
 // FILE: oaModelRuntimeMutation.ts
-// Purpose: Invalidates isolated HarnessOS Agent runtime snapshots after model-service mutation.
+// Purpose: Invalidates isolated Haros Agent runtime snapshots after model-service mutation.
 // Layer: Server engine runtime
 
 import { realpathSync } from "node:fs";

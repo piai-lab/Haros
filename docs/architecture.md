@@ -1,6 +1,6 @@
 # Architecture
 
-HarnessOS is organized around ownership boundaries rather than screens or feature names.
+Haros is organized around ownership boundaries rather than screens or feature names.
 
 ## Product orchestration
 
@@ -11,14 +11,14 @@ same orchestration owner with different workspace lifecycles.
 ## Engines
 
 An Engine is a complete agent runtime. `ENGINE_DESCRIPTORS` is the single owner of Engine identity,
-display name, registration, capability projection, and Settings discovery. OA is the default
-Engine.
+display name, registration, capability projection, and Settings discovery. One built-in Engine is
+the default for a fresh setup.
 
 Engine selection freezes the exact Engine, model, and options admitted to a queued turn. Changing
 Engine is stop-first. A launch failure preserves the prompt and Queue and never silently selects a
 different Engine.
 
-Native Engine sessions are not product Threads. HarnessOS does not copy or fabricate native
+Native Engine sessions are not product Threads. Haros does not copy or fabricate native
 continuation across Engines.
 
 ## HostGateway
@@ -30,22 +30,22 @@ only a typed projection.
 HostGateway also owns exact-turn authority, permission checks, cancellation, timeout, idempotency,
 and receipts. Engine adapters do not duplicate those responsibilities.
 
-## OA
+## Built-in Engine
 
-OA is the built-in default Engine and uses HarnessOS-owned state. Its runtime composition is
-explicit and bounded: planning guard, todos, user questions, web access, and HostGateway tools.
-Those resources are not ambiently injected into other Engines.
+The built-in default Engine uses Haros-owned state. Its runtime composition is explicit and
+bounded: planning guard, todos, user questions, web access, and HostGateway tools. Those resources
+are not ambiently injected into other Engines.
 
-OA's model services remain internal to OA. The product UI receives a typed, credential-blind
-projection and never becomes a second credential, package, or model-catalog owner.
+Its model services remain internal to the Engine. The product UI receives a typed,
+credential-blind projection and never becomes a second credential, package, or model-catalog owner.
 
 ## State boundaries
 
-- Product state is owned by HarnessOS persistence.
-- OA global and project-local state uses HarnessOS-owned paths.
+- Product state is owned by Haros persistence.
+- Built-in Engine global and project-local state uses Haros-owned paths.
 - Other Engines retain their own private configuration and session state.
 - System capabilities never write their authority state into an Engine's private directory.
-- HarnessOS does not import or mutate retired product namespaces.
+- Haros does not import or mutate retired product namespaces.
 
 ## Processes
 

@@ -62,7 +62,7 @@ export const DeviceRuntimeState = Schema.Literals([
 export type DeviceRuntimeState = typeof DeviceRuntimeState.Type;
 
 /**
- * Who owns the boot. HarnessOS only auto-shuts down devices it booted itself;
+ * Who owns the boot. Haros only auto-shuts down devices it booted itself;
  * anything the user started (pane picker, Simulator.app) outlives the session.
  */
 export const DeviceBootSource = Schema.Literals(["oa", "user"]);
@@ -268,7 +268,7 @@ export const ThreadDeviceState = Schema.Struct({
    * it is waiting on.
    */
   attachPhase: Schema.optional(Schema.NullOr(DeviceAttachPhase)),
-  /** Devices the pane may show: booted devices plus anything HarnessOS is booting. */
+  /** Devices the pane may show: booted devices plus anything Haros is booting. */
   devices: Schema.Array(DeviceDescriptor).check(Schema.isMaxLength(64)),
   /** True while an agent tool is driving input, so the pane can show the badge. */
   agentActive: Schema.Boolean,
@@ -279,7 +279,7 @@ export type ThreadDeviceState = typeof ThreadDeviceState.Type;
 
 // ── Control-plane inputs and results ─────────────────────────────────
 
-/** Devices HarnessOS itself booted are capped globally; viewing already-booted devices is not. */
+/** Devices Haros itself booted are capped globally; viewing already-booted devices is not. */
 export const DEVICE_HARNESSOS_BOOT_LIMIT = 3;
 
 const DeviceTargetInput = Schema.Struct({ udid: DeviceUdid });
@@ -420,7 +420,7 @@ export type DeviceBundleId = typeof DeviceBundleId.Type;
 
 export const DeviceInstallAppInput = Schema.Struct({
   udid: DeviceUdid,
-  /** Absolute path to a built `.app` bundle; HarnessOS never runs the build itself. */
+  /** Absolute path to a built `.app` bundle; Haros never runs the build itself. */
   appPath: TrimmedNonEmptyString.check(Schema.isMaxLength(DEVICE_PATH_MAX_LENGTH)),
 });
 export type DeviceInstallAppInput = typeof DeviceInstallAppInput.Type;

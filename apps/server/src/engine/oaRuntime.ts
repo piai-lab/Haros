@@ -1,5 +1,5 @@
 // FILE: oaRuntime.ts
-// Purpose: Owns the bundled OA Engine runtime loader and fixed HarnessOS-private state root.
+// Purpose: Owns the bundled OA Engine runtime loader and fixed Haros-private state root.
 // Layer: Server engine runtime
 
 import { constants as fsConstants, lstatSync, realpathSync } from "node:fs";

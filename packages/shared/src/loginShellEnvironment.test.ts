@@ -324,7 +324,7 @@ describe("createCachedLoginShellEnvironmentReader", () => {
   it("runs uncached when the home directory cannot be resolved", () => {
     const fixture = makeFixture();
     // Pointed at the fixture root, so a spy that failed to apply writes here (and fails the
-    // call-count assertion below) instead of touching the developer's real HarnessOS home.
+    // call-count assertion below) instead of touching the developer's real Haros home.
     const env = { HARNESSOS_HOME: Path.dirname(Path.dirname(fixture.cachePath)) };
     homeDirectoryFailure.active = true;
 
@@ -359,7 +359,7 @@ describe("createCachedLoginShellEnvironmentReader", () => {
 });
 
 describe("loginShellEnvironmentCachePath", () => {
-  it("anchors the cache in the HarnessOS home both processes resolve", () => {
+  it("anchors the cache in the Haros home both processes resolve", () => {
     expect(loginShellEnvironmentCachePath({ env: { HARNESSOS_HOME: "/tmp/harnessos-home" } })).toBe(
       Path.join("/tmp/harnessos-home", "cache", "login-shell-environment.json"),
     );

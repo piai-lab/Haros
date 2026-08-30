@@ -30,7 +30,7 @@ function projectCreateCommand(
     projectId: ProjectId.makeUnsafe("project-chat"),
     kind: "chat",
     title: "Chat",
-    workspaceRoot: "/Users/tester/Documents/HarnessOS/2026-06-11/chat",
+    workspaceRoot: "/Users/tester/Documents/Haros/2026-06-11/chat",
     createWorkspaceRootIfMissing: true,
     createdAt: "2026-06-11T21:30:43.000Z",
     ...overrides,
@@ -50,7 +50,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      chatWorkspaceRoot: "/Users/tester/Documents/Haros",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -69,14 +69,14 @@ describe("makeDispatchCommandNormalizer", () => {
     await runPrepareWorkspaceRoot(result);
 
     // Only after the caller explicitly runs the deferred effect does scaffolding happen.
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/HarnessOS/2026-06-11/chat"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/Haros/2026-06-11/chat"]);
   });
 
   it("retries the deferred prepare effect on transient failures before succeeding", async () => {
     let callCount = 0;
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      chatWorkspaceRoot: "/Users/tester/Documents/Haros",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -102,7 +102,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      chatWorkspaceRoot: "/Users/tester/Documents/Haros",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -115,14 +115,14 @@ describe("makeDispatchCommandNormalizer", () => {
     const result = await Effect.runPromise(normalizer({ command: projectCreateCommand() }));
     await runPrepareWorkspaceRoot(result);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/HarnessOS/2026-06-11/chat"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/Haros/2026-06-11/chat"]);
   });
 
   it("does not prepare ordinary projects or the chat workspace root itself", async () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      chatWorkspaceRoot: "/Users/tester/Documents/Haros",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -136,7 +136,7 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "project",
-          workspaceRoot: "/Users/tester/Documents/HarnessOS/2026-06-11/app",
+          workspaceRoot: "/Users/tester/Documents/Haros/2026-06-11/app",
         }),
       }),
     );
@@ -144,7 +144,7 @@ describe("makeDispatchCommandNormalizer", () => {
     const second = await Effect.runPromise(
       normalizer({
         command: projectCreateCommand({
-          workspaceRoot: "/Users/tester/Documents/HarnessOS",
+          workspaceRoot: "/Users/tester/Documents/Haros",
         }),
       }),
     );
@@ -157,8 +157,8 @@ describe("makeDispatchCommandNormalizer", () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
-      studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/Haros",
+      studioWorkspaceRoot: "/Users/tester/Documents/Haros/Studio",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -174,20 +174,20 @@ describe("makeDispatchCommandNormalizer", () => {
         command: projectCreateCommand({
           kind: "studio",
           title: "Studio",
-          workspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+          workspaceRoot: "/Users/tester/Documents/Haros/Studio",
         }),
       }),
     );
     await runPrepareWorkspaceRoot(result);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/HarnessOS/Studio"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/Haros/Studio"]);
   });
 
   it("prepares nested Studio workspace roots but not ordinary projects under Studio", async () => {
     const preparedRoots: string[] = [];
     const normalizer = makeDispatchCommandNormalizer<Error>({
       attachmentsDir: "/tmp/attachments",
-      studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+      studioWorkspaceRoot: "/Users/tester/Documents/Haros/Studio",
       fileSystem: {} as FileSystem.FileSystem,
       path: {} as Path.Path,
       canonicalizeProjectWorkspaceRoot: (workspaceRoot) => Effect.succeed(workspaceRoot),
@@ -201,7 +201,7 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "studio",
-          workspaceRoot: "/Users/tester/Documents/HarnessOS/Studio/Outbox",
+          workspaceRoot: "/Users/tester/Documents/Haros/Studio/Outbox",
         }),
       }),
     );
@@ -210,13 +210,13 @@ describe("makeDispatchCommandNormalizer", () => {
       normalizer({
         command: projectCreateCommand({
           kind: "project",
-          workspaceRoot: "/Users/tester/Documents/HarnessOS/Studio/SomeProject",
+          workspaceRoot: "/Users/tester/Documents/Haros/Studio/SomeProject",
         }),
       }),
     );
     await runPrepareWorkspaceRoot(second);
 
-    expect(preparedRoots).toEqual(["/Users/tester/Documents/HarnessOS/Studio/Outbox"]);
+    expect(preparedRoots).toEqual(["/Users/tester/Documents/Haros/Studio/Outbox"]);
   });
 
   it("defers binary attachment authority to the transactional managed ledger", async () => {

@@ -1,11 +1,11 @@
 # Haros
 
-Haros is a local-first desktop workbench for agentic work. It keeps projects, conversations,
-queues, recovery, and system capabilities in one coherent product while execution Engines remain
-replaceable and isolated.
+Haros is a local-first desktop workbench for getting real work done with AI. Projects,
+conversations, tools, queued work, and recovery live in one coherent product, so you can move from
+a quick question to sustained project work without rebuilding your context.
 
 [简体中文](docs/README.zh-CN.md) · [Architecture](docs/architecture.md) ·
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Security](SECURITY.md)
 
 > Haros is currently a source alpha. There are no official installers, releases, or update
 > feeds yet.
@@ -22,19 +22,20 @@ All three surfaces share the same Project, Thread, Queue, Timeline, and recovery
 between them does not create a second product state or pretend that one Engine's native session is
 another Engine's continuation.
 
-## What makes Haros different
+## Why Haros
 
-- **OA by default.** A fresh setup has one clear starting point.
-- **Engine boundaries stay honest.** Each Engine owns its native session and private configuration;
-  Haros owns the product conversation, queue, recovery, and presentation.
-- **System capabilities have one authority.** File, Git, terminal, browser, and device operations
-  pass through HostGateway for cataloging, permission, cancellation, idempotency, and receipts.
-- **Local-first state.** Projects and product state remain on the machine unless an explicitly
-  selected service is used.
-- **Failure is a first-class state.** Prompts and queued work survive launch failures; Haros
-  reports the actual failing boundary instead of silently switching execution paths.
-- **One owner per fact.** Engine descriptors, product state, settings projections, and UI catalogs
-  each have one canonical source.
+- **One continuous workbench.** Agent, Chat, and Studio share the same projects, threads, queue,
+  timeline, and recovery model.
+- **Immediate, truthful feedback.** A submitted turn shows the selected model at once, while Haros
+  continues startup and reconciliation in the background.
+- **Built-in local tools.** Files, Git, terminal, browser, and device workflows are available from
+  the same place instead of being scattered across helper apps.
+- **Local-first state.** Projects and product state remain on the machine unless you explicitly use
+  a connected service.
+- **Work survives failure.** Prompts and queued work remain recoverable when execution cannot start
+  or is interrupted.
+- **Replaceable execution.** Haros keeps its product state independent from the selected execution
+  runtime, so changing how work runs does not fragment the workbench.
 
 The deeper ownership model is documented in [docs/architecture.md](docs/architecture.md).
 
@@ -67,15 +68,15 @@ bun run build:desktop
 
 ```text
 apps/desktop   Desktop shell and OS integration
-apps/server    Product orchestration, Engines, HostGateway, and persistence
+apps/server    Product orchestration, execution, local capabilities, and persistence
 apps/web       Agent, Chat, and Studio workbench
-packages/      Typed contracts, shared logic, and OA composition
+packages/      Typed contracts, shared logic, and runtime composition
 scripts/       Deterministic development, legal, and packaged-proof tooling
 docs/          Stable architecture and contributor-facing documentation
 ```
 
 Generated build output, caches, test artifacts, and reproducible legal reports are not committed.
-The fixed OA runtime input is the only vendored runtime artifact in the source tree.
+A fixed runtime input is the only vendored runtime artifact in the source tree.
 
 ## Project status
 

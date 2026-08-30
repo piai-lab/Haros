@@ -281,7 +281,7 @@ async function executeProbe(input: {
   const context = createWebAccessInstanceContext({ configService, profile: "oa" });
   try {
     const response = await runWithWebAccessContext(context, () =>
-      search("HarnessOS Web Access connectivity check", {
+      search("Haros Web Access connectivity check", {
         ...(input.provider ? { provider: input.provider } : {}),
         numResults: 1,
         signal: input.signal,

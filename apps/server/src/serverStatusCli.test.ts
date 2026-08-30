@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_SERVER_STATUS_URL,
-  fetchHarnessOSServerStatus,
-  formatHarnessOSServerStatus,
+  fetchHarosServerStatus,
+  formatHarosServerStatus,
 } from "./serverStatusCli.ts";
 
 describe("server status CLI probe", () => {
@@ -17,7 +17,7 @@ describe("server status CLI probe", () => {
       });
     });
 
-    const result = await fetchHarnessOSServerStatus({ fetch });
+    const result = await fetchHarosServerStatus({ fetch });
 
     expect(result).toMatchObject({
       reachable: true,
@@ -28,13 +28,13 @@ describe("server status CLI probe", () => {
         projection: { state: "healthy" },
       },
     });
-    expect(formatHarnessOSServerStatus(result)).toBe(
+    expect(formatHarosServerStatus(result)).toBe(
       "Haros server: ready\nURL: http://127.0.0.1:3773\nProjection: healthy",
     );
   });
 
   it("reports a reachable server that is still starting", async () => {
-    const result = await fetchHarnessOSServerStatus({
+    const result = await fetchHarosServerStatus({
       fetch: async () =>
         Response.json({
           status: "ok",
@@ -44,11 +44,11 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: starting");
+    expect(formatHarosServerStatus(result)).toContain("Haros server: starting");
   });
 
   it("distinguishes an unhealthy projection from a server that is still starting", async () => {
-    const result = await fetchHarnessOSServerStatus({
+    const result = await fetchHarosServerStatus({
       fetch: async () =>
         Response.json({
           status: "ok",
@@ -58,12 +58,12 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: not ready");
+    expect(formatHarosServerStatus(result)).toContain("Haros server: not ready");
   });
 
   it("treats an unknown or missing projection health state as not ready", async () => {
     for (const projection of [{ state: "unknown" }, undefined]) {
-      const result = await fetchHarnessOSServerStatus({
+      const result = await fetchHarosServerStatus({
         fetch: async () =>
           Response.json({
             status: "ok",
@@ -81,7 +81,7 @@ describe("server status CLI probe", () => {
       Response.json({ status: "ok", startupReady: true, projection: { state: "healthy" } }),
     );
 
-    await fetchHarnessOSServerStatus({
+    await fetchHarosServerStatus({
       url: "https://harnessos.example.com/some/path?ignored=1#hash",
       fetch,
     });
@@ -93,7 +93,7 @@ describe("server status CLI probe", () => {
   });
 
   it("rejects credentials and never reports URL secrets", async () => {
-    const result = await fetchHarnessOSServerStatus({
+    const result = await fetchHarosServerStatus({
       url: "https://user:password@harnessos.example.com/path?token=secret#fragment",
     });
 
@@ -108,16 +108,14 @@ describe("server status CLI probe", () => {
   });
 
   it("fails closed for invalid URLs and malformed health responses", async () => {
-    await expect(
-      fetchHarnessOSServerStatus({ url: "file:///tmp/harnessos" }),
-    ).resolves.toMatchObject({
+    await expect(fetchHarosServerStatus({ url: "file:///tmp/harnessos" })).resolves.toMatchObject({
       reachable: false,
       ready: false,
       error: "Server URL must use http:// or https://.",
     });
 
     await expect(
-      fetchHarnessOSServerStatus({ fetch: async () => Response.json({ status: "ok" }) }),
+      fetchHarosServerStatus({ fetch: async () => Response.json({ status: "ok" }) }),
     ).resolves.toMatchObject({
       reachable: false,
       ready: false,
@@ -127,7 +125,7 @@ describe("server status CLI probe", () => {
 
   it("reports HTTP and transport failures without throwing", async () => {
     await expect(
-      fetchHarnessOSServerStatus({
+      fetchHarosServerStatus({
         fetch: async () => new Response("offline", { status: 503 }),
       }),
     ).resolves.toMatchObject({
@@ -136,7 +134,7 @@ describe("server status CLI probe", () => {
       error: "Health request returned HTTP 503.",
     });
 
-    const result = await fetchHarnessOSServerStatus({
+    const result = await fetchHarosServerStatus({
       fetch: async () => {
         throw new Error("connection refused");
       },
@@ -146,6 +144,6 @@ describe("server status CLI probe", () => {
       ready: false,
       error: "connection refused",
     });
-    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: unreachable");
+    expect(formatHarosServerStatus(result)).toContain("Haros server: unreachable");
   });
 });

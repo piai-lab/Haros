@@ -32,7 +32,7 @@ import {
   resolveGrokRuntimeModelSettings,
   scopeGrokRuntimeItemIdForTurn,
   scopeGrokToolCallStateForTurn,
-  takeGrokHarnessOSHarnessPolicyTextPart,
+  takeGrokHarosHarnessPolicyTextPart,
 } from "./GrokAdapter.ts";
 
 describe("Grok runtime model settings", () => {
@@ -58,13 +58,13 @@ describe("Grok runtime model settings", () => {
   });
 });
 
-describe("Grok HarnessOS harness policy", () => {
+describe("Grok Haros harness policy", () => {
   it("delivers private scoped host context once", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
-    expect(takeGrokHarnessOSHarnessPolicyTextPart(state, true)?.text).toContain(
+    expect(takeGrokHarosHarnessPolicyTextPart(state, true)?.text).toContain(
       HARNESSOS_HARNESS_POLICY_MARKER,
     );
-    expect(takeGrokHarnessOSHarnessPolicyTextPart(state, true)).toBeNull();
+    expect(takeGrokHarosHarnessPolicyTextPart(state, true)).toBeNull();
   });
 });
 
@@ -75,7 +75,7 @@ describe("Grok native plan approval", () => {
         text: "Design the change",
         interactionMode: "plan",
       }),
-    ).toMatch(/^HarnessOS requested Grok's native plan mode\./u);
+    ).toMatch(/^Haros requested Grok's native plan mode\./u);
   });
 
   it("sets Grok's native prompt mode idempotently on every turn", () => {
@@ -164,11 +164,11 @@ describe("Grok native plan approval", () => {
     expect(extractGrokExitPlanMarkdown(request)).toBeUndefined();
   });
 
-  it("keeps native plan mode gated after HarnessOS captures the plan", () => {
+  it("keeps native plan mode gated after Haros captures the plan", () => {
     expect(makeGrokExitPlanModeCapturedResponse()).toEqual({
       outcome: "cancelled",
       feedback:
-        "HarnessOS captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.",
+        "Haros captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.",
     });
   });
 
@@ -219,7 +219,7 @@ describe("Grok native user questions", () => {
     ]);
   });
 
-  it("maps HarnessOS answers to Grok's question-text keyed response", () => {
+  it("maps Haros answers to Grok's question-text keyed response", () => {
     expect(extractGrokUserInputQuestions(request)[0]).toMatchObject({
       id: "grok-question-0",
       header: "Verification",

@@ -268,7 +268,7 @@ export function loadHostGatewayEngineCatalog(input: {
   const availability = input.availability ?? { enabled: true };
   const unavailableReason =
     availability.enabled === false
-      ? `Engine "${input.engine}" is disabled in HarnessOS settings.`
+      ? `Engine "${input.engine}" is disabled in Haros settings.`
       : availability.available === false
         ? (availability.message ?? `Engine "${input.engine}" is not available.`)
         : availability.authStatus === "unauthenticated"

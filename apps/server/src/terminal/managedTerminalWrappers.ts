@@ -245,7 +245,7 @@ function writeFileIfChanged(filePath: string, content: string, mode: number): vo
 }
 
 function buildManagedZshRc(quotedZshDir: string): string {
-  return `# HarnessOS zsh rc wrapper
+  return `# Haros zsh rc wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zshrc" ]] && source "$_harnessos_home/.zshrc"
@@ -290,7 +290,7 @@ function ensureManagedZshWrappers(zshDir: string): void {
   const quotedZshDir = shellQuote(zshDir);
   writeFileIfChanged(
     path.join(zshDir, ".zshenv"),
-    `# HarnessOS zsh env wrapper
+    `# Haros zsh env wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zshenv" ]] && source "$_harnessos_home/.zshenv"
@@ -300,7 +300,7 @@ export ZDOTDIR=${quotedZshDir}
   );
   writeFileIfChanged(
     path.join(zshDir, ".zprofile"),
-    `# HarnessOS zsh profile wrapper
+    `# Haros zsh profile wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zprofile" ]] && source "$_harnessos_home/.zprofile"

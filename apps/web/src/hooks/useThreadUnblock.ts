@@ -39,7 +39,7 @@ export function useThreadUnblock(input: {
     void (async () => {
       try {
         const api = readNativeApi();
-        if (!api) throw new Error("Not connected to the HarnessOS server.");
+        if (!api) throw new Error("Not connected to the Haros server.");
         const result = await unblockThreadFromClient(api.orchestration, threadId);
         onUnblocked(threadId);
         toastManager.add(describeThreadUnblockResult(result));

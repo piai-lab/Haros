@@ -1,5 +1,5 @@
 // Adapted from @mrclrchtr/supi-ask-user@5.0.0 src/types.ts.
-// This is an internal fork-kernel model, not HarnessOS's public Ask User contract.
+// This is an internal fork-kernel model, not Haros's public Ask User contract.
 
 export interface QuestionnaireOptionInput {
   value: string;

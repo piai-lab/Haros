@@ -1,5 +1,5 @@
 // FILE: OAEcosystem.ts
-// Purpose: Declares the HarnessOS Agent native package/resource lifecycle owner.
+// Purpose: Declares the Haros Agent native package/resource lifecycle owner.
 // Layer: Server engine service contract
 
 import type {

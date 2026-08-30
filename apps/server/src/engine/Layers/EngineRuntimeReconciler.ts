@@ -172,8 +172,8 @@ const make = (options?: EngineRuntimeReconcilerLiveOptions) =>
           kind: "engine.runtime.reconciled",
           summary:
             plan.action === "align-running-turn"
-              ? "HarnessOS realigned the active engine turn"
-              : "HarnessOS recovered a stale running state",
+              ? "Haros realigned the active engine turn"
+              : "Haros recovered a stale running state",
           payload: {
             engine: plan.engine,
             action: plan.action,

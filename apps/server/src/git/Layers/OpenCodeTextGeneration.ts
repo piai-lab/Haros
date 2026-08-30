@@ -388,7 +388,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
               cliSpec: config.cliSpec,
             });
             const sessionCreateInput = {
-              title: `HarnessOS ${input.operation}`,
+              title: `Haros ${input.operation}`,
               model: {
                 providerID: providerId,
                 id: modelId,

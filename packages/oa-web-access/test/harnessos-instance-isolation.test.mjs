@@ -164,7 +164,7 @@ test("canonical default search auto-summarizes without presenting Curator", asyn
   await harness.handlers.get("session_shutdown")?.();
 });
 
-test("HarnessOS named Provider errors point to Settings without leaking upstream commands or paths", async () => {
+test("Haros named Provider errors point to Settings without leaking upstream commands or paths", async () => {
   const root = await mkdtemp(join(tmpdir(), "harnessos-web-error-projection-"));
   const configService = createWebSearchConfigService(join(root, "agent"));
   configService.ensureDefault();

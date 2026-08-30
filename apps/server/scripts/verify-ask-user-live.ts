@@ -1,5 +1,5 @@
 // FILE: verify-ask-user-live.ts
-// Purpose: Proves Product Ask round-trip and Converge's Ask-first gate through real HarnessOS Agent journeys.
+// Purpose: Proves Product Ask round-trip and Converge's Ask-first gate through real Haros Agent journeys.
 // Layer: Maintainer-only live verification; credentials are accepted only through engine env vars.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

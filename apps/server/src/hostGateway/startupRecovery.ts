@@ -53,7 +53,7 @@ export function recoverInterruptedHostGatewayOperations(input: {
               errorJson: JSON.stringify({
                 code: "server_restarted_before_dispatch",
                 message:
-                  "HarnessOS restarted before dispatch began. No git or orchestration resources were touched.",
+                  "Haros restarted before dispatch began. No git or orchestration resources were touched.",
               }),
               now: gatewayIsoNow(),
             });
@@ -198,7 +198,7 @@ export function recoverInterruptedHostGatewayOperations(input: {
               errorJson: JSON.stringify({
                 code: "recovery_compensation_failed",
                 message:
-                  "HarnessOS could not fully compensate the interrupted operation during startup recovery. The sanitized operation remains retryable and some resources may require manual cleanup; no replacements will be created.",
+                  "Haros could not fully compensate the interrupted operation during startup recovery. The sanitized operation remains retryable and some resources may require manual cleanup; no replacements will be created.",
                 errors: recoveryErrors,
               }),
               now: gatewayIsoNow(),
@@ -214,7 +214,7 @@ export function recoverInterruptedHostGatewayOperations(input: {
             errorJson: JSON.stringify({
               code: "server_restarted",
               message:
-                "HarnessOS restarted before the operation completed. Deterministic operation-owned resources were compensated; no replacements were created.",
+                "Haros restarted before the operation completed. Deterministic operation-owned resources were compensated; no replacements were created.",
               compensatedCount: plan.length,
             }),
             now: gatewayIsoNow(),
@@ -229,7 +229,7 @@ export function recoverInterruptedHostGatewayOperations(input: {
                   errorJson: JSON.stringify({
                     code: "startup_recovery_failed",
                     message:
-                      "HarnessOS could not recover the interrupted operation. The sanitized operation remains retryable and resources may require manual cleanup; no replacements will be created.",
+                      "Haros could not recover the interrupted operation. The sanitized operation remains retryable and resources may require manual cleanup; no replacements will be created.",
                     error: detail,
                   }),
                   now: gatewayIsoNow(),

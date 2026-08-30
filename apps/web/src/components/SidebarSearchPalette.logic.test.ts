@@ -26,8 +26,8 @@ const actions: SidebarSearchAction[] = [
   },
   {
     id: "feedback",
-    label: "Feedback HarnessOS",
-    description: "Send feedback or report an issue to the HarnessOS team.",
+    label: "Feedback Haros",
+    description: "Send feedback or report an issue to the Haros team.",
     keywords: ["feedback", "bug", "issue", "report", "support"],
   },
   {
@@ -167,7 +167,7 @@ describe("SidebarSearchPalette.logic", () => {
     );
   });
 
-  it("matches Feedback HarnessOS by feedback and issue keywords", () => {
+  it("matches Feedback Haros by feedback and issue keywords", () => {
     assert.deepEqual(
       matchSidebarSearchActions(actions, "feedback").map((action) => action.id),
       ["feedback"],

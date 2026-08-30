@@ -1,5 +1,5 @@
 // FILE: oaEcosystem.ts
-// Purpose: Typed HarnessOS Agent package/resource lifecycle bridge.
+// Purpose: Typed Haros Agent package/resource lifecycle bridge.
 // Layer: Shared contracts
 
 import { Schema } from "effect";
@@ -36,38 +36,38 @@ const ResourcePath = TrimmedNonEmptyString.check(
   Schema.makeFilter<string>((value) => isPublicResourcePath(value)),
 );
 
-export const HarnessOSPackageResourceType = Schema.Literals([
+export const HarosPackageResourceType = Schema.Literals([
   "extensions",
   "skills",
   "prompts",
   "themes",
 ]);
-export type HarnessOSPackageResourceType = typeof HarnessOSPackageResourceType.Type;
+export type HarosPackageResourceType = typeof HarosPackageResourceType.Type;
 
-export const HarnessOSPackageKind = Schema.Literals(["npm", "git", "local", "unsupported"]);
-export type HarnessOSPackageKind = typeof HarnessOSPackageKind.Type;
+export const HarosPackageKind = Schema.Literals(["npm", "git", "local", "unsupported"]);
+export type HarosPackageKind = typeof HarosPackageKind.Type;
 
-export const HarnessOSPackageDescriptor = Schema.Struct({
+export const HarosPackageDescriptor = Schema.Struct({
   packageId: PackageId,
   displayName: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
-  kind: HarnessOSPackageKind,
+  kind: HarosPackageKind,
   installed: Schema.Boolean,
   filtered: Schema.Boolean,
   manageable: Schema.Boolean,
   updateAvailable: Schema.optional(Schema.Boolean),
 });
-export type HarnessOSPackageDescriptor = typeof HarnessOSPackageDescriptor.Type;
+export type HarosPackageDescriptor = typeof HarosPackageDescriptor.Type;
 
-export const HarnessOSPackageResourceDescriptor = Schema.Struct({
+export const HarosPackageResourceDescriptor = Schema.Struct({
   packageId: PackageId,
-  resourceType: HarnessOSPackageResourceType,
+  resourceType: HarosPackageResourceType,
   resourcePath: ResourcePath,
   enabled: Schema.Boolean,
 });
-export type HarnessOSPackageResourceDescriptor = typeof HarnessOSPackageResourceDescriptor.Type;
+export type HarosPackageResourceDescriptor = typeof HarosPackageResourceDescriptor.Type;
 
-const Packages = Schema.Array(HarnessOSPackageDescriptor).check(Schema.isMaxLength(512));
-const Resources = Schema.Array(HarnessOSPackageResourceDescriptor).check(Schema.isMaxLength(8_192));
+const Packages = Schema.Array(HarosPackageDescriptor).check(Schema.isMaxLength(512));
+const Resources = Schema.Array(HarosPackageResourceDescriptor).check(Schema.isMaxLength(8_192));
 
 export const OAEcosystemSnapshot = Schema.Struct({
   packages: Packages,
@@ -96,7 +96,7 @@ export type OAEcosystemListResourcesResult = typeof OAEcosystemListResourcesResu
 
 export const OAEcosystemResourceToggleInput = Schema.Struct({
   packageId: PackageId,
-  resourceType: HarnessOSPackageResourceType,
+  resourceType: HarosPackageResourceType,
   resourcePath: ResourcePath,
   enabled: Schema.Boolean,
 });

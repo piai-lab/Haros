@@ -56,7 +56,7 @@ export function inspectOAAskUserRegistration(input: {
         ? [
             registrations.length > 1
               ? "Pi discovered more than one ask_user Extension registration."
-              : "Pi did not select the sole bundled HarnessOS ask_user Extension tool.",
+              : "Pi did not select the sole bundled Haros ask_user Extension tool.",
           ]
         : diagnostics,
   };

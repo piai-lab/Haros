@@ -337,7 +337,7 @@ describe("canonical browser host RPC", () => {
               thread_id: "surface-thread",
               surface_id: "surface-opaque-123",
               url: "http://127.0.0.1:43123/?session=private-token",
-              title: "HarnessOS 网络搜索",
+              title: "Haros 网络搜索",
               expires_at: Date.now() + 60_000,
             },
           }),
@@ -365,7 +365,7 @@ describe("canonical browser host RPC", () => {
               thread_id: "other-thread",
               surface_id: "surface-other-123",
               url: "http://127.0.0.1:43124/?session=other-private-token",
-              title: "HarnessOS 网络搜索",
+              title: "Haros 网络搜索",
               expires_at: Date.now() + 60_000,
             },
           }),
@@ -380,7 +380,7 @@ describe("canonical browser host RPC", () => {
       threadId: "surface-thread",
       surfaceId: "surface-opaque-123",
       url: "http://127.0.0.1:43123/?session=private-token",
-      title: "HarnessOS 网络搜索",
+      title: "Haros 网络搜索",
       expiresAt: expect.any(Number),
     });
     expect(settleEngineWebSurface).toHaveBeenCalledWith({

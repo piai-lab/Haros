@@ -29,14 +29,14 @@ afterEach(() => {
 const descriptors = [
   {
     name: "browser_open",
-    description: "Open a URL in the HarnessOS browser.",
+    description: "Open a URL in the Haros browser.",
     inputSchema: { type: "object", properties: { url: { type: "string" } } },
     group: "browser",
     provenance: "host-gateway",
   },
   {
     name: "harnessos_list_threads",
-    description: "List HarnessOS threads.",
+    description: "List Haros threads.",
     inputSchema: { type: "object", properties: {} },
     group: "tasks",
     provenance: "host-gateway",
@@ -224,7 +224,7 @@ describe.each([
         requiredNames: ["browser_open"],
         currentlyExposedNames: new Set(["browser_open"]),
       }),
-    ).toThrow("Required HarnessOS Host tools are unavailable");
+    ).toThrow("Required Haros Host tools are unavailable");
   });
 
   it("contains an invalid catalog to the Host Extension diagnostic", async () => {

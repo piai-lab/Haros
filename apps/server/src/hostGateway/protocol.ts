@@ -1,5 +1,5 @@
 /**
- * Minimal MCP (Model Context Protocol) JSON-RPC handling for the HarnessOS agent
+ * Minimal MCP (Model Context Protocol) JSON-RPC handling for the Haros agent
  * gateway.
  *
  * Implements the stateless subset of the MCP streamable-HTTP transport the
@@ -155,7 +155,7 @@ export function buildMcpInitializeResult(input: {
     },
     serverInfo: {
       name: "oa",
-      title: "HarnessOS App Control",
+      title: "Haros App Control",
       version: input.serverVersion,
     },
     instructions: input.instructions,

@@ -1,5 +1,5 @@
 // FILE: codexProcessEnv.ts
-// Purpose: Builds the exact environment used when HarnessOS launches Codex subprocesses.
+// Purpose: Builds the exact environment used when Haros launches Codex subprocesses.
 // Layer: Server runtime utility
 // Exports: Codex process env builder and browser-plugin overlay helpers.
 // Depends on: Codex home path helpers, shared Codex config parsing, login-shell env reader.
@@ -14,10 +14,7 @@ import {
   type ShellEnvironmentReader,
 } from "@harnessos/shared/shell";
 
-import {
-  resolveBaseCodexHomePath,
-  resolveHarnessOSCodexHomeOverlayPath,
-} from "./codexHomePaths.ts";
+import { resolveBaseCodexHomePath, resolveHarosCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import {
   buildEngineChildEnvironment,
   registerEngineCredentialKey,
@@ -53,9 +50,7 @@ function isSafePluginSectionHeader(value: unknown): value is string {
   );
 }
 
-export async function readHarnessOSConfigSuppressions(
-  markerPath: string,
-): Promise<readonly string[]> {
+export async function readHarosConfigSuppressions(markerPath: string): Promise<readonly string[]> {
   try {
     const parsed = JSON.parse(await fs.readFile(markerPath, "utf8")) as unknown;
     if (typeof parsed !== "object" || parsed === null) return [];
@@ -139,7 +134,7 @@ export function disableCodexConfigSections(
   return output.join("\n");
 }
 
-async function writeHarnessOSConfigSuppressions(
+async function writeHarosConfigSuppressions(
   markerPath: string,
   sectionHeaders: readonly string[],
 ): Promise<void> {
@@ -569,7 +564,7 @@ function appendManagedCodexConfigSection(config: string, section: string): strin
       continue;
     }
     if (normalizeTomlTableHeaderName(header) === managedMcpTableName) {
-      // The session-scoped gateway entry is authoritative inside HarnessOS's
+      // The session-scoped gateway entry is authoritative inside Haros's
       // overlay. The user's source config remains untouched.
       overlayConfig = removeTomlTableNamespace(overlayConfig, HARNESSOS_MANAGED_MCP_TABLE_HEADER);
       tables.push(table);
@@ -609,13 +604,13 @@ async function serializeCodexOverlayPreparation<A>(
   }
 }
 
-async function prepareHarnessOSCodexHomeOverlayUnlocked(input: {
+async function prepareHarosCodexHomeOverlayUnlocked(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
   readonly appendConfigToml?: string;
 }): Promise<string | undefined> {
   const sourceHomePath = resolveBaseCodexHomePath(input.env, input.homePath);
-  const overlayHomePath = resolveHarnessOSCodexHomeOverlayPath(input.env, sourceHomePath);
+  const overlayHomePath = resolveHarosCodexHomeOverlayPath(input.env, sourceHomePath);
   if (path.resolve(sourceHomePath) === path.resolve(overlayHomePath)) {
     return undefined;
   }
@@ -656,7 +651,7 @@ async function prepareHarnessOSCodexHomeOverlayUnlocked(input: {
     ...new Set([
       ...HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
       ...findConflictingLocalBrowserPluginSections(sourceConfig),
-      ...(await readHarnessOSConfigSuppressions(suppressionMarkerPath)),
+      ...(await readHarosConfigSuppressions(suppressionMarkerPath)),
     ]),
   ].slice(0, MAX_CONFIG_SUPPRESSION_SECTIONS);
   const overlayConfigPath = path.join(overlayHomePath, "config.toml");
@@ -680,23 +675,23 @@ async function prepareHarnessOSCodexHomeOverlayUnlocked(input: {
     }
   }
   await fs.writeFile(overlayConfigPath, overlayConfig, "utf8");
-  await writeHarnessOSConfigSuppressions(suppressionMarkerPath, suppressedSections);
+  await writeHarosConfigSuppressions(suppressionMarkerPath, suppressedSections);
 
   return overlayHomePath;
 }
 
-async function prepareHarnessOSCodexHomeOverlay(input: {
+async function prepareHarosCodexHomeOverlay(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
   readonly appendConfigToml?: string;
 }): Promise<string | undefined> {
   const sourceHomePath = resolveBaseCodexHomePath(input.env, input.homePath);
-  const overlayHomePath = resolveHarnessOSCodexHomeOverlayPath(input.env, sourceHomePath);
+  const overlayHomePath = resolveHarosCodexHomeOverlayPath(input.env, sourceHomePath);
   if (path.resolve(sourceHomePath) === path.resolve(overlayHomePath)) {
     return undefined;
   }
   return serializeCodexOverlayPreparation(overlayHomePath, () =>
-    prepareHarnessOSCodexHomeOverlayUnlocked(input),
+    prepareHarosCodexHomeOverlayUnlocked(input),
   );
 }
 
@@ -710,7 +705,7 @@ export async function buildCodexProcessEnv(
   } = {},
 ): Promise<NodeJS.ProcessEnv> {
   const baseEnv = { ...(input.env ?? process.env) };
-  const overlayHomePath = await prepareHarnessOSCodexHomeOverlay({
+  const overlayHomePath = await prepareHarosCodexHomeOverlay({
     env: baseEnv,
     ...(input.homePath ? { homePath: input.homePath } : {}),
     ...(input.appendConfigToml ? { appendConfigToml: input.appendConfigToml } : {}),

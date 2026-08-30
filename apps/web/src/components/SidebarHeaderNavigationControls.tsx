@@ -4,14 +4,14 @@
 // Depends on: Sidebar state plus AppNavigationButtons
 
 import { AppNavigationButtons } from "./AppNavigationButtons";
-import { HarnessOSLogo } from "./HarnessOSLogo";
+import { HarosLogo } from "./HarosLogo";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { isElectron } from "~/env";
 import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
 
 /**
- * Compact brand instrument for desktop titlebars. `HarnessOSLogo` enlarges artwork
+ * Compact brand instrument for desktop titlebars. `HarosLogo` enlarges artwork
  * inside small canvases by 1.12x, so a 16px component produces a ~14px visible
  * silhouette that shares the native macOS traffic-light axis without dominating it.
  */
@@ -21,7 +21,7 @@ export function SidebarProductMark() {
       className="me-[3px] flex h-7 w-5 shrink-0 items-center justify-center"
       data-slot="sidebar-product-mark"
     >
-      <HarnessOSLogo size={16} />
+      <HarosLogo size={16} />
     </span>
   );
 }

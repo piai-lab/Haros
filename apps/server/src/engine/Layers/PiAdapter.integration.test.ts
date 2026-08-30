@@ -132,7 +132,7 @@ describe("normalizePiTokenUsage", () => {
 });
 
 describe("Pi native resource projection", () => {
-  it("keeps native slash input in Pi and injects HarnessOS policy through its system prompt", () => {
+  it("keeps native slash input in Pi and injects Haros policy through its system prompt", () => {
     const prompt = makePiHostSystemPrompt({
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["tasks"],
@@ -140,13 +140,13 @@ describe("Pi native resource projection", () => {
 
     expect(prompt).toContain("<harnessos_host_context>");
     expect(prompt).toContain("Use the exposed capability metadata");
-    expect(prompt).not.toContain("HarnessOS MCP control is unavailable");
+    expect(prompt).not.toContain("Haros MCP control is unavailable");
   });
 
-  it("keeps usable native tools visible when HarnessOS MCP discovery fails", () => {
+  it("keeps usable native tools visible when Haros MCP discovery fails", () => {
     expect(makePiGatewayLoadWarning("OA")).toEqual({
       message:
-        "HarnessOS MCP tools could not be loaded for this OA session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.",
+        "Haros MCP tools could not be loaded for this OA session. Engine-native tools remain available; Haros MCP actions are unavailable.",
       detail: { source: "harnessos-mcp", availability: "failed" },
     });
   });
@@ -165,7 +165,7 @@ describe("Pi native resource projection", () => {
     expect(stockPiPrompt).not.toContain("harnessos_update_tasks");
   });
 
-  it("keeps HarnessOS identity immutable while selecting three distinct Product contracts", () => {
+  it("keeps Haros identity immutable while selecting three distinct Product contracts", () => {
     const chatPrompt = makeOAEngineSystemPrompt({
       workSurface: "chat",
     });
@@ -176,7 +176,7 @@ describe("Pi native resource projection", () => {
       productSurface: "studio",
     });
     const identity =
-      "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+      "You are Haros, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
     const officialChineseIdentity =
       "The academy's official Chinese name is 广东智慧医学国际研究院.";
 
@@ -243,12 +243,12 @@ describe("Pi native resource projection", () => {
     ).toEqual(AUTOMATION_RUN_GATEWAY_TOOL_NAMES);
   });
 
-  it("does not give stock Pi the HarnessOS identity or work-surface contract", () => {
+  it("does not give stock Pi the Haros identity or work-surface contract", () => {
     const prompt = makePiHostSystemPrompt({
       gatewayControlAvailable: false,
     });
 
-    expect(prompt).not.toContain("You are HarnessOS");
+    expect(prompt).not.toContain("You are Haros");
     expect(prompt).not.toContain("In Chat,");
     expect(prompt).not.toContain("In Agent,");
   });
@@ -273,7 +273,7 @@ describe("Pi credential gate", () => {
   });
 });
 
-describe("HarnessOS Agent Plan lifecycle", () => {
+describe("Haros Agent Plan lifecycle", () => {
   it("wraps slash input and emits one proposed plan before terminal settlement", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-plan-lifecycle-"));
     const agentDir = path.join(serverRoot, "agent");
@@ -380,17 +380,17 @@ describe("HarnessOS Agent Plan lifecycle", () => {
             .map((block: any) => block.text)
             .join("\n")
         : String(firstUserContent ?? "");
-      expect(firstUserMessage).toContain("HarnessOS plan mode is active.");
+      expect(firstUserMessage).toContain("Haros plan mode is active.");
       expect(firstUserMessage).toContain("/reload and inspect the workspace");
       expect(firstUserMessage.startsWith("/reload")).toBe(false);
-      expect(firstUserMessage.match(/HarnessOS plan mode is active\./g)).toHaveLength(1);
+      expect(firstUserMessage.match(/Haros plan mode is active\./g)).toHaveLength(1);
       expect(firstUserMessage.indexOf("/reload and inspect the workspace")).toBeLessThan(
-        firstUserMessage.indexOf("HarnessOS plan mode is active."),
+        firstUserMessage.indexOf("Haros plan mode is active."),
       );
       const secondUserContent = requestBodies[1]?.messages
         ?.filter((message: any) => message.role === "user")
         .at(-1)?.content;
-      expect(JSON.stringify(secondUserContent)).not.toContain("HarnessOS plan mode is active.");
+      expect(JSON.stringify(secondUserContent)).not.toContain("Haros plan mode is active.");
       const proposed = events.filter((event) => event.type === "turn.proposed.completed");
       expect(proposed).toHaveLength(1);
       expect(proposed[0]?.payload).toEqual({ planMarkdown: "- Inspect\n- Implement" });
@@ -406,7 +406,7 @@ describe("HarnessOS Agent Plan lifecycle", () => {
   });
 });
 
-describe("Pi native HarnessOS gateway tools", () => {
+describe("Pi native Haros gateway tools", () => {
   it("uses canonical MCP schemas and keeps same-cwd thread tokens distinct", async () => {
     const requests: Array<{ readonly token: string | null; readonly body: any }> = [];
     const fetch = async (_input: string | URL | Request, init?: RequestInit) => {
@@ -424,7 +424,7 @@ describe("Pi native HarnessOS gateway tools", () => {
                 tools: [
                   {
                     name: "harnessos_list_threads",
-                    description: "List HarnessOS threads.",
+                    description: "List Haros threads.",
                     _meta: {
                       "harnessos/owner": "host-gateway",
                       "harnessos/group": "tasks",
@@ -492,7 +492,7 @@ describe("Pi native HarnessOS gateway tools", () => {
             tools: [
               {
                 name: "harnessos_create_threads",
-                description: "Create HarnessOS threads.",
+                description: "Create Haros threads.",
                 _meta: {
                   "harnessos/owner": "host-gateway",
                   "harnessos/group": "tasks",
@@ -532,7 +532,7 @@ describe("Pi native HarnessOS gateway tools", () => {
     expect(controller.signal.aborted).toBe(true);
   });
 
-  it("projects eager Host tools only for HarnessOS while leaving other owners opaque", async () => {
+  it("projects eager Host tools only for Haros while leaving other owners opaque", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-eager-host-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -725,7 +725,7 @@ describe("Pi native HarnessOS gateway tools", () => {
       const hostContexts = requestBodies.map(piRequestHostContext);
       expect(hostContexts.every(Boolean)).toBe(true);
       for (const body of requestBodies) {
-        expect(piRequestSystemPrompt(body)).not.toContain("HarnessOS MCP control is unavailable");
+        expect(piRequestSystemPrompt(body)).not.toContain("Haros MCP control is unavailable");
       }
       expect(piRequestSystemPrompt(requestBodies[0])).toContain("thread-scoped in-app page");
       expect(gateway.requests.map(({ method }) => method)).toEqual(
@@ -1681,7 +1681,7 @@ function isPiAutoRetryWarning(event: EngineRuntimeEvent) {
   );
 }
 
-function isHarnessOSTaskUnavailableWarning(event: EngineRuntimeEvent) {
+function isHarosTaskUnavailableWarning(event: EngineRuntimeEvent) {
   if (event.type !== "runtime.warning") return false;
   const detail = event.payload.detail;
   return (
@@ -1830,7 +1830,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("uses the product safe reader for HarnessOS create and refresh", async () => {
+  it("uses the product safe reader for Haros create and refresh", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "harnessos-agent-model-reader-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
@@ -1939,7 +1939,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("keeps passive HarnessOS discovery global-only and does not execute Project extensions", async () => {
+  it("keeps passive Haros discovery global-only and does not execute Project extensions", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-untrusted-discovery-"));
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
@@ -2255,7 +2255,7 @@ describe("getPiDiscoverableModels", () => {
     const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000062");
     const stockThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000063");
     const identity =
-      "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+      "You are Haros, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
     const officialChineseIdentity =
       "The academy's official Chinese name is 广东智慧医学国际研究院.";
     const immutableAgentPrompt = makeOAEngineSystemPrompt({
@@ -2536,7 +2536,7 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             expect(
-              yield* serverSettings.mutateHarnessOSDefaultPrompt(
+              yield* serverSettings.mutateHarosDefaultPrompt(
                 null,
                 "customized-chat-default-marker",
               ),
@@ -2571,7 +2571,7 @@ describe("getPiDiscoverableModels", () => {
               });
             yield* send("capture Chat native default");
             expect(
-              yield* serverSettings.mutateHarnessOSDefaultPrompt(
+              yield* serverSettings.mutateHarosDefaultPrompt(
                 "customized-chat-default-marker",
                 "customized-chat-default-v2",
               ),
@@ -2688,7 +2688,7 @@ describe("getPiDiscoverableModels", () => {
 
             yield* send("initial resources");
             expect(
-              yield* serverSettings.mutateHarnessOSDefaultPrompt(null, "customized-default-v1"),
+              yield* serverSettings.mutateHarosDefaultPrompt(null, "customized-default-v1"),
             ).toMatchObject({ state: "changed" });
             yield* Effect.sync(() => {
               writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v2");
@@ -2706,7 +2706,7 @@ describe("getPiDiscoverableModels", () => {
 
             yield* Effect.sync(() => unlinkSync(path.join(agentDir, "SYSTEM.md")));
             expect(
-              yield* serverSettings.mutateHarnessOSDefaultPrompt("customized-default-v1", null),
+              yield* serverSettings.mutateHarosDefaultPrompt("customized-default-v1", null),
             ).toMatchObject({ state: "changed" });
             expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
             yield* send("restored factory default");
@@ -2763,7 +2763,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("fails closed when Product admission omits or contradicts the HarnessOS work surface", async () => {
+  it("fails closed when Product admission omits or contradicts the Haros work surface", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-work-surface-admission-"));
     const cwd = path.join(serverRoot, "workspace");
     const otherRoot = path.join(serverRoot, "other-project");
@@ -2861,7 +2861,7 @@ describe("getPiDiscoverableModels", () => {
         "  pi.registerTool({",
         '    name: "harnessos_update_tasks",',
         '    label: "Third-party same-name tool",',
-        '    description: "A third-party tool that does not own HarnessOS Agent tasks.",',
+        '    description: "A third-party tool that does not own Haros Agent tasks.",',
         "    parameters: Type.Object({}),",
         '    execute: async () => ({ content: [{ type: "text", text: "extension result" }] }),',
         "  });",
@@ -2951,7 +2951,7 @@ describe("getPiDiscoverableModels", () => {
       expect(
         events.some((event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId),
       ).toBe(false);
-      expect(events.some(isHarnessOSTaskUnavailableWarning)).toBe(true);
+      expect(events.some(isHarosTaskUnavailableWarning)).toBe(true);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -3070,7 +3070,7 @@ describe("getPiDiscoverableModels", () => {
 
       expect(requestCount).toBe(2);
       expect(result.exists).toBe(true);
-      expect(events.filter(isHarnessOSTaskUnavailableWarning)).toHaveLength(1);
+      expect(events.filter(isHarosTaskUnavailableWarning)).toHaveLength(1);
       expect(
         events.some(
           (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
@@ -3192,7 +3192,7 @@ describe("getPiDiscoverableModels", () => {
       expect(requestCount).toBe(2);
       expect(result.reloaded).toBe("reloaded");
       expect(result.exists).toBe(true);
-      expect(events.filter(isHarnessOSTaskUnavailableWarning)).toHaveLength(1);
+      expect(events.filter(isHarosTaskUnavailableWarning)).toHaveLength(1);
       expect(
         events.some(
           (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
@@ -3204,7 +3204,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("projects the bundled HarnessOS task tool into the canonical turn task list", async () => {
+  it("projects the bundled Haros task tool into the canonical turn task list", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-task-projection-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -3308,7 +3308,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("reconciles an existing HarnessOS Session on the next send after credential mutation", async () => {
+  it("reconciles an existing Haros Session on the next send after credential mutation", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-credential-reconcile-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -3397,7 +3397,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("keeps an active HarnessOS turn on its original credentials and reconciles only the next send", async () => {
+  it("keeps an active Haros turn on its original credentials and reconciles only the next send", async () => {
     const serverRoot = mkdtempSync(
       path.join(tmpdir(), "harnessos-agent-active-credential-reconcile-"),
     );
@@ -4016,7 +4016,7 @@ describe("getPiDiscoverableModels", () => {
         "";
       expect(
         finalContinuationPrompt.split(
-          "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+          "You are Haros, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
         ),
       ).toHaveLength(2);
       expect(

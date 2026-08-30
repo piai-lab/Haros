@@ -26,10 +26,10 @@ export function hasUsableExactModelBinding(input: {
   return ENGINE_KINDS.some((engine) => {
     const selection = input.exactEngineSelections[engine];
     const status = findEngineStatus(input.engineStatuses, engine);
-    // Bundled HarnessOS/stock Pi runtimes can enumerate models before any
+    // Bundled Haros/stock Pi runtimes can enumerate models before any
     // credential exists, and their Engine health intentionally reports auth as
     // unknown. Their exact catalog rows are therefore not send authority.
-    // HarnessOS is upgraded separately by the passive Model-services projection;
+    // Haros is upgraded separately by the passive Model-services projection;
     // stock Pi stays recoverable until its own health can prove authentication.
     if ((engine === "oa" || engine === "pi") && status?.authStatus !== "authenticated") {
       return false;

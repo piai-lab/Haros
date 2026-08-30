@@ -23,35 +23,35 @@ describe("chatWorkspaceFolders", () => {
   it("places new chat folders under date and slug segments", () => {
     expect(
       buildChatWorkspaceFolderPath({
-        chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+        chatWorkspaceRoot: "/Users/tester/Documents/Haros",
         createdAt: new Date(2026, 5, 11, 23, 30, 43),
         existingWorkspaceRoots: [],
         titleSeed: "Yes, it takes all the skills!",
       }),
-    ).toBe("/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills");
+    ).toBe("/Users/tester/Documents/Haros/2026-06-11/yes-it-takes-all-the-skills");
   });
 
   it("adds numeric suffixes when the same slug already exists", () => {
     expect(
       buildChatWorkspaceFolderPath({
-        chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+        chatWorkspaceRoot: "/Users/tester/Documents/Haros",
         createdAt: new Date(2026, 5, 11, 23, 30, 43),
         existingWorkspaceRoots: [
-          "/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills",
+          "/Users/tester/Documents/Haros/2026-06-11/yes-it-takes-all-the-skills",
         ],
         titleSeed: "Yes, it takes all the skills!",
       }),
-    ).toBe("/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills-2");
+    ).toBe("/Users/tester/Documents/Haros/2026-06-11/yes-it-takes-all-the-skills-2");
   });
 
   it("preserves Windows separators when the server root uses them", () => {
     expect(
       buildChatWorkspaceFolderPath({
-        chatWorkspaceRoot: "C:\\Users\\tester\\Documents\\HarnessOS",
+        chatWorkspaceRoot: "C:\\Users\\tester\\Documents\\Haros",
         createdAt: new Date(2026, 5, 11, 23, 30, 43),
         existingWorkspaceRoots: [],
         titleSeed: "Hello there",
       }),
-    ).toBe("C:\\Users\\tester\\Documents\\HarnessOS\\2026-06-11\\hello-there");
+    ).toBe("C:\\Users\\tester\\Documents\\Haros\\2026-06-11\\hello-there");
   });
 });

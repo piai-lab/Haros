@@ -987,7 +987,7 @@ function withStudioProject(snapshot: OrchestrationReadModel): OrchestrationReadM
         id: STUDIO_PROJECT_ID,
         kind: "studio",
         title: "Studio",
-        workspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+        workspaceRoot: "/Users/tester/Documents/Haros/Studio",
         defaultEngineSelection: {
           engine: "codex",
           model: "gpt-5",
@@ -2913,7 +2913,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     localStorage.removeItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY);
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
-      // Match the user's 1894px HarnessOS capture: the reading column must follow
+      // Match the user's 1894px Haros capture: the reading column must follow
       // the center of the real canvas while the left boundary moves.
       viewport: { ...DEFAULT_VIEWPORT, width: 1894 },
       snapshot: createSnapshotForTargetUser({
@@ -4548,8 +4548,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 nextFixture.welcome = {
                   ...nextFixture.welcome,
                   homeDir: "/Users/tester",
-                  chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
-                  studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+                  chatWorkspaceRoot: "/Users/tester/Documents/Haros",
+                  studioWorkspaceRoot: "/Users/tester/Documents/Haros/Studio",
                 };
               },
             }
@@ -4635,8 +4635,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
-          studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+          chatWorkspaceRoot: "/Users/tester/Documents/Haros",
+          studioWorkspaceRoot: "/Users/tester/Documents/Haros/Studio",
         };
       },
     });
@@ -9058,8 +9058,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
-          studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
+          chatWorkspaceRoot: "/Users/tester/Documents/Haros",
+          studioWorkspaceRoot: "/Users/tester/Documents/Haros/Studio",
         };
       },
     });
@@ -9173,7 +9173,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+          chatWorkspaceRoot: "/Users/tester/Documents/Haros",
         };
       },
     });
@@ -9231,7 +9231,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           project.id === HOME_PROJECT_ID
             ? {
                 ...project,
-                workspaceRoot: "/Users/tester/Documents/HarnessOS/2026/send-to-agent",
+                workspaceRoot: "/Users/tester/Documents/Haros/2026/send-to-agent",
               }
             : project,
         ),
@@ -9240,7 +9240,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+          chatWorkspaceRoot: "/Users/tester/Documents/Haros",
         };
       },
     });
@@ -9467,7 +9467,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+          chatWorkspaceRoot: "/Users/tester/Documents/Haros",
         };
         nextFixture.gitBranchByCwd = {
           "/Users/tester": "home-main",
@@ -9511,7 +9511,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     let catalogProjected = false;
-    const readyHarnessOSStatus = {
+    const readyHarosStatus = {
       engine: "oa" as const,
       status: "ready" as const,
       available: true,
@@ -9536,7 +9536,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       checkedAt: NOW_ISO,
     };
     const refreshEngines = vi.fn(async () => ({
-      engines: catalogProjected ? [readyHarnessOSStatus] : [],
+      engines: catalogProjected ? [readyHarosStatus] : [],
     }));
     const setupService = {
       serviceId: "deepseek",
@@ -9628,7 +9628,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       };
       fixture.serverConfig = {
         ...fixture.serverConfig,
-        engines: [readyHarnessOSStatus],
+        engines: [readyHarosStatus],
       };
       return {
         state: "complete" as const,
@@ -9668,7 +9668,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          engines: [readyHarnessOSStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
+          engines: [readyHarosStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
         };
         nextFixture.providerPassivePresence = ["oa", "pi", "opencode"];
         nextFixture.providerModelsByEngine = {
@@ -10302,7 +10302,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("routes a stale HarnessOS service selection back to Model services", async () => {
+  it("routes a stale Haros service selection back to Model services", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setStickyEngineSelection({
       engine: "oa",
@@ -10377,7 +10377,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await waitForURL(
         mounted.router,
         (path) => path === "/settings",
-        "A stale HarnessOS service selection should open Model services recovery.",
+        "A stale Haros service selection should open Model services recovery.",
       );
       expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
       expect(mounted.router.state.location.search).not.toHaveProperty("target");

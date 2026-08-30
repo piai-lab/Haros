@@ -1,5 +1,5 @@
 // FILE: ModelsSettingsPanel.tsx
-// Purpose: Own HarnessOS model-service discovery, authentication, catalog, and recovery workflows.
+// Purpose: Own Haros model-service discovery, authentication, catalog, and recovery workflows.
 // Layer: Settings panel
 
 import {
@@ -13,13 +13,13 @@ import {
   type OAModelServiceDescriptor,
   type OAModelServiceOAuthPromptMode,
   type OAModelServiceModel,
-  type HarnessOSCustomModelServiceApi,
-  type HarnessOSCustomModelServiceConfigInput,
-  type HarnessOSCustomModelServiceCredentialInput,
-  type HarnessOSCustomModelServiceDiscoveredModel,
-  type HarnessOSCustomModelHeaderMetadata,
-  type HarnessOSCustomModelHeaderMutation,
-  type HarnessOSCustomModelServiceModelInput,
+  type HarosCustomModelServiceApi,
+  type HarosCustomModelServiceConfigInput,
+  type HarosCustomModelServiceCredentialInput,
+  type HarosCustomModelServiceDiscoveredModel,
+  type HarosCustomModelHeaderMetadata,
+  type HarosCustomModelHeaderMutation,
+  type HarosCustomModelServiceModelInput,
   type EngineSelection,
 } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -114,12 +114,12 @@ export interface PreparedModelService {
 
 interface CustomHeaderEditorEntry {
   readonly name: string;
-  readonly existingSource: HarnessOSCustomModelHeaderMetadata["source"] | null;
+  readonly existingSource: HarosCustomModelHeaderMetadata["source"] | null;
   readonly mode: "preserve" | "environment" | "clear";
   readonly variableName: string;
 }
 
-type CustomModelEditorModel = Omit<HarnessOSCustomModelServiceModelInput, "headerMutations"> & {
+type CustomModelEditorModel = Omit<HarosCustomModelServiceModelInput, "headerMutations"> & {
   readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
 };
 
@@ -127,7 +127,7 @@ interface CustomModelServiceEditorState {
   readonly mode: "create" | "edit";
   readonly serviceId: string | null;
   readonly displayName: string;
-  readonly api: HarnessOSCustomModelServiceApi;
+  readonly api: HarosCustomModelServiceApi;
   readonly baseUrl: string;
   readonly authHeader: boolean | undefined;
   readonly credentialMode: "preserve" | "stored_key" | "environment" | "command";
@@ -143,7 +143,7 @@ interface CustomModelServiceEditorState {
 
 interface CustomModelDiscoveryState {
   readonly status: "idle" | "loading" | "success";
-  readonly models: ReadonlyArray<HarnessOSCustomModelServiceDiscoveredModel>;
+  readonly models: ReadonlyArray<HarosCustomModelServiceDiscoveredModel>;
   readonly selectedModelIds: ReadonlySet<string>;
 }
 
@@ -179,7 +179,7 @@ const CUSTOM_MODEL_THINKING_LEVEL_LABEL_KEYS = {
   xhigh: "settings.customApiThinkingLevel.xhigh",
   max: "settings.customApiThinkingLevel.max",
 } as const;
-type CustomModelCompat = NonNullable<HarnessOSCustomModelServiceModelInput["compat"]>;
+type CustomModelCompat = NonNullable<HarosCustomModelServiceModelInput["compat"]>;
 type CustomModelBooleanCompatField = Exclude<keyof CustomModelCompat, "maxTokensField">;
 const CUSTOM_MODEL_COMPAT_LABEL_KEYS: Record<CustomModelBooleanCompatField, MessageKey> = {
   supportsDeveloperRole: "settings.customApiCompat.supportsDeveloperRole",
@@ -218,7 +218,7 @@ const PREFERRED_MODEL_SERVICE_RANK = new Map<string, number>(
 );
 
 function customHeaderEditorEntries(
-  headers: ReadonlyArray<HarnessOSCustomModelHeaderMetadata> | undefined,
+  headers: ReadonlyArray<HarosCustomModelHeaderMetadata> | undefined,
 ): ReadonlyArray<CustomHeaderEditorEntry> {
   return (headers ?? []).map((header) => ({
     name: header.name,
@@ -230,8 +230,8 @@ function customHeaderEditorEntries(
 
 function customHeaderMutations(
   entries: ReadonlyArray<CustomHeaderEditorEntry>,
-): ReadonlyArray<HarnessOSCustomModelHeaderMutation> {
-  return entries.flatMap<HarnessOSCustomModelHeaderMutation>((entry) => {
+): ReadonlyArray<HarosCustomModelHeaderMutation> {
+  return entries.flatMap<HarosCustomModelHeaderMutation>((entry) => {
     if (entry.mode === "preserve") return [];
     const name = entry.name.trim();
     if (entry.mode === "clear") return [{ name, type: "clear" as const }];
@@ -293,7 +293,7 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
 
 function customModelServiceConfig(
   editor: CustomModelServiceEditorState,
-): HarnessOSCustomModelServiceConfigInput {
+): HarosCustomModelServiceConfigInput {
   const headerMutations = customHeaderMutations(editor.headers);
   return {
     serviceId: editor.serviceId,
@@ -354,7 +354,7 @@ function customModelServiceFingerprint(editor: CustomModelServiceEditorState): s
 
 function customModelServiceCredentialInput(
   editor: CustomModelServiceEditorState,
-): HarnessOSCustomModelServiceCredentialInput | null {
+): HarosCustomModelServiceCredentialInput | null {
   switch (editor.credentialMode) {
     case "preserve":
       return editor.mode === "edit" ? { type: "preserve" } : null;
@@ -2773,7 +2773,7 @@ function ActiveModelsSettingsPanel({
                     value={customServiceEditor.api}
                     onValueChange={(value) =>
                       updateCustomServiceEditor((current) => {
-                        const api = value as HarnessOSCustomModelServiceApi;
+                        const api = value as HarosCustomModelServiceApi;
                         return {
                           ...current,
                           api,
@@ -3211,7 +3211,7 @@ function ActiveModelsSettingsPanel({
                                   const api =
                                     value === "provider_default"
                                       ? undefined
-                                      : (value as HarnessOSCustomModelServiceApi);
+                                      : (value as HarosCustomModelServiceApi);
                                   const protocolChanged =
                                     (entry.api ?? current.api) !== (api ?? current.api);
                                   return {

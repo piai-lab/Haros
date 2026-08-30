@@ -61,7 +61,7 @@ const EN_MESSAGES = {
   "settings.notepad": "Notepad",
   "settings.notepadDescription": "Show the current task's notepad in the Environment panel.",
   "settings.integrationsDescription":
-    "Let Codex, Claude Code, and other local apps connect to and use HarnessOS.",
+    "Let Codex, Claude Code, and other local apps connect to and use Haros.",
   "settings.appSection": "App",
   "settings.noSuggestedFonts": "No matching suggested fonts.",
   "settings.followUpBehavior": "Follow-up behavior",
@@ -169,7 +169,7 @@ const ZH_CN_MESSAGES = {
   "settings.textMarkersDescription": "在环境信息面板中显示高亮和下划线文本。",
   "settings.notepad": "记事本",
   "settings.notepadDescription": "在环境信息面板中显示当前任务的记事本。",
-  "settings.integrationsDescription": "允许 Codex、Claude Code 等本地应用连接并使用 HarnessOS。",
+  "settings.integrationsDescription": "允许 Codex、Claude Code 等本地应用连接并使用 Haros。",
   "settings.appSection": "应用",
   "settings.noSuggestedFonts": "没有匹配的推荐字体。",
   "settings.followUpBehavior": "后续消息行为",

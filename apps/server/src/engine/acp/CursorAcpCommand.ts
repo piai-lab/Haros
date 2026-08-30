@@ -230,7 +230,7 @@ function wrapPowerShellCommand(command: string, args: ReadonlyArray<string>): Cu
   };
 }
 
-// Resolves persisted/default Cursor binary settings into the executable HarnessOS should spawn.
+// Resolves persisted/default Cursor binary settings into the executable Haros should spawn.
 export function resolveCursorAgentBinaryPath(binaryPath: string | null | undefined): string {
   const configuredBinaryPath = binaryPath?.trim();
   return !configuredBinaryPath || configuredBinaryPath === LEGACY_CURSOR_AGENT_BINARY

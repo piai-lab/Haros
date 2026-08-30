@@ -1,5 +1,5 @@
 // FILE: engineChildEnvironment.ts
-// Purpose: Builds engine child environments without HarnessOS control-plane authority.
+// Purpose: Builds engine child environments without Haros control-plane authority.
 // Layer: Server engine process security
 
 export type EngineChildKind =
@@ -79,7 +79,7 @@ const isTestHarnessKey = (key: string, env: NodeJS.ProcessEnv): boolean =>
 export function buildEngineChildEnvironment(input: {
   readonly engine: EngineChildKind;
   readonly baseEnv?: NodeJS.ProcessEnv;
-  readonly inheritedHarnessOSKeys?: ReadonlyArray<string>;
+  readonly inheritedHarosKeys?: ReadonlyArray<string>;
   readonly inheritedNativeCapabilityKeys?: ReadonlyArray<string>;
   readonly overrides?: NodeJS.ProcessEnv;
 }): NodeJS.ProcessEnv {
@@ -87,7 +87,7 @@ export function buildEngineChildEnvironment(input: {
     ...(input.baseEnv ?? process.env),
     ...input.overrides,
   };
-  const allowedHarnessOSKeys = new Set(input.inheritedHarnessOSKeys ?? []);
+  const allowedHarosKeys = new Set(input.inheritedHarosKeys ?? []);
   const allowedNativeCapabilities = new Set(input.inheritedNativeCapabilityKeys ?? []);
   const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine];
   const childEnv: NodeJS.ProcessEnv = {};
@@ -95,7 +95,7 @@ export function buildEngineChildEnvironment(input: {
   for (const [key, value] of Object.entries(baseEnv)) {
     if (
       key.startsWith("HARNESSOS_") &&
-      !allowedHarnessOSKeys.has(key) &&
+      !allowedHarosKeys.has(key) &&
       !isTestHarnessKey(key, baseEnv)
     ) {
       continue;

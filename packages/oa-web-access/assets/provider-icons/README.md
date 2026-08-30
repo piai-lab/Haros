@@ -1,6 +1,6 @@
-# HarnessOS Web Access provider icons
+# Haros Web Access provider icons
 
-This directory is the shipped, exact-pinned provider-mark owner for HarnessOS
+This directory is the shipped, exact-pinned provider-mark owner for Haros
 Web Access. The 26 runtime provider identities resolve to 25 physical files;
 `parallel-mcp` deliberately reuses `parallel.svg` because it is a second
 connection method for the same Parallel service.
@@ -18,7 +18,7 @@ byte-for-byte from the repository research snapshot at commit
 the locked `@lobehub/icons-static-svg@1.94.0`; DuckDuckGo exactly matches
 `simple-icons@16.28.0`; the remaining candidates are fixed
 official-site/app/favicon bytes recorded by that intake. Asset admission means
-that the exact local bytes ship in HarnessOS; it does not claim ownership,
+that the exact local bytes ship in Haros; it does not claim ownership,
 endorsement, or sponsorship. Provider marks remain the property of their
 respective owners and are used only to identify the service selected by the user.
 

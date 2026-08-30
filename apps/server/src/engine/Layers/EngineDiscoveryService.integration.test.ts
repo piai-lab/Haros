@@ -1,6 +1,6 @@
 // FILE: EngineDiscoveryService.test.ts
 // Purpose: Verifies the discovery service merges engine-native skills with the
-//          unified HarnessOS catalog, filters user-disabled skills, and reports
+//          unified Haros catalog, filters user-disabled skills, and reports
 //          skill discovery as supported for every engine.
 // Layer: Server engine tests
 
@@ -319,7 +319,7 @@ describe("EngineDiscoveryService.listSkills", () => {
     expect(JSON.stringify(result)).not.toContain("codex binary missing");
   });
 
-  it("keeps native skills and reports a sanitized HarnessOS Library discovery failure", async () => {
+  it("keeps native skills and reports a sanitized Haros Library discovery failure", async () => {
     const nativeSkill = {
       name: "native-only",
       path: path.join(homeDir, ".codex", "skills", "native-only", "SKILL.md"),

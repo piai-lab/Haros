@@ -1,5 +1,5 @@
 /**
- * Engine-facing config builders for the HarnessOS HostGateway.
+ * Engine-facing config builders for the Haros HostGateway.
  *
  * One shared module shapes the same MCP connection (endpoint URL + per-thread
  * bearer token) into every engine's native MCP configuration format so the
@@ -34,7 +34,7 @@ function authorizationHeader(connection: HostGatewayMcpConnection): string {
 /**
  * Codex reads MCP servers from `config.toml`; the config file is shared by all
  * sessions of one Codex home, so the token is never written into it. Instead
- * the block references an env var that HarnessOS sets per app-server process.
+ * the block references an env var that Haros sets per app-server process.
  *
  * The shell_environment_policy table keeps that env var out of exec tool
  * subprocesses: codex defaults to `ignore_default_excludes = true`, so the
@@ -70,7 +70,7 @@ export interface OpenCodeMcpRemoteServerConfig {
 /**
  * OpenCode's dynamic `mcp.add` endpoint is server/directory scoped rather
  * than session scoped. Callers must install this config through either a
- * engine process dedicated to the owning HarnessOS thread or an exclusive
+ * engine process dedicated to the owning Haros thread or an exclusive
  * external-server/directory lock held for the full agent turn.
  */
 export function buildOpenCodeMcpServer(
@@ -144,18 +144,18 @@ async function postHostGatewayJsonRpc(input: {
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   });
   if (!response.ok) {
-    throw new Error(`HarnessOS MCP request failed with HTTP ${String(response.status)}.`);
+    throw new Error(`Haros MCP request failed with HTTP ${String(response.status)}.`);
   }
   const payload: unknown = await response.json();
   if (!isRecord(payload) || payload.jsonrpc !== "2.0") {
-    throw new Error("HarnessOS MCP returned an invalid JSON-RPC response.");
+    throw new Error("Haros MCP returned an invalid JSON-RPC response.");
   }
   if ("error" in payload) {
     const failure = isRecord(payload.error) ? payload.error : null;
-    throw new Error(failure?.message ? String(failure.message) : "HarnessOS MCP request failed.");
+    throw new Error(failure?.message ? String(failure.message) : "Haros MCP request failed.");
   }
   if (payload.id !== id || !("result" in payload)) {
-    throw new Error("HarnessOS MCP returned a mismatched JSON-RPC response.");
+    throw new Error("Haros MCP returned a mismatched JSON-RPC response.");
   }
   return payload.result;
 }
@@ -171,7 +171,7 @@ export async function listHostGatewayMcpTools(input: {
     method: "tools/list",
   });
   if (!isRecord(result) || !Array.isArray(result.tools)) {
-    throw new Error("HarnessOS MCP tools/list returned an invalid tool catalog.");
+    throw new Error("Haros MCP tools/list returned an invalid tool catalog.");
   }
   return result.tools.map((value) => {
     if (
@@ -180,7 +180,7 @@ export async function listHostGatewayMcpTools(input: {
       typeof value.description !== "string" ||
       !isRecord(value.inputSchema)
     ) {
-      throw new Error("HarnessOS MCP tools/list returned an invalid tool descriptor.");
+      throw new Error("Haros MCP tools/list returned an invalid tool descriptor.");
     }
     const metadata = readHostGatewayToolMetadata(value);
     return metadata.group === undefined
@@ -265,7 +265,7 @@ export interface AntigravityMcpPluginConfig {
 }
 
 /**
- * Build the secret-free MCP fragment installed with HarnessOS's Antigravity
+ * Build the secret-free MCP fragment installed with Haros's Antigravity
  * plugin. Antigravity expands the endpoint plus a one-shot bootstrap value
  * from each `agy` process. The stdio proxy consumes that value during MCP
  * initialization and keeps the exchanged session bearer in its own memory,
@@ -311,7 +311,7 @@ export interface AcpInitializeCapabilitiesView {
  * falls back to the stdio->HTTP proxy script otherwise (stdio is the ACP
  * baseline every agent must accept).
  */
-export function buildAcpHarnessOSMcpServers(input: {
+export function buildAcpHarosMcpServers(input: {
   readonly connection: HostGatewayMcpConnection;
   readonly initializeResult: AcpInitializeCapabilitiesView;
   readonly stdioProxy: AcpStdioProxySpawn;

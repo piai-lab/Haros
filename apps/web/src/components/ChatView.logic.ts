@@ -16,7 +16,7 @@ import {
   type ThreadId as ThreadIdType,
 } from "@harnessos/contracts";
 import { normalizeModelSlug } from "@harnessos/shared/model";
-import { buildHarnessOSBranchName } from "@harnessos/shared/git";
+import { buildHarosBranchName } from "@harnessos/shared/git";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { isGenericTerminalThreadTitle } from "@harnessos/shared/terminalThreads";
 import {
@@ -1000,7 +1000,7 @@ export function describeVoiceRecordingStartError(error: unknown): string {
   const errorName = typeof error.name === "string" ? error.name : "";
 
   if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
-    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for HarnessOS, then try again.";
+    return "Microphone access was denied. Enable it in macOS Privacy & Security > Microphone for Haros, then try again.";
   }
   if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
     return "No microphone was found. Connect one and try again.";
@@ -1590,7 +1590,7 @@ export function buildSuggestedWorktreeName(input: {
   associatedWorktreeBranch?: string | null;
   title?: string | null;
 }): string {
-  return buildHarnessOSBranchName(input.associatedWorktreeBranch ?? input.title);
+  return buildHarosBranchName(input.associatedWorktreeBranch ?? input.title);
 }
 
 export function deriveComposerSendState(options: {

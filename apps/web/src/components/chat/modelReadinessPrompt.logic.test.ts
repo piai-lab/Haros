@@ -85,7 +85,7 @@ describe("model readiness facts", () => {
     ).toBe(false);
   });
 
-  it("requires the exact HarnessOS service origin to own the configured model", () => {
+  it("requires the exact Haros service origin to own the configured model", () => {
     const selection = {
       engine: "oa",
       model: "gateway/model",

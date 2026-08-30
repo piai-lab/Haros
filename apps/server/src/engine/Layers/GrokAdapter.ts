@@ -49,10 +49,10 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpHarnessOSMcpServers } from "../../hostGateway/mcpInjection.ts";
+import { buildAcpHarosMcpServers } from "../../hostGateway/mcpInjection.ts";
 import {
-  type HarnessOSHarnessPolicyDeliveryState,
-  takeHarnessOSHarnessPolicyTextPartForEngineSession,
+  type HarosHarnessPolicyDeliveryState,
+  takeHarosHarnessPolicyTextPartForEngineSession,
 } from "../../hostGateway/harnessPolicy.ts";
 import { HostGatewayCredentials } from "../../hostGateway/Services/HostGatewayCredentials.ts";
 import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
@@ -140,11 +140,11 @@ import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogg
 
 const ENGINE = "grok" as const;
 
-export const takeGrokHarnessOSHarnessPolicyTextPart = (
-  state: HarnessOSHarnessPolicyDeliveryState,
+export const takeGrokHarosHarnessPolicyTextPart = (
+  state: HarosHarnessPolicyDeliveryState,
   scopedGatewayConnectionAvailable: boolean,
 ) =>
-  takeHarnessOSHarnessPolicyTextPartForEngineSession(state, {
+  takeHarosHarnessPolicyTextPartForEngineSession(state, {
     scopedGatewayConnectionAvailable,
   });
 const GROK_RESUME_VERSION = 1 as const;
@@ -204,7 +204,7 @@ const GROK_TURN_SETTLE_DRAIN_POLL_MS = 25;
 const GROK_EXIT_PLAN_RESPONSE_GRACE_MS = 25;
 const XAI_API_BASE_URL = "https://api.x.ai/v1";
 const GROK_PLAN_MODE_PROMPT_PREFIX = [
-  "HarnessOS requested Grok's native plan mode.",
+  "Haros requested Grok's native plan mode.",
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -266,7 +266,7 @@ export function buildGrokPromptMeta(interactionMode: EngineInteractionMode): {
 } {
   // Grok ACP reconciles its native Plan tracker from session/prompt `_meta.mode`.
   // Unlike x.ai/toggle_plan_mode this is idempotent, so reconnects cannot invert
-  // the engine state when HarnessOS sends the desired mode again.
+  // the engine state when Haros sends the desired mode again.
   return { mode: interactionMode === "plan" ? "plan" : "agent" };
 }
 
@@ -304,7 +304,7 @@ export function resolveGrokPlanHookResponse(
   }
   return {
     decision: "deny",
-    systemMessage: `HarnessOS Plan mode blocks the mutating or unknown Grok tool "${toolName || "unknown"}".`,
+    systemMessage: `Haros Plan mode blocks the mutating or unknown Grok tool "${toolName || "unknown"}".`,
   };
 }
 
@@ -1148,7 +1148,7 @@ export function makeGrokAdapter(
             cwd,
             runtimeMode: input.runtimeMode,
             ...(resumeSessionId ? { resumeSessionId } : {}),
-            clientInfo: { name: "HarnessOS", version: "0.0.0" },
+            clientInfo: { name: "Haros", version: "0.0.0" },
             // Grok registers client hooks from session setup metadata, not
             // initialize.clientCapabilities. Re-send this on load/resume so a
             // reconnected session keeps the Plan-mode write gate.
@@ -1156,7 +1156,7 @@ export function makeGrokAdapter(
             ...(hostGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult) =>
-                    buildAcpHarnessOSMcpServers({
+                    buildAcpHarosMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: hostGatewayCredentials.stdioProxy,
@@ -1265,7 +1265,7 @@ export function makeGrokAdapter(
                       ctx.lastPlanFingerprint !== planMarkdown
                     ) {
                       ctx.lastPlanFingerprint = planMarkdown;
-                      // The extension response must reach Grok before HarnessOS cancels the
+                      // The extension response must reach Grok before Haros cancels the
                       // prompt fiber. Cancelling inline can tear down Grok's pending reverse
                       // request and recreate its misleading "client disconnected" failure.
                       yield* Effect.gen(function* () {
@@ -1895,7 +1895,7 @@ export function makeGrokAdapter(
             issue: "Turn requires non-empty text or attachments.",
           });
         }
-        const harnessPolicy = takeGrokHarnessOSHarnessPolicyTextPart(
+        const harnessPolicy = takeGrokHarosHarnessPolicyTextPart(
           ctx,
           hostGatewayCredentials !== undefined,
         );
@@ -2580,7 +2580,7 @@ export function makeGrokAdapter(
             runtime,
             targetCwd,
             unsupportedIssue:
-              "This Grok ACP version does not advertise session/fork; HarnessOS will rebuild the fork from its retained transcript.",
+              "This Grok ACP version does not advertise session/fork; Haros will rebuild the fork from its retained transcript.",
             requestTimeoutMs: GROK_ACP_FORK_TIMEOUT_MS,
             timeoutError: grokForkTimeoutError,
           });
@@ -2593,7 +2593,7 @@ export function makeGrokAdapter(
             engine: ENGINE,
             operation: "forkThread",
             issue:
-              "The source Grok session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.",
+              "The source Grok session has a turn in flight; Haros will rebuild the fork from its retained transcript.",
           });
         }
         const forked = activeSource
@@ -2621,7 +2621,7 @@ export function makeGrokAdapter(
                 cwd: sourceCwd,
                 runtimeMode: input.runtimeMode,
                 resumeSessionId: sourceSessionId,
-                clientInfo: { name: "HarnessOS Fork", version: "0.0.0" },
+                clientInfo: { name: "Haros Fork", version: "0.0.0" },
                 sessionMeta: GROK_SESSION_META,
               });
               yield* runtime.start().pipe(

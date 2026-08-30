@@ -432,7 +432,7 @@ export function parseCursorCliModelList(stdout: string): ReadonlyArray<EngineMod
 
 export const CURSOR_LIST_AVAILABLE_MODELS_METHOD = "cursor/list_available_models";
 
-// Cursor exposes "auto" as a `default` model id over ACP; keep HarnessOS's "auto"
+// Cursor exposes "auto" as a `default` model id over ACP; keep Haros's "auto"
 // slug so the picker and DEFAULT_MODEL_BY_ENGINE stay consistent.
 const CURSOR_ACP_AUTO_MODEL_ID = "default";
 

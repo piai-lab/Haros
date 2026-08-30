@@ -14,10 +14,10 @@ import {
 
 describe("resolveElectronUpdaterCacheDirName", () => {
   it("matches electron-updater's cache directory fallback", () => {
-    expect(resolveElectronUpdaterCacheDirName(null, "HarnessOS")).toBe("HarnessOS");
+    expect(resolveElectronUpdaterCacheDirName(null, "Haros")).toBe("Haros");
     expect(
-      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "HarnessOS-updater" }, "HarnessOS"),
-    ).toBe("HarnessOS-updater");
+      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "Haros-updater" }, "Haros"),
+    ).toBe("Haros-updater");
   });
 });
 
@@ -25,55 +25,55 @@ describe("resolveElectronUpdaterPendingCacheDir", () => {
   it("matches electron-updater's pending cache path on macOS", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "HarnessOS-updater",
+        cacheDirName: "Haros-updater",
         platform: "darwin",
         homeDir: "/Users/test",
       }),
-    ).toBe("/Users/test/Library/Caches/HarnessOS-updater/pending");
+    ).toBe("/Users/test/Library/Caches/Haros-updater/pending");
   });
 
   it("matches electron-updater's pending cache path on Windows", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "HarnessOS-updater",
+        cacheDirName: "Haros-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "C:\\Users\\test\\AppData\\Local",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\HarnessOS-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\Haros-updater\\pending");
   });
 
   it("falls back from an empty Windows cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "HarnessOS-updater",
+        cacheDirName: "Haros-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\HarnessOS-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\Haros-updater\\pending");
   });
 
   it("matches electron-updater's pending cache path on Linux", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "HarnessOS-updater",
+        cacheDirName: "Haros-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "/tmp/cache",
       }),
-    ).toBe("/tmp/cache/HarnessOS-updater/pending");
+    ).toBe("/tmp/cache/Haros-updater/pending");
   });
 
   it("falls back from an empty Linux cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "HarnessOS-updater",
+        cacheDirName: "Haros-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "",
       }),
-    ).toBe("/home/test/.cache/HarnessOS-updater/pending");
+    ).toBe("/home/test/.cache/Haros-updater/pending");
   });
 
   it("returns null when no cache dir is configured", () => {
@@ -90,16 +90,14 @@ describe("resolveElectronUpdaterPendingCacheDir", () => {
 describe("resolveElectronUpdaterCacheDir", () => {
   it("exposes the shared cache root and legacy top-level zip path", () => {
     const args = {
-      cacheDirName: "HarnessOS-updater",
+      cacheDirName: "Haros-updater",
       platform: "darwin" as const,
       homeDir: "/Users/test",
     };
 
-    expect(resolveElectronUpdaterCacheDir(args)).toBe(
-      "/Users/test/Library/Caches/HarnessOS-updater",
-    );
+    expect(resolveElectronUpdaterCacheDir(args)).toBe("/Users/test/Library/Caches/Haros-updater");
     expect(resolveElectronUpdaterLegacyZipPath(args)).toBe(
-      "/Users/test/Library/Caches/HarnessOS-updater/update.zip",
+      "/Users/test/Library/Caches/Haros-updater/update.zip",
     );
   });
 });

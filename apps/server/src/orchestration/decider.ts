@@ -1065,7 +1065,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
       });
       // Engine-native threads mirror subagents the engine already runs;
-      // HarnessOS never starts a session for them, so the Auto-mode capability
+      // Haros never starts a session for them, so the Auto-mode capability
       // check can only reject the projection (and durably poison the runtime
       // journal replaying it), never prevent an unverified Auto session.
       if (command.creationSource !== "engine_native") {

@@ -1,5 +1,5 @@
 // FILE: importedThreadMessages.ts
-// Purpose: Normalizes engine-native transcript snapshots into HarnessOS import messages.
+// Purpose: Normalizes engine-native transcript snapshots into Haros import messages.
 // Layer: Orchestration import mapping
 // Exports: Codex, Claude, OpenCode, and Factory Droid transcript mappers.
 

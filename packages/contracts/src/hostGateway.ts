@@ -1,5 +1,5 @@
 /**
- * Public contracts for the HarnessOS agent-control gateway.
+ * Public contracts for the Haros agent-control gateway.
  *
  * New gateway tools decode these schemas before doing any work. Keeping the
  * limits here ensures the MCP surface, server implementation, and tests share
@@ -16,7 +16,7 @@ export const HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION = 20;
 export const HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH = 256;
 export const HARNESSOS_GATEWAY_MAX_WAIT_MS = 60_000;
 
-export const HarnessOSGatewayErrorCode = Schema.Literals([
+export const HarosGatewayErrorCode = Schema.Literals([
   "caller_session_inactive",
   "caller_turn_inactive",
   "capability_denied",
@@ -31,23 +31,23 @@ export const HarnessOSGatewayErrorCode = Schema.Literals([
   "wait_timed_out",
   "operation_failed",
 ]);
-export type HarnessOSGatewayErrorCode = typeof HarnessOSGatewayErrorCode.Type;
+export type HarosGatewayErrorCode = typeof HarosGatewayErrorCode.Type;
 
-export const HarnessOSGatewayError = Schema.Struct({
-  code: HarnessOSGatewayErrorCode,
+export const HarosGatewayError = Schema.Struct({
+  code: HarosGatewayErrorCode,
   message: Schema.String,
   details: Schema.optional(Schema.Unknown),
 });
-export type HarnessOSGatewayError = typeof HarnessOSGatewayError.Type;
+export type HarosGatewayError = typeof HarosGatewayError.Type;
 
-export const HarnessOSGatewayErrorResult = Schema.Struct({
-  error: HarnessOSGatewayError,
+export const HarosGatewayErrorResult = Schema.Struct({
+  error: HarosGatewayError,
 });
-export type HarnessOSGatewayErrorResult = typeof HarnessOSGatewayErrorResult.Type;
+export type HarosGatewayErrorResult = typeof HarosGatewayErrorResult.Type;
 
-export const HarnessOSContextResult = Schema.Struct({
+export const HarosContextResult = Schema.Struct({
   harness: Schema.Struct({
-    name: Schema.Literal("HarnessOS"),
+    name: Schema.Literal("Haros"),
     policyVersion: Schema.String,
   }),
   caller: Schema.Struct({
@@ -63,9 +63,9 @@ export const HarnessOSContextResult = Schema.Struct({
     automations: Schema.Boolean,
   }),
 });
-export type HarnessOSContextResult = typeof HarnessOSContextResult.Type;
+export type HarosContextResult = typeof HarosContextResult.Type;
 
-export const HarnessOSCreateThreadSpec = Schema.Struct({
+export const HarosCreateThreadSpec = Schema.Struct({
   prompt: Schema.String.check(Schema.isNonEmpty()),
   title: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
   target: EngineSelection,
@@ -78,21 +78,21 @@ export const HarnessOSCreateThreadSpec = Schema.Struct({
   branchName: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
   runtimeMode: Schema.optional(Schema.Literals(["approval-required", "full-access"])),
 });
-export type HarnessOSCreateThreadSpec = typeof HarnessOSCreateThreadSpec.Type;
+export type HarosCreateThreadSpec = typeof HarosCreateThreadSpec.Type;
 
-const HarnessOSGatewayRequestId = Schema.String.check(Schema.isNonEmpty()).check(
+const HarosGatewayRequestId = Schema.String.check(Schema.isNonEmpty()).check(
   Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH),
 );
 
-export const HarnessOSCreateThreadsInput = Schema.Struct({
-  requestId: HarnessOSGatewayRequestId,
-  threads: Schema.Array(HarnessOSCreateThreadSpec)
+export const HarosCreateThreadsInput = Schema.Struct({
+  requestId: HarosGatewayRequestId,
+  threads: Schema.Array(HarosCreateThreadSpec)
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
-export type HarnessOSCreateThreadsInput = typeof HarnessOSCreateThreadsInput.Type;
+export type HarosCreateThreadsInput = typeof HarosCreateThreadsInput.Type;
 
-export const HarnessOSEngineCatalog = Schema.Struct({
+export const HarosEngineCatalog = Schema.Struct({
   engine: EngineKind,
   defaultModel: Schema.NullOr(Schema.String),
   models: Schema.Array(EngineModelDescriptor),
@@ -102,46 +102,46 @@ export const HarnessOSEngineCatalog = Schema.Struct({
   source: Schema.optional(Schema.String),
   error: Schema.optional(Schema.String),
 });
-export type HarnessOSEngineCatalog = typeof HarnessOSEngineCatalog.Type;
+export type HarosEngineCatalog = typeof HarosEngineCatalog.Type;
 
-export const HarnessOSGatewayTargetOptionValue = Schema.Union([
+export const HarosGatewayTargetOptionValue = Schema.Union([
   Schema.String,
   Schema.Number,
   Schema.Boolean,
 ]);
-export type HarnessOSGatewayTargetOptionValue = typeof HarnessOSGatewayTargetOptionValue.Type;
+export type HarosGatewayTargetOptionValue = typeof HarosGatewayTargetOptionValue.Type;
 
-export const HarnessOSGatewayTargetOptionRule = Schema.Struct({
+export const HarosGatewayTargetOptionRule = Schema.Struct({
   key: Schema.String,
   valueType: Schema.Literals(["string", "number", "boolean"]),
-  allowedValues: Schema.Array(HarnessOSGatewayTargetOptionValue),
+  allowedValues: Schema.Array(HarosGatewayTargetOptionValue),
   allowedValuesSource: Schema.Literals(["engine-contract", "model-discovery"]),
 });
-export type HarnessOSGatewayTargetOptionRule = typeof HarnessOSGatewayTargetOptionRule.Type;
+export type HarosGatewayTargetOptionRule = typeof HarosGatewayTargetOptionRule.Type;
 
-export const HarnessOSGatewayTargetConstruction = Schema.Struct({
+export const HarosGatewayTargetConstruction = Schema.Struct({
   modelValueSource: Schema.Literal("engines[].models[].slug"),
   primaryOptionKey: Schema.String,
   alternativeOptionKeys: Schema.Array(Schema.String),
   optionSelectionRule: Schema.String,
-  engineOptions: Schema.Array(HarnessOSGatewayTargetOptionRule),
-  optionsByModel: Schema.Record(Schema.String, Schema.Array(HarnessOSGatewayTargetOptionRule)),
+  engineOptions: Schema.Array(HarosGatewayTargetOptionRule),
+  optionsByModel: Schema.Record(Schema.String, Schema.Array(HarosGatewayTargetOptionRule)),
   exampleTarget: Schema.NullOr(EngineSelection),
 });
-export type HarnessOSGatewayTargetConstruction = typeof HarnessOSGatewayTargetConstruction.Type;
+export type HarosGatewayTargetConstruction = typeof HarosGatewayTargetConstruction.Type;
 
-export const HarnessOSCapabilitiesResult = Schema.Struct({
-  targetConstruction: Schema.Record(Schema.String, HarnessOSGatewayTargetConstruction),
-  engines: Schema.Array(HarnessOSEngineCatalog),
+export const HarosCapabilitiesResult = Schema.Struct({
+  targetConstruction: Schema.Record(Schema.String, HarosGatewayTargetConstruction),
+  engines: Schema.Array(HarosEngineCatalog),
   limits: Schema.Struct({
     maxThreadsPerOperation: Schema.Int,
     maxWaitMs: Schema.Int,
     oneCreationPlanPerActiveTurn: Schema.Boolean,
   }),
 });
-export type HarnessOSCapabilitiesResult = typeof HarnessOSCapabilitiesResult.Type;
+export type HarosCapabilitiesResult = typeof HarosCapabilitiesResult.Type;
 
-export const HarnessOSCreatedThreadResult = Schema.Struct({
+export const HarosCreatedThreadResult = Schema.Struct({
   index: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   threadId: ThreadId,
   projectId: ProjectId,
@@ -155,19 +155,19 @@ export const HarnessOSCreatedThreadResult = Schema.Struct({
   worktreePath: Schema.NullOr(Schema.String),
   status: Schema.Literal("task_dispatched"),
 });
-export type HarnessOSCreatedThreadResult = typeof HarnessOSCreatedThreadResult.Type;
+export type HarosCreatedThreadResult = typeof HarosCreatedThreadResult.Type;
 
-export const HarnessOSCreateThreadsResult = Schema.Struct({
+export const HarosCreateThreadsResult = Schema.Struct({
   operationId: Schema.String,
-  requestId: HarnessOSGatewayRequestId,
+  requestId: HarosGatewayRequestId,
   requestedCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   createdCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   threadIds: Schema.Array(ThreadId),
-  threads: Schema.Array(HarnessOSCreatedThreadResult),
+  threads: Schema.Array(HarosCreatedThreadResult),
 });
-export type HarnessOSCreateThreadsResult = typeof HarnessOSCreateThreadsResult.Type;
+export type HarosCreateThreadsResult = typeof HarosCreateThreadsResult.Type;
 
-export const HarnessOSWaitForThreadsInput = Schema.Struct({
+export const HarosWaitForThreadsInput = Schema.Struct({
   threadIds: Schema.Array(ThreadId)
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
@@ -182,9 +182,9 @@ export const HarnessOSWaitForThreadsInput = Schema.Struct({
     ),
   ),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
-export type HarnessOSWaitForThreadsInput = typeof HarnessOSWaitForThreadsInput.Type;
+export type HarosWaitForThreadsInput = typeof HarosWaitForThreadsInput.Type;
 
-export const HarnessOSWaitedThreadResult = Schema.Struct({
+export const HarosWaitedThreadResult = Schema.Struct({
   threadId: ThreadId,
   runId: Schema.NullOr(TurnId),
   state: Schema.Literals(["idle", "pending", "running", "completed", "error", "interrupted"]),
@@ -198,13 +198,13 @@ export const HarnessOSWaitedThreadResult = Schema.Struct({
     arguments: Schema.Struct({ threadId: ThreadId }),
   }),
 });
-export type HarnessOSWaitedThreadResult = typeof HarnessOSWaitedThreadResult.Type;
+export type HarosWaitedThreadResult = typeof HarosWaitedThreadResult.Type;
 
-export const HarnessOSWaitForThreadsResult = Schema.Struct({
+export const HarosWaitForThreadsResult = Schema.Struct({
   callerThreadId: ThreadId,
   runIds: Schema.Array(Schema.NullOr(TurnId)),
   allTerminal: Schema.Boolean,
   timedOut: Schema.Boolean,
-  threads: Schema.Array(HarnessOSWaitedThreadResult),
+  threads: Schema.Array(HarosWaitedThreadResult),
 });
-export type HarnessOSWaitForThreadsResult = typeof HarnessOSWaitForThreadsResult.Type;
+export type HarosWaitForThreadsResult = typeof HarosWaitForThreadsResult.Type;

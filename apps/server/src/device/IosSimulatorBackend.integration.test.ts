@@ -44,11 +44,11 @@ const successfulProcessResult = (stdout = ""): ProcessRunResult => ({
 
 describe("device helper source resolution", () => {
   it("prefers a physical helper directory supplied by packaged desktop", () => {
-    const external = "/Applications/HarnessOS.app/Contents/Resources/device-helper";
+    const external = "/Applications/Haros.app/Contents/Resources/device-helper";
 
     expect(
       resolveDeviceHelperSourceDir(
-        "/Applications/HarnessOS.app/Contents/Resources/app.asar/apps/server/dist",
+        "/Applications/Haros.app/Contents/Resources/app.asar/apps/server/dist",
         (candidate) => candidate === external,
         external,
       ),

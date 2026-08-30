@@ -530,7 +530,7 @@ const devRunnerCli = Command.make("dev-runner", {
     Argument.withDescription("Development mode to run."),
   ),
   harnessosHome: Flag.string("home-dir").pipe(
-    Flag.withDescription("Base directory for all HarnessOS data (equivalent to HARNESSOS_HOME)."),
+    Flag.withDescription("Base directory for all Haros data (equivalent to HARNESSOS_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(

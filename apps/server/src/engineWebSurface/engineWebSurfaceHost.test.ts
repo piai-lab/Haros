@@ -114,7 +114,7 @@ describe("Engine web-surface host", () => {
     const serialized = JSON.stringify(safe);
     expect(serialized).not.toContain("fixture-token");
     expect(serialized).not.toContain("curatorUrl");
-    expect(serialized).toContain("HarnessOS Browser temporary page");
+    expect(serialized).toContain("Haros Browser temporary page");
   });
 
   it("lets the product presenter consume an exact registered intent only once", async () => {
@@ -170,6 +170,6 @@ describe("Engine web-surface host", () => {
     expect(presentations).toBe(1);
     expect(() =>
       glimpse.open('<script>window.location.replace("http://localhost:3000/");</script>'),
-    ).toThrow("No matching HarnessOS Engine web-surface intent is active.");
+    ).toThrow("No matching Haros Engine web-surface intent is active.");
   });
 });

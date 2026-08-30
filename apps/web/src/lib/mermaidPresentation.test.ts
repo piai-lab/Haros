@@ -37,7 +37,7 @@ describe("preflightMermaidSource", () => {
     ["class", "classDiagram\nA <|-- B"],
     ["state", "stateDiagram-v2\n[*] --> Ready"],
     ["er", "erDiagram\nUSER ||--o{ ORDER : places"],
-    ["mindmap", "mindmap\n  root((HarnessOS))"],
+    ["mindmap", "mindmap\n  root((Haros))"],
   ])("allows explicit %s diagrams", (_name, source) => {
     expect(preflightMermaidSource(source).ok).toBe(true);
   });

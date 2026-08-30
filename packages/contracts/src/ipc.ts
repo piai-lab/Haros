@@ -262,14 +262,14 @@ import type {
 } from "./engineExecution";
 import type { EngineCompactThreadInput } from "./engine";
 import type {
-  HarnessOSCustomModelServiceRemoveInput,
-  HarnessOSCustomModelServiceRemoveResult,
-  HarnessOSCustomModelServiceDiscoverInput,
-  HarnessOSCustomModelServiceDiscoverResult,
-  HarnessOSCustomModelServiceSaveInput,
-  HarnessOSCustomModelServiceSaveResult,
-  HarnessOSCustomModelServiceTestInput,
-  HarnessOSCustomModelServiceTestResult,
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceTestInput,
+  HarosCustomModelServiceTestResult,
   OAModelServiceAnswerLoginInput,
   OAModelServiceAuthResult,
   OAModelServiceBeginLoginInput,
@@ -447,7 +447,7 @@ export interface EngineWebSurfacePresentationContext {
   locale: "en" | "zh-CN";
   theme: "light" | "dark";
   /**
-   * Credential-blind, fully resolved colors for HarnessOS-owned pages that live
+   * Credential-blind, fully resolved colors for Haros-owned pages that live
    * outside the renderer DOM. The renderer theme owner creates this snapshot;
    * Browser and Engine packages may project it, but never reinterpret a theme
    * preset or persist a second palette.
@@ -992,21 +992,21 @@ export interface NativeApi {
       options?: { readonly signal?: AbortSignal },
     ) => Promise<OAModelServiceRefreshResult>;
     testCustom: (
-      input: HarnessOSCustomModelServiceTestInput,
+      input: HarosCustomModelServiceTestInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarnessOSCustomModelServiceTestResult>;
+    ) => Promise<HarosCustomModelServiceTestResult>;
     discoverCustom: (
-      input: HarnessOSCustomModelServiceDiscoverInput,
+      input: HarosCustomModelServiceDiscoverInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarnessOSCustomModelServiceDiscoverResult>;
+    ) => Promise<HarosCustomModelServiceDiscoverResult>;
     saveCustom: (
-      input: HarnessOSCustomModelServiceSaveInput,
+      input: HarosCustomModelServiceSaveInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarnessOSCustomModelServiceSaveResult>;
+    ) => Promise<HarosCustomModelServiceSaveResult>;
     removeCustom: (
-      input: HarnessOSCustomModelServiceRemoveInput,
+      input: HarosCustomModelServiceRemoveInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarnessOSCustomModelServiceRemoveResult>;
+    ) => Promise<HarosCustomModelServiceRemoveResult>;
   };
   oaEcosystem: {
     list: (input?: OAEcosystemListInput) => Promise<OAEcosystemSnapshot>;

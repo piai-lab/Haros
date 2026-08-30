@@ -149,7 +149,7 @@ export const PLAIN_PI_EXTENSION_THEME = {
   },
 } as unknown as ExtensionUIContext["theme"];
 
-/** Owns Pi Extension UI projection onto HarnessOS's canonical user-input lifecycle. */
+/** Owns Pi Extension UI projection onto Haros's canonical user-input lifecycle. */
 export function makePiFamilyUserInputBridge<C extends PiExtensionUserInputContext>(config: {
   readonly displayName: string;
   readonly extensionLabel: string;
@@ -427,7 +427,7 @@ export function makePiFamilyUserInputBridge<C extends PiExtensionUserInputContex
         ...config.makeEventBase(context, { includeTurnId: false }),
         type: "runtime.warning",
         payload: {
-          message: `${config.extensionLabel} UI API '${method}' is not supported in HarnessOS yet.`,
+          message: `${config.extensionLabel} UI API '${method}' is not supported in Haros yet.`,
           detail: { method },
         },
         raw: {

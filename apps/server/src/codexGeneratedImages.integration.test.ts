@@ -73,11 +73,11 @@ describe("generatedImagePathFromRuntimeEvent", () => {
 });
 
 describe("resolveCodexGeneratedImagesRoot(s)", () => {
-  const previousHarnessOSHome = process.env.HARNESSOS_HOME;
+  const previousHarosHome = process.env.HARNESSOS_HOME;
 
   afterEach(() => {
-    if (previousHarnessOSHome === undefined) delete process.env.HARNESSOS_HOME;
-    else process.env.HARNESSOS_HOME = previousHarnessOSHome;
+    if (previousHarosHome === undefined) delete process.env.HARNESSOS_HOME;
+    else process.env.HARNESSOS_HOME = previousHarosHome;
   });
 
   it("returns the overlay generated_images directory as the active write root by default", () => {

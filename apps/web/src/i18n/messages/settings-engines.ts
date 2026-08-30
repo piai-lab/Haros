@@ -67,9 +67,9 @@ const EN_MESSAGES = {
   "settings.custom": "Custom",
   "settings.commandLabel": "Command:",
   "settings.noSafeUpdateCommand":
-    "A newer version is available, but HarnessOS could not identify a safe one-click update command for this installation.",
+    "A newer version is available, but Haros could not identify a safe one-click update command for this installation.",
   "settings.selfManagedUpdate":
-    "{engine} manages its own releases, so HarnessOS cannot tell whether a newer version exists. Run the update to be sure.",
+    "{engine} manages its own releases, so Haros cannot tell whether a newer version exists. Run the update to be sure.",
   "settings.couldNotUpdateEngine": "Could not update {engine}",
   "settings.manualUpdateInstruction":
     "{failure}\n\nCopy the command below to update manually in a terminal.",
@@ -80,7 +80,7 @@ const EN_MESSAGES = {
     "Check Codex, Claude, and other engine CLIs for newer versions in the background.",
   "settings.engineUpdates": "Engine updates",
   "settings.engineUpdatesDescription":
-    "Review installed engine tools that HarnessOS can safely update.",
+    "Review installed engine tools that Haros can safely update.",
   "settings.automaticChecksOff": "Automatic checks off",
   "settings.updatesAvailable": "{count} updates available",
   "settings.noEngineUpdates": "No engine updates detected",
@@ -165,9 +165,9 @@ const ZH_CN_MESSAGES = {
   "settings.configuredPassword": "已配置——输入替代值或留空",
   "settings.custom": "自定义",
   "settings.commandLabel": "命令：",
-  "settings.noSafeUpdateCommand": "有新版本可用，但 HarnessOS 无法为此安装识别安全的一键更新命令。",
+  "settings.noSafeUpdateCommand": "有新版本可用，但 Haros 无法为此安装识别安全的一键更新命令。",
   "settings.selfManagedUpdate":
-    "{engine} 自行管理发行版本，HarnessOS 无法判断是否有新版本；请运行更新以确认。",
+    "{engine} 自行管理发行版本，Haros 无法判断是否有新版本；请运行更新以确认。",
   "settings.couldNotUpdateEngine": "无法更新 {engine}",
   "settings.manualUpdateInstruction": "{failure}\n\n请复制下方命令并在终端中手动更新。",
   "settings.engineUpdateUnknownFailure": "引擎更新失败。",
@@ -175,7 +175,7 @@ const ZH_CN_MESSAGES = {
   "settings.automaticCliUpdates": "自动检查 CLI 更新",
   "settings.automaticCliUpdatesDescription": "在后台检查 Codex、Claude 等引擎 CLI 的新版本。",
   "settings.engineUpdates": "引擎更新",
-  "settings.engineUpdatesDescription": "查看 HarnessOS 可安全更新的已安装引擎工具。",
+  "settings.engineUpdatesDescription": "查看 Haros 可安全更新的已安装引擎工具。",
   "settings.automaticChecksOff": "自动检查已关闭",
   "settings.updatesAvailable": "{count} 个更新可用",
   "settings.noEngineUpdates": "未检测到引擎更新",

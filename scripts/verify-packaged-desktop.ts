@@ -126,7 +126,7 @@ export function acquirePackagedProofLease(
         ? `pid=${existingOwner.pid}, source=${existingOwner.sourceCommit.slice(0, 12)}`
         : "owner metadata is not yet available";
       throw new Error(
-        `Another HarnessOS packaged proof owns this host (${ownerDescription}). Wait for it to finish; do not terminate unrelated HarnessOS processes.`,
+        `Another Haros packaged proof owns this host (${ownerDescription}). Wait for it to finish; do not terminate unrelated Haros processes.`,
       );
     }
 
@@ -142,7 +142,7 @@ export function acquirePackagedProofLease(
     }
     rmSync(staleDirectory, { recursive: true, force: true });
     if (!acquire()) {
-      throw new Error("Another HarnessOS packaged proof acquired this host concurrently.");
+      throw new Error("Another Haros packaged proof acquired this host concurrently.");
     }
   }
 

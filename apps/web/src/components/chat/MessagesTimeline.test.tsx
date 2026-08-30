@@ -169,7 +169,7 @@ describe("MessagesTimeline", () => {
       );
 
       expect(markup).toContain(">Haros<");
-      expect(markup).not.toContain(">HarnessOS<");
+      expect(markup).not.toContain(">OA<");
     },
   );
 
@@ -278,7 +278,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain('data-engine-web-surface-status="waiting-for-user"');
-    expect(markup).toContain('aria-label="Reopen in HarnessOS Browser"');
+    expect(markup).toContain('aria-label="Reopen in Haros Browser"');
     expect(markup).toContain("Waiting for curation");
     expect(markup).not.toContain("session=");
   });
@@ -315,7 +315,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).not.toContain("Reopen in HarnessOS Browser");
+    expect(markup).not.toContain("Reopen in Haros Browser");
     expect(markup).not.toContain("Waiting for curation");
     expect(markup).not.toContain("session=");
   });
@@ -594,9 +594,9 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup.match(/data-cross-task-origin="true"/g)).toHaveLength(1);
-    expect(markup).toContain("Sent by HarnessOS from another thread");
+    expect(markup).toContain("Sent by Haros from another thread");
     expect(markup).toContain('aria-label="Open source thread"');
-    expect(markup.indexOf("Sent by HarnessOS from another thread")).toBeLessThan(
+    expect(markup.indexOf("Sent by Haros from another thread")).toBeLessThan(
       markup.indexOf("Inspect the repository"),
     );
   });
@@ -645,7 +645,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Sent by HarnessOS from another thread");
+    expect(markup).toContain("Sent by Haros from another thread");
     expect(markup).not.toContain("Sent by agent");
   });
 
@@ -3013,7 +3013,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-tool-icon="mcp"');
   });
 
-  it("shows the HarnessOS mark for every engine-specific tool row shape", async () => {
+  it("shows the Haros mark for every engine-specific tool row shape", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const baseProps = makeTimelineBaseProps();
 
@@ -3032,9 +3032,9 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "dynamic_tool_call",
-              toolTitle: "HarnessOS__harnessos_create_thread",
-              toolName: "HarnessOS__harnessos_create_thread",
-              detail: "HarnessOS__harnessos_create_thread",
+              toolTitle: "Haros__harnessos_create_thread",
+              toolName: "Haros__harnessos_create_thread",
+              detail: "Haros__harnessos_create_thread",
               activityKind: "tool.started",
             },
           },
@@ -3043,8 +3043,8 @@ describe("MessagesTimeline", () => {
     );
     expect(claudeMarkup).toContain('data-tool-icon="oa"');
     expect(claudeMarkup).not.toContain('data-tool-icon="mcp"');
-    expect(claudeMarkup).toContain("HarnessOS is creating a thread");
-    expect(claudeMarkup).not.toContain("HarnessOS__harnessos_create_thread");
+    expect(claudeMarkup).toContain("Haros is creating a thread");
+    expect(claudeMarkup).not.toContain("Haros__harnessos_create_thread");
 
     // A engine may misclassify an MCP action containing "create" or "list"
     // as a file change. Tool identity still wins over that transport category.
@@ -3062,16 +3062,16 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "file_change",
-              toolTitle: "mcp__HarnessOS__harnessos_list_threads",
-              detail: "mcp__HarnessOS__harnessos_list_threads",
+              toolTitle: "mcp__Haros__harnessos_list_threads",
+              detail: "mcp__Haros__harnessos_list_threads",
             },
           },
         ]}
       />,
     );
     expect(codexMarkup).toContain('data-tool-icon="oa"');
-    expect(codexMarkup).toContain("HarnessOS listed threads");
-    expect(codexMarkup).not.toContain("mcp__HarnessOS__harnessos_list_threads");
+    expect(codexMarkup).toContain("Haros listed threads");
+    expect(codexMarkup).not.toContain("mcp__Haros__harnessos_list_threads");
 
     const failedMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3096,13 +3096,13 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(failedMarkup).toContain("HarnessOS couldn&#x27;t create threads");
+    expect(failedMarkup).toContain("Haros couldn&#x27;t create threads");
     expect(failedMarkup).toContain("Claude rejected reasoningEffort");
   });
 
-  // Browser calls get the globe rather than the generic HarnessOS mark: a browsing
+  // Browser calls get the globe rather than the generic Haros mark: a browsing
   // row is about a page, and the surface it acted on is the first thing to read.
-  it("uses the browser icon and action name for HarnessOS browser calls", async () => {
+  it("uses the browser icon and action name for Haros browser calls", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3122,7 +3122,7 @@ describe("MessagesTimeline", () => {
               toolStatus: "completed",
               liveActivity: {
                 state: "completed",
-                label: "HarnessOS: Browser Open",
+                label: "Haros: Browser Open",
                 startedAt: "2026-03-17T19:12:27.000Z",
                 lastActivityAt: "2026-03-17T19:12:28.000Z",
                 elapsedSeconds: 1,
@@ -3138,7 +3138,7 @@ describe("MessagesTimeline", () => {
     // A settled call reads as its action alone — no lifecycle or timing tail.
     expect(markup).not.toContain("elapsed");
     expect(markup).not.toContain("Completed tool");
-    expect(markup).not.toContain("HarnessOS: Browser Open");
+    expect(markup).not.toContain("Haros: Browser Open");
 
     const presentationOnlyMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3194,7 +3194,7 @@ describe("MessagesTimeline", () => {
       detail: 'mcp__harnessos__harnessos_read_thread: {"threadId":"c357d8c5-b4c1-47d0"}',
       activityKind: "tool.completed",
     });
-    expect(readThreadMarkup).toContain("HarnessOS read a thread");
+    expect(readThreadMarkup).toContain("Haros read a thread");
     expect(readThreadMarkup).not.toContain("mcp__harnessos__harnessos_read_thread:");
     expect(readThreadMarkup).not.toContain("threadId");
 
@@ -3208,7 +3208,7 @@ describe("MessagesTimeline", () => {
       detail: 'mcp__harnessos__harnessos_diagnose_thread: {"threadId":"09a1615d-084f-40b9"}',
       activityKind: "tool.completed",
     });
-    expect(diagnoseMarkup).toContain("HarnessOS diagnosed a thread");
+    expect(diagnoseMarkup).toContain("Haros diagnosed a thread");
     expect(diagnoseMarkup).not.toContain("mcp__harnessos__harnessos_diagnose_thread:");
     expect(diagnoseMarkup).not.toContain("threadId");
 
@@ -3239,11 +3239,11 @@ describe("MessagesTimeline", () => {
       detail: 'McpError: {"code":-32602,"message":"Invalid params"}',
       activityKind: "tool.completed",
     });
-    expect(failedArgsMarkup).toContain("HarnessOS couldn&#x27;t create threads");
+    expect(failedArgsMarkup).toContain("Haros couldn&#x27;t create threads");
     expect(failedArgsMarkup).toContain("Invalid params");
   });
 
-  it("keeps HarnessOS tool calls and adds a thread creation recap at the end of the turn", async () => {
+  it("keeps Haros tool calls and adds a thread creation recap at the end of the turn", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const assistantMessageId = MessageId.makeUnsafe("message-harnessos-recap");
     const workEntries = [
@@ -3258,7 +3258,7 @@ describe("MessagesTimeline", () => {
           tone: "tool",
           itemType: "mcp_tool_call",
           toolName: "mcp__harnessos__harnessos_create_threads",
-          toolTitle: "HarnessOS created threads",
+          toolTitle: "Haros created threads",
           activityKind: "tool.completed",
         },
       },
@@ -3269,10 +3269,10 @@ describe("MessagesTimeline", () => {
         entry: {
           id: "work-harnessos-create-recap",
           createdAt: "2026-03-17T19:12:29.000Z",
-          label: "Created 2 HarnessOS threads",
+          label: "Created 2 Haros threads",
           tone: "info",
           activityKind: "harnessos.threads.created",
-          harnessosThreadCreation: {
+          harosThreadCreation: {
             operationId: "gateway:create:two-workers",
             requestedCount: 2,
             createdCount: 2,
@@ -3311,7 +3311,7 @@ describe("MessagesTimeline", () => {
         timelineEntries={[...workEntries]}
       />,
     );
-    expect(liveMarkup).toContain("HarnessOS created threads");
+    expect(liveMarkup).toContain("Haros created threads");
     expect(liveMarkup).not.toContain('data-harnessos-thread-creation-card="true"');
 
     const markup = renderToStaticMarkup(

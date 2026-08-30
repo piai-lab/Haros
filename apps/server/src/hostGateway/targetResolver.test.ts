@@ -519,7 +519,7 @@ describe("HostGateway target resolver", () => {
     }),
   );
 
-  it.effect("fails closed before discovery when HarnessOS disables a engine", () =>
+  it.effect("fails closed before discovery when Haros disables a engine", () =>
     Effect.gen(function* () {
       let discoveryCalls = 0;
       const trackedDiscovery = {

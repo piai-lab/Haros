@@ -417,19 +417,19 @@ function effortLevelFromOptions(options: ClaudeQueryOptions | undefined): string
 const THREAD_ID = ThreadId.makeUnsafe("thread-claude-1");
 const RESUME_THREAD_ID = ThreadId.makeUnsafe("thread-claude-resume");
 
-describe("Claude HarnessOS harness policy", () => {
+describe("Claude Haros harness policy", () => {
   it("advertises scoped MCP additively when credentials are available", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(true);
     assert.include(text, HARNESSOS_HARNESS_POLICY_MARKER);
     assert.include(text, "tools actually available");
     assert.notInclude(text, "harnessos_create_threads");
-    assert.notInclude(text, "HarnessOS MCP control is unavailable");
+    assert.notInclude(text, "Haros MCP control is unavailable");
   });
 
   it("stays truthful when scoped MCP credentials are absent", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(false);
     assert.include(text, HARNESSOS_HARNESS_POLICY_MARKER);
-    assert.include(text, "HarnessOS MCP control is unavailable");
+    assert.include(text, "Haros MCP control is unavailable");
   });
 });
 
@@ -480,7 +480,7 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
-  it.effect("injects the canonical HarnessOS browser MCP into an Opus 4.8 session", () => {
+  it.effect("injects the canonical Haros browser MCP into an Opus 4.8 session", () => {
     const gateway = makeGatewayCredentialsHarness();
     const harness = makeMultiQueryHarness({ gatewayCredentials: gateway.credentials });
     return Effect.gen(function* () {
@@ -610,9 +610,9 @@ describe("ClaudeAdapterLive", () => {
       assert.include(systemPrompt.append ?? "", "When spawning subagents");
       assert.include(systemPrompt.append ?? "", "worker-<tier>");
       assert.include(systemPrompt.append ?? "", HARNESSOS_HARNESS_POLICY_MARKER);
-      assert.include(systemPrompt.append ?? "", "HarnessOS is the host and harness");
+      assert.include(systemPrompt.append ?? "", "Haros is the host and harness");
       // This characterization harness intentionally omits gateway credentials.
-      assert.include(systemPrompt.append ?? "", "HarnessOS MCP control is unavailable");
+      assert.include(systemPrompt.append ?? "", "Haros MCP control is unavailable");
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),
@@ -8885,7 +8885,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const promptText = yield* Effect.promise(() =>
         readFirstPromptText(harness.getLastCreateQueryInput()),
       );
-      assert.include(promptText ?? "", "HarnessOS plan mode is active.");
+      assert.include(promptText ?? "", "Haros plan mode is active.");
       assert.include(promptText ?? "", "<proposed_plan>");
       assert.include(promptText ?? "", "User request:\nplan this for me");
     }).pipe(

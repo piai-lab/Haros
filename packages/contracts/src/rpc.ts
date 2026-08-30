@@ -138,14 +138,14 @@ import {
 } from "./orchestration";
 import { EngineCompactThreadInput } from "./engine";
 import {
-  HarnessOSCustomModelServiceRemoveInput,
-  HarnessOSCustomModelServiceRemoveResult,
-  HarnessOSCustomModelServiceSaveInput,
-  HarnessOSCustomModelServiceSaveResult,
-  HarnessOSCustomModelServiceDiscoverInput,
-  HarnessOSCustomModelServiceDiscoverResult,
-  HarnessOSCustomModelServiceTestInput,
-  HarnessOSCustomModelServiceTestResult,
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceTestInput,
+  HarosCustomModelServiceTestResult,
   OAModelServiceAnswerLoginInput,
   OAModelServiceAuthResult,
   OAModelServiceBeginLoginInput,
@@ -1289,24 +1289,24 @@ export const WsOAModelServicesRefreshRpc = Rpc.make(WS_METHODS.oaModelServicesRe
 export const WsOAModelServicesDiscoverCustomRpc = Rpc.make(
   WS_METHODS.oaModelServicesDiscoverCustom,
   {
-    payload: HarnessOSCustomModelServiceDiscoverInput,
-    success: HarnessOSCustomModelServiceDiscoverResult,
+    payload: HarosCustomModelServiceDiscoverInput,
+    success: HarosCustomModelServiceDiscoverResult,
     error: WsRpcError,
   },
 );
 export const WsOAModelServicesTestCustomRpc = Rpc.make(WS_METHODS.oaModelServicesTestCustom, {
-  payload: HarnessOSCustomModelServiceTestInput,
-  success: HarnessOSCustomModelServiceTestResult,
+  payload: HarosCustomModelServiceTestInput,
+  success: HarosCustomModelServiceTestResult,
   error: WsRpcError,
 });
 export const WsOAModelServicesSaveCustomRpc = Rpc.make(WS_METHODS.oaModelServicesSaveCustom, {
-  payload: HarnessOSCustomModelServiceSaveInput,
-  success: HarnessOSCustomModelServiceSaveResult,
+  payload: HarosCustomModelServiceSaveInput,
+  success: HarosCustomModelServiceSaveResult,
   error: WsRpcError,
 });
 export const WsOAModelServicesRemoveCustomRpc = Rpc.make(WS_METHODS.oaModelServicesRemoveCustom, {
-  payload: HarnessOSCustomModelServiceRemoveInput,
-  success: HarnessOSCustomModelServiceRemoveResult,
+  payload: HarosCustomModelServiceRemoveInput,
+  success: HarosCustomModelServiceRemoveResult,
   error: WsRpcError,
 });
 
@@ -1587,7 +1587,7 @@ const WsServerAndEngineRpcGroup = RpcGroup.make(
   WsEngineListAgentsRpc,
 );
 
-const WsHarnessOSAndAutomationRpcGroup = RpcGroup.make(
+const WsHarosAndAutomationRpcGroup = RpcGroup.make(
   WsOAModelServicesListRpc,
   WsOAModelServicesGetRpc,
   WsOAModelServicesBeginLoginRpc,
@@ -1634,13 +1634,13 @@ type WsFeatureRpc =
   | RpcGroup.Rpcs<typeof WsOrchestrationAndProjectRpcGroup>
   | RpcGroup.Rpcs<typeof WsGitAndTerminalRpcGroup>
   | RpcGroup.Rpcs<typeof WsServerAndEngineRpcGroup>
-  | RpcGroup.Rpcs<typeof WsHarnessOSAndAutomationRpcGroup>;
+  | RpcGroup.Rpcs<typeof WsHarosAndAutomationRpcGroup>;
 
 export const WsFeatureRpcGroup: RpcGroup.RpcGroup<WsFeatureRpc> =
   WsOrchestrationAndProjectRpcGroup.merge(
     WsGitAndTerminalRpcGroup,
     WsServerAndEngineRpcGroup,
-    WsHarnessOSAndAutomationRpcGroup,
+    WsHarosAndAutomationRpcGroup,
   );
 
 /** @deprecated Use WsFeatureRpcGroup. Bootstrap is intentionally a separate endpoint/group. */

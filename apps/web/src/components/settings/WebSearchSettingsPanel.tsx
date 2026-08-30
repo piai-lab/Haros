@@ -1,5 +1,5 @@
 // FILE: WebSearchSettingsPanel.tsx
-// Purpose: Edit the package-owned HarnessOS Web Access configuration without duplicating runtime facts.
+// Purpose: Edit the package-owned Haros Web Access configuration without duplicating runtime facts.
 // Layer: Settings panel
 
 import type {

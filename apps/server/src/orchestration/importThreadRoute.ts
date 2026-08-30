@@ -1,5 +1,5 @@
 // FILE: importThreadRoute.ts
-// Purpose: Imports engine-native sessions and binds them to HarnessOS thread projections.
+// Purpose: Imports engine-native sessions and binds them to Haros thread projections.
 // Layer: Orchestration command handler
 // Exports: makeImportThreadHandler.
 

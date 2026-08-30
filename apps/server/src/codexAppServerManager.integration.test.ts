@@ -65,7 +65,7 @@ const autoTurnOverrides = {
   sandboxPolicy: { type: "workspaceWrite" },
 } as const;
 
-describe("Codex HarnessOS harness policy", () => {
+describe("Codex Haros harness policy", () => {
   it("keeps the same host policy exactly once in default and plan instructions", () => {
     for (const instructions of [
       CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
@@ -73,7 +73,7 @@ describe("Codex HarnessOS harness policy", () => {
     ]) {
       expect(instructions).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
       expect(instructions.split(HARNESSOS_HARNESS_POLICY_MARKER)).toHaveLength(2);
-      expect(instructions).toContain("HarnessOS is the host and harness");
+      expect(instructions).toContain("Haros is the host and harness");
       expect(instructions).toContain("tools actually available");
       expect(instructions).not.toContain("harnessos_create_threads");
       expect(instructions).not.toContain("browser_open");
@@ -83,7 +83,7 @@ describe("Codex HarnessOS harness policy", () => {
 
   it("resolves the gateway endpoint when each session environment is built", async () => {
     const homePath = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-gateway-endpoint-"));
-    const previousHarnessOSHome = process.env.HARNESSOS_HOME;
+    const previousHarosHome = process.env.HARNESSOS_HOME;
     process.env.HARNESSOS_HOME = path.join(homePath, "harnessos-home");
     let endpointUrl = "http://127.0.0.1:0/mcp";
     try {
@@ -110,10 +110,10 @@ describe("Codex HarnessOS harness policy", () => {
       const configPath = path.join(env.CODEX_HOME ?? homePath, "config.toml");
       expect(readFileSync(configPath, "utf8")).toContain('url = "http://127.0.0.1:48123/mcp"');
     } finally {
-      if (previousHarnessOSHome === undefined) {
+      if (previousHarosHome === undefined) {
         delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.HARNESSOS_HOME = previousHarnessOSHome;
+        process.env.HARNESSOS_HOME = previousHarosHome;
       }
       rmSync(homePath, { recursive: true, force: true });
     }
@@ -863,7 +863,7 @@ describe("codex CLI version gate", () => {
       writeBinary("0.1.0", "replaced-in-place-by-a-downgrade");
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for HarnessOS/);
+      ).rejects.toThrow(/too old for Haros/);
     } finally {
       reset();
       vi.unstubAllEnvs();
@@ -904,7 +904,7 @@ describe("codex CLI version gate", () => {
       writeBinary("0.1.0", "replaced-in-place-by-a-downgrade");
       await expect(
         assertSupportedCodexCliVersion({ binaryPath: "codex", cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for HarnessOS/);
+      ).rejects.toThrow(/too old for Haros/);
     } finally {
       reset();
       vi.unstubAllEnvs();
@@ -941,10 +941,10 @@ describe("codex CLI version gate", () => {
     try {
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for HarnessOS/);
+      ).rejects.toThrow(/too old for Haros/);
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for HarnessOS/);
+      ).rejects.toThrow(/too old for Haros/);
       // Failures are re-probed so installing or upgrading Codex takes effect at once.
       expect(probeCount()).toBe(2);
     } finally {
@@ -1043,7 +1043,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("applies durable section suppressions inside HarnessOS's Codex overlay", async () => {
+  it("applies durable section suppressions inside Haros's Codex overlay", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
@@ -1182,7 +1182,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale real files in HarnessOS's Codex home overlay", async () => {
+  it("repairs stale real files in Haros's Codex home overlay", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
@@ -1210,7 +1210,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale auth.json files in HarnessOS's Codex home overlay", async () => {
+  it("repairs stale auth.json files in Haros's Codex home overlay", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
@@ -1239,7 +1239,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("preserves real generated image directories in HarnessOS's Codex home overlay", async () => {
+  it("preserves real generated image directories in Haros's Codex home overlay", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
@@ -1531,7 +1531,7 @@ describe("startSession", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
         name: "harnessos_desktop",
-        title: "HarnessOS Desktop",
+        title: "Haros Desktop",
         version: "0.1.0",
       },
       capabilities: {
@@ -1638,7 +1638,7 @@ describe("startSession", () => {
       )
       .mockImplementation(() => {
         throw new Error(
-          "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
+          "Codex CLI v0.36.0 is too old for Haros. Upgrade to v0.37.0 or newer and restart Haros.",
         );
       });
 
@@ -1650,7 +1650,7 @@ describe("startSession", () => {
           runtimeMode: "full-access",
         }),
       ).rejects.toThrow(
-        "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
+        "Codex CLI v0.36.0 is too old for Haros. Upgrade to v0.37.0 or newer and restart Haros.",
       );
       expect(versionCheck).toHaveBeenCalledTimes(1);
       expect(events).toEqual([
@@ -1658,7 +1658,7 @@ describe("startSession", () => {
           method: "session/startFailed",
           kind: "error",
           message:
-            "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
+            "Codex CLI v0.36.0 is too old for Haros. Upgrade to v0.37.0 or newer and restart Haros.",
         },
       ]);
     } finally {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveDesktopAppDataBase, resolveDesktopUserDataPath } from "./desktopUserDataProfile";
 
 describe("desktopUserDataProfile", () => {
-  it("resolves the canonical HarnessOS profile names", () => {
+  it("resolves the canonical Haros profile names", () => {
     const appDataBase = "/Users/tester/Library/Application Support";
     expect(
       resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "harnessos-dev" }),
@@ -26,7 +26,7 @@ describe("desktopUserDataProfile", () => {
     ).toBe("/tmp/xdg");
   });
 
-  it("keeps Electron profile state under an explicit HarnessOS home", () => {
+  it("keeps Electron profile state under an explicit Haros home", () => {
     expect(
       resolveDesktopUserDataPath({
         appDataBase: "/Users/tester/Library/Application Support",

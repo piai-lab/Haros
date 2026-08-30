@@ -1,6 +1,6 @@
 // FILE: FileLineCommentBox.tsx
 // Purpose: Inline "Local comment" editor anchored under a file line in the
-//          read-only preview. Mirrors Codex's per-line comment box: a HarnessOS
+//          read-only preview. Mirrors Codex's per-line comment box: a Haros
 //          badge header, the target line label, a borderless request field, and
 //          Cancel/Comment actions (Comment stays disabled until non-empty text).
 // Layer: Chat file-preview interaction UI
@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { FILE_COMMENT_TEXT_MAX_CHARS, normalizeFileCommentText } from "~/lib/fileComments";
-import { HarnessOSLogo } from "../HarnessOSLogo";
+import { HarosLogo } from "../HarosLogo";
 import { Button } from "../ui/button";
 
 interface FileLineCommentBoxProps {
@@ -71,7 +71,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-[var(--color-text-foreground)]">
           <span className="editor-file-viewer__comment-badge">
-            <HarnessOSLogo size={12} className="text-[var(--color-text-foreground-secondary)]" />
+            <HarosLogo size={12} className="text-[var(--color-text-foreground-secondary)]" />
           </span>
           Local comment
         </span>

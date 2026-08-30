@@ -54,8 +54,8 @@ export function remoteAccessPolicyError(
   if (!isPubliclyExposed) return null;
   if (!config.authToken?.trim()) {
     return config.publicUrl
-      ? "Refusing to publish HarnessOS through HARNESSOS_PUBLIC_URL/--public-url without HARNESSOS_AUTH_TOKEN/--auth-token."
-      : `Refusing to bind HarnessOS to non-loopback host ${config.host ?? "<unspecified>"} without HARNESSOS_AUTH_TOKEN/--auth-token.`;
+      ? "Refusing to publish Haros through HARNESSOS_PUBLIC_URL/--public-url without HARNESSOS_AUTH_TOKEN/--auth-token."
+      : `Refusing to bind Haros to non-loopback host ${config.host ?? "<unspecified>"} without HARNESSOS_AUTH_TOKEN/--auth-token.`;
   }
   if (config.devUrl) {
     return "Remote server binds cannot be combined with VITE_DEV_SERVER_URL/--dev-url yet; use a loopback host for development or run the built web UI for remote access.";
@@ -174,7 +174,7 @@ export function resolveDefaultChatWorkspaceRoot(input: {
   const homeDir = input.homeDir.trim();
   const platform = input.platform ?? process.platform;
   const pathApi = platform === "win32" ? pathWin32 : pathPosix;
-  return pathApi.join(homeDir, "Documents", "HarnessOS");
+  return pathApi.join(homeDir, "Documents", "Haros");
 }
 
 export function resolveDefaultStudioWorkspaceRoot(input: {

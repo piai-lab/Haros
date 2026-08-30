@@ -1,5 +1,5 @@
 // FILE: softOrbit.ts
-// Purpose: Implement the canonical HarnessOS Soft Orbit click feedback.
+// Purpose: Implement the canonical Haros Soft Orbit click feedback.
 // Layer: Brand interaction behavior
 
 export type SoftOrbitState = "idle" | "pressed" | "running" | "queued" | "reduced" | "cancelled";

@@ -194,7 +194,7 @@ describe("DeviceManager discovery before the helper exists", () => {
       { id: "install-xcode" as const, label: "Install Xcode", done: true },
       {
         id: "build-device-helper" as const,
-        label: "Build the HarnessOS device helper",
+        label: "Build the Haros device helper",
         done: false,
       },
     ],
@@ -688,7 +688,7 @@ describe("surviving a crash", () => {
   });
 
   it("leaves the devices of a server that is still running", async () => {
-    // Two HarnessOS processes can overlap; the record belongs to the live one.
+    // Two Haros processes can overlap; the record belongs to the live one.
     const owner = makeStore();
     const { backend, manager } = makeManager(new FakeDeviceBackend(), {
       bootOwnership: owner.store,

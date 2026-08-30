@@ -14,7 +14,7 @@ describe("desktopWsBridge", () => {
     expect(normalizeDesktopWsUrl(null)).toBeNull();
   });
 
-  it("reads only the canonical HarnessOS desktop URL environment value", () => {
+  it("reads only the canonical Haros desktop URL environment value", () => {
     expect(
       resolveDesktopWsUrlFromEnv({
         HARNESSOS_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=harnessos",

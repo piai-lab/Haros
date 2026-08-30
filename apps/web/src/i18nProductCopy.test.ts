@@ -273,7 +273,7 @@ const RAW_FACT_ALLOWLIST = [
   "SidebarSearchPalette.tsx:text:OpenCode",
   "SidebarSearchPalette.tsx:text:Codex",
   "SidebarSearchPalette.tsx:text:Enter",
-  "SidebarActivityView.tsx:text:HarnessOS",
+  "SidebarActivityView.tsx:text:Haros",
   "Sidebar.tsx:property:`#${pr.number} ${label}: ${pr.title}`",
   "useComposerCommandMenuItems.ts:property:`@${name}`",
   "useComposerCommandMenuItems.ts:property:`@${alias}`",
@@ -393,7 +393,7 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
   return [...findings.values()];
 }
 
-describe("reachable HarnessOS-owned product copy", () => {
+describe("reachable Haros-owned product copy", () => {
   it("keeps every normal shell owner inside the source-level gate", () => {
     const scannedSources = new Set<string>(PRODUCT_COPY_SOURCES);
     expect(
@@ -554,7 +554,7 @@ describe("reachable HarnessOS-owned product copy", () => {
     );
   });
 
-  it("keeps normal Prompt settings copy in HarnessOS product language", () => {
+  it("keeps normal Prompt settings copy in Haros product language", () => {
     const forbidden = [
       /\bPi\b/u,
       /Pi-compatible/iu,
@@ -590,7 +590,7 @@ describe("reachable HarnessOS-owned product copy", () => {
       ["onboarding.firstRun.engineTitle", "Choose your work engine", "选择你的工作引擎"],
       ["onboarding.firstRun.serviceTitle", "Connect a model service", "连接一个模型服务"],
       ["onboarding.firstRun.modelTitle", "Choose an exact model", "选择一个精确模型"],
-      ["onboarding.firstRun.readyTitle", "HarnessOS is ready", "HarnessOS 已准备好"],
+      ["onboarding.firstRun.readyTitle", "Haros is ready", "Haros 已准备好"],
       ["onboarding.firstRun.later", "Set up later", "稍后设置"],
       ["onboarding.firstRun.startUsing", "Start using", "开始使用"],
     ] as const;

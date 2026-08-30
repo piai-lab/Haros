@@ -2778,7 +2778,7 @@ describe("EngineCommandReactor", () => {
     expect(providerInput).not.toContain("Use /docs for the latest segment");
   });
 
-  it("persists one deterministic Skill delivery receipt per selected HarnessOS Skill", async () => {
+  it("persists one deterministic Skill delivery receipt per selected Haros Skill", async () => {
     const harness = await createHarness({
       startReactor: false,
       threadEngineSelection: { engine: "oa", model: "harnessos-test" },
@@ -3337,7 +3337,7 @@ describe("EngineCommandReactor", () => {
         type: "thread.meta.update",
         commandId: CommandId.makeUnsafe("cmd-goal-before-reactor-restart"),
         threadId: ThreadId.makeUnsafe("thread-1"),
-        goal: "Resume after HarnessOS restarts",
+        goal: "Resume after Haros restarts",
         goalStartBehavior: "defer",
       }),
     );
@@ -6314,7 +6314,7 @@ describe("EngineCommandReactor", () => {
     );
   });
 
-  it("keeps Product work-surface fields out of non-HarnessOS engine bindings", async () => {
+  it("keeps Product work-surface fields out of non-Haros engine bindings", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -6344,7 +6344,7 @@ describe("EngineCommandReactor", () => {
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("projectContextRoot");
   });
 
-  it("derives the bundled HarnessOS Agent surface and canonical Project root", async () => {
+  it("derives the bundled Haros Agent surface and canonical Project root", async () => {
     const harness = await createHarness({
       threadEngineSelection: { engine: "oa", model: "deepseek/deepseek-chat" },
     });

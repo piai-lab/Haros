@@ -116,7 +116,7 @@ export function upgradePathAllowsCompression(requestUrl: string | undefined): bo
 }
 
 /**
- * Owns the Node HTTP/WebSocket transport so HarnessOS, rather than the platform
+ * Owns the Node HTTP/WebSocket transport so Haros, rather than the platform
  * adapter's 100 MiB default, controls admission before a message is decoded.
  */
 export const makeBoundedNodeHttpServer = Effect.fnUntraced(function* (

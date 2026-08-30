@@ -297,7 +297,7 @@ describe("MessagesTimeline turn process approval cases", () => {
     );
     try {
       expect(processTrigger()?.getAttribute("aria-expanded")).toBe("false");
-      const action = screen.getByRole("button", { name: "Reopen in HarnessOS Browser" }).element();
+      const action = screen.getByRole("button", { name: "Reopen in Haros Browser" }).element();
       expect(action.closest("[data-timeline-row-kind='turn-process']")).toBeNull();
     } finally {
       await screen.unmount();

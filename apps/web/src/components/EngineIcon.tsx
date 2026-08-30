@@ -8,7 +8,7 @@ import { type EngineKind } from "@harnessos/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
-import { OABadge } from "./HarnessOSLogo";
+import { OABadge } from "./HarosLogo";
 import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,

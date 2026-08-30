@@ -16,12 +16,12 @@ export const BROWSER_FIELD_INSTRUCTION_COPY = {
   tabId: "Optional scoped tab returned by browser_tabs/open; omit to use engine-session affinity.",
   timeoutMs: "Optional end-to-end action deadline in milliseconds within the published bounds.",
   idempotencyKey:
-    "Optional advanced retry key. HarnessOS derives a stable key from the authenticated tool request when omitted; provide one only to deliberately deduplicate a byte-identical retry.",
+    "Optional advanced retry key. Haros derives a stable key from the authenticated tool request when omitted; provide one only to deliberately deduplicate a byte-identical retry.",
   target:
     "Exactly one target; prefer a current snapshot {ref,snapshotId}, then a literal semantic locator, strict CSS, or an allowed point.",
   show: "Whether to request the shared browser surface when its owning thread is already active; defaults true and never changes the user's active chat. False reuses an existing scoped tab without requesting UI visibility.",
   waitUntil:
-    "Navigation milestone; domcontentloaded is the default, while networkidle uses HarnessOS's bounded tracker.",
+    "Navigation milestone; domcontentloaded is the default, while networkidle uses Haros's bounded tracker.",
   annotationId:
     "Optional opaque annotation id from a browser annotation attachment. Pass exactly one of annotationId or url; annotationId resolves the exact captured live page locally without embedding its private live URL in the prompt.",
   conditions:

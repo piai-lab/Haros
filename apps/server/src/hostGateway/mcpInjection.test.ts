@@ -10,7 +10,7 @@ import {
 } from "../codexProcessEnv.ts";
 import {
   buildAntigravityMcpPluginConfig,
-  buildAcpHarnessOSMcpServers,
+  buildAcpHarosMcpServers,
   buildClaudeMcpServers,
   buildCodexMcpConfigToml,
   buildOpenCodeMcpServer,
@@ -242,7 +242,7 @@ describe("HostGateway MCP injection", () => {
                 tools: [
                   {
                     name: "harnessos_list_threads",
-                    description: "List HarnessOS threads.",
+                    description: "List Haros threads.",
                     inputSchema: { type: "object", properties: {} },
                     _meta: {
                       "harnessos/owner": "host-gateway",
@@ -258,7 +258,7 @@ describe("HostGateway MCP injection", () => {
     assert.deepEqual(await listHostGatewayMcpTools({ connection, fetch }), [
       {
         name: "harnessos_list_threads",
-        description: "List HarnessOS threads.",
+        description: "List Haros threads.",
         inputSchema: { type: "object", properties: {} },
         group: "tasks",
         provenance: "host-gateway",
@@ -268,7 +268,7 @@ describe("HostGateway MCP injection", () => {
       hostGatewayGroupsFromToolDescriptors([
         {
           name: "harnessos_list_threads",
-          description: "List HarnessOS threads.",
+          description: "List Haros threads.",
           inputSchema: {},
           group: "tasks",
           provenance: "host-gateway",
@@ -296,7 +296,7 @@ describe("HostGateway MCP injection", () => {
   });
 
   it("uses the ACP http transport when the agent advertises support", () => {
-    const servers = buildAcpHarnessOSMcpServers({
+    const servers = buildAcpHarosMcpServers({
       connection,
       initializeResult: { agentCapabilities: { mcpCapabilities: { http: true } } },
       stdioProxy,
@@ -312,7 +312,7 @@ describe("HostGateway MCP injection", () => {
   });
 
   it("falls back to the stdio proxy when http is not advertised", () => {
-    const servers = buildAcpHarnessOSMcpServers({
+    const servers = buildAcpHarosMcpServers({
       connection,
       initializeResult: {},
       stdioProxy,

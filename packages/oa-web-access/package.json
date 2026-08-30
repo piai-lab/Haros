@@ -2,7 +2,7 @@
   "name": "@harnessos/oa-web-access",
   "version": "0.25.0-oa.0",
   "private": true,
-  "description": "Bundled Pi-native web access for HarnessOS Agent.",
+  "description": "Bundled Pi-native web access for Haros Agent.",
   "keywords": [
     "extension",
     "fetch",

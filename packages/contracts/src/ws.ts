@@ -143,10 +143,10 @@ import {
 import { EngineExecutionCapabilitiesInput } from "./engineExecution";
 import { EngineCompactThreadInput } from "./engine";
 import {
-  HarnessOSCustomModelServiceRemoveInput,
-  HarnessOSCustomModelServiceDiscoverInput,
-  HarnessOSCustomModelServiceSaveInput,
-  HarnessOSCustomModelServiceTestInput,
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceTestInput,
   OAModelServiceAnswerLoginInput,
   OAModelServiceBeginLoginInput,
   OAModelServiceCancelLoginInput,
@@ -323,7 +323,7 @@ export const WS_METHODS = {
   engineListModels: "engine.listModels",
   engineListAgents: "engine.listAgents",
 
-  // HarnessOS Agent model services
+  // Haros Agent model services
   oaModelServicesList: "oaModelServices.list",
   oaModelServicesGet: "oaModelServices.get",
   oaModelServicesBeginLogin: "oaModelServices.beginLogin",
@@ -588,13 +588,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.oaModelServicesLogout, OAModelServiceLogoutInput),
   tagRequestBody(WS_METHODS.oaModelServicesRevealApiKey, OAModelServiceRevealApiKeyInput),
   tagRequestBody(WS_METHODS.oaModelServicesRefresh, OAModelServiceRefreshInput),
-  tagRequestBody(
-    WS_METHODS.oaModelServicesDiscoverCustom,
-    HarnessOSCustomModelServiceDiscoverInput,
-  ),
-  tagRequestBody(WS_METHODS.oaModelServicesTestCustom, HarnessOSCustomModelServiceTestInput),
-  tagRequestBody(WS_METHODS.oaModelServicesSaveCustom, HarnessOSCustomModelServiceSaveInput),
-  tagRequestBody(WS_METHODS.oaModelServicesRemoveCustom, HarnessOSCustomModelServiceRemoveInput),
+  tagRequestBody(WS_METHODS.oaModelServicesDiscoverCustom, HarosCustomModelServiceDiscoverInput),
+  tagRequestBody(WS_METHODS.oaModelServicesTestCustom, HarosCustomModelServiceTestInput),
+  tagRequestBody(WS_METHODS.oaModelServicesSaveCustom, HarosCustomModelServiceSaveInput),
+  tagRequestBody(WS_METHODS.oaModelServicesRemoveCustom, HarosCustomModelServiceRemoveInput),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),

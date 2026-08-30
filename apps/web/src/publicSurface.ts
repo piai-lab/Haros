@@ -1,9 +1,9 @@
 // FILE: publicSurface.ts
-// Purpose: Owns HarnessOS's fixed public exits.
+// Purpose: Owns Haros's fixed public exits.
 // Layer: Web product boundary
 
-export const CANONICAL_GITHUB_REPOSITORY_URL = "https://github.com/piai-lab/HarnessOS";
-export const FEEDBACK_RECIPIENT_LABEL = "GitHub Issues (piai-lab/HarnessOS)";
+export const CANONICAL_GITHUB_REPOSITORY_URL = "https://github.com/piai-lab/Haros";
+export const FEEDBACK_RECIPIENT_LABEL = "GitHub Issues (piai-lab/Haros)";
 
 export type PublicSiteSurface = "home" | "docs" | "issues" | "discussions" | "security";
 

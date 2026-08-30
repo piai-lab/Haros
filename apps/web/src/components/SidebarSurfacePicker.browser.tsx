@@ -66,7 +66,7 @@ function SurfaceHarness({
 function WordmarkWidthHarness({ width }: { width: number }) {
   return (
     <div style={{ containerType: "inline-size", width }}>
-      <span className="sidebar-product-wordmark">HarnessOS</span>
+      <span className="sidebar-product-wordmark">Haros</span>
     </div>
   );
 }
@@ -100,11 +100,11 @@ describe("SidebarSurfacePicker", () => {
 
   it("never clips the product wordmark at preserved narrow widths", async () => {
     const narrow = await render(<WordmarkWidthHarness width={258.0078125} />);
-    await expect.element(narrow.getByText("HarnessOS")).not.toBeVisible();
+    await expect.element(narrow.getByText("Haros")).not.toBeVisible();
 
     await narrow.unmount();
     const authored = await render(<WordmarkWidthHarness width={368} />);
-    await expect.element(authored.getByText("HarnessOS")).toBeVisible();
+    await expect.element(authored.getByText("Haros")).toBeVisible();
   });
 
   it("exposes three described radio choices and routes Chat and Studio exactly once", async () => {
@@ -122,7 +122,7 @@ describe("SidebarSurfacePicker", () => {
       name: /Chat Talk, analyze, and use explicit references/,
     });
     const studio = screen.getByRole("menuitemradio", {
-      name: /Studio Create in HarnessOS's managed workspace/,
+      name: /Studio Create in Haros's managed workspace/,
     });
     await expect.element(agent).toHaveAttribute("aria-checked", "true");
     await expect.element(chat).toBeVisible();
@@ -139,7 +139,7 @@ describe("SidebarSurfacePicker", () => {
     await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
     (trigger.element() as HTMLButtonElement).click();
     const reopenedStudio = screen.getByRole("menuitemradio", {
-      name: /Studio Create in HarnessOS's managed workspace/,
+      name: /Studio Create in Haros's managed workspace/,
     });
     await expect.element(reopenedStudio).toBeVisible();
     reopenedStudio.element().focus();

@@ -31,7 +31,7 @@ describe("shouldInlineSkillForProvider", () => {
     expect(shouldInlineSkillForProvider("codex", cursorSkillPath)).toBe(true);
   });
 
-  it("inlines only HarnessOS-owned paths for cursor", () => {
+  it("inlines only Haros-owned paths for cursor", () => {
     expect(shouldInlineSkillForProvider("cursor", harnessosSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("cursor", cursorSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("cursor", codexSkillPath)).toBe(false);

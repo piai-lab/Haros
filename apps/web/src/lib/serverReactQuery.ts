@@ -244,7 +244,7 @@ export function serverLocalServersQueryOptions(
 }
 
 // Sidebar project badges need a snapshot, but idle Home should not keep shelling out
-// through lsof/ps; active HarnessOS-owned runs still poll for responsive status.
+// through lsof/ps; active Haros-owned runs still poll for responsive status.
 export function sidebarLocalServersQueryOptions(input: {
   hasActiveProjectRun: boolean;
   hasProjects: boolean;
@@ -322,7 +322,7 @@ export function serverUsageHistoryQueryOptions(input: ServerGetUsageHistoryInput
 }
 
 // Local profile + shareable-card core statistics. The client passes its own fixed
-// UTC offset; all metrics are computed from HarnessOS's local DB projections.
+// UTC offset; all metrics are computed from Haros's local DB projections.
 export function serverProfileStatsQueryOptions(input: { enabled?: boolean } = {}) {
   const utcOffsetMinutes = -new Date().getTimezoneOffset();
   return queryOptions({

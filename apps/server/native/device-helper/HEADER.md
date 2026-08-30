@@ -1,6 +1,6 @@
 # harnessos-device-helper
 
-The native side of HarnessOS's Device Pane: a macOS program that mirrors and drives
+The native side of Haros's Device Pane: a macOS program that mirrors and drives
 a booted iOS Simulator without `Simulator.app`, using CoreSimulator and
 SimulatorKit private APIs.
 

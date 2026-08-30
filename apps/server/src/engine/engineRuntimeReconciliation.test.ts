@@ -560,7 +560,7 @@ describe("planProviderRuntimeReconciliation", () => {
           id: "engine-runtime-reconcile:activity",
           tone: "info",
           kind: "engine.runtime.reconciled",
-          summary: "HarnessOS recovered a stale running state",
+          summary: "Haros recovered a stale running state",
           payload: {
             engine: plan.engine,
             action: plan.action,

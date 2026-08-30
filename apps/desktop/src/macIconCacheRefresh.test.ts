@@ -10,8 +10,8 @@ import {
 
 describe("resolveLaunchVersionRecordPath", () => {
   it("places the record file inside the userData directory", () => {
-    expect(resolveLaunchVersionRecordPath("/home/me/AppData/HarnessOS")).toBe(
-      "/home/me/AppData/HarnessOS/last-launch-version.json",
+    expect(resolveLaunchVersionRecordPath("/home/me/AppData/Haros")).toBe(
+      "/home/me/AppData/Haros/last-launch-version.json",
     );
   });
 });
@@ -57,14 +57,14 @@ describe("shouldRefreshIconCache", () => {
 
 describe("resolveMacAppBundlePath", () => {
   it("resolves the .app bundle from the Electron executable on macOS", () => {
-    expect(
-      resolveMacAppBundlePath("/Applications/HarnessOS.app/Contents/MacOS/HarnessOS", "darwin"),
-    ).toBe("/Applications/HarnessOS.app");
+    expect(resolveMacAppBundlePath("/Applications/Haros.app/Contents/MacOS/Haros", "darwin")).toBe(
+      "/Applications/Haros.app",
+    );
   });
 
   it("returns null off macOS", () => {
     expect(
-      resolveMacAppBundlePath("/Applications/HarnessOS.app/Contents/MacOS/HarnessOS", "linux"),
+      resolveMacAppBundlePath("/Applications/Haros.app/Contents/MacOS/Haros", "linux"),
     ).toBeNull();
   });
 

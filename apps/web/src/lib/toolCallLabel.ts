@@ -113,13 +113,13 @@ export interface ReadableToolTitleInput {
   readonly isRunning?: boolean;
 }
 
-interface HarnessOSMcpToolPresentation {
+interface HarosMcpToolPresentation {
   readonly running: string;
   readonly completed: string;
   readonly failed: string;
 }
 
-type HarnessOSBrowserToolName = `harnessos_${BrowserToolName}`;
+type HarosBrowserToolName = `harnessos_${BrowserToolName}`;
 const BROWSER_TOOL_NAME_SET = new Set<string>(BROWSER_TOOL_NAMES);
 
 const HARNESSOS_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
@@ -127,162 +127,162 @@ const HARNESSOS_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
     const title = BROWSER_TOOL_TITLES[toolName];
     return [`harnessos_${toolName}`, { running: title, completed: title, failed: title }];
   }),
-) as Record<HarnessOSBrowserToolName, HarnessOSMcpToolPresentation>;
+) as Record<HarosBrowserToolName, HarosMcpToolPresentation>;
 
 const HARNESSOS_MCP_TOOL_PRESENTATIONS = {
   harnessos_context: {
-    running: "HarnessOS is checking its context",
-    completed: "HarnessOS checked its context",
-    failed: "HarnessOS couldn't check its context",
+    running: "Haros is checking its context",
+    completed: "Haros checked its context",
+    failed: "Haros couldn't check its context",
   },
   harnessos_capabilities: {
-    running: "HarnessOS is checking available agents",
-    completed: "HarnessOS checked available agents",
-    failed: "HarnessOS couldn't check available agents",
+    running: "Haros is checking available agents",
+    completed: "Haros checked available agents",
+    failed: "Haros couldn't check available agents",
   },
   harnessos_overview: {
-    running: "HarnessOS is gathering an overview",
-    completed: "HarnessOS gathered an overview",
-    failed: "HarnessOS couldn't gather an overview",
+    running: "Haros is gathering an overview",
+    completed: "Haros gathered an overview",
+    failed: "Haros couldn't gather an overview",
   },
   harnessos_list_allowed_projects: {
-    running: "HarnessOS is listing allowed projects",
-    completed: "HarnessOS listed allowed projects",
-    failed: "HarnessOS couldn't list allowed projects",
+    running: "Haros is listing allowed projects",
+    completed: "Haros listed allowed projects",
+    failed: "Haros couldn't list allowed projects",
   },
   harnessos_create_task: {
-    running: "HarnessOS is creating a task",
-    completed: "HarnessOS created a task",
-    failed: "HarnessOS couldn't create a task",
+    running: "Haros is creating a task",
+    completed: "Haros created a task",
+    failed: "Haros couldn't create a task",
   },
   harnessos_wait_for_task: {
-    running: "HarnessOS is waiting for a task",
-    completed: "HarnessOS finished waiting for a task",
-    failed: "HarnessOS couldn't wait for a task",
+    running: "Haros is waiting for a task",
+    completed: "Haros finished waiting for a task",
+    failed: "Haros couldn't wait for a task",
   },
   harnessos_read_task: {
-    running: "HarnessOS is reading a task",
-    completed: "HarnessOS read a task",
-    failed: "HarnessOS couldn't read a task",
+    running: "Haros is reading a task",
+    completed: "Haros read a task",
+    failed: "Haros couldn't read a task",
   },
   harnessos_list_projects: {
-    running: "HarnessOS is listing projects",
-    completed: "HarnessOS listed projects",
-    failed: "HarnessOS couldn't list projects",
+    running: "Haros is listing projects",
+    completed: "Haros listed projects",
+    failed: "Haros couldn't list projects",
   },
   harnessos_list_threads: {
-    running: "HarnessOS is listing threads",
-    completed: "HarnessOS listed threads",
-    failed: "HarnessOS couldn't list threads",
+    running: "Haros is listing threads",
+    completed: "Haros listed threads",
+    failed: "Haros couldn't list threads",
   },
   harnessos_read_thread: {
-    running: "HarnessOS is reading a thread",
-    completed: "HarnessOS read a thread",
-    failed: "HarnessOS couldn't read a thread",
+    running: "Haros is reading a thread",
+    completed: "Haros read a thread",
+    failed: "Haros couldn't read a thread",
   },
   harnessos_read_thread_activity: {
-    running: "HarnessOS is reading thread activity",
-    completed: "HarnessOS read thread activity",
-    failed: "HarnessOS couldn't read thread activity",
+    running: "Haros is reading thread activity",
+    completed: "Haros read thread activity",
+    failed: "Haros couldn't read thread activity",
   },
   harnessos_read_thread_events: {
-    running: "HarnessOS is reading thread events",
-    completed: "HarnessOS read thread events",
-    failed: "HarnessOS couldn't read thread events",
+    running: "Haros is reading thread events",
+    completed: "Haros read thread events",
+    failed: "Haros couldn't read thread events",
   },
   harnessos_read_thread_runtime_events: {
-    running: "HarnessOS is reading thread runtime events",
-    completed: "HarnessOS read thread runtime events",
-    failed: "HarnessOS couldn't read thread runtime events",
+    running: "Haros is reading thread runtime events",
+    completed: "Haros read thread runtime events",
+    failed: "Haros couldn't read thread runtime events",
   },
   harnessos_diagnose_thread: {
-    running: "HarnessOS is diagnosing a thread",
-    completed: "HarnessOS diagnosed a thread",
-    failed: "HarnessOS couldn't diagnose a thread",
+    running: "Haros is diagnosing a thread",
+    completed: "Haros diagnosed a thread",
+    failed: "Haros couldn't diagnose a thread",
   },
   harnessos_create_thread: {
-    running: "HarnessOS is creating a thread",
-    completed: "HarnessOS created a thread",
-    failed: "HarnessOS couldn't create a thread",
+    running: "Haros is creating a thread",
+    completed: "Haros created a thread",
+    failed: "Haros couldn't create a thread",
   },
   harnessos_create_threads: {
-    running: "HarnessOS is creating threads",
-    completed: "HarnessOS created threads",
-    failed: "HarnessOS couldn't create threads",
+    running: "Haros is creating threads",
+    completed: "Haros created threads",
+    failed: "Haros couldn't create threads",
   },
   harnessos_wait_for_threads: {
-    running: "HarnessOS is waiting for threads",
-    completed: "HarnessOS finished waiting for threads",
-    failed: "HarnessOS couldn't wait for threads",
+    running: "Haros is waiting for threads",
+    completed: "Haros finished waiting for threads",
+    failed: "Haros couldn't wait for threads",
   },
   harnessos_send_message: {
-    running: "HarnessOS is sending a message",
-    completed: "HarnessOS sent a message",
-    failed: "HarnessOS couldn't send a message",
+    running: "Haros is sending a message",
+    completed: "Haros sent a message",
+    failed: "Haros couldn't send a message",
   },
   harnessos_interrupt_thread: {
-    running: "HarnessOS is interrupting a thread",
-    completed: "HarnessOS interrupted a thread",
-    failed: "HarnessOS couldn't interrupt a thread",
+    running: "Haros is interrupting a thread",
+    completed: "Haros interrupted a thread",
+    failed: "Haros couldn't interrupt a thread",
   },
   harnessos_set_thread_title: {
-    running: "HarnessOS is renaming a thread",
-    completed: "HarnessOS renamed a thread",
-    failed: "HarnessOS couldn't rename a thread",
+    running: "Haros is renaming a thread",
+    completed: "Haros renamed a thread",
+    failed: "Haros couldn't rename a thread",
   },
   harnessos_set_thread_archived: {
-    running: "HarnessOS is updating a thread",
-    completed: "HarnessOS updated a thread",
-    failed: "HarnessOS couldn't update a thread",
+    running: "Haros is updating a thread",
+    completed: "Haros updated a thread",
+    failed: "Haros couldn't update a thread",
   },
   harnessos_create_automation: {
-    running: "HarnessOS is creating an automation",
-    completed: "HarnessOS created an automation",
-    failed: "HarnessOS couldn't create an automation",
+    running: "Haros is creating an automation",
+    completed: "Haros created an automation",
+    failed: "Haros couldn't create an automation",
   },
   harnessos_list_automations: {
-    running: "HarnessOS is listing automations",
-    completed: "HarnessOS listed automations",
-    failed: "HarnessOS couldn't list automations",
+    running: "Haros is listing automations",
+    completed: "Haros listed automations",
+    failed: "Haros couldn't list automations",
   },
   harnessos_view_automation: {
-    running: "HarnessOS is viewing an automation",
-    completed: "HarnessOS viewed an automation",
-    failed: "HarnessOS couldn't view an automation",
+    running: "Haros is viewing an automation",
+    completed: "Haros viewed an automation",
+    failed: "Haros couldn't view an automation",
   },
   harnessos_update_automation: {
-    running: "HarnessOS is updating an automation",
-    completed: "HarnessOS updated an automation",
-    failed: "HarnessOS couldn't update an automation",
+    running: "Haros is updating an automation",
+    completed: "Haros updated an automation",
+    failed: "Haros couldn't update an automation",
   },
   harnessos_update_automation_memory: {
-    running: "HarnessOS is updating automation memory",
-    completed: "HarnessOS updated automation memory",
-    failed: "HarnessOS couldn't update automation memory",
+    running: "Haros is updating automation memory",
+    completed: "Haros updated automation memory",
+    failed: "Haros couldn't update automation memory",
   },
   harnessos_report_automation_result: {
-    running: "HarnessOS is reporting an automation result",
-    completed: "HarnessOS reported an automation result",
-    failed: "HarnessOS couldn't report an automation result",
+    running: "Haros is reporting an automation result",
+    completed: "Haros reported an automation result",
+    failed: "Haros couldn't report an automation result",
   },
   harnessos_cancel_automation: {
-    running: "HarnessOS is stopping an automation",
-    completed: "HarnessOS stopped an automation",
-    failed: "HarnessOS couldn't stop an automation",
+    running: "Haros is stopping an automation",
+    completed: "Haros stopped an automation",
+    failed: "Haros couldn't stop an automation",
   },
   ...HARNESSOS_BROWSER_TOOL_PRESENTATIONS,
-} as const satisfies Record<string, HarnessOSMcpToolPresentation>;
+} as const satisfies Record<string, HarosMcpToolPresentation>;
 
-function normalizeHarnessOSMcpIdentifier(value: string): string {
+function normalizeHarosMcpIdentifier(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 }
 
-const HARNESSOS_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, HarnessOSBrowserToolName>(
+const HARNESSOS_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, HarosBrowserToolName>(
   BROWSER_TOOL_NAMES.map((toolName) => [
-    normalizeHarnessOSMcpIdentifier(BROWSER_TOOL_TITLES[toolName]),
+    normalizeHarosMcpIdentifier(BROWSER_TOOL_TITLES[toolName]),
     `harnessos_${toolName}`,
   ]),
 );
@@ -292,14 +292,37 @@ const HARNESSOS_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(
 ).map(([toolName, presentation]) => ({
   toolName,
   presentation,
-  normalizedRunning: normalizeHarnessOSMcpIdentifier(presentation.running),
-  normalizedCompleted: normalizeHarnessOSMcpIdentifier(presentation.completed),
-  normalizedFailed: normalizeHarnessOSMcpIdentifier(presentation.failed),
+  normalizedRunning: normalizeHarosMcpIdentifier(presentation.running),
+  normalizedCompleted: normalizeHarosMcpIdentifier(presentation.completed),
+  normalizedFailed: normalizeHarosMcpIdentifier(presentation.failed),
 }));
 
-function extractHarnessOSMcpToolName(normalizedCandidate: string): string | null {
+function extractHarosMcpToolName(normalizedCandidate: string): string | null {
   if (BROWSER_TOOL_NAME_SET.has(normalizedCandidate)) {
     return `harnessos_${normalizedCandidate}`;
+  }
+  let productScopedCandidate = normalizedCandidate;
+  while (productScopedCandidate.startsWith("haros_")) {
+    productScopedCandidate = productScopedCandidate.slice("haros_".length);
+  }
+  if (productScopedCandidate !== normalizedCandidate) {
+    if (BROWSER_TOOL_NAME_SET.has(productScopedCandidate)) {
+      return `harnessos_${productScopedCandidate}`;
+    }
+    const stableToolName = productScopedCandidate.startsWith("harnessos_")
+      ? productScopedCandidate
+      : `harnessos_${productScopedCandidate}`;
+    if (stableToolName in HARNESSOS_MCP_TOOL_PRESENTATIONS) {
+      return stableToolName;
+    }
+  }
+  // Engines may expose the current product label as the MCP server name while the tool keeps its
+  // stable machine identifier. Normalize that one presentation shape back to the canonical tool.
+  if (normalizedCandidate.startsWith("mcp_haros_harnessos_")) {
+    return normalizedCandidate.slice("mcp_haros_".length);
+  }
+  if (normalizedCandidate.startsWith("haros_harnessos_")) {
+    return normalizedCandidate.slice("haros_".length);
   }
   if (normalizedCandidate.startsWith("mcp_harnessos_harnessos_")) {
     return normalizedCandidate.slice("mcp_harnessos_".length);
@@ -316,45 +339,45 @@ function extractHarnessOSMcpToolName(normalizedCandidate: string): string | null
   return null;
 }
 
-function resolveHarnessOSBrowserToolName(
+function resolveHarosBrowserToolName(
   candidates: ReadonlyArray<string | null | undefined>,
-): HarnessOSBrowserToolName | null {
+): HarosBrowserToolName | null {
   for (const candidate of candidates) {
     if (!candidate) continue;
-    const normalizedCandidate = normalizeHarnessOSMcpIdentifier(candidate);
-    const extractedToolName = extractHarnessOSMcpToolName(normalizedCandidate);
+    const normalizedCandidate = normalizeHarosMcpIdentifier(candidate);
+    const extractedToolName = extractHarosMcpToolName(normalizedCandidate);
     const candidateToolName =
       extractedToolName ??
       HARNESSOS_BROWSER_TOOL_NAME_BY_PRESENTATION.get(normalizedCandidate) ??
       normalizedCandidate;
     if (candidateToolName in HARNESSOS_BROWSER_TOOL_PRESENTATIONS) {
-      return candidateToolName as HarnessOSBrowserToolName;
+      return candidateToolName as HarosBrowserToolName;
     }
   }
   return null;
 }
 
-function fallbackHarnessOSMcpToolPresentation(toolName: string): HarnessOSMcpToolPresentation {
+function fallbackHarosMcpToolPresentation(toolName: string): HarosMcpToolPresentation {
   const action =
     toolName
       .replace(/^harnessos_/, "")
       .replace(/_+/g, " ")
       .trim() || "an action";
   return {
-    running: `HarnessOS is handling ${action}`,
-    completed: `HarnessOS handled ${action}`,
-    failed: `HarnessOS couldn't handle ${action}`,
+    running: `Haros is handling ${action}`,
+    completed: `Haros handled ${action}`,
+    failed: `Haros couldn't handle ${action}`,
   };
 }
 
-function resolveHarnessOSMcpToolPresentation(
+function resolveHarosMcpToolPresentation(
   candidates: ReadonlyArray<string | null | undefined>,
-): HarnessOSMcpToolPresentation | null {
+): HarosMcpToolPresentation | null {
   for (const candidate of candidates) {
     if (!candidate) {
       continue;
     }
-    const normalizedCandidate = normalizeHarnessOSMcpIdentifier(candidate);
+    const normalizedCandidate = normalizeHarosMcpIdentifier(candidate);
     for (const entry of HARNESSOS_MCP_TOOL_PRESENTATION_ENTRIES) {
       if (
         normalizedCandidate === entry.normalizedRunning ||
@@ -364,64 +387,62 @@ function resolveHarnessOSMcpToolPresentation(
         return entry.presentation;
       }
     }
-    const toolName = extractHarnessOSMcpToolName(normalizedCandidate);
+    const toolName = extractHarosMcpToolName(normalizedCandidate);
     const knownPresentation = toolName
       ? (HARNESSOS_MCP_TOOL_PRESENTATIONS[
           toolName as keyof typeof HARNESSOS_MCP_TOOL_PRESENTATIONS
-        ] as HarnessOSMcpToolPresentation | undefined)
+        ] as HarosMcpToolPresentation | undefined)
       : undefined;
     if (knownPresentation) {
       return knownPresentation;
     }
     // Free-text summaries (e.g. reconciler activity lines) can begin with the
-    // word "HarnessOS" and normalize into a fake tool identifier; only
+    // word "Haros" and normalize into a fake tool identifier; only
     // identifier-shaped candidates may take an invented fallback presentation.
     if (/\s/.test(candidate.trim())) {
       continue;
     }
     if (normalizedCandidate.startsWith("harnessos_is_handling_")) {
-      return fallbackHarnessOSMcpToolPresentation(
+      return fallbackHarosMcpToolPresentation(
         `harnessos_${normalizedCandidate.slice("harnessos_is_handling_".length)}`,
       );
     }
     if (normalizedCandidate.startsWith("harnessos_handled_")) {
-      return fallbackHarnessOSMcpToolPresentation(
+      return fallbackHarosMcpToolPresentation(
         `harnessos_${normalizedCandidate.slice("harnessos_handled_".length)}`,
       );
     }
     if (normalizedCandidate.startsWith("harnessos_couldn_t_handle_")) {
-      return fallbackHarnessOSMcpToolPresentation(
+      return fallbackHarosMcpToolPresentation(
         `harnessos_${normalizedCandidate.slice("harnessos_couldn_t_handle_".length)}`,
       );
     }
     if (!toolName) {
       continue;
     }
-    return fallbackHarnessOSMcpToolPresentation(toolName);
+    return fallbackHarosMcpToolPresentation(toolName);
   }
   return null;
 }
 
-export type HarnessOSMcpToolStatus = "running" | "completed" | "failed" | "cancelled";
+export type HarosMcpToolStatus = "running" | "completed" | "failed" | "cancelled";
 
-export interface HarnessOSMcpToolTitleInput {
+export interface HarosMcpToolTitleInput {
   readonly toolName?: string | null | undefined;
   readonly title?: string | null | undefined;
   readonly fallbackLabel?: string | null | undefined;
-  readonly status?: HarnessOSMcpToolStatus | undefined;
+  readonly status?: HarosMcpToolStatus | undefined;
 }
 
-export function isHarnessOSBrowserToolCall(input: HarnessOSMcpToolTitleInput): boolean {
-  return (
-    resolveHarnessOSBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null
-  );
+export function isHarosBrowserToolCall(input: HarosMcpToolTitleInput): boolean {
+  return resolveHarosBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null;
 }
 
-// Every engine exposes HarnessOS's MCP tools differently: MCP, dynamic, and even
+// Every engine exposes Haros's MCP tools differently: MCP, dynamic, and even
 // file-change rows can all represent the same gateway action. Normalize by tool
 // identity instead of engine item type so transport details never reach the UI.
-export function deriveHarnessOSMcpToolTitle(input: HarnessOSMcpToolTitleInput): string | null {
-  const presentation = resolveHarnessOSMcpToolPresentation([
+export function deriveHarosMcpToolTitle(input: HarosMcpToolTitleInput): string | null {
+  const presentation = resolveHarosMcpToolPresentation([
     input.toolName,
     input.title,
     input.fallbackLabel,
@@ -437,23 +458,23 @@ export function deriveHarnessOSMcpToolTitle(input: HarnessOSMcpToolTitleInput): 
     case "failed":
       return presentation.failed;
     case "cancelled":
-      return presentation.running.startsWith("HarnessOS is ")
-        ? `HarnessOS stopped ${presentation.running.slice("HarnessOS is ".length)}`
+      return presentation.running.startsWith("Haros is ")
+        ? `Haros stopped ${presentation.running.slice("Haros is ".length)}`
         : `Cancelled ${presentation.running}`;
   }
 }
 
-export function sanitizeHarnessOSMcpToolPreview(input: {
+export function sanitizeHarosMcpToolPreview(input: {
   readonly preview?: string | null | undefined;
   readonly heading: string;
-  readonly status?: HarnessOSMcpToolStatus | undefined;
+  readonly status?: HarosMcpToolStatus | undefined;
 }): string | null {
   const preview = input.preview?.trim();
   if (!preview) return null;
-  const previewTitle = deriveHarnessOSMcpToolTitle({ title: preview, status: input.status });
+  const previewTitle = deriveHarosMcpToolTitle({ title: preview, status: input.status });
   if (
     previewTitle &&
-    normalizeHarnessOSMcpIdentifier(previewTitle) === normalizeHarnessOSMcpIdentifier(input.heading)
+    normalizeHarosMcpIdentifier(previewTitle) === normalizeHarosMcpIdentifier(input.heading)
   ) {
     return null;
   }

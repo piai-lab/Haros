@@ -249,7 +249,7 @@ export function formatSkillScope(scope: string | undefined, locale: AppLocale = 
   if (normalized.length === 0) return locale === "zh-CN" ? "个人" : "Personal";
   const normalizedLower = normalized.toLowerCase();
   if (normalizedLower === "oa") {
-    return locale === "zh-CN" ? "HarnessOS 能力库" : "HarnessOS Library";
+    return locale === "zh-CN" ? "Haros 能力库" : "Haros Library";
   }
   if (locale === "zh-CN") {
     const localized = {
@@ -269,7 +269,7 @@ export function formatSkillDiscoveryWarning(
   engineLabel: string,
 ): string {
   if (warning.source === "engine-native") {
-    return `${engineLabel} native skill discovery failed. Any available HarnessOS Library skills are shown below.`;
+    return `${engineLabel} native skill discovery failed. Any available Haros Library skills are shown below.`;
   }
-  return `HarnessOS Library discovery failed. Any available ${engineLabel} native skills are shown below.`;
+  return `Haros Library discovery failed. Any available ${engineLabel} native skills are shown below.`;
 }

@@ -34,7 +34,7 @@ export function buildAskUserTool(input: {
     name: ASK_USER_TOOL_NAME,
     label: "Ask user",
     description:
-      "Ask the user one or more material decision or clarification questions and wait for their response before answering, recommending, planning, or acting. Use authored options when they help, but never add an Other/Custom catch-all option; HarnessOS always provides that choice.",
+      "Ask the user one or more material decision or clarification questions and wait for their response before answering, recommending, planning, or acting. Use authored options when they help, but never add an Other/Custom catch-all option; Haros always provides that choice.",
     promptSnippet:
       "Ask the user for material decisions or clarification before answering or acting",
     promptGuidelines: [

@@ -1,8 +1,8 @@
 /**
- * HostGateway - HarnessOS app-control tool surface for engine agents.
+ * HostGateway - Haros app-control tool surface for engine agents.
  *
  * Serves the `harnessos_*` MCP tools that let any engine session (Codex,
- * Claude, Grok, ...) inspect and control HarnessOS itself: list projects and
+ * Claude, Grok, ...) inspect and control Haros itself: list projects and
  * threads, read thread status, spawn child threads, send messages, and manage
  * heartbeat automations. The HTTP route delegates every `POST /mcp` request
  * here; authentication and JSON-RPC handling both live behind this interface.

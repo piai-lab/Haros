@@ -404,7 +404,7 @@ export function makeOAAgentPromptFilesLive(options: OAAgentPromptFilesLiveOption
       const run = <A>(operation: () => Promise<A>) =>
         Effect.tryPromise({
           try: operation,
-          catch: () => new Error("HarnessOS Agent prompt file operation failed"),
+          catch: () => new Error("Haros Agent prompt file operation failed"),
         });
       const serialize = <A>(operation: () => Promise<A>) => {
         const result = mutationTail.then(operation, operation);
@@ -439,7 +439,7 @@ export function makeOAAgentPromptFilesLive(options: OAAgentPromptFilesLiveOption
                   ? before.defaultPrompt.content
                   : null;
                 const mutation = await Effect.runPromise(
-                  serverSettings.mutateHarnessOSDefaultPrompt(expectedContent, nextContent),
+                  serverSettings.mutateHarosDefaultPrompt(expectedContent, nextContent),
                 );
                 if (mutation.state === "conflict") return conflict("content_changed");
                 return {

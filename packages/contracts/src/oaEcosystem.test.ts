@@ -10,7 +10,7 @@ import {
 
 const decodeInstallInput = Schema.decodeUnknownSync(OAEcosystemInstallInput);
 
-describe("HarnessOS ecosystem contracts", () => {
+describe("Haros ecosystem contracts", () => {
   it("accepts canonical scoped npm package identities", () => {
     expect(decodeInstallInput({ source: "npm:@scope/package@1.2.3" })).toEqual({
       source: "npm:@scope/package@1.2.3",

@@ -88,13 +88,13 @@ export const APPEARANCE_SETTINGS_SEARCH = {
   theme: defineSettingsSearchRow({
     id: "appearance:theme",
     titleKey: "settings.theme",
-    keywords: "Choose how HarnessOS looks across the app. dark light system color",
+    keywords: "Choose how Haros looks across the app. dark light system color",
     target: SETTINGS_TARGETS.theme,
   }),
   appIcon: defineSettingsSearchPanel({
     id: "appearance:app-icon",
     titleKey: "settings.appIcon",
-    keywords: "Choose the icon HarnessOS uses in the dock or taskbar desktop application logo.",
+    keywords: "Choose the icon Haros uses in the dock or taskbar desktop application logo.",
   }),
   customTitleBar: defineSettingsSearchPanel({
     id: "appearance:custom-title-bar",
@@ -105,7 +105,7 @@ export const APPEARANCE_SETTINGS_SEARCH = {
   systemUiFont: defineSettingsSearchRow({
     id: "appearance:system-ui-font",
     titleKey: "settings.systemUiFont",
-    keywords: "Use the operating system interface font throughout HarnessOS.",
+    keywords: "Use the operating system interface font throughout Haros.",
   }),
   uiDensity: defineSettingsSearchRow({
     id: "appearance:ui-density",

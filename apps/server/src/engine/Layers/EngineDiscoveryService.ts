@@ -180,7 +180,7 @@ const make = Effect.gen(function* () {
         supportsThreadCompaction: adapter.capabilities.supportsThreadCompaction === true,
         supportsThreadImport: adapter.capabilities.supportsThreadImport === true,
       };
-      // The unified HarnessOS skills catalog backs skill discovery for every
+      // The unified Haros skills catalog backs skill discovery for every
       // engine, including ones without native skill support.
       return {
         ...capabilities,

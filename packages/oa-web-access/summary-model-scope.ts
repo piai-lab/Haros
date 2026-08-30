@@ -62,7 +62,7 @@ function readSettings(path: string): Record<string, unknown> {
 }
 
 export function loadEnabledModelPatterns(ctx: SummaryModelScopeContext): string[] | null {
-  // HarnessOS's injected ModelRuntime/SettingsManager already owns its model scope.
+  // Haros's injected ModelRuntime/SettingsManager already owns its model scope.
   // Never consult stock Pi global or project state from the bundled profile.
   if (currentWebAccessContext()?.profile === "oa") return null;
   const globalSettings = readSettings(join(getAgentDir(), "settings.json"));

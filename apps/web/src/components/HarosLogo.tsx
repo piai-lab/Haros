@@ -1,24 +1,24 @@
-// FILE: HarnessOSLogo.tsx
-// Purpose: Render the canonical HarnessOS product mark with responsive light/dark assets.
+// FILE: HarosLogo.tsx
+// Purpose: Render the canonical Haros product mark with responsive light/dark assets.
 // Layer: Shared app branding primitive
 
 import { useId, type SVGProps } from "react";
 
 import { cn } from "~/lib/utils";
 
-export interface HarnessOSLogoProps extends Omit<SVGProps<SVGSVGElement>, "children"> {
+export interface HarosLogoProps extends Omit<SVGProps<SVGSVGElement>, "children"> {
   readonly size?: number;
   readonly title?: string;
 }
 
-export function HarnessOSLogo({
+export function HarosLogo({
   size = 32,
   title,
   className,
   style,
   "aria-label": ariaLabel,
   ...svgProps
-}: HarnessOSLogoProps) {
+}: HarosLogoProps) {
   const titleId = `harnessos-logo-${useId().replace(/:/g, "")}`;
   const isNamed = Boolean(title || ariaLabel);
 
@@ -49,7 +49,7 @@ export function HarnessOSLogo({
   );
 }
 
-export function OABadge({ size = 16, className, style, ...svgProps }: HarnessOSLogoProps) {
+export function OABadge({ size = 16, className, style, ...svgProps }: HarosLogoProps) {
   return (
     <svg
       {...svgProps}

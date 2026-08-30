@@ -3,7 +3,7 @@ import type { EngineWebSurfaceThemeSnapshot } from "@harnessos/contracts/engineW
 export interface CuratorPresentationSnapshot {
   readonly locale: "en" | "zh-CN";
   readonly theme: "light" | "dark";
-  /** Bundled HarnessOS presenters must supply the renderer-owned resolved snapshot. */
+  /** Bundled Haros presenters must supply the renderer-owned resolved snapshot. */
   readonly themeSnapshot: Readonly<EngineWebSurfaceThemeSnapshot>;
 }
 

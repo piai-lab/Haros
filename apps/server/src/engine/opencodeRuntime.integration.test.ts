@@ -220,7 +220,7 @@ describe("buildOpenCodeServerProcessEnv", () => {
     expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"engine":{"openai":{}}}');
   });
 
-  it("strips inherited HarnessOS authority from managed server processes", () => {
+  it("strips inherited Haros authority from managed server processes", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
         OPENAI_API_KEY: "engine-key",

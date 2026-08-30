@@ -35,6 +35,8 @@
     "build": "turbo run build",
     "brand:generate": "node apps/web/scripts/generate-brand-assets.mjs",
     "brand:check": "node apps/web/scripts/generate-brand-assets.mjs --check",
+    "public-surface:check": "node scripts/check-public-identity.mjs",
+    "source-adoptions:check": "node scripts/check-source-adoptions.mjs",
     "build:desktop": "turbo run build --filter=@harnessos/desktop --filter=@harnessos/server",
     "typecheck": "turbo run typecheck",
     "lint": "oxlint --report-unused-disable-directives",

@@ -903,7 +903,7 @@ describe("getComposerEngineState", () => {
     });
   });
 
-  it("keeps HarnessOS Agent runtime thinking selections on the thinkingLevel field", () => {
+  it("keeps Haros Agent runtime thinking selections on the thinkingLevel field", () => {
     const selection = getComposerTraitSelection(
       "oa",
       "deepseek/deepseek-v4-pro",

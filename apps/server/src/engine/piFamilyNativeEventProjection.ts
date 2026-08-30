@@ -186,7 +186,7 @@ export function piToolTimelineDetail(result: unknown): string | undefined {
 
 export function makePiGatewayLoadWarning(displayName: string) {
   return {
-    message: `HarnessOS MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.`,
+    message: `Haros MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; Haros MCP actions are unavailable.`,
     detail: { source: "harnessos-mcp", availability: "failed" } as const,
   };
 }

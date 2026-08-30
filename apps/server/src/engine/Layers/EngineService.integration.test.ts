@@ -407,7 +407,7 @@ function makeEngineServiceLayer(
   engines?: {
     readonly includeRestartRollbackDroid?: boolean;
     readonly includePi?: boolean;
-    readonly includeHarnessOS?: boolean;
+    readonly includeHaros?: boolean;
     readonly runtimeEventCapacity?: number;
   },
 ) {
@@ -436,7 +436,7 @@ function makeEngineServiceLayer(
               ? Effect.succeed(droid.adapter)
               : engine === "pi" && engines?.includePi === true
                 ? Effect.succeed(pi.adapter)
-                : engine === "oa" && engines?.includeHarnessOS === true
+                : engine === "oa" && engines?.includeHaros === true
                   ? Effect.succeed(oa.adapter)
                   : Effect.fail(new EngineUnsupportedError({ engine })),
     listEngines: () =>
@@ -446,7 +446,7 @@ function makeEngineServiceLayer(
         "antigravity",
         ...(engines?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
         ...(engines?.includePi === true ? (["pi"] as const) : []),
-        ...(engines?.includeHarnessOS === true ? (["oa"] as const) : []),
+        ...(engines?.includeHaros === true ? (["oa"] as const) : []),
       ] as const),
   };
 
@@ -479,12 +479,12 @@ function makeEngineServiceLayer(
   };
 }
 
-const routing = makeEngineServiceLayer(undefined, { includePi: true, includeHarnessOS: true });
+const routing = makeEngineServiceLayer(undefined, { includePi: true, includeHaros: true });
 const modelServiceAdmission = makeEngineServiceLayer(undefined, {
-  includeHarnessOS: true,
+  includeHaros: true,
 });
 const ecosystemReloadRouting = makeEngineServiceLayer(undefined, {
-  includeHarnessOS: true,
+  includeHaros: true,
 });
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
@@ -1517,7 +1517,7 @@ bindingRetryRouting.layer("EngineServiceLive binding settlement retry", (it) => 
 });
 
 ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) => {
-  it.effect("reloads only the exact live HarnessOS Agent session", () =>
+  it.effect("reloads only the exact live Haros Agent session", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-reload");
@@ -1822,7 +1822,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-start-first");
       const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake HarnessOS start implementation");
+      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseStart = yield* Deferred.make<void>();
       modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
@@ -1841,7 +1841,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
         500,
         10,
-        "HarnessOS custom-service start",
+        "Haros custom-service start",
       );
 
       const mutationEntered = yield* Deferred.make<void>();
@@ -1908,7 +1908,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* engine.stopRuntimeSession!({ threadId });
 
       const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake HarnessOS start implementation");
+      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseRecovery = yield* Deferred.make<void>();
       modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
@@ -1921,7 +1921,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
         500,
         10,
-        "HarnessOS custom-service recovery",
+        "Haros custom-service recovery",
       );
 
       const mutationEntered = yield* Deferred.make<void>();
@@ -1953,7 +1953,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         });
 
         const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
-        if (!defaultStart) assert.fail("Expected the fake HarnessOS start implementation");
+        if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
         const replacementFailure = new EngineAdapterSessionNotFoundError({
           engine: "oa",
           threadId,
@@ -2007,7 +2007,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       });
 
       const defaultHasSession = modelServiceAdmission.oa.hasSession.getMockImplementation();
-      if (!defaultHasSession) assert.fail("Expected the fake HarnessOS session probe");
+      if (!defaultHasSession) assert.fail("Expected the fake Haros session probe");
       const lifecycleEntered = yield* Deferred.make<void>();
       const releaseLifecycle = yield* Deferred.make<void>();
       modelServiceAdmission.oa.hasSession.mockImplementationOnce((probedThreadId) =>
@@ -2025,7 +2025,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* Deferred.await(lifecycleEntered);
 
       const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake HarnessOS start implementation");
+      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const replacementFailure = new EngineAdapterSessionNotFoundError({
         engine: "oa",
         threadId,
@@ -2112,7 +2112,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* sleep(25);
 
       const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      if (!binding) assert.fail("Expected a persisted HarnessOS binding");
+      if (!binding) assert.fail("Expected a persisted Haros binding");
       yield* directory.upsert({
         ...binding,
         runtimePayload: {
@@ -2327,7 +2327,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     }),
   );
 
-  it.effect("strips HarnessOS-only work-surface fields from other Engine admission", () =>
+  it.effect("strips Haros-only work-surface fields from other Engine admission", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
@@ -2360,7 +2360,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     }),
   );
 
-  it.effect("persists and recovers the bundled HarnessOS work surface", () =>
+  it.effect("persists and recovers the bundled Haros work surface", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;

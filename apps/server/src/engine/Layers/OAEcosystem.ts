@@ -1,12 +1,12 @@
 // FILE: OAEcosystem.ts
-// Purpose: Bridges explicit HarnessOS Agent ecosystem intents to its bundled Pi owners.
+// Purpose: Bridges explicit Haros Agent ecosystem intents to its bundled Pi owners.
 // Layer: Server engine implementation
 
 import type {
   OAEcosystemListResourcesResult,
   OAEcosystemMutationResult,
   OAEcosystemSnapshot,
-  HarnessOSPackageDescriptor,
+  HarosPackageDescriptor,
 } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
@@ -45,7 +45,7 @@ async function snapshot(input: {
   const updatePackageIds = new Set(
     input.checkUpdates ? await packageManager.checkPublicPackageUpdates() : [],
   );
-  const packages: HarnessOSPackageDescriptor[] = configured.slice(0, 512).map((pkg) =>
+  const packages: HarosPackageDescriptor[] = configured.slice(0, 512).map((pkg) =>
     input.checkUpdates
       ? {
           packageId: pkg.packageId,
@@ -85,7 +85,7 @@ export function makeOAEcosystemLive(options: OAEcosystemLiveOptions = {}) {
             );
             return result;
           },
-          catch: () => new Error("HarnessOS ecosystem operation failed"),
+          catch: () => new Error("Haros ecosystem operation failed"),
         });
 
       const withOwners = async () => {

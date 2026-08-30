@@ -16,19 +16,19 @@ NS_ASSUME_NONNULL_BEGIN
 /// Hardware buttons addressable over HID. Rotation is deliberately absent: the
 /// simulator exposes no rotation button, so orientation changes go through
 /// `simctl` at the UI level instead (see HEADER.md).
-typedef NS_ENUM(NSInteger, HarnessOSHardwareButton) {
-  HarnessOSHardwareButtonHome,
-  HarnessOSHardwareButtonLock,
-  HarnessOSHardwareButtonSide,
-  HarnessOSHardwareButtonSiri,
-  HarnessOSHardwareButtonVolumeUp,
-  HarnessOSHardwareButtonVolumeDown,
+typedef NS_ENUM(NSInteger, HarosHardwareButton) {
+  HarosHardwareButtonHome,
+  HarosHardwareButtonLock,
+  HarosHardwareButtonSide,
+  HarosHardwareButtonSiri,
+  HarosHardwareButtonVolumeUp,
+  HarosHardwareButtonVolumeDown,
 };
 
 /// Returns NO (and fills `name`-specific errors) for an unknown button name.
-BOOL HarnessOSHardwareButtonFromName(NSString *name, HarnessOSHardwareButton *outButton);
+BOOL HarosHardwareButtonFromName(NSString *name, HarosHardwareButton *outButton);
 
-@interface HarnessOSHIDBridge : NSObject
+@interface HarosHIDBridge : NSObject
 
 /// Connects a HID client to `device` (a `SimDevice`). Returns NO on failure.
 - (BOOL)attachToDevice:(id)device
@@ -72,9 +72,9 @@ BOOL HarnessOSHardwareButtonFromName(NSString *name, HarnessOSHardwareButton *ou
 /// Returns the count of characters that had no mapping (skipped).
 - (NSInteger)typeText:(NSString *)text NS_SWIFT_NAME(type(text:));
 
-- (void)sendButton:(HarnessOSHardwareButton)button down:(BOOL)down
+- (void)sendButton:(HarosHardwareButton)button down:(BOOL)down
     NS_SWIFT_NAME(sendButton(_:down:));
-- (void)tapButton:(HarnessOSHardwareButton)button NS_SWIFT_NAME(tapButton(_:));
+- (void)tapButton:(HarosHardwareButton)button NS_SWIFT_NAME(tapButton(_:));
 
 @end
 

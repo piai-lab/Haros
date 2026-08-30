@@ -89,7 +89,7 @@ describe("createDesktopPlatformBuildConfig", () => {
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "HarnessOS",
+          StartupWMClass: "Haros",
         },
       },
     });
@@ -169,7 +169,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.ok(issue?.includes("Build mac/arm64 on macOS"));
   });
 
-  it("uses canonical HarnessOS app icons instead of browser favicons for desktop", () => {
+  it("uses canonical Haros app icons instead of browser favicons for desktop", () => {
     assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/brand/exports/app-icon-1024.png");
     assert.equal(
       BRAND_ASSET_PATHS.productionMacLegacyIconPng,

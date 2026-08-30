@@ -1,5 +1,5 @@
 // FILE: composerSlashCommands.ts
-// Purpose: Share HarnessOS's built-in composer slash command names across web UI
+// Purpose: Share Haros's built-in composer slash command names across web UI
 //          parsing and server-side profile stats backfills.
 // Layer: Shared runtime utility
 // Exports: command-name constants and normalization helpers.

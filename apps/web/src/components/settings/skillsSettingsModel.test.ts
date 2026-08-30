@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
-  isHarnessOSSkillSource,
+  isHarosSkillSource,
   ORIGIN_SECTION_ORDER,
   skillOriginInfo,
 } from "./skillsSettingsModel";
@@ -74,15 +74,15 @@ describe("buildSettingsSkillGroups", () => {
   });
 });
 
-describe("isHarnessOSSkillSource", () => {
-  it("distinguishes HarnessOS-owned assets from Engine-native homes", () => {
+describe("isHarosSkillSource", () => {
+  it("distinguishes Haros-owned assets from Engine-native homes", () => {
     expect(
-      isHarnessOSSkillSource(
+      isHarosSkillSource(
         skill({ path: "/Users/test/.harnessos/skills/reviewer/SKILL.md", scope: "project" }),
       ),
     ).toBe(true);
     expect(
-      isHarnessOSSkillSource(
+      isHarosSkillSource(
         skill({ path: "/Users/test/.codex/skills/reviewer/SKILL.md", scope: "codex" }),
       ),
     ).toBe(false);
@@ -125,7 +125,7 @@ describe("Settings skill Engine projection", () => {
       const origin = engine === "claude" ? "claude" : engine;
       const info = skillOriginInfo(origin);
       if (engine === "oa") {
-        expect(info).toEqual({ label: "HarnessOS", engine: null });
+        expect(info).toEqual({ label: "Haros", engine: null });
       } else {
         expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[engine], engine });
       }

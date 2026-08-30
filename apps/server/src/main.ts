@@ -53,7 +53,7 @@ import {
   verifyServerRuntime,
 } from "./externalMcp/bridge";
 import { externalMcpLauncher, externalMcpShellCommand } from "./externalMcp/launcher";
-import { fetchHarnessOSServerStatus, formatHarnessOSServerStatus } from "./serverStatusCli";
+import { fetchHarosServerStatus, formatHarosServerStatus } from "./serverStatusCli";
 
 export class StartupError extends Data.TaggedError("StartupError")<{
   readonly message: string;
@@ -230,7 +230,7 @@ const ServerConfigLive = (input: CliInput) =>
         try: () => preparePrivateServerPaths(derivedPaths),
         catch: (cause) =>
           new StartupError({
-            message: "Failed to secure HarnessOS's local state directory",
+            message: "Failed to secure Haros's local state directory",
             cause,
           }),
       });
@@ -407,7 +407,7 @@ const makeServerProgram = (input: CliInput) =>
       }),
     );
 
-    yield* Effect.logInfo("HarnessOS running", makeServerStartupLogData(config));
+    yield* Effect.logInfo("Haros running", makeServerStartupLogData(config));
     if (startupPairingUrl) {
       if (config.allowInsecureRemote && !config.publicUrl) {
         yield* Effect.logWarning(
@@ -464,7 +464,7 @@ const hostFlag = Flag.string("host").pipe(
   Flag.optional,
 );
 const harnessosHomeFlag = Flag.string("home-dir").pipe(
-  Flag.withDescription("Base directory for all HarnessOS data (equivalent to HARNESSOS_HOME)."),
+  Flag.withDescription("Base directory for all Haros data (equivalent to HARNESSOS_HOME)."),
   Flag.optional,
 );
 const devUrlFlag = Flag.string("dev-url").pipe(
@@ -531,7 +531,7 @@ const baseServerCommand = Command.make("oa", {
   autoBootstrapProjectFromCwd: autoBootstrapProjectFromCwdFlag,
   logEngineEvents: logEngineEventsFlag,
   logWebSocketEvents: logWebSocketEventsFlag,
-}).pipe(Command.withDescription("Run the HarnessOS server."));
+}).pipe(Command.withDescription("Run the Haros server."));
 
 const mcpServeCommand = Command.make(
   "serve",
@@ -552,7 +552,7 @@ const mcpServeCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Serve the paired HarnessOS external MCP integration over stdio for Codex, Claude, and other MCP clients.",
+    "Serve the paired Haros external MCP integration over stdio for Codex, Claude, and other MCP clients.",
   ),
 );
 
@@ -560,7 +560,7 @@ const mcpPairCommand = Command.make(
   "pair",
   {
     code: Flag.string("code").pipe(
-      Flag.withDescription("Short-lived pairing code issued by HarnessOS Settings."),
+      Flag.withDescription("Short-lived pairing code issued by Haros Settings."),
     ),
   },
   ({ code }) =>
@@ -576,21 +576,21 @@ const mcpPairCommand = Command.make(
         catch: (cause) => new StartupError({ message: "External MCP pairing failed.", cause }),
       });
       process.stdout.write(
-        `Paired HarnessOS external MCP integration "${paired.paired.name}".\nCredential stored privately at ${paired.storePath}.\nConfigure the MCP client command as: ${externalMcpShellCommand(externalMcpLauncher(["mcp", "serve", "--integration", paired.paired.integrationId, "--home-dir", baseDir]))}\n`,
+        `Paired Haros external MCP integration "${paired.paired.name}".\nCredential stored privately at ${paired.storePath}.\nConfigure the MCP client command as: ${externalMcpShellCommand(externalMcpLauncher(["mcp", "serve", "--integration", paired.paired.integrationId, "--home-dir", baseDir]))}\n`,
       );
       if (process.platform === "win32") {
         process.stdout.write(
-          "Windows note: HarnessOS stores this credential under your user profile, but Windows does not expose POSIX 0600 permission checks. Protect the profile and its HarnessOS data directory.\n",
+          "Windows note: Haros stores this credential under your user profile, but Windows does not expose POSIX 0600 permission checks. Protect the profile and its Haros data directory.\n",
         );
       }
     }),
-).pipe(Command.withDescription("Pair this CLI with a user-approved HarnessOS MCP integration."));
+).pipe(Command.withDescription("Pair this CLI with a user-approved Haros MCP integration."));
 
 const serverStatusCommand = Command.make(
   "status",
   {
     url: Flag.string("url").pipe(
-      Flag.withDescription("HarnessOS server base URL to probe."),
+      Flag.withDescription("Haros server base URL to probe."),
       Flag.optional,
     ),
     json: Flag.boolean("json").pipe(
@@ -613,7 +613,7 @@ const serverStatusCommand = Command.make(
                 error:
                   cause instanceof Error
                     ? cause.message
-                    : "Failed to discover a running HarnessOS server.",
+                    : "Failed to discover a running Haros server.",
               };
             }
           })();
@@ -630,7 +630,7 @@ const serverStatusCommand = Command.make(
                 if ("runtime" in discovered) {
                   await verifyServerRuntime(discovered.runtime, globalThis.fetch);
                 }
-                return await fetchHarnessOSServerStatus({ url: discovered.url });
+                return await fetchHarosServerStatus({ url: discovered.url });
               } catch (cause) {
                 return {
                   reachable: false as const,
@@ -639,26 +639,26 @@ const serverStatusCommand = Command.make(
                   error:
                     cause instanceof Error
                       ? cause.message
-                      : "Failed to verify the discovered HarnessOS server.",
+                      : "Failed to verify the discovered Haros server.",
                 };
               }
             });
       process.stdout.write(
-        json ? `${JSON.stringify(result, null, 2)}\n` : `${formatHarnessOSServerStatus(result)}\n`,
+        json ? `${JSON.stringify(result, null, 2)}\n` : `${formatHarosServerStatus(result)}\n`,
       );
       if (!result.ready) {
         process.exitCode = 1;
       }
     }),
-).pipe(Command.withDescription("Check whether an HarnessOS server is reachable and ready."));
+).pipe(Command.withDescription("Check whether an Haros server is reachable and ready."));
 
 const serverToolsCommand = Command.make("server").pipe(
-  Command.withDescription("Inspect and manage a running HarnessOS server."),
+  Command.withDescription("Inspect and manage a running Haros server."),
   Command.withSubcommands([serverStatusCommand]),
 );
 
 const mcpCommand = Command.make("mcp").pipe(
-  Command.withDescription("Manage HarnessOS's loopback external MCP bridge."),
+  Command.withDescription("Manage Haros's loopback external MCP bridge."),
   Command.withSubcommands([mcpServeCommand, mcpPairCommand]),
 );
 

@@ -1,7 +1,7 @@
 // FILE: harnessosHome.ts
-// Purpose: Resolves the user-level HarnessOS base directory without Effect, so the backend
+// Purpose: Resolves the user-level Haros base directory without Effect, so the backend
 // server and the Electron main process agree on one location during early startup.
-// Exports: expandHomePath, resolveHarnessOSHomeDirectory, HARNESSOS_HOME_ENV_NAME.
+// Exports: expandHomePath, resolveHarosHomeDirectory, HARNESSOS_HOME_ENV_NAME.
 
 import * as OS from "node:os";
 import * as Path from "node:path";
@@ -21,13 +21,13 @@ export function expandHomePath(input: string, homeDirectory: string = OS.homedir
 }
 
 /**
- * Resolves the HarnessOS base directory the same way for every process in the install.
+ * Resolves the Haros base directory the same way for every process in the install.
  *
  * Deliberately plain Node: the Electron main process needs this before Effect (or even
  * `app.whenReady()`) is available, and the login-shell environment cache has to land in
  * the same place whichever process wrote it first.
  */
-export function resolveHarnessOSHomeDirectory(
+export function resolveHarosHomeDirectory(
   options: {
     /** Explicit override; falls back to `HARNESSOS_HOME` from `env`. */
     readonly configuredHome?: string | undefined;

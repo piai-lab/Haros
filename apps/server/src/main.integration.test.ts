@@ -65,7 +65,7 @@ const serverStart = Effect.acquireRelease(
     ),
 ).pipe(Effect.map(({ server }) => server));
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
-let defaultHarnessOSHome = "";
+let defaultHarosHome = "";
 const tempHomes = new Set<string>();
 
 function makeTempHome(prefix = "harnessos-main-test-"): string {
@@ -109,7 +109,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            HARNESSOS_HOME: defaultHarnessOSHome,
+            HARNESSOS_HOME: defaultHarosHome,
             HARNESSOS_NO_BROWSER: "true",
             ...env,
           },
@@ -122,7 +122,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  defaultHarnessOSHome = makeTempHome();
+  defaultHarosHome = makeTempHome();
   resolvedConfig = null;
   serverStopSignal = Effect.void;
   retainedSqlClient = null;
@@ -782,7 +782,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
       assert.equal(start.mock.calls.length, 0);
       assert.equal(resolvedConfig, null);
-      assert.match(String(error), /Refusing to bind HarnessOS to non-loopback host 0\.0\.0\.0/);
+      assert.match(String(error), /Refusing to bind Haros to non-loopback host 0\.0\.0\.0/);
     }),
   );
 

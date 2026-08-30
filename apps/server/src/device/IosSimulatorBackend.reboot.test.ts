@@ -128,7 +128,7 @@ describe("stale descriptor detection", () => {
 });
 
 describe("simulator reboot", () => {
-  it("re-attaches after a HarnessOS-driven shutdown and reboot", async () => {
+  it("re-attaches after a Haros-driven shutdown and reboot", async () => {
     const { backend, helper } = makeBackend();
     await backend.tap(DEVICE, 10, 10);
 
@@ -144,7 +144,7 @@ describe("simulator reboot", () => {
     ]);
   });
 
-  it("recovers when the device was rebooted outside HarnessOS", async () => {
+  it("recovers when the device was rebooted outside Haros", async () => {
     const { backend, helper } = makeBackend();
     await backend.tap(DEVICE, 10, 10);
 

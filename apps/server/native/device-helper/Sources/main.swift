@@ -1,4 +1,4 @@
-// harnessos-device-helper — the native side of HarnessOS's Device Pane.
+// harnessos-device-helper — the native side of Haros's Device Pane.
 //
 // Protocol: newline-delimited JSON-RPC 2.0 over stdio (one object per line).
 // Frames do not travel on stdio; they go to the Unix socket given to
@@ -142,8 +142,8 @@ final class HelperSession {
   let deviceSet: SimulatorDeviceSet
 
   private(set) var device: SimulatorDevice?
-  private(set) var hid: HarnessOSHIDBridge?
-  private(set) var accessibility: HarnessOSAXBridge?
+  private(set) var hid: HarosHIDBridge?
+  private(set) var accessibility: HarosAXBridge?
   private var stream: FrameStream?
   private var displayDescriptor: NSObject?
   /// The boot the current attachment belongs to. Compared against the device's
@@ -168,7 +168,7 @@ final class HelperSession {
       throw RPCError(.simulatorFailure, "display has no framebuffer surface yet")
     }
 
-    let hidBridge = HarnessOSHIDBridge()
+    let hidBridge = HarosHIDBridge()
     var hidFailure: String?
     var hidReady = false
     do {
@@ -182,7 +182,7 @@ final class HelperSession {
 
     // The accessibility translator is a process-wide singleton, so it is primed
     // once per attach and rebound to the current device.
-    let axBridge = HarnessOSAXBridge()
+    let axBridge = HarosAXBridge()
     axBridge.device = device.handle
     let axReady = axBridge.prepare()
     if !axReady {
@@ -229,7 +229,7 @@ final class HelperSession {
     return device
   }
 
-  func requireHID() throws -> HarnessOSHIDBridge {
+  func requireHID() throws -> HarosHIDBridge {
     // Verify first: a stale boot session re-attaches and replaces `hid`, so
     // the guard must read the post-verification client, not the old one.
     try verifyBootSession()
@@ -270,7 +270,7 @@ final class HelperSession {
     }
   }
 
-  func requireAccessibility() throws -> HarnessOSAXBridge {
+  func requireAccessibility() throws -> HarosAXBridge {
     guard let accessibility else {
       throw RPCError(.notAttached, "accessibility translation is unavailable for this simulator")
     }
@@ -349,12 +349,12 @@ final class HelperSession {
 
 /// Run one HID injection and fail if the bridge could not deliver it.
 ///
-/// Every injection path in HarnessOSHIDBridge returns silently when it has no
+/// Every injection path in HarosHIDBridge returns silently when it has no
 /// client or a private symbol is missing, and this layer used to answer
 /// `{"ok": true}` regardless. A half-attached HID client therefore looked
 /// exactly like a working one: taps were acked and nothing moved. Comparing the
 /// undelivered counter around the call turns that into a real error.
-private func withHIDDelivery(_ hid: HarnessOSHIDBridge, _ body: () -> Void) throws {
+private func withHIDDelivery(_ hid: HarosHIDBridge, _ body: () -> Void) throws {
   let before = hid.undeliveredEventCount
   body()
   let dropped = hid.undeliveredEventCount - before
@@ -466,8 +466,8 @@ func handle(method: String, params: Params, session: HelperSession) throws -> An
   case "button":
     let hid = try session.requireHID()
     let name = try params.string("name")
-    var button = HarnessOSHardwareButton.home
-    guard HarnessOSHardwareButtonFromName(name, &button) else {
+    var button = HarosHardwareButton.home
+    guard HarosHardwareButtonFromName(name, &button) else {
       throw RPCError(
         .invalidParams,
         "unknown button '\(name)'; expected home, lock, side, siri, volume-up or volume-down")

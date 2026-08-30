@@ -10,7 +10,7 @@ import {
   makeOATaskListExtension,
 } from "./oaTaskListExtension.ts";
 
-describe("HarnessOS task-list Extension", () => {
+describe("Haros task-list Extension", () => {
   it("normalizes one bounded snapshot and rejects competing current tasks", async () => {
     expect(
       decodeOATaskListUpdate({

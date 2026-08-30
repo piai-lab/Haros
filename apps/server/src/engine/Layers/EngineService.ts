@@ -3464,7 +3464,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           if (!adapter.reloadSessionResources) {
             return yield* toValidationError(
               operation,
-              "HarnessOS Agent does not expose active-session resource reload.",
+              "Haros Agent does not expose active-session resource reload.",
             );
           }
           return {

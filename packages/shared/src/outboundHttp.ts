@@ -101,7 +101,7 @@ export function encodeOutboundMultipart(
   if (!Number.isSafeInteger(options.maxBytes) || options.maxBytes <= 0) {
     throw new OutboundHttpError("request", "Multipart byte limit must be a positive integer.");
   }
-  const boundary = `HarnessOS-${randomUUID()}`;
+  const boundary = `Haros-${randomUUID()}`;
   const chunks: Uint8Array[] = [];
   const encoder = new TextEncoder();
   let size = 0;

@@ -37,8 +37,8 @@ function makeWindow({ destroyed = false, visible = true }: FakeWindowState = {})
 
 const identity = {
   appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
-  relaunchCommand: "C:\\Program Files\\HarnessOS\\HarnessOS.exe",
-  relaunchDisplayName: "HarnessOS",
+  relaunchCommand: "C:\\Program Files\\Haros\\Haros.exe",
+  relaunchDisplayName: "Haros",
 } as const;
 
 const iconPath = "C:\\Users\\harnessos\\userdata\\taskbar-icons\\taskbar-icon.ico";
@@ -79,7 +79,7 @@ describe("windowsShellIconCachePath", () => {
   it("prefers the packaged executable directory over userdata so Explorer loads a trusted ICO", () => {
     expect(
       resolveWindowsShellIconCacheDirectory({
-        executablePath: Path.join("Programs", "harnessos-desktop", "HarnessOS.exe"),
+        executablePath: Path.join("Programs", "harnessos-desktop", "Haros.exe"),
         fallbackDirectory: Path.join("userdata", "taskbar-icons"),
       }),
     ).toBe(Path.join("Programs", "harnessos-desktop"));
@@ -95,8 +95,8 @@ describe("windowsShellIconCachePath", () => {
 describe("collectWindowsShortcutPaths", () => {
   it("includes Start Menu and nested program-folder shortcuts while skipping missing roots", () => {
     const files: Record<string, string[]> = {
-      [Path.join("Start Menu", "Programs")]: ["HarnessOS.lnk", "Other", "Readme.txt"],
-      [Path.join("Start Menu", "Programs", "Other")]: ["HarnessOS Dev.lnk"],
+      [Path.join("Start Menu", "Programs")]: ["Haros.lnk", "Other", "Readme.txt"],
+      [Path.join("Start Menu", "Programs", "Other")]: ["Haros Dev.lnk"],
     };
 
     expect(
@@ -110,8 +110,8 @@ describe("collectWindowsShortcutPaths", () => {
         isDirectory: (path) => path === Path.join("Start Menu", "Programs", "Other"),
       }),
     ).toEqual([
-      Path.join("Start Menu", "Programs", "HarnessOS.lnk"),
-      Path.join("Start Menu", "Programs", "Other", "HarnessOS Dev.lnk"),
+      Path.join("Start Menu", "Programs", "Haros.lnk"),
+      Path.join("Start Menu", "Programs", "Other", "Haros Dev.lnk"),
     ]);
   });
 });
@@ -123,14 +123,14 @@ describe("syncWindowsShortcutIcons", () => {
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
       appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
-      executablePath: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
+      executablePath: Path.join("Program Files", "Haros", "Haros.exe"),
       shortcutPaths: ["harnessos.lnk", "other.lnk", "already.lnk"],
       readShortcut: (shortcutPath) => {
         if (shortcutPath === "harnessos.lnk") {
           return {
             appUserModelId: HARNESSOS_PRODUCTION_BUNDLE_ID,
-            target: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
-            icon: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
+            target: Path.join("Program Files", "Haros", "Haros.exe"),
+            icon: Path.join("Program Files", "Haros", "Haros.exe"),
             iconIndex: 0,
           };
         }
@@ -179,7 +179,7 @@ describe("syncWindowsShortcutIcons", () => {
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
       appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
-      executablePath: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
+      executablePath: Path.join("Program Files", "Haros", "Haros.exe"),
       shortcutPaths: ["already.lnk", "other.lnk"],
       readShortcut: (shortcutPath) => {
         if (shortcutPath === "already.lnk") {
@@ -211,7 +211,7 @@ describe("syncWindowsShortcutIcons", () => {
         "Local",
         "Programs",
         "harnessos-desktop",
-        "HarnessOS.exe",
+        "Haros.exe",
       ),
       shortcutPaths: ["harnessos.lnk"],
       readShortcut: () => ({
@@ -223,7 +223,7 @@ describe("syncWindowsShortcutIcons", () => {
           "Local",
           "Programs",
           "harnessos-desktop",
-          "HarnessOS.exe",
+          "Haros.exe",
         ),
       }),
       updateShortcut,

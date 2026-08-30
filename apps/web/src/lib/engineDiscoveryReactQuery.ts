@@ -341,7 +341,7 @@ export function engineModelsQueryOptions(input: {
   cwd?: string | null;
   enabled?: boolean;
 }) {
-  // Passive HarnessOS model discovery is intentionally global-only: the Server
+  // Passive Haros model discovery is intentionally global-only: the Server
   // does not bind a Thread/Session or execute Project extensions on this path.
   // Keeping a Project cwd in the query identity would therefore repeat the same
   // expensive runtime catalog load for every Project and briefly replace an

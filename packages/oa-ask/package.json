@@ -2,7 +2,7 @@
   "name": "@harnessos/oa-ask",
   "version": "5.0.0-oa.1",
   "private": true,
-  "description": "Host-neutral Ask User runtime fork for HarnessOS's canonical user-input product.",
+  "description": "Host-neutral Ask User runtime fork for Haros's canonical user-input product.",
   "license": "MIT",
   "type": "module",
   "exports": {

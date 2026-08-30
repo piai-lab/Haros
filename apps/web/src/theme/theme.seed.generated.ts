@@ -1,5 +1,5 @@
 // FILE: theme.seed.generated.ts
-// Purpose: Stores the ordered, normalized HarnessOS theme-preset catalog.
+// Purpose: Stores the ordered, normalized Haros theme-preset catalog.
 // Layer: Web appearance generated catalog
 // Exports: THEME_SEED_CATALOG as the sole preset identity/variant/seed owner.
 

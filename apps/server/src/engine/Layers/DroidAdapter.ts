@@ -38,10 +38,10 @@ import {
 import { ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpHarnessOSMcpServers } from "../../hostGateway/mcpInjection.ts";
+import { buildAcpHarosMcpServers } from "../../hostGateway/mcpInjection.ts";
 import {
-  type HarnessOSHarnessPolicyDeliveryState,
-  takeHarnessOSHarnessPolicyTextPartForEngineSession,
+  type HarosHarnessPolicyDeliveryState,
+  takeHarosHarnessPolicyTextPartForEngineSession,
 } from "../../hostGateway/harnessPolicy.ts";
 import { HostGatewayCredentials } from "../../hostGateway/Services/HostGatewayCredentials.ts";
 import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
@@ -127,11 +127,11 @@ import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogg
 
 const ENGINE = "droid" as const;
 
-export const takeDroidHarnessOSHarnessPolicyTextPart = (
-  state: HarnessOSHarnessPolicyDeliveryState,
+export const takeDroidHarosHarnessPolicyTextPart = (
+  state: HarosHarnessPolicyDeliveryState,
   scopedGatewayConnectionAvailable: boolean,
 ) =>
-  takeHarnessOSHarnessPolicyTextPartForEngineSession(state, {
+  takeHarosHarnessPolicyTextPartForEngineSession(state, {
     scopedGatewayConnectionAvailable,
   });
 const DROID_RESUME_VERSION = 1 as const;
@@ -165,7 +165,7 @@ const DROID_DISCOVERY_CACHE_MAX_ENTRIES = 16;
 const DROID_RESOURCE_DISCIPLINE_PROMPT =
   "Keep CPU-intensive validation work serial: never overlap builds, typechecks, linters, tests, package audits, or package-manager commands, including across background agents. Wait for one CPU-intensive command to finish before starting the next. Read-only code inspection may still run in parallel.";
 const DROID_PLAN_MODE_PROMPT_PREFIX = [
-  "HarnessOS Droid plan mode is active.",
+  "Haros Droid plan mode is active.",
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -219,7 +219,7 @@ interface DroidSessionContext {
   readonly activeAssistantItemsWithContent: Set<string>;
   activeTurnFailedToolDetail: string | undefined;
   activePromptFiber: Fiber.Fiber<void, never> | undefined;
-  /** Turns cancelled by HarnessOS only because their Plan proposal was captured. */
+  /** Turns cancelled by Haros only because their Plan proposal was captured. */
   readonly planCapturedTurnIds: Set<TurnId>;
   // Epoch-ms of the last inbound ACP activity for the active turn; drives the
   // idle-progress watchdog that force-fails a silently hung turn.
@@ -864,11 +864,11 @@ export function makeDroidAdapter(
             cwd,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientCapabilities: { elicitation: { form: {} } },
-            clientInfo: { name: "HarnessOS", version: "0.0.0" },
+            clientInfo: { name: "Haros", version: "0.0.0" },
             ...(hostGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult: Acp.InitializeResponse) =>
-                    buildAcpHarnessOSMcpServers({
+                    buildAcpHarosMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: hostGatewayCredentials.stdioProxy,
@@ -1048,7 +1048,7 @@ export function makeDroidAdapter(
               engine: ENGINE,
               method: "session/resume",
               detail:
-                "Droid could not resume the requested native session. HarnessOS refused the fresh fallback to avoid silently losing conversation context.",
+                "Droid could not resume the requested native session. Haros refused the fresh fallback to avoid silently losing conversation context.",
             });
           }
 
@@ -1596,7 +1596,7 @@ export function makeDroidAdapter(
             issue: "Turn requires non-empty text or attachments.",
           });
         }
-        const harnessPolicy = takeDroidHarnessOSHarnessPolicyTextPart(
+        const harnessPolicy = takeDroidHarosHarnessPolicyTextPart(
           ctx,
           hostGatewayCredentials !== undefined,
         );
@@ -1969,7 +1969,7 @@ export function makeDroidAdapter(
             runtime,
             targetCwd,
             unsupportedIssue:
-              "This Droid ACP version does not advertise session/fork; HarnessOS will rebuild the fork from its retained transcript.",
+              "This Droid ACP version does not advertise session/fork; Haros will rebuild the fork from its retained transcript.",
             requestTimeoutMs: DROID_ACP_REQUEST_TIMEOUT_MS,
             timeoutError: droidAcpTimeoutError,
           });
@@ -1982,7 +1982,7 @@ export function makeDroidAdapter(
             engine: ENGINE,
             operation: "forkThread",
             issue:
-              "The source Droid session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.",
+              "The source Droid session has a turn in flight; Haros will rebuild the fork from its retained transcript.",
           });
         }
         const forked = activeSource
@@ -2006,7 +2006,7 @@ export function makeDroidAdapter(
                 childProcessSpawner,
                 cwd: sourceCwd,
                 resumeSessionId: sourceSessionId,
-                clientInfo: { name: "HarnessOS Fork", version: "0.0.0" },
+                clientInfo: { name: "Haros Fork", version: "0.0.0" },
               });
               yield* runtime.start().pipe(
                 Effect.timeoutOption(DROID_ACP_REQUEST_TIMEOUT_MS),
@@ -2088,7 +2088,7 @@ export function makeDroidAdapter(
           const runtime = yield* makeDroidDiscoveryRuntime({
             ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
             cwd,
-            clientName: "HarnessOS Model Discovery",
+            clientName: "Haros Model Discovery",
           });
           yield* runtime.start();
           const result = yield* discoverDroidAcpModels(runtime);
@@ -2209,7 +2209,7 @@ export function makeDroidAdapter(
           const runtime = yield* makeDroidDiscoveryRuntime({
             ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
             cwd,
-            clientName: "HarnessOS Command Discovery",
+            clientName: "Haros Command Discovery",
           });
           yield* runtime.start();
           let commands = yield* runtime.getAvailableCommands;

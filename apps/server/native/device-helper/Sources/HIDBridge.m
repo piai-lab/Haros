@@ -16,7 +16,7 @@ typedef struct {
   unsigned int msgh_local_port;
   unsigned int msgh_voucher_port;
   unsigned int msgh_id;
-} HarnessOSIndigoMachHeader;
+} HarosIndigoMachHeader;
 
 typedef struct {
   unsigned int field1;
@@ -37,7 +37,7 @@ typedef struct {
   double field16;
   double field17;
   double field18;
-} HarnessOSIndigoTouch;
+} HarosIndigoTouch;
 
 typedef struct {
   unsigned int eventSource;
@@ -45,27 +45,27 @@ typedef struct {
   unsigned int eventTarget;
   unsigned int keyCode;
   unsigned int field5;
-} HarnessOSIndigoButton;
+} HarosIndigoButton;
 
 typedef union {
-  HarnessOSIndigoTouch touch;
-  HarnessOSIndigoButton button;
+  HarosIndigoTouch touch;
+  HarosIndigoButton button;
   unsigned char raw[144];
-} HarnessOSIndigoEvent;
+} HarosIndigoEvent;
 
 typedef struct {
   unsigned int field1;
   unsigned long long timestamp;
   unsigned int field3;
-  HarnessOSIndigoEvent event;
-} HarnessOSIndigoPayload;
+  HarosIndigoEvent event;
+} HarosIndigoPayload;
 
 typedef struct {
-  HarnessOSIndigoMachHeader header;
+  HarosIndigoMachHeader header;
   unsigned int innerSize;
   unsigned char eventType;
-  HarnessOSIndigoPayload payload;
-} HarnessOSIndigoMessage;
+  HarosIndigoPayload payload;
+} HarosIndigoMessage;
 
 #pragma pack(pop)
 
@@ -91,57 +91,57 @@ static const int kButtonOpUp = 0x2;
 // The mouse/touch seed message target, ported from idb.
 static const int kTouchTarget = 0x32;
 
-typedef HarnessOSIndigoMessage *(*HarnessOSIndigoButtonFn)(int keyCode, int op, int target);
-typedef HarnessOSIndigoMessage *(*HarnessOSIndigoKeyboardFn)(uint32_t usage, int op);
-typedef HarnessOSIndigoMessage *(*HarnessOSIndigoMouseFn)(CGPoint *point0, CGPoint *point1, int target,
+typedef HarosIndigoMessage *(*HarosIndigoButtonFn)(int keyCode, int op, int target);
+typedef HarosIndigoMessage *(*HarosIndigoKeyboardFn)(uint32_t usage, int op);
+typedef HarosIndigoMessage *(*HarosIndigoMouseFn)(CGPoint *point0, CGPoint *point1, int target,
                                                     int eventType, BOOL extra);
-typedef HarnessOSIndigoMessage *(*HarnessOSIndigoArbitraryFn)(int target, uint32_t page, uint32_t usage,
+typedef HarosIndigoMessage *(*HarosIndigoArbitraryFn)(int target, uint32_t page, uint32_t usage,
                                                         int op);
 
-BOOL HarnessOSHardwareButtonFromName(NSString *name, HarnessOSHardwareButton *outButton) {
+BOOL HarosHardwareButtonFromName(NSString *name, HarosHardwareButton *outButton) {
   NSDictionary<NSString *, NSNumber *> *map = @{
-    @"home": @(HarnessOSHardwareButtonHome),
-    @"lock": @(HarnessOSHardwareButtonLock),
-    @"side": @(HarnessOSHardwareButtonSide),
-    @"siri": @(HarnessOSHardwareButtonSiri),
-    @"volume-up": @(HarnessOSHardwareButtonVolumeUp),
-    @"volume-down": @(HarnessOSHardwareButtonVolumeDown),
+    @"home": @(HarosHardwareButtonHome),
+    @"lock": @(HarosHardwareButtonLock),
+    @"side": @(HarosHardwareButtonSide),
+    @"siri": @(HarosHardwareButtonSiri),
+    @"volume-up": @(HarosHardwareButtonVolumeUp),
+    @"volume-down": @(HarosHardwareButtonVolumeDown),
   };
   NSNumber *found = map[name.lowercaseString];
   if (found == nil) {
     return NO;
   }
   if (outButton != NULL) {
-    *outButton = (HarnessOSHardwareButton)found.integerValue;
+    *outButton = (HarosHardwareButton)found.integerValue;
   }
   return YES;
 }
 
-static int HarnessOSButtonSource(HarnessOSHardwareButton button) {
+static int HarosButtonSource(HarosHardwareButton button) {
   switch (button) {
-    case HarnessOSHardwareButtonHome: return kButtonSourceHome;
-    case HarnessOSHardwareButtonLock: return kButtonSourceLock;
-    case HarnessOSHardwareButtonSide: return kButtonSourceSide;
-    case HarnessOSHardwareButtonSiri: return kButtonSourceSiri;
-    case HarnessOSHardwareButtonVolumeUp:
-    case HarnessOSHardwareButtonVolumeDown: return -1;
+    case HarosHardwareButtonHome: return kButtonSourceHome;
+    case HarosHardwareButtonLock: return kButtonSourceLock;
+    case HarosHardwareButtonSide: return kButtonSourceSide;
+    case HarosHardwareButtonSiri: return kButtonSourceSiri;
+    case HarosHardwareButtonVolumeUp:
+    case HarosHardwareButtonVolumeDown: return -1;
   }
   return kButtonSourceHome;
 }
 
 /// Consumer-page usage for the two volume keys, or 0 for the buttons that
 /// travel as Indigo button events instead.
-static uint32_t HarnessOSConsumerUsage(HarnessOSHardwareButton button) {
+static uint32_t HarosConsumerUsage(HarosHardwareButton button) {
   switch (button) {
-    case HarnessOSHardwareButtonVolumeUp: return kHIDUsageVolumeIncrement;
-    case HarnessOSHardwareButtonVolumeDown: return kHIDUsageVolumeDecrement;
+    case HarosHardwareButtonVolumeUp: return kHIDUsageVolumeIncrement;
+    case HarosHardwareButtonVolumeDown: return kHIDUsageVolumeDecrement;
     default: return 0;
   }
 }
 
 /// USB HID usage for a printable ASCII character, plus whether shift is needed.
 /// Returns 0 for characters with no mapping.
-static uint32_t HarnessOSUsageForCharacter(unichar c, BOOL *outShift) {
+static uint32_t HarosUsageForCharacter(unichar c, BOOL *outShift) {
   BOOL shift = NO;
   uint32_t usage = 0;
 
@@ -205,13 +205,13 @@ static uint32_t HarnessOSUsageForCharacter(unichar c, BOOL *outShift) {
 
 static const uint32_t kUsageLeftShift = 225;
 
-@implementation HarnessOSHIDBridge {
+@implementation HarosHIDBridge {
   id _client;
   dispatch_queue_t _sendQueue;
-  HarnessOSIndigoButtonFn _buttonFn;
-  HarnessOSIndigoKeyboardFn _keyboardFn;
-  HarnessOSIndigoMouseFn _mouseFn;
-  HarnessOSIndigoArbitraryFn _arbitraryFn;
+  HarosIndigoButtonFn _buttonFn;
+  HarosIndigoKeyboardFn _keyboardFn;
+  HarosIndigoMouseFn _mouseFn;
+  HarosIndigoArbitraryFn _arbitraryFn;
   NSInteger _undelivered;
 }
 
@@ -259,10 +259,10 @@ static const uint32_t kUsageLeftShift = 225;
     return NO;
   }
 
-  _arbitraryFn = (HarnessOSIndigoArbitraryFn)dlsym(kit, "IndigoHIDMessageForHIDArbitrary");
-  _buttonFn = (HarnessOSIndigoButtonFn)dlsym(kit, "IndigoHIDMessageForButton");
-  _keyboardFn = (HarnessOSIndigoKeyboardFn)dlsym(kit, "IndigoHIDMessageForKeyboardArbitrary");
-  _mouseFn = (HarnessOSIndigoMouseFn)dlsym(kit, "IndigoHIDMessageForMouseNSEvent");
+  _arbitraryFn = (HarosIndigoArbitraryFn)dlsym(kit, "IndigoHIDMessageForHIDArbitrary");
+  _buttonFn = (HarosIndigoButtonFn)dlsym(kit, "IndigoHIDMessageForButton");
+  _keyboardFn = (HarosIndigoKeyboardFn)dlsym(kit, "IndigoHIDMessageForKeyboardArbitrary");
+  _mouseFn = (HarosIndigoMouseFn)dlsym(kit, "IndigoHIDMessageForMouseNSEvent");
   if (_buttonFn == NULL || _keyboardFn == NULL || _mouseFn == NULL || _arbitraryFn == NULL) {
     if (error) {
       *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
@@ -303,7 +303,7 @@ static const uint32_t kUsageLeftShift = 225;
   return YES;
 }
 
-- (void)sendMessage:(HarnessOSIndigoMessage *)message {
+- (void)sendMessage:(HarosIndigoMessage *)message {
   if (_client == nil || message == NULL) {
     [self noteUndelivered];
     return;
@@ -312,7 +312,7 @@ static const uint32_t kUsageLeftShift = 225;
   void (^completion)(NSError *) = ^(NSError *sendError) {
     // Errors here are per-event and non-fatal; the stream keeps going.
   };
-  ((void (*)(id, SEL, HarnessOSIndigoMessage *, BOOL, dispatch_queue_t, void (^)(NSError *)))objc_msgSend)(
+  ((void (*)(id, SEL, HarosIndigoMessage *, BOOL, dispatch_queue_t, void (^)(NSError *)))objc_msgSend)(
       _client, selector, message, YES, _sendQueue, completion);
 }
 
@@ -322,7 +322,7 @@ static const uint32_t kUsageLeftShift = 225;
     return;
   }
   CGPoint point = CGPointMake(x, y);
-  HarnessOSIndigoMessage *seed = _mouseFn(&point, NULL, kTouchTarget, down ? kButtonOpDown : kButtonOpUp, NO);
+  HarosIndigoMessage *seed = _mouseFn(&point, NULL, kTouchTarget, down ? kButtonOpDown : kButtonOpUp, NO);
   if (seed == NULL) {
     [self noteUndelivered];
     return;
@@ -330,8 +330,8 @@ static const uint32_t kUsageLeftShift = 225;
 
   // A touch is delivered as two payloads in one message; the seed only supplies
   // the first, so it is duplicated and the digitizer fields fixed up.
-  size_t stride = sizeof(HarnessOSIndigoPayload);
-  HarnessOSIndigoMessage *message = calloc(1, sizeof(HarnessOSIndigoMessage) + stride);
+  size_t stride = sizeof(HarosIndigoPayload);
+  HarosIndigoMessage *message = calloc(1, sizeof(HarosIndigoMessage) + stride);
   if (message == NULL) {
     free(seed);
     [self noteUndelivered];
@@ -342,14 +342,14 @@ static const uint32_t kUsageLeftShift = 225;
   message->payload.field1 = 0x0000000b;
   message->payload.timestamp = mach_absolute_time();
 
-  memcpy(&message->payload.event.touch, &seed->payload.event.touch, sizeof(HarnessOSIndigoTouch));
+  memcpy(&message->payload.event.touch, &seed->payload.event.touch, sizeof(HarosIndigoTouch));
   message->payload.event.touch.xRatio = x;
   message->payload.event.touch.yRatio = y;
 
   void *first = &message->payload;
   void *second = (void *)((uintptr_t)first + stride);
   memcpy(second, first, stride);
-  HarnessOSIndigoPayload *secondPayload = (HarnessOSIndigoPayload *)second;
+  HarosIndigoPayload *secondPayload = (HarosIndigoPayload *)second;
   secondPayload->event.touch.field1 = 0x00000001;
   secondPayload->event.touch.field2 = 0x00000002;
 
@@ -390,7 +390,7 @@ static const uint32_t kUsageLeftShift = 225;
     [self noteUndelivered];
     return;
   }
-  HarnessOSIndigoMessage *message = _keyboardFn(usage, down ? kButtonOpDown : kButtonOpUp);
+  HarosIndigoMessage *message = _keyboardFn(usage, down ? kButtonOpDown : kButtonOpUp);
   [self sendMessage:message];
 }
 
@@ -406,7 +406,7 @@ static const uint32_t kUsageLeftShift = 225;
   for (NSUInteger index = 0; index < length; index++) {
     unichar character = [text characterAtIndex:index];
     BOOL needsShift = NO;
-    uint32_t usage = HarnessOSUsageForCharacter(character, &needsShift);
+    uint32_t usage = HarosUsageForCharacter(character, &needsShift);
     if (usage == 0) {
       skipped++;
       continue;
@@ -424,9 +424,9 @@ static const uint32_t kUsageLeftShift = 225;
   return skipped;
 }
 
-- (void)sendButton:(HarnessOSHardwareButton)button down:(BOOL)down {
+- (void)sendButton:(HarosHardwareButton)button down:(BOOL)down {
   int op = down ? kButtonOpDown : kButtonOpUp;
-  uint32_t consumerUsage = HarnessOSConsumerUsage(button);
+  uint32_t consumerUsage = HarosConsumerUsage(button);
 
   if (consumerUsage != 0) {
     if (_arbitraryFn == NULL) {
@@ -441,10 +441,10 @@ static const uint32_t kUsageLeftShift = 225;
     [self noteUndelivered];
     return;
   }
-  [self sendMessage:_buttonFn(HarnessOSButtonSource(button), op, kButtonTargetHardware)];
+  [self sendMessage:_buttonFn(HarosButtonSource(button), op, kButtonTargetHardware)];
 }
 
-- (void)tapButton:(HarnessOSHardwareButton)button {
+- (void)tapButton:(HarosHardwareButton)button {
   [self sendButton:button down:YES];
   usleep(90000);
   [self sendButton:button down:NO];

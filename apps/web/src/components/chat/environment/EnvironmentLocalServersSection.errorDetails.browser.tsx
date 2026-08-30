@@ -51,7 +51,7 @@ describe("Environment local-server scan error detail", () => {
 
     expect(page.getByText("Couldn’t scan local ports", { exact: true })).toBeInTheDocument();
     expect(
-      page.getByText("Check that the HarnessOS server can inspect local ports, then try again.", {
+      page.getByText("Check that the Haros server can inspect local ports, then try again.", {
         exact: true,
       }),
     ).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("Environment local-server scan error detail", () => {
 
     expect(page.getByText("Couldn’t scan local ports", { exact: true })).toBeInTheDocument();
     expect(
-      page.getByText("Check that the HarnessOS server can inspect local ports, then try again.", {
+      page.getByText("Check that the Haros server can inspect local ports, then try again.", {
         exact: true,
       }),
     ).toBeInTheDocument();

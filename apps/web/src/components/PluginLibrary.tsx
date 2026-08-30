@@ -7,8 +7,8 @@ import {
   ENGINE_KINDS,
   type ThreadId,
   WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
-  type HarnessOSPackageDescriptor,
-  type HarnessOSPackageResourceDescriptor,
+  type HarosPackageDescriptor,
+  type HarosPackageResourceDescriptor,
   type EngineKind,
   type EnginePluginDescriptor,
   type EngineSkillDescriptor,
@@ -111,7 +111,7 @@ type PackageMutation =
   | { type: "install"; source: string }
   | { type: "update"; packageId: string }
   | { type: "remove"; packageId: string }
-  | { type: "toggle"; resource: HarnessOSPackageResourceDescriptor; enabled: boolean }
+  | { type: "toggle"; resource: HarosPackageResourceDescriptor; enabled: boolean }
   | { type: "reload"; threadId: ThreadId };
 type PackageReloadState = "reloaded" | "no_active_session" | "different_engine" | "busy";
 
@@ -451,7 +451,7 @@ function PackageRow({
   onRemove,
   onUpdate,
 }: {
-  item: HarnessOSPackageDescriptor;
+  item: HarosPackageDescriptor;
   busy: boolean;
   onManage: () => void;
   onRemove: () => void;
@@ -514,9 +514,9 @@ function PackageResourceDialog({
   loading: boolean;
   open: boolean;
   packageName: string;
-  resources: readonly HarnessOSPackageResourceDescriptor[];
+  resources: readonly HarosPackageResourceDescriptor[];
   onOpenChange: (open: boolean) => void;
-  onToggle: (resource: HarnessOSPackageResourceDescriptor, enabled: boolean) => void;
+  onToggle: (resource: HarosPackageResourceDescriptor, enabled: boolean) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -602,8 +602,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const [skillSearch, setSkillSearch] = useState("");
   const [packageSource, setPackageSource] = useState("");
   const [managedPackageId, setManagedPackageId] = useState<string | null>(null);
-  const [pendingRemovalPackage, setPendingRemovalPackage] =
-    useState<HarnessOSPackageDescriptor | null>(null);
+  const [pendingRemovalPackage, setPendingRemovalPackage] = useState<HarosPackageDescriptor | null>(
+    null,
+  );
   const [packageError, setPackageError] = useState(false);
   const [packageReloadState, setPackageReloadState] = useState<PackageReloadState | null>(null);
   const deferredPluginSearch = useDeferredValue(pluginSearch);
@@ -665,7 +666,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ecosystemQueryKey }),
         // An install/update/remove/filter/reload can change the global Extension
-        // engines registered into passive HarnessOS model discovery. Keep the
+        // engines registered into passive Haros model discovery. Keep the
         // existing engine-prefix invalidation as the single refresh boundary.
         queryClient.invalidateQueries({
           queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),

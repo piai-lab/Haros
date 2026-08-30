@@ -104,7 +104,7 @@ describe("updateMachine", () => {
       },
       "1.1.0",
       2,
-      "HarnessOS restarted before the update was installed.",
+      "Haros restarted before the update was installed.",
     );
 
     expect(state).toMatchObject({
@@ -112,7 +112,7 @@ describe("updateMachine", () => {
       availableVersion: "1.1.0",
       downloadedVersion: null,
       installFailureCount: 2,
-      message: "HarnessOS restarted before the update was installed.",
+      message: "Haros restarted before the update was installed.",
       errorContext: "install",
       canRetry: true,
     });

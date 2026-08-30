@@ -1,5 +1,5 @@
 // FILE: theme.logic.ts
-// Purpose: Owns HarnessOS appearance presets, share parsing, and resolved semantic token math.
+// Purpose: Owns Haros appearance presets, share parsing, and resolved semantic token math.
 // Layer: Web appearance domain logic
 // Exports: Theme types, normalization helpers, import/export utilities, and CSS variable builders.
 
@@ -140,7 +140,7 @@ const THEME_SHARE_PREFIX = "harnessos-theme-v1:";
 const LEGACY_THEME_SHARE_PREFIX = "codex-theme-v1:";
 const CONTRAST_CURVE_BELOW_BASELINE = 0.7;
 const CONTRAST_CURVE_ABOVE_BASELINE = 2;
-// Keep Codex's original curve anchors while treating HarnessOS's zero setting as the
+// Keep Codex's original curve anchors while treating Haros's zero setting as the
 // neutral optical baseline. The old curve continued below zero, which compounded with
 // component opacity utilities and washed secondary copy down into near-invisible ink.
 const CONTRAST_CURVE_BASELINE: Record<ThemeVariant, number> = {
@@ -175,7 +175,7 @@ const PANEL_CONTRAST_STEP: Record<ThemeVariant, number> = {
 const THEME_PRESET_LABEL_OVERRIDES: Readonly<Record<string, string>> = {
   codex: "Codex",
   github: "GitHub",
-  oa: "HarnessOS",
+  oa: "Haros",
   "vscode-plus": "VS Code Plus",
 };
 
@@ -844,7 +844,7 @@ export function buildResolvedThemeTokens(
 }
 
 /**
- * Resolves the minimum appearance contract for an HarnessOS-owned page rendered
+ * Resolves the minimum appearance contract for an Haros-owned page rendered
  * outside the Web DOM (for example the Web Access observer/Curator). Consumers
  * receive colors, not ThemeState, preset ids, CSS variables, or mutation rights.
  */
@@ -1286,7 +1286,7 @@ function normalizeContrastStrength(value: number, variant: ThemeVariant): number
   const baselineRatio = baseline / 100;
   const curvedValue = value / 100 + ((value - baseline) / 60) * CONTRAST_CURVE_BELOW_BASELINE;
 
-  // All bundled HarnessOS themes seed at exactly zero. Correct that default without
+  // All bundled Haros themes seed at exactly zero. Correct that default without
   // reinterpreting any non-zero value a user already tuned or imported.
   if (value === 0) {
     return 0;

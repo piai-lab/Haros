@@ -69,15 +69,15 @@ export interface ServerSettingsShape {
     engine: ExternalEngineServer,
     serverPassword: string,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
-  readonly mutateHarnessOSDefaultPrompt: (
+  readonly mutateHarosDefaultPrompt: (
     expected: string | null,
     next: string | null,
-  ) => Effect.Effect<HarnessOSDefaultPromptMutationResult, ServerSettingsError>;
+  ) => Effect.Effect<HarosDefaultPromptMutationResult, ServerSettingsError>;
   readonly streamChanges: Stream.Stream<ServerSettings>;
   readonly streamViews: Stream.Stream<ServerSettingsView>;
 }
 
-export interface HarnessOSDefaultPromptMutationResult {
+export interface HarosDefaultPromptMutationResult {
   readonly state: "changed" | "unchanged" | "conflict";
   readonly current: string | null;
 }
@@ -186,14 +186,14 @@ export class ServerSettingsService extends ServiceMap.Service<
             return toServerSettingsView(next);
           }),
         );
-        const mutateHarnessOSDefaultPrompt = (expected: string | null, next: string | null) =>
+        const mutateHarosDefaultPrompt = (expected: string | null, next: string | null) =>
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
               const currentSettings = yield* Ref.get(currentSettingsRef);
               const current = currentSettings.engines.oa.defaultPrompt;
               if (current !== expected) return { state: "conflict" as const, current };
               if (current === next) return { state: "unchanged" as const, current };
-              const nextSettings = yield* replaceHarnessOSDefaultPrompt(
+              const nextSettings = yield* replaceHarosDefaultPrompt(
                 "<memory>",
                 currentSettings,
                 next,
@@ -227,7 +227,7 @@ export class ServerSettingsService extends ServiceMap.Service<
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
           resetSettingsView,
           updateEngineCredential,
-          mutateHarnessOSDefaultPrompt,
+          mutateHarosDefaultPrompt,
           get streamChanges() {
             return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
           },
@@ -290,7 +290,7 @@ function normalizeSettings(
   );
 }
 
-function replaceHarnessOSDefaultPrompt(
+function replaceHarosDefaultPrompt(
   settingsPath: string,
   current: ServerSettings,
   defaultPrompt: string | null,
@@ -309,7 +309,7 @@ function replaceHarnessOSDefaultPrompt(
       (cause) =>
         new ServerSettingsError({
           settingsPath,
-          detail: `failed to normalize HarnessOS default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
+          detail: `failed to normalize Haros default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
           cause,
         }),
     ),
@@ -664,14 +664,14 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
-  const mutateHarnessOSDefaultPrompt = (expected: string | null, nextValue: string | null) =>
+  const mutateHarosDefaultPrompt = (expected: string | null, nextValue: string | null) =>
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
         const current = disk.settings.engines.oa.defaultPrompt;
         if (current !== expected) return { state: "conflict" as const, current };
         if (current === nextValue) return { state: "unchanged" as const, current };
-        const next = yield* replaceHarnessOSDefaultPrompt(settingsPath, disk.settings, nextValue);
+        const next = yield* replaceHarosDefaultPrompt(settingsPath, disk.settings, nextValue);
         const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
         yield* writeSettingsAtomically({
           revision: nextRevision,
@@ -768,7 +768,7 @@ const makeServerSettings = Effect.gen(function* () {
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
     resetSettingsView,
     updateEngineCredential,
-    mutateHarnessOSDefaultPrompt,
+    mutateHarosDefaultPrompt,
     get streamChanges() {
       return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
     },

@@ -1,5 +1,5 @@
 // FILE: engineWebSurfaceHost.ts
-// Purpose: Presents short-lived, provenance-backed Engine web surfaces in HarnessOS.
+// Purpose: Presents short-lived, provenance-backed Engine web surfaces in Haros.
 // Layer: Server host integration
 // Exports: narrow intent registration plus Pi curator extraction/sanitization helpers
 
@@ -15,7 +15,7 @@ const ENGINE_WEB_SURFACE_INTENT_TTL_MS = 10 * 60 * 1_000;
 const MAX_ENGINE_WEB_SURFACE_URL_LENGTH = 2_048;
 const MIN_SESSION_TOKEN_LENGTH = 8;
 const MAX_SESSION_TOKEN_LENGTH = 512;
-const REDACTED_ENGINE_WEB_SURFACE = "[HarnessOS Browser temporary page]";
+const REDACTED_ENGINE_WEB_SURFACE = "[Haros Browser temporary page]";
 
 export type EngineWebSurfaceStatus = "waiting-for-user" | "unavailable" | "completed";
 
@@ -59,7 +59,7 @@ export function requireReadyEngineWebSurfaceContext(
     (context.theme !== "light" && context.theme !== "dark") ||
     themeSnapshot === null
   ) {
-    throw new Error("The HarnessOS appearance snapshot is not ready for this internal page.");
+    throw new Error("The Haros appearance snapshot is not ready for this internal page.");
   }
   return {
     locale: context.locale,

@@ -1545,7 +1545,7 @@ html[data-surface-mode="observer"] .expired-overlay {
   100% { transform: translateX(430%); }
 }
 
-/* HarnessOS V7 presentation adapter. Protocol/state semantics remain above. */
+/* Haros V7 presentation adapter. Protocol/state semantics remain above. */
 :root {
   color-scheme: dark;
   --bg: #0c0c0d;

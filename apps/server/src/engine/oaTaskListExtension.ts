@@ -80,9 +80,9 @@ export function buildOATaskListTool(input: {
 }): ToolDefinition {
   return input.defineTool({
     name: HARNESSOS_TASK_LIST_TOOL_NAME,
-    label: "Update HarnessOS tasks",
+    label: "Update Haros tasks",
     description:
-      "Replace the current HarnessOS Agent task snapshot. Use it when non-trivial work benefits from visible progress, and send the complete current snapshot with at most one task in progress.",
+      "Replace the current Haros Agent task snapshot. Use it when non-trivial work benefits from visible progress, and send the complete current snapshot with at most one task in progress.",
     promptSnippet: "Maintain a revisable task snapshot when useful",
     promptGuidelines: [
       "Track user goals and meaningful outcomes when progress visibility helps; investigate first when needed, and never list internal tool or loading steps.",
@@ -121,7 +121,7 @@ export function buildOATaskListTool(input: {
       const payload = decodeOATaskListUpdate(params);
       if (!payload) {
         throw new Error(
-          "Invalid HarnessOS task list: provide 1-50 non-empty tasks and at most one in-progress task.",
+          "Invalid Haros task list: provide 1-50 non-empty tasks and at most one in-progress task.",
         );
       }
       input.onValidatedPayload?.(payload);
@@ -129,7 +129,7 @@ export function buildOATaskListTool(input: {
         content: [
           {
             type: "text",
-            text: `Updated the current HarnessOS task list (${payload.tasks.length} tasks).`,
+            text: `Updated the current Haros task list (${payload.tasks.length} tasks).`,
           },
         ],
         details: payload,
@@ -168,7 +168,7 @@ export function inspectOATaskListExtensionRegistration(input: {
     available,
     diagnostics:
       !available && diagnostics.length === 0
-        ? ["Pi did not select the bundled HarnessOS task Extension tool."]
+        ? ["Pi did not select the bundled Haros task Extension tool."]
         : diagnostics,
   };
 }

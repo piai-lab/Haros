@@ -2,16 +2,16 @@ import { assert, describe, it } from "@effect/vitest";
 import { Schema } from "effect";
 
 import {
-  HarnessOSCapabilitiesResult,
-  HarnessOSCreateThreadsInput,
-  HarnessOSCreateThreadsResult,
-  HarnessOSGatewayErrorResult,
-  HarnessOSWaitForThreadsInput,
-  HarnessOSWaitForThreadsResult,
+  HarosCapabilitiesResult,
+  HarosCreateThreadsInput,
+  HarosCreateThreadsResult,
+  HarosGatewayErrorResult,
+  HarosWaitForThreadsInput,
+  HarosWaitForThreadsResult,
 } from "./hostGateway";
 
-const decodeCreate = Schema.decodeUnknownSync(HarnessOSCreateThreadsInput);
-const decodeWait = Schema.decodeUnknownSync(HarnessOSWaitForThreadsInput);
+const decodeCreate = Schema.decodeUnknownSync(HarosCreateThreadsInput);
+const decodeWait = Schema.decodeUnknownSync(HarosWaitForThreadsInput);
 
 const thread = {
   prompt: "Explain this repository",
@@ -80,7 +80,7 @@ describe("HostGateway contracts", () => {
 
   it("decodes typed capability, creation, wait, and error results", () => {
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(HarnessOSCapabilitiesResult)({
+      Schema.decodeUnknownSync(HarosCapabilitiesResult)({
         targetConstruction: {
           codex: {
             modelValueSource: "engines[].models[].slug",
@@ -130,7 +130,7 @@ describe("HostGateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(HarnessOSCreateThreadsResult)({
+      Schema.decodeUnknownSync(HarosCreateThreadsResult)({
         operationId: "gateway:create:1",
         requestId: "request-1",
         requestedCount: 1,
@@ -155,7 +155,7 @@ describe("HostGateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(HarnessOSWaitForThreadsResult)({
+      Schema.decodeUnknownSync(HarosWaitForThreadsResult)({
         callerThreadId: "thread-parent",
         runIds: ["turn-1"],
         allTerminal: true,
@@ -179,7 +179,7 @@ describe("HostGateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(HarnessOSGatewayErrorResult)({
+      Schema.decodeUnknownSync(HarosGatewayErrorResult)({
         error: { code: "creation_plan_locked", message: "A plan already exists." },
       }),
     );

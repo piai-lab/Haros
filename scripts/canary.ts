@@ -1,5 +1,5 @@
 // FILE: canary.ts
-// Purpose: Maintains and launches an isolated, frozen HarnessOS Canary checkout.
+// Purpose: Maintains and launches an isolated, frozen Haros Canary checkout.
 // Layer: Local developer tooling
 
 import { spawn, spawnSync } from "node:child_process";
@@ -210,7 +210,7 @@ function assertManagedSourceIsClean(paths: CanaryPaths): void {
   const status = capture("git", ["status", "--porcelain", "--untracked-files=no"], paths.source);
   if (status.length > 0) {
     throw new Error(
-      `HarnessOS Canary's managed source has tracked local changes. Refusing to overwrite ${paths.source}.`,
+      `Haros Canary's managed source has tracked local changes. Refusing to overwrite ${paths.source}.`,
     );
   }
 }
@@ -244,7 +244,7 @@ function currentSourceCommit(paths: CanaryPaths): string | null {
 function startCanary(paths: CanaryPaths): void {
   const existingPid = readPid(paths);
   if (existingPid !== null && isRunning(existingPid)) {
-    console.log(`HarnessOS Canary is already running (pid ${String(existingPid)}).`);
+    console.log(`Haros Canary is already running (pid ${String(existingPid)}).`);
     return;
   }
   const commit = currentSourceCommit(paths);
@@ -252,7 +252,7 @@ function startCanary(paths: CanaryPaths): void {
     commit === null ||
     !FS.existsSync(Path.join(paths.source, "apps/desktop/dist-electron/main.js"))
   ) {
-    throw new Error("HarnessOS Canary is not built. Run `bun run canary:setup` first.");
+    throw new Error("Haros Canary is not built. Run `bun run canary:setup` first.");
   }
   FS.mkdirSync(paths.home, { recursive: true });
   const env = { ...process.env };
@@ -276,11 +276,11 @@ function startCanary(paths: CanaryPaths): void {
       shell: process.platform === "win32",
     });
     if (child.pid === undefined) {
-      throw new Error("HarnessOS Canary failed to return a process id.");
+      throw new Error("Haros Canary failed to return a process id.");
     }
     child.unref();
     FS.writeFileSync(paths.pid, `${String(child.pid)}\n`, { mode: 0o600 });
-    console.log(`Started HarnessOS Canary at ${commit.slice(0, 12)} (pid ${String(child.pid)}).`);
+    console.log(`Started Haros Canary at ${commit.slice(0, 12)} (pid ${String(child.pid)}).`);
     console.log(`Log: ${paths.log}`);
   } finally {
     FS.closeSync(logDescriptor);
@@ -335,7 +335,7 @@ function updateCanary(paths: CanaryPaths, ref: string): void {
 function rollbackCanary(paths: CanaryPaths): void {
   const state = readState(paths);
   if (state?.previousCommit === null || state?.previousCommit === undefined) {
-    throw new Error("HarnessOS Canary has no previous successful commit to restore.");
+    throw new Error("Haros Canary has no previous successful commit to restore.");
   }
   assertManagedSourceIsClean(paths);
   stopCanary(paths);
@@ -363,7 +363,7 @@ function printStatus(paths: CanaryPaths): void {
   const state = readState(paths);
   const pid = readPid(paths);
   const running = pid !== null && isRunning(pid);
-  console.log(`HarnessOS Canary: ${running ? `running (pid ${String(pid)})` : "stopped"}`);
+  console.log(`Haros Canary: ${running ? `running (pid ${String(pid)})` : "stopped"}`);
   console.log(`Source: ${paths.source}`);
   console.log(`Data: ${paths.home}`);
   console.log(`Log: ${paths.log}`);

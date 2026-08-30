@@ -1345,7 +1345,7 @@ const makeWsRpcHandlersLayer = () =>
                     operationId: input.operationId,
                     kind: "phase",
                     phase: "registering",
-                    message: "Adding project to HarnessOS",
+                    message: "Adding project to Haros",
                   });
 
                   const { command: normalizedCommand, prepareWorkspaceRoot } =
@@ -2118,47 +2118,47 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.oaEcosystemList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.list(input))),
-            "Failed to list HarnessOS Agent packages",
+            "Failed to list Haros Agent packages",
           ),
         [WS_METHODS.oaEcosystemListResources]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.listResources(input))),
-            "Failed to list HarnessOS Agent package resources",
+            "Failed to list Haros Agent package resources",
           ),
         [WS_METHODS.oaEcosystemInstall]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.install(input))),
-            "Failed to install an HarnessOS Agent package",
+            "Failed to install an Haros Agent package",
           ),
         [WS_METHODS.oaEcosystemUpdate]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.update(input))),
-            "Failed to update an HarnessOS Agent package",
+            "Failed to update an Haros Agent package",
           ),
         [WS_METHODS.oaEcosystemRemove]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.remove(input))),
-            "Failed to remove an HarnessOS Agent package",
+            "Failed to remove an Haros Agent package",
           ),
         [WS_METHODS.oaEcosystemSetResourceEnabled]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.setResourceEnabled(input))),
-            "Failed to change an HarnessOS Agent package resource",
+            "Failed to change an Haros Agent package resource",
           ),
         [WS_METHODS.oaEcosystemReload]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaEcosystem.reload(input))),
-            "Failed to reload HarnessOS Agent resources",
+            "Failed to reload Haros Agent resources",
           ),
         [WS_METHODS.oaAgentPromptsGetSnapshot]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.getSnapshot(input))),
-            "Failed to read HarnessOS Agent prompt files",
+            "Failed to read Haros Agent prompt files",
           ),
         [WS_METHODS.oaAgentPromptsMutate]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.mutate(input))),
-            "Failed to change an HarnessOS Agent prompt file",
+            "Failed to change an Haros Agent prompt file",
           ),
         [WS_METHODS.oaWebSearchOpen]: () =>
           rpcEffect(
@@ -2202,67 +2202,67 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.oaModelServicesList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.list(input))),
-            "Failed to list HarnessOS model services",
+            "Failed to list Haros model services",
           ),
         [WS_METHODS.oaModelServicesGet]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.get(input))),
-            "Failed to read an HarnessOS model service",
+            "Failed to read an Haros model service",
           ),
         [WS_METHODS.oaModelServicesBeginLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.beginLogin(clientId, input))),
-            "Failed to begin HarnessOS model-service login",
+            "Failed to begin Haros model-service login",
           ),
         [WS_METHODS.oaModelServicesPollLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.pollLogin(clientId, input))),
-            "Failed to poll HarnessOS model-service login",
+            "Failed to poll Haros model-service login",
           ),
         [WS_METHODS.oaModelServicesAnswerLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.answerLogin(clientId, input))),
-            "Failed to continue HarnessOS model-service login",
+            "Failed to continue Haros model-service login",
           ),
         [WS_METHODS.oaModelServicesCancelLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.cancelLogin(clientId, input))),
-            "Failed to cancel HarnessOS model-service login",
+            "Failed to cancel Haros model-service login",
           ),
         [WS_METHODS.oaModelServicesLogout]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.logout(input))),
-            "Failed to remove HarnessOS model-service credentials",
+            "Failed to remove Haros model-service credentials",
           ),
         [WS_METHODS.oaModelServicesRevealApiKey]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.revealApiKey(input))),
-            "Failed to reveal an HarnessOS model-service API key",
+            "Failed to reveal an Haros model-service API key",
           ),
         [WS_METHODS.oaModelServicesRefresh]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.refresh(input))),
-            "Failed to refresh an HarnessOS model service",
+            "Failed to refresh an Haros model service",
           ),
         [WS_METHODS.oaModelServicesDiscoverCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.discoverCustom(input))),
-            "Failed to discover models for an HarnessOS custom model service",
+            "Failed to discover models for an Haros custom model service",
           ),
         [WS_METHODS.oaModelServicesTestCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.testCustom(input))),
-            "Failed to test an HarnessOS custom model service",
+            "Failed to test an Haros custom model service",
           ),
         [WS_METHODS.oaModelServicesSaveCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.saveCustom(input))),
-            "Failed to save an HarnessOS custom model service",
+            "Failed to save an Haros custom model service",
           ),
         [WS_METHODS.oaModelServicesRemoveCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(oaModelServices.removeCustom(input))),
-            "Failed to remove an HarnessOS custom model service",
+            "Failed to remove an Haros custom model service",
           ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),

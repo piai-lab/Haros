@@ -1,5 +1,5 @@
 // FILE: composingOrbPainter.ts
-// Purpose: Paints the fixed 20px Composing/Ribbon orb used by HarnessOS's live status row.
+// Purpose: Paints the fixed 20px Composing/Ribbon orb used by Haros's live status row.
 // Layer: Web UI presentation primitive
 //
 // Copied-adapted from thinking-orbs@0.3.1, commit

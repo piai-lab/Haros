@@ -124,7 +124,7 @@ const PI_ENGINE = "pi" as const;
 const OA_ENGINE = "oa" as const;
 const BUNDLED_OA_RUNTIME_VERSION = "0.84.3";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
-const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in HarnessOS settings.";
+const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in Haros settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const ENGINES = ENGINE_KINDS;
@@ -276,7 +276,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
   pi: {
     engine: PI_ENGINE,
     binaryName: "pi",
-    // Pi is part of the HarnessOS App runtime. App updates own this version;
+    // Pi is part of the Haros App runtime. App updates own this version;
     // engine maintenance must never mutate it behind the App's back.
     npmPackageName: null,
     homebrew: null,
@@ -806,7 +806,7 @@ function parseCursorAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "warning",
       authStatus: "unknown",
-      message: "Cursor Agent is installed, but HarnessOS could not verify authentication status.",
+      message: "Cursor Agent is installed, but Haros could not verify authentication status.",
     };
   }
 
@@ -1406,7 +1406,7 @@ export const makeCheckDroidEngineStatus = (
         ? { authType: "apiKey", authLabel: "Factory API Key" }
         : {
             message:
-              "Droid CLI is installed. HarnessOS can use the CLI's cached device-pairing login; run `droid` to authenticate locally if needed, or set FACTORY_API_KEY.",
+              "Droid CLI is installed. Haros can use the CLI's cached device-pairing login; run `droid` to authenticate locally if needed, or set FACTORY_API_KEY.",
           }),
     } satisfies ServerEngineStatus;
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "droid"));
@@ -1589,7 +1589,7 @@ export const checkOAAgentEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
         authStatus: "unknown",
         version: BUNDLED_OA_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
-        message: "HarnessOS is bundled and ready. Add engine credentials before sending.",
+        message: "Haros is bundled and ready. Add engine credentials before sending.",
       }) satisfies ServerEngineStatus,
   );
 
@@ -1655,7 +1655,7 @@ export const checkAntigravityEngineStatus = (
         authStatus: "unknown",
         version: parsedVersion,
         checkedAt,
-        message: `Antigravity CLI ${parsedVersion} is too old for HarnessOS. Upgrade to ${MINIMUM_ANTIGRAVITY_CLI_VERSION} or newer.`,
+        message: `Antigravity CLI ${parsedVersion} is too old for Haros. Upgrade to ${MINIMUM_ANTIGRAVITY_CLI_VERSION} or newer.`,
       } satisfies ServerEngineStatus;
     }
     const models = yield* runAntigravityCommand(["models"], executable).pipe(
@@ -1685,8 +1685,7 @@ export const checkAntigravityEngineStatus = (
       authStatus: "unknown",
       version: parsedVersion,
       checkedAt,
-      message:
-        "Antigravity CLI is installed, but HarnessOS could not verify login by listing models.",
+      message: "Antigravity CLI is installed, but Haros could not verify login by listing models.",
     } satisfies ServerEngineStatus;
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "agy"));
 
@@ -1828,7 +1827,7 @@ export const makeCheckCursorEngineStatus = (
         version: parsedVersion,
         checkedAt,
         message:
-          "Cursor Agent is authenticated, but model discovery timed out before HarnessOS could verify available models.",
+          "Cursor Agent is authenticated, but model discovery timed out before Haros could verify available models.",
       } satisfies ServerEngineStatus;
     }
 
@@ -2661,7 +2660,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
         if (!isProviderEnabledForSettings(engine, settings)) {
           return yield* new ServerEngineUpdateError({
             engine,
-            reason: "Engine is disabled in HarnessOS settings.",
+            reason: "Engine is disabled in Haros settings.",
           });
         }
         const capabilities = yield* getEngineMaintenanceCapabilities(engine).pipe(
@@ -2769,7 +2768,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
               startedAt,
               finishedAt,
               message: stillOutdated
-                ? `Update command completed, but HarnessOS still detects an outdated engine version${stillOutdatedVersions}.`
+                ? `Update command completed, but Haros still detects an outdated engine version${stillOutdatedVersions}.`
                 : "Engine updated.",
               output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
             }),

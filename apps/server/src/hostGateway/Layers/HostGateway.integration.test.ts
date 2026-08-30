@@ -1555,7 +1555,7 @@ describe("HostGateway", () => {
       assert.equal(initResult.protocolVersion, "2025-06-18");
       assert.isString(initResult.instructions);
       assert.isBelow(String(initResult.instructions).length, 200);
-      assert.notInclude(String(initResult.instructions), "[HarnessOS harness policy");
+      assert.notInclude(String(initResult.instructions), "[Haros harness policy");
 
       const list = yield* harness.postRaw({
         authorizationHeader: "Bearer token-parent",
@@ -1715,14 +1715,14 @@ describe("HostGateway", () => {
           id: ProjectId.makeUnsafe("project-chat-container"),
           kind: "chat",
           title: "che progetti ci sono in harnessos",
-          workspaceRoot: `${homeDir}/Documents/HarnessOS/2026-03-01/chat`,
+          workspaceRoot: `${homeDir}/Documents/Haros/2026-03-01/chat`,
         },
         {
           ...makeProjectShell(),
           id: ProjectId.makeUnsafe("project-studio-container"),
           kind: "studio",
           title: "Studio",
-          workspaceRoot: `${homeDir}/Documents/HarnessOS/Studio`,
+          workspaceRoot: `${homeDir}/Documents/Haros/Studio`,
         },
         {
           ...makeProjectShell(),

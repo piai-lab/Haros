@@ -9,7 +9,7 @@ export const FEEDBACK_CATEGORIES = [
   { value: "bug", label: "Bug", lead: "I ran into a bug" },
   { value: "session", label: "Session", lead: "I hit a session problem" },
   { value: "ui", label: "UI", lead: "Something looked wrong" },
-  { value: "performance", label: "Performance", lead: "HarnessOS felt slow" },
+  { value: "performance", label: "Performance", lead: "Haros felt slow" },
   { value: "idea", label: "Idea", lead: "I have an idea" },
   { value: "other", label: "Other", lead: "I have some feedback" },
 ] as const;
@@ -105,7 +105,7 @@ export function formatFeedbackSummary(input: {
   ];
 
   return [
-    `${lead} in HarnessOS ${diagnostics.appVersion}${usageContext}.`,
+    `${lead} in Haros ${diagnostics.appVersion}${usageContext}.`,
     "",
     ...rows
       .filter((row): row is [string, string] => row[1] !== null && row[1] !== "")
@@ -262,7 +262,7 @@ export function buildFeedbackIssueUrl(submission: FeedbackSubmission): string {
     (submission as unknown as Record<string, unknown>).diagnostics,
   );
   const label = category?.label ?? "Feedback";
-  const firstLine = details.split(/\r?\n/u, 1)[0]?.trim() || "HarnessOS feedback";
+  const firstLine = details.split(/\r?\n/u, 1)[0]?.trim() || "Haros feedback";
   const title = `[${label}] ${firstLine}`.slice(0, 120);
   const body = [
     "## Feedback",
@@ -270,13 +270,13 @@ export function buildFeedbackIssueUrl(submission: FeedbackSubmission): string {
     details,
     "",
     "<details>",
-    "<summary>HarnessOS diagnostics</summary>",
+    "<summary>Haros diagnostics</summary>",
     "",
     formatFeedbackSummary({ category: submission.category, diagnostics }),
     "",
     "</details>",
     "",
-    "> This draft was created locally by HarnessOS. Review it before submitting to GitHub.",
+    "> This draft was created locally by Haros. Review it before submitting to GitHub.",
   ].join("\n");
   const labels =
     submission.category === "idea" ? ["enhancement", "needs-triage"] : ["needs-triage"];

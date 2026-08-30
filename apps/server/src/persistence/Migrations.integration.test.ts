@@ -8,7 +8,7 @@ import * as NodeSqliteClient from "./NodeSqliteClient.ts";
 
 const layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
-layer("HarnessOS initial schema", (it) => {
+layer("Haros initial schema", (it) => {
   it.effect("creates the complete canonical schema once", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -85,7 +85,7 @@ untrackedLayer("untracked database", (it) => {
   );
 });
 
-describe("HarnessOS migration registry", () => {
+describe("Haros migration registry", () => {
   it("starts at one fresh baseline", () => {
     assert.deepStrictEqual(
       migrationEntries.map(([id, name]) => [id, name]),

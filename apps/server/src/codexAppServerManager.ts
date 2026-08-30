@@ -552,7 +552,7 @@ The \`request_user_input\` tool is unavailable in Default mode. If you call it w
 In Default mode, strongly prefer making reasonable assumptions and executing the user's request rather than stopping to ask questions. If you absolutely must ask a question because the answer cannot be discovered from local context and a reasonable assumption would be risky, ask the user directly with a concise plain-text question. Never write a multiple choice question as a textual assistant message.
 </collaboration_mode>\n\n${HARNESSOS_GATEWAY_HARNESS_POLICY}`;
 
-// Maps HarnessOS's simple runtime toggle to Codex thread-level permission overrides.
+// Maps Haros's simple runtime toggle to Codex thread-level permission overrides.
 function mapCodexRuntimeMode(runtimeMode: RuntimeMode): {
   readonly approvalPolicy: CodexApprovalPolicy;
   readonly approvalsReviewer: CodexApprovalsReviewer;
@@ -661,7 +661,7 @@ const CODEX_ALWAYS_ALLOW_SESSION_TURN_OVERRIDES: CodexSessionApprovalOverride = 
   sandboxPolicy: { type: "dangerFullAccess" },
 };
 
-// HarnessOS re-sends turn-level Codex permission overrides, so keep "always allow"
+// Haros re-sends turn-level Codex permission overrides, so keep "always allow"
 // as live session state instead of relying on one native approval reply.
 function resolveCodexTurnOverrides(context: CodexSessionContext): {
   readonly approvalPolicy: CodexApprovalPolicy;
@@ -724,7 +724,7 @@ export function buildCodexInitializeParams() {
   return {
     clientInfo: {
       name: "harnessos_desktop",
-      title: "HarnessOS Desktop",
+      title: "Haros Desktop",
       version: "0.1.0",
     },
     capabilities: {
@@ -979,7 +979,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     );
   }
 
-  // The HarnessOS MCP server rides on the shared overlay config (no secrets),
+  // The Haros MCP server rides on the shared overlay config (no secrets),
   // while the per-thread bearer token travels through the app-server process
   // env referenced by `bearer_token_env_var`.
   private async buildSessionProcessEnv(
@@ -1002,7 +1002,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   // first-class: skills/list returns them and turn/start `skill` items inject
   // their instructions. Verified live: skill items with paths outside known
   // roots are silently ignored by codex app-server, so this call is required.
-  private async registerHarnessOSSkillsRoot(context: CodexSessionContext): Promise<void> {
+  private async registerHarosSkillsRoot(context: CodexSessionContext): Promise<void> {
     if (!this.harnessosSkillsDir) {
       return;
     }
@@ -1011,7 +1011,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         extraRoots: [this.harnessosSkillsDir],
       });
     } catch (error) {
-      // Older codex builds (< extra-roots support) keep working; HarnessOS-only
+      // Older codex builds (< extra-roots support) keep working; Haros-only
       // skills simply stay invisible to codex on those versions.
       log.warn("skills/extraRoots/set unavailable", { error });
     }
@@ -1095,7 +1095,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
 
       await this.writeMessage(context, { method: "initialized" });
-      await this.registerHarnessOSSkillsRoot(context);
+      await this.registerHarosSkillsRoot(context);
       // Model discovery is lazy and cached by listModels(). Keeping model/list
       // out of this serial cold-start path avoids an otherwise unused request
       // with its own 20-second deadline.
@@ -1875,7 +1875,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
       await this.writeMessage(context, { method: "initialized" });
-      await this.registerHarnessOSSkillsRoot(context);
+      await this.registerHarosSkillsRoot(context);
       try {
         const accountReadResponse = await this.sendRequest(context, "account/read", {});
         context.account = readCodexAccountSnapshot(accountReadResponse);
@@ -2754,7 +2754,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     try {
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
       await this.writeMessage(context, { method: "initialized" });
-      await this.registerHarnessOSSkillsRoot(context);
+      await this.registerHarosSkillsRoot(context);
       try {
         const accountReadResponse = await this.sendRequest(context, "account/read", {});
         context.account = readCodexAccountSnapshot(accountReadResponse);
@@ -3371,7 +3371,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         return;
       }
 
-      const detail = "Codex asked a question HarnessOS could not render, so it was declined.";
+      const detail = "Codex asked a question Haros could not render, so it was declined.";
       this.emitErrorEvent(context, "item/tool/requestUserInput/unrenderable", detail);
       await this.writeMessage(context, {
         id: request.id,

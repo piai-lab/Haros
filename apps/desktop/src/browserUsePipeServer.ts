@@ -425,7 +425,7 @@ export class BrowserHostPipeServer {
     }
     client.sessionId = sessionId;
     return {
-      name: "HarnessOS Browser Host",
+      name: "Haros Browser Host",
       version: "1.0.0",
       type: "harnessos-browser-host",
       metadata: {

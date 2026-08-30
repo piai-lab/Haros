@@ -305,8 +305,8 @@ function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
         id: "alignment-harnessos-message",
         createdAt: "2026-08-24T13:30:42.000Z",
         turnId,
-        label: "HarnessOS sent a message",
-        toolTitle: "HarnessOS sent a message",
+        label: "Haros sent a message",
+        toolTitle: "Haros sent a message",
         toolName: "mcp__harnessos__harnessos_send_message",
         tone: "tool",
         itemType: "mcp_tool_call",
@@ -930,7 +930,7 @@ describe("Timeline public reasoning disclosure", () => {
   });
 
   it.each(["light", "dark"] as const)(
-    "keeps command, reasoning, and HarnessOS activity headings on one leading column in %s mode",
+    "keeps command, reasoning, and Haros activity headings on one leading column in %s mode",
     async (theme) => {
       const host = createNarrowHost();
       host.className =

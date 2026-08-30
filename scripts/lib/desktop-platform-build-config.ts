@@ -120,7 +120,7 @@ export function createDesktopPlatformBuildConfig(
         category: "Development",
         desktop: {
           entry: {
-            StartupWMClass: "HarnessOS",
+            StartupWMClass: "Haros",
           },
         },
       },

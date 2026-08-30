@@ -52,7 +52,7 @@ const EN_MESSAGES = {
   "conversation.actionDeleted": "Deleted action “{name}”",
   "conversation.unknownAction": "Unknown",
   "conversation.accessModeUpdateFailed": "Could not update access mode",
-  "conversation.serverDisconnected": "HarnessOS is not connected to the server.",
+  "conversation.serverDisconnected": "Haros is not connected to the server.",
   "conversation.planModeUpdateFailed": "Could not update plan mode",
   "conversation.messageNotFound": "Could not find the selected message.",
   "conversation.stopFailed": "Could not stop the response",
@@ -62,13 +62,13 @@ const EN_MESSAGES = {
     "This change needs to restart the Engine. Stop the current response, then edit and resend.",
   "conversation.quitResumeFailed": "Task was not resumed",
   "conversation.quitResumeFailed.workspace-missing":
-    "The original workspace no longer exists. HarnessOS did not guess another folder or start the task.",
+    "The original workspace no longer exists. Haros did not guess another folder or start the task.",
   "conversation.quitResumeFailed.workspace-unavailable":
     "The original workspace is not accessible. Check its permissions or storage, then continue manually.",
   "conversation.quitResumeFailed.project-unavailable":
-    "The original project is no longer available. HarnessOS did not start the task.",
+    "The original project is no longer available. Haros did not start the task.",
   "conversation.quitResumeFailed.exact-binding-unavailable":
-    "The exact model and reasoning settings used by this task could not be recovered, so HarnessOS did not substitute different settings.",
+    "The exact model and reasoning settings used by this task could not be recovered, so Haros did not substitute different settings.",
   "conversation.nothingToCommit": "Nothing to commit or push.",
   "conversation.answerPlanBeforeImages": "Answer the plan questions before adding images.",
   "conversation.answerPlanBeforeFiles": "Answer the plan questions before adding files.",
@@ -78,7 +78,7 @@ const EN_MESSAGES = {
   "conversation.automationCreated": "Automation created",
   "conversation.automationUpdated": "Automation updated",
   "conversation.automationCreatedSummary": "Created automation: {name} — {cadence}",
-  "conversation.automationCreateFailedDescription": "HarnessOS could not save the automation.",
+  "conversation.automationCreateFailedDescription": "Haros could not save the automation.",
   "conversation.automationChatRequired": "Chat is required",
   "conversation.automationChatRequiredDescription":
     "Open this automation in Chat before editing it.",
@@ -237,7 +237,7 @@ const ZH_CN_MESSAGES = {
   "conversation.actionDeleted": "已删除操作“{name}”",
   "conversation.unknownAction": "未知",
   "conversation.accessModeUpdateFailed": "无法更新访问模式",
-  "conversation.serverDisconnected": "HarnessOS 尚未连接到服务器。",
+  "conversation.serverDisconnected": "Haros 尚未连接到服务器。",
   "conversation.planModeUpdateFailed": "无法更新规划模式",
   "conversation.messageNotFound": "找不到所选消息。",
   "conversation.stopFailed": "无法停止回复",
@@ -247,12 +247,12 @@ const ZH_CN_MESSAGES = {
     "这项修改需要重新启动引擎。请先停止当前回复，再编辑并重新发送。",
   "conversation.quitResumeFailed": "任务未能自动继续",
   "conversation.quitResumeFailed.workspace-missing":
-    "原工作区已不存在。HarnessOS 没有猜测其他目录，也没有启动任务。",
+    "原工作区已不存在。Haros 没有猜测其他目录，也没有启动任务。",
   "conversation.quitResumeFailed.workspace-unavailable":
     "原工作区当前无法访问。请检查权限或存储状态后手动继续。",
-  "conversation.quitResumeFailed.project-unavailable": "原项目已不可用。HarnessOS 没有启动任务。",
+  "conversation.quitResumeFailed.project-unavailable": "原项目已不可用。Haros 没有启动任务。",
   "conversation.quitResumeFailed.exact-binding-unavailable":
-    "无法恢复此任务当时精确的模型和推理设置，因此 HarnessOS 没有替换成其他设置。",
+    "无法恢复此任务当时精确的模型和推理设置，因此 Haros 没有替换成其他设置。",
   "conversation.nothingToCommit": "没有可提交或推送的更改。",
   "conversation.answerPlanBeforeImages": "请先回答规划问题，再添加图片。",
   "conversation.answerPlanBeforeFiles": "请先回答规划问题，再添加文件。",
@@ -262,7 +262,7 @@ const ZH_CN_MESSAGES = {
   "conversation.automationCreated": "自动化已创建",
   "conversation.automationUpdated": "自动化已更新",
   "conversation.automationCreatedSummary": "已创建自动化：{name} — {cadence}",
-  "conversation.automationCreateFailedDescription": "HarnessOS 无法保存此自动化。",
+  "conversation.automationCreateFailedDescription": "Haros 无法保存此自动化。",
   "conversation.automationChatRequired": "需要 Chat",
   "conversation.automationChatRequiredDescription": "请先在 Chat 中打开此自动化再编辑。",
   "conversation.automationChatCreateFailed": "无法创建 Chat",

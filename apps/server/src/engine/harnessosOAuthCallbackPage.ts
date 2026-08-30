@@ -1,5 +1,5 @@
 // FILE: harnessosOAuthCallbackPage.ts
-// Purpose: Renders the HarnessOS-owned presentation for engine browser OAuth loopback results.
+// Purpose: Renders the Haros-owned presentation for engine browser OAuth loopback results.
 // Layer: Server engine presentation boundary
 
 import { readFileSync, statSync } from "node:fs";
@@ -18,7 +18,7 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-export function loadHarnessOSOAuthLogoDataUrl(staticDir: string | undefined): string | null {
+export function loadHarosOAuthLogoDataUrl(staticDir: string | undefined): string | null {
   if (!staticDir) return null;
   try {
     const logoPath = path.join(staticDir, "brand", "harnessos-mark.svg");
@@ -30,14 +30,14 @@ export function loadHarnessOSOAuthLogoDataUrl(staticDir: string | undefined): st
   }
 }
 
-export function createHarnessOSOAuthPageRenderer(input: {
+export function createHarosOAuthPageRenderer(input: {
   readonly serviceName: string;
   readonly logoDataUrl: string | null;
 }): OAuthPageRenderer {
   const serviceName = escapeHtml(input.serviceName);
   const logo = input.logoDataUrl
-    ? `<img class="logo" src="${input.logoDataUrl}" alt="HarnessOS" width="76" height="76" />`
-    : `<div class="wordmark" aria-label="HarnessOS">HarnessOS</div>`;
+    ? `<img class="logo" src="${input.logoDataUrl}" alt="Haros" width="76" height="76" />`
+    : `<div class="wordmark" aria-label="Haros">Haros</div>`;
 
   return ({ kind }) => {
     const authorizationReceived = kind === "authorization_received";
@@ -46,11 +46,11 @@ export function createHarnessOSOAuthPageRenderer(input: {
       : "Authorization didn’t complete";
     const chineseTitle = authorizationReceived ? "已收到授权" : "授权未完成";
     const englishMessage = authorizationReceived
-      ? `Authorization from ${serviceName} was received. Close this page and return to HarnessOS to finish connecting.`
-      : `Return to HarnessOS and try authorizing ${serviceName} again.`;
+      ? `Authorization from ${serviceName} was received. Close this page and return to Haros to finish connecting.`
+      : `Return to Haros and try authorizing ${serviceName} again.`;
     const chineseMessage = authorizationReceived
-      ? `已收到来自 ${serviceName} 的授权。请关闭此页面并返回 HarnessOS 完成连接。`
-      : `请返回 HarnessOS，重新授权 ${serviceName}。`;
+      ? `已收到来自 ${serviceName} 的授权。请关闭此页面并返回 Haros 完成连接。`
+      : `请返回 Haros，重新授权 ${serviceName}。`;
 
     return `<!doctype html>
 <html lang="en">
@@ -59,7 +59,7 @@ export function createHarnessOSOAuthPageRenderer(input: {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
-  <title>${englishTitle} · HarnessOS</title>
+  <title>${englishTitle} · Haros</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -156,7 +156,7 @@ export function createHarnessOSOAuthPageRenderer(input: {
     const prefersChinese = navigator.languages?.some((language) => /^zh(?:-|$)/i.test(language)) ?? /^zh(?:-|$)/i.test(navigator.language);
     if (prefersChinese) {
       document.documentElement.lang = "zh-CN";
-      document.title = ${JSON.stringify(`${chineseTitle} · HarnessOS`)};
+      document.title = ${JSON.stringify(`${chineseTitle} · Haros`)};
     }
   </script>
 </head>

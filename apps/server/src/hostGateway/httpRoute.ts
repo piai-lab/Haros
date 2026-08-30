@@ -1,5 +1,5 @@
 /**
- * HTTP route for the HarnessOS HostGateway MCP endpoint.
+ * HTTP route for the Haros HostGateway MCP endpoint.
  *
  * Registers `POST /mcp` (streamable-HTTP MCP, stateless JSON responses) plus
  * spec-mandated method handling for GET/DELETE. Authentication is a

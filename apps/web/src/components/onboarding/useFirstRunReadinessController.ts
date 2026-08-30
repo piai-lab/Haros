@@ -100,7 +100,7 @@ export function useFirstRunReadinessController(
   const catalog = useEngineModelCatalog({
     selectedEngine,
     discoveryEnabled: false,
-    // First-run classification is passive. HarnessOS's engine catalog loads
+    // First-run classification is passive. Haros's engine catalog loads
     // Pi Extensions, so readiness must rely on the credential-blind Model
     // services projection until the user explicitly opens model discovery.
     selectedEngineDiscoveryEnabled: selectedEngine !== "oa",
@@ -200,12 +200,12 @@ export function useFirstRunReadinessController(
             ? "configured"
             : "error"
         : "unknown";
-  const explicitHarnessOSSelection = rememberedSelections.oa;
-  const hasUsableHarnessOSBinding =
+  const explicitHarosSelection = rememberedSelections.oa;
+  const hasUsableHarosBinding =
     cachedPassiveServices?.state === "ready" &&
-    explicitHarnessOSSelection !== undefined &&
+    explicitHarosSelection !== undefined &&
     hasUsableOAModelServiceBinding({
-      selection: explicitHarnessOSSelection,
+      selection: explicitHarosSelection,
       selectionIsExplicit: true,
       catalogState: catalog.catalogStateByEngine.oa,
       modelOptions: catalog.selectableModelOptionsByEngine.oa,
@@ -215,7 +215,7 @@ export function useFirstRunReadinessController(
     engines: ENGINE_KINDS.filter((engine) => engine !== "oa"),
     explicitExactEngineSelections: rememberedSelections,
   });
-  const hasRememberedHarnessOSBinding = hasRememberedExactModelBinding({
+  const hasRememberedHarosBinding = hasRememberedExactModelBinding({
     engines: ["oa"],
     explicitExactEngineSelections: rememberedSelections,
   });
@@ -235,9 +235,9 @@ export function useFirstRunReadinessController(
       engineStatuses.length === 0);
   const readiness = deriveFirstRunReadinessState({
     factsSettled,
-    hasUsableExactBinding: hasUsableIndependentBinding || hasUsableHarnessOSBinding,
+    hasUsableExactBinding: hasUsableIndependentBinding || hasUsableHarosBinding,
     hasRememberedIndependentEngineBinding,
-    hasRememberedHarnessOSBinding,
+    hasRememberedHarosBinding,
     modelServicesCapability,
     modelServicesTransport,
     passiveModelServicesState,

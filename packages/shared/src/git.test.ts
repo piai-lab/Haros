@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   WORKTREE_BRANCH_PREFIX,
-  buildHarnessOSBranchName,
+  buildHarosBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
-  resolveUniqueHarnessOSBranchName,
+  resolveUniqueHarosBranchName,
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
@@ -58,32 +58,32 @@ describe("resolveThreadBranchRegressionGuard", () => {
   });
 });
 
-describe("buildHarnessOSBranchName", () => {
+describe("buildHarosBranchName", () => {
   it("uses harnessos as the branch namespace", () => {
-    expect(buildHarnessOSBranchName("fix toast copy")).toBe("harnessos/fix-toast-copy");
+    expect(buildHarosBranchName("fix toast copy")).toBe("harnessos/fix-toast-copy");
   });
 
-  it("keeps non-HarnessOS namespaces inside the HarnessOS branch", () => {
-    expect(buildHarnessOSBranchName("feature/refine-toolbar-actions")).toBe(
+  it("keeps non-Haros namespaces inside the Haros branch", () => {
+    expect(buildHarosBranchName("feature/refine-toolbar-actions")).toBe(
       "harnessos/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes the canonical prefix before rebuilding the branch", () => {
-    expect(buildHarnessOSBranchName("harnessos/refine toolbar actions")).toBe(
+    expect(buildHarosBranchName("harnessos/refine toolbar actions")).toBe(
       "harnessos/refine-toolbar-actions",
     );
   });
 
   it("falls back to harnessos/update when no preferred name is provided", () => {
-    expect(buildHarnessOSBranchName()).toBe("harnessos/update");
+    expect(buildHarosBranchName()).toBe("harnessos/update");
   });
 });
 
-describe("resolveUniqueHarnessOSBranchName", () => {
-  it("increments suffix when the HarnessOS branch already exists", () => {
+describe("resolveUniqueHarosBranchName", () => {
+  it("increments suffix when the Haros branch already exists", () => {
     expect(
-      resolveUniqueHarnessOSBranchName(
+      resolveUniqueHarosBranchName(
         ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
         "fix toast copy",
       ),

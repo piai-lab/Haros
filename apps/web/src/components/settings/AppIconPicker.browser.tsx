@@ -18,7 +18,7 @@ function readTopLeftAlpha(image: HTMLImageElement): number {
   return context?.getImageData(0, 0, 1, 1).data[3] ?? -1;
 }
 
-it("uses the HarnessOS icon variants and selects the alternate", async () => {
+it("uses the Haros icon variants and selects the alternate", async () => {
   const onValueChange = vi.fn();
   const mounted = await render(
     <AppIconPicker platform="MacIntel" value="default" onValueChange={onValueChange} />,

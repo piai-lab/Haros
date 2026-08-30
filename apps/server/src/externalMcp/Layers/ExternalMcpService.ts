@@ -61,7 +61,7 @@ export const makeExternalMcpService = Effect.gen(function* () {
     repository.listActiveProjects().pipe(
       Effect.map((projects) => new Map(projects.map((project) => [project.id, project]))),
       Effect.mapError((cause) =>
-        toExternalMcpError("repository_error", "Could not load HarnessOS projects.", 500, cause),
+        toExternalMcpError("repository_error", "Could not load Haros projects.", 500, cause),
       ),
     );
 

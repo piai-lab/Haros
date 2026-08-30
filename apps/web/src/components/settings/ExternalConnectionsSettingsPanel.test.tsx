@@ -26,7 +26,7 @@ describe("ExternalConnectionsSettingsPanel", () => {
     expect(markup).toContain('role="switch"');
     expect(markup).toContain('data-unchecked=""');
     expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Create connection<\/button>/);
-    expect(markup).not.toContain("Access all of HarnessOS");
+    expect(markup).not.toContain("Access all of Haros");
     expect(markup).not.toContain("MCP manager");
   });
 });

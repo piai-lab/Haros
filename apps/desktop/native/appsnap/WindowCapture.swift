@@ -66,7 +66,7 @@ func selectFrontmostWindow(excludedBundleIdentifier: String) -> Result<SelectedW
         return .failure(
             AppSnapFailure(
                 code: "excluded_frontmost_application",
-                message: "HarnessOS cannot capture its own window."
+                message: "Haros cannot capture its own window."
             )
         )
     }

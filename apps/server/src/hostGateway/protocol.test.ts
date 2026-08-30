@@ -77,7 +77,7 @@ describe("HostGateway MCP protocol", () => {
     assert.equal(result.instructions, "use the tools");
     assert.deepEqual(result.serverInfo, {
       name: "oa",
-      title: "HarnessOS App Control",
+      title: "Haros App Control",
       version: "1.2.3",
     });
   });
@@ -85,16 +85,16 @@ describe("HostGateway MCP protocol", () => {
   it("supports MCP tool annotations without changing protocol shaping", () => {
     const tool: McpToolDefinition = {
       name: "harnessos_context",
-      description: "Inspect the current HarnessOS harness context.",
+      description: "Inspect the current Haros harness context.",
       inputSchema: { type: "object" },
       annotations: {
-        title: "HarnessOS context",
+        title: "Haros context",
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
       },
     };
-    assert.equal(tool.annotations?.title, "HarnessOS context");
+    assert.equal(tool.annotations?.title, "Haros context");
   });
 });

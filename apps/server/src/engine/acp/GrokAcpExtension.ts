@@ -85,7 +85,7 @@ export const GrokExitPlanModeRequest = Schema.Struct({
 });
 
 const HARNESSOS_PLAN_REVIEW_FEEDBACK =
-  "HarnessOS captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.";
+  "Haros captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.";
 
 export function extractGrokExitPlanMarkdown(
   request: typeof GrokExitPlanModeRequest.Type,
@@ -95,7 +95,7 @@ export function extractGrokExitPlanMarkdown(
 }
 
 /**
- * HarnessOS owns the approval step after the planning turn settles. Returning a
+ * Haros owns the approval step after the planning turn settles. Returning a
  * semantic cancellation keeps Grok's native plan-mode write gate active and
  * avoids both auto-implementation and Grok's misleading client-disconnect path.
  */
@@ -109,7 +109,7 @@ export function makeGrokExitPlanModeCapturedResponse(): {
   };
 }
 
-/** HarnessOS has already received an implementation turn, so Grok may leave its native gate. */
+/** Haros has already received an implementation turn, so Grok may leave its native gate. */
 export function makeGrokExitPlanModeApprovedResponse(): { readonly outcome: "approved" } {
   return { outcome: "approved" };
 }

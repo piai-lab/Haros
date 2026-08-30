@@ -1,5 +1,5 @@
 // FILE: oaModelServices.ts
-// Purpose: Defines the credential-blind HarnessOS Agent model-services projection.
+// Purpose: Defines the credential-blind Haros Agent model-services projection.
 // Layer: Shared contracts
 // Exports: Read-only list/get schemas used by the Server and Settings renderer.
 
@@ -48,18 +48,18 @@ const BoundedServiceModels = Schema.Array(OAModelServiceModel).check(
   Schema.isMaxLength(HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT),
 );
 
-export const HarnessOSCustomModelServiceApi = Schema.Literals([
+export const HarosCustomModelServiceApi = Schema.Literals([
   "openai-completions",
   "openai-responses",
   "anthropic-messages",
   "google-generative-ai",
 ]);
-export type HarnessOSCustomModelServiceApi = typeof HarnessOSCustomModelServiceApi.Type;
+export type HarosCustomModelServiceApi = typeof HarosCustomModelServiceApi.Type;
 
 const BoundedThinkingLevelValue = Schema.NullOr(
   TrimmedNonEmptyString.check(Schema.isMaxLength(64)),
 );
-const HarnessOSCustomModelThinkingLevelMap = Schema.Struct({
+const HarosCustomModelThinkingLevelMap = Schema.Struct({
   off: Schema.optional(BoundedThinkingLevelValue),
   minimal: Schema.optional(BoundedThinkingLevelValue),
   low: Schema.optional(BoundedThinkingLevelValue),
@@ -75,20 +75,20 @@ const BoundedEndpointUrl = TrimmedNonEmptyString.check(
 );
 
 const NonNegativeFiniteNumber = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
-const HarnessOSCustomModelCostRates = {
+const HarosCustomModelCostRates = {
   input: NonNegativeFiniteNumber,
   output: NonNegativeFiniteNumber,
   cacheRead: NonNegativeFiniteNumber,
   cacheWrite: NonNegativeFiniteNumber,
 } as const;
-const HarnessOSCustomModelCostTier = Schema.Struct({
+const HarosCustomModelCostTier = Schema.Struct({
   inputTokensAbove: NonNegativeFiniteNumber,
-  ...HarnessOSCustomModelCostRates,
+  ...HarosCustomModelCostRates,
 });
-const HarnessOSCustomModelCost = Schema.Struct({
-  ...HarnessOSCustomModelCostRates,
+const HarosCustomModelCost = Schema.Struct({
+  ...HarosCustomModelCostRates,
   tiers: Schema.optional(
-    Schema.Array(HarnessOSCustomModelCostTier).check(
+    Schema.Array(HarosCustomModelCostTier).check(
       Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT),
     ),
   ),
@@ -123,9 +123,9 @@ export const HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API = {
     "supportsToolReferences",
   ],
   "google-generative-ai": [],
-} as const satisfies Record<HarnessOSCustomModelServiceApi, readonly string[]>;
+} as const satisfies Record<HarosCustomModelServiceApi, readonly string[]>;
 
-const HarnessOSCustomModelCompat = Schema.Struct({
+const HarosCustomModelCompat = Schema.Struct({
   supportsDeveloperRole: Schema.optional(Schema.Boolean),
   supportsReasoningEffort: Schema.optional(Schema.Boolean),
   supportsUsageInStreaming: Schema.optional(Schema.Boolean),
@@ -150,20 +150,20 @@ const BoundedHeaderName = TrimmedNonEmptyString.check(
   Schema.isMaxLength(128),
   Schema.isPattern(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u),
 );
-const HarnessOSCustomModelHeaderSource = Schema.Literals(["external", "environment", "command"]);
-export const HarnessOSCustomModelHeaderMetadata = Schema.Struct({
+const HarosCustomModelHeaderSource = Schema.Literals(["external", "environment", "command"]);
+export const HarosCustomModelHeaderMetadata = Schema.Struct({
   name: BoundedHeaderName,
-  source: HarnessOSCustomModelHeaderSource,
+  source: HarosCustomModelHeaderSource,
 });
-export type HarnessOSCustomModelHeaderMetadata = typeof HarnessOSCustomModelHeaderMetadata.Type;
-const BoundedHeaderMetadata = Schema.Array(HarnessOSCustomModelHeaderMetadata).check(
+export type HarosCustomModelHeaderMetadata = typeof HarosCustomModelHeaderMetadata.Type;
+const BoundedHeaderMetadata = Schema.Array(HarosCustomModelHeaderMetadata).check(
   Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT),
 );
 
 const HeaderEnvironmentVariableName = Schema.String.check(
   Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u),
 );
-export const HarnessOSCustomModelHeaderMutation = Schema.Union([
+export const HarosCustomModelHeaderMutation = Schema.Union([
   Schema.Struct({ name: BoundedHeaderName, type: Schema.Literal("clear") }),
   Schema.Struct({
     name: BoundedHeaderName,
@@ -171,71 +171,69 @@ export const HarnessOSCustomModelHeaderMutation = Schema.Union([
     variableName: HeaderEnvironmentVariableName,
   }),
 ]);
-export type HarnessOSCustomModelHeaderMutation = typeof HarnessOSCustomModelHeaderMutation.Type;
-const BoundedHeaderMutations = Schema.Array(HarnessOSCustomModelHeaderMutation).check(
+export type HarosCustomModelHeaderMutation = typeof HarosCustomModelHeaderMutation.Type;
+const BoundedHeaderMutations = Schema.Array(HarosCustomModelHeaderMutation).check(
   Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT),
 );
 
-const HarnessOSCustomModelServiceModelFields = {
+const HarosCustomModelServiceModelFields = {
   modelId: BoundedModelId,
   displayName: Schema.optional(BoundedDisplayName),
-  api: Schema.optional(HarnessOSCustomModelServiceApi),
+  api: Schema.optional(HarosCustomModelServiceApi),
   baseUrl: Schema.optional(BoundedEndpointUrl),
   reasoning: Schema.optional(Schema.Boolean),
-  thinkingLevelMap: Schema.optional(HarnessOSCustomModelThinkingLevelMap),
+  thinkingLevelMap: Schema.optional(HarosCustomModelThinkingLevelMap),
   input: Schema.optional(
     Schema.Array(Schema.Literals(["text", "image"]))
       .check(Schema.isMinLength(1))
       .check(Schema.isMaxLength(2)),
   ),
-  cost: Schema.optional(HarnessOSCustomModelCost),
-  compat: Schema.optional(HarnessOSCustomModelCompat),
+  cost: Schema.optional(HarosCustomModelCost),
+  compat: Schema.optional(HarosCustomModelCompat),
   contextWindow: Schema.optional(PositiveInt),
   maxTokens: Schema.optional(PositiveInt),
 } as const;
 
-export const HarnessOSCustomModelServiceModelInput = Schema.Struct({
-  ...HarnessOSCustomModelServiceModelFields,
+export const HarosCustomModelServiceModelInput = Schema.Struct({
+  ...HarosCustomModelServiceModelFields,
   headerMutations: Schema.optional(BoundedHeaderMutations),
 });
-export type HarnessOSCustomModelServiceModelInput =
-  typeof HarnessOSCustomModelServiceModelInput.Type;
+export type HarosCustomModelServiceModelInput = typeof HarosCustomModelServiceModelInput.Type;
 
-const HarnessOSCustomModelServiceModelConfig = Schema.Struct({
-  ...HarnessOSCustomModelServiceModelFields,
+const HarosCustomModelServiceModelConfig = Schema.Struct({
+  ...HarosCustomModelServiceModelFields,
   configuredHeaders: Schema.optional(BoundedHeaderMetadata),
 });
 
-const BoundedCustomModels = Schema.Array(HarnessOSCustomModelServiceModelInput)
+const BoundedCustomModels = Schema.Array(HarosCustomModelServiceModelInput)
   .check(Schema.isMinLength(1))
   .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
 
-export const HarnessOSCustomModelServiceConfigInput = Schema.Struct({
+export const HarosCustomModelServiceConfigInput = Schema.Struct({
   serviceId: Schema.NullOr(BoundedIdentifier),
   displayName: BoundedDisplayName,
-  api: HarnessOSCustomModelServiceApi,
+  api: HarosCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
   authHeader: Schema.optional(Schema.Boolean),
   headerMutations: Schema.optional(BoundedHeaderMutations),
   models: BoundedCustomModels,
 });
-export type HarnessOSCustomModelServiceConfigInput =
-  typeof HarnessOSCustomModelServiceConfigInput.Type;
+export type HarosCustomModelServiceConfigInput = typeof HarosCustomModelServiceConfigInput.Type;
 
-export const HarnessOSCustomModelServiceConfig = Schema.Struct({
+export const HarosCustomModelServiceConfig = Schema.Struct({
   serviceId: BoundedIdentifier,
   displayName: BoundedDisplayName,
-  api: HarnessOSCustomModelServiceApi,
+  api: HarosCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
   authHeader: Schema.optional(Schema.Boolean),
   configuredHeaders: Schema.optional(BoundedHeaderMetadata),
-  models: Schema.Array(HarnessOSCustomModelServiceModelConfig)
+  models: Schema.Array(HarosCustomModelServiceModelConfig)
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT)),
 });
-export type HarnessOSCustomModelServiceConfig = typeof HarnessOSCustomModelServiceConfig.Type;
+export type HarosCustomModelServiceConfig = typeof HarosCustomModelServiceConfig.Type;
 
-export const HarnessOSCustomModelServiceCapability = Schema.Struct({
+export const HarosCustomModelServiceCapability = Schema.Struct({
   protocols: Schema.Tuple([
     Schema.Literal("openai-completions"),
     Schema.Literal("openai-responses"),
@@ -243,8 +241,7 @@ export const HarnessOSCustomModelServiceCapability = Schema.Struct({
     Schema.Literal("google-generative-ai"),
   ]),
 });
-export type HarnessOSCustomModelServiceCapability =
-  typeof HarnessOSCustomModelServiceCapability.Type;
+export type HarosCustomModelServiceCapability = typeof HarosCustomModelServiceCapability.Type;
 
 export const OAModelServiceOrigin = Schema.Literals([
   "builtin",
@@ -351,7 +348,7 @@ export const OAModelServicesListResult = Schema.Union([
     state: Schema.Literal("ready"),
     services: BoundedNonEmptyModelServices,
     connectableServices: BoundedModelServices,
-    customApiConfiguration: Schema.optional(HarnessOSCustomModelServiceCapability),
+    customApiConfiguration: Schema.optional(HarosCustomModelServiceCapability),
     extensionProjectionState: Schema.optional(OAModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
@@ -359,7 +356,7 @@ export const OAModelServicesListResult = Schema.Union([
     state: Schema.Literal("empty"),
     services: Schema.Tuple([]),
     connectableServices: BoundedModelServices,
-    customApiConfiguration: Schema.optional(HarnessOSCustomModelServiceCapability),
+    customApiConfiguration: Schema.optional(HarosCustomModelServiceCapability),
     extensionProjectionState: Schema.optional(OAModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
@@ -383,7 +380,7 @@ export const OAModelServicesGetResult = Schema.Union([
     state: Schema.Literal("ready"),
     service: OAModelServiceDescriptor,
     models: Schema.optional(BoundedServiceModels),
-    customConfig: Schema.optional(HarnessOSCustomModelServiceConfig),
+    customConfig: Schema.optional(HarosCustomModelServiceConfig),
     extensionProjectionState: Schema.optional(OAModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
@@ -549,7 +546,7 @@ const CredentialCommand = Schema.String.check(
   Schema.isPattern(/^[^\u0000-\u001f\u007f-\u009f]+$/u),
 );
 
-export const HarnessOSCustomModelServiceCredentialInput = Schema.Union([
+export const HarosCustomModelServiceCredentialInput = Schema.Union([
   Schema.Struct({ type: Schema.Literal("preserve") }),
   Schema.Struct({ type: Schema.Literal("stored_key"), apiKey: BoundedSecret }),
   Schema.Struct({
@@ -561,45 +558,44 @@ export const HarnessOSCustomModelServiceCredentialInput = Schema.Union([
     command: CredentialCommand,
   }),
 ]);
-export type HarnessOSCustomModelServiceCredentialInput =
-  typeof HarnessOSCustomModelServiceCredentialInput.Type;
+export type HarosCustomModelServiceCredentialInput =
+  typeof HarosCustomModelServiceCredentialInput.Type;
 
-export const HarnessOSCustomModelServiceTestInput = Schema.Struct({
-  config: HarnessOSCustomModelServiceConfigInput,
-  credential: HarnessOSCustomModelServiceCredentialInput,
+export const HarosCustomModelServiceTestInput = Schema.Struct({
+  config: HarosCustomModelServiceConfigInput,
+  credential: HarosCustomModelServiceCredentialInput,
   testModelId: BoundedModelId,
 });
-export type HarnessOSCustomModelServiceTestInput = typeof HarnessOSCustomModelServiceTestInput.Type;
+export type HarosCustomModelServiceTestInput = typeof HarosCustomModelServiceTestInput.Type;
 
-export const HarnessOSCustomModelServiceDiscoveryConfigInput = Schema.Struct({
+export const HarosCustomModelServiceDiscoveryConfigInput = Schema.Struct({
   serviceId: Schema.NullOr(BoundedIdentifier),
   displayName: BoundedDisplayName,
-  api: HarnessOSCustomModelServiceApi,
+  api: HarosCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
   headerMutations: Schema.optional(BoundedHeaderMutations),
 });
-export type HarnessOSCustomModelServiceDiscoveryConfigInput =
-  typeof HarnessOSCustomModelServiceDiscoveryConfigInput.Type;
+export type HarosCustomModelServiceDiscoveryConfigInput =
+  typeof HarosCustomModelServiceDiscoveryConfigInput.Type;
 
-export const HarnessOSCustomModelServiceDiscoveredModel = Schema.Struct({
+export const HarosCustomModelServiceDiscoveredModel = Schema.Struct({
   modelId: BoundedModelId,
   displayName: BoundedDisplayName,
 });
-export type HarnessOSCustomModelServiceDiscoveredModel =
-  typeof HarnessOSCustomModelServiceDiscoveredModel.Type;
+export type HarosCustomModelServiceDiscoveredModel =
+  typeof HarosCustomModelServiceDiscoveredModel.Type;
 
-const BoundedDiscoveredModels = Schema.Array(HarnessOSCustomModelServiceDiscoveredModel)
+const BoundedDiscoveredModels = Schema.Array(HarosCustomModelServiceDiscoveredModel)
   .check(Schema.isMinLength(1))
   .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
 
-export const HarnessOSCustomModelServiceDiscoverInput = Schema.Struct({
-  config: HarnessOSCustomModelServiceDiscoveryConfigInput,
-  credential: HarnessOSCustomModelServiceCredentialInput,
+export const HarosCustomModelServiceDiscoverInput = Schema.Struct({
+  config: HarosCustomModelServiceDiscoveryConfigInput,
+  credential: HarosCustomModelServiceCredentialInput,
 });
-export type HarnessOSCustomModelServiceDiscoverInput =
-  typeof HarnessOSCustomModelServiceDiscoverInput.Type;
+export type HarosCustomModelServiceDiscoverInput = typeof HarosCustomModelServiceDiscoverInput.Type;
 
-export const HarnessOSCustomModelServiceDiscoverResult = Schema.Union([
+export const HarosCustomModelServiceDiscoverResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literal("success"),
     models: BoundedDiscoveredModels,
@@ -622,10 +618,10 @@ export const HarnessOSCustomModelServiceDiscoverResult = Schema.Union([
     errorCode: Schema.Literal("cancelled"),
   }),
 ]);
-export type HarnessOSCustomModelServiceDiscoverResult =
-  typeof HarnessOSCustomModelServiceDiscoverResult.Type;
+export type HarosCustomModelServiceDiscoverResult =
+  typeof HarosCustomModelServiceDiscoverResult.Type;
 
-export const HarnessOSCustomModelServiceTestResult = Schema.Union([
+export const HarosCustomModelServiceTestResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literal("success"),
     models: BoundedServiceModels,
@@ -643,16 +639,15 @@ export const HarnessOSCustomModelServiceTestResult = Schema.Union([
     ]),
   }),
 ]);
-export type HarnessOSCustomModelServiceTestResult =
-  typeof HarnessOSCustomModelServiceTestResult.Type;
+export type HarosCustomModelServiceTestResult = typeof HarosCustomModelServiceTestResult.Type;
 
-export const HarnessOSCustomModelServiceSaveInput = Schema.Struct({
-  config: HarnessOSCustomModelServiceConfigInput,
-  credential: HarnessOSCustomModelServiceCredentialInput,
+export const HarosCustomModelServiceSaveInput = Schema.Struct({
+  config: HarosCustomModelServiceConfigInput,
+  credential: HarosCustomModelServiceCredentialInput,
 });
-export type HarnessOSCustomModelServiceSaveInput = typeof HarnessOSCustomModelServiceSaveInput.Type;
+export type HarosCustomModelServiceSaveInput = typeof HarosCustomModelServiceSaveInput.Type;
 
-export const HarnessOSCustomModelServiceSaveResult = Schema.Union([
+export const HarosCustomModelServiceSaveResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literals(["complete", "complete_with_sync_warning"]),
     service: OAModelServiceDescriptor,
@@ -667,18 +662,15 @@ export const HarnessOSCustomModelServiceSaveResult = Schema.Union([
     service: Schema.NullOr(OAModelServiceDescriptor),
   }),
 ]);
-export type HarnessOSCustomModelServiceSaveResult =
-  typeof HarnessOSCustomModelServiceSaveResult.Type;
+export type HarosCustomModelServiceSaveResult = typeof HarosCustomModelServiceSaveResult.Type;
 
-export const HarnessOSCustomModelServiceRemoveInput = Schema.Struct({
+export const HarosCustomModelServiceRemoveInput = Schema.Struct({
   serviceId: BoundedIdentifier,
 });
-export type HarnessOSCustomModelServiceRemoveInput =
-  typeof HarnessOSCustomModelServiceRemoveInput.Type;
+export type HarosCustomModelServiceRemoveInput = typeof HarosCustomModelServiceRemoveInput.Type;
 
-export const HarnessOSCustomModelServiceRemoveResult = Schema.Struct({
+export const HarosCustomModelServiceRemoveResult = Schema.Struct({
   state: Schema.Literals(["complete", "complete_with_sync_warning", "blocked_active_operation"]),
   serviceId: BoundedIdentifier,
 });
-export type HarnessOSCustomModelServiceRemoveResult =
-  typeof HarnessOSCustomModelServiceRemoveResult.Type;
+export type HarosCustomModelServiceRemoveResult = typeof HarosCustomModelServiceRemoveResult.Type;

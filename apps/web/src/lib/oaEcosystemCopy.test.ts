@@ -2,19 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 
-describe("HarnessOS Agent ecosystem product copy", () => {
-  it("keeps the package surface bilingual and bound to HarnessOS Agent", () => {
-    expect(EN_MESSAGES["library.packageTitle"]).toBe("HarnessOS Agent packages");
-    expect(ZH_CN_MESSAGES["library.packageTitle"]).toBe("HarnessOS Agent 扩展包");
+describe("Haros Agent ecosystem product copy", () => {
+  it("keeps the package surface bilingual and bound to Haros Agent", () => {
+    expect(EN_MESSAGES["library.packageTitle"]).toBe("Haros Agent packages");
+    expect(ZH_CN_MESSAGES["library.packageTitle"]).toBe("Haros Agent 扩展包");
     expect(EN_MESSAGES["library.manageResources"]).toBe("Manage resources");
     expect(ZH_CN_MESSAGES["library.manageResources"]).toBe("管理资源");
     expect(EN_MESSAGES["library.reloadActiveTaskResources"]).toBe("Reload current task");
     expect(ZH_CN_MESSAGES["library.reloadActiveTaskResources"]).toBe("重新加载当前任务");
     expect(EN_MESSAGES["library.reloadState.different_engine"]).toBe(
-      "This task is not using HarnessOS Agent.",
+      "This task is not using Haros Agent.",
     );
     expect(ZH_CN_MESSAGES["library.reloadState.different_engine"]).toBe(
-      "此任务没有使用 HarnessOS Agent。",
+      "此任务没有使用 Haros Agent。",
     );
     expect(EN_MESSAGES["library.reloadState.no_active_session"]).toBe(
       "This task is no longer running. Reopen it and try again.",

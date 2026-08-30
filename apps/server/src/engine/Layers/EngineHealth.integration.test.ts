@@ -444,7 +444,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         available: false,
         authStatus: "unknown",
         checkedAt: "2026-06-16T12:00:00.000Z",
-        message: "Engine is disabled in HarnessOS settings.",
+        message: "Engine is disabled in Haros settings.",
       });
     });
 
@@ -458,7 +458,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
 
       assert.strictEqual(statuses.length, 10);
       assert.strictEqual(codex?.available, false);
-      assert.strictEqual(codex?.message, "Engine is disabled in HarnessOS settings.");
+      assert.strictEqual(codex?.message, "Engine is disabled in Haros settings.");
     });
 
     it("suppresses cached update advisories when automatic update checks are disabled", () => {
@@ -519,7 +519,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         const cachedCodex = yield* readEngineStatusCache(cachePath);
 
         assert.strictEqual(codex?.available, false);
-        assert.strictEqual(codex?.message, "Engine is disabled in HarnessOS settings.");
+        assert.strictEqual(codex?.message, "Engine is disabled in Haros settings.");
         assert.deepStrictEqual(cachedCodex, cachedReadyCodexStatus);
       }),
     );
@@ -566,7 +566,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
           const disabledCodex = disabledStatuses.find((status) => status.engine === "codex");
 
           assert.strictEqual(disabledCodex?.available, false);
-          assert.strictEqual(disabledCodex?.message, "Engine is disabled in HarnessOS settings.");
+          assert.strictEqual(disabledCodex?.message, "Engine is disabled in Haros settings.");
 
           yield* serverSettings.updateSettings({
             engines: {
@@ -580,7 +580,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
           const currentCodex = currentStatuses.find((status) => status.engine === "codex");
           assert.strictEqual(currentCodex?.available, true);
           assert.strictEqual(currentCodex?.authStatus, "authenticated");
-          assert.notStrictEqual(currentCodex?.message, "Engine is disabled in HarnessOS settings.");
+          assert.notStrictEqual(currentCodex?.message, "Engine is disabled in Haros settings.");
           assert.strictEqual(spawnCount, 0);
         }).pipe(Effect.provide(layer));
       }),
@@ -594,7 +594,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         assert.strictEqual(statuses.length, 10);
         for (const status of statuses) {
           assert.strictEqual(status.available, false);
-          assert.strictEqual(status.message, "Engine is disabled in HarnessOS settings.");
+          assert.strictEqual(status.message, "Engine is disabled in Haros settings.");
           assert.strictEqual(status.versionAdvisory?.status, "unknown");
           assert.strictEqual(status.versionAdvisory?.canUpdate, false);
           assert.strictEqual(status.versionAdvisory?.updateCommand, null);
@@ -609,7 +609,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
 
         assert.ok(error instanceof ServerEngineUpdateError);
         assert.strictEqual(error.engine, "kilo");
-        assert.strictEqual(error.reason, "Engine is disabled in HarnessOS settings.");
+        assert.strictEqual(error.reason, "Engine is disabled in Haros settings.");
       }).pipe(Effect.provide(disabledEngineHealthLayer)),
     );
   });
@@ -1078,7 +1078,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         assert.strictEqual(status.unavailableReason, undefined);
         assert.strictEqual(
           status.message,
-          "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
+          "Codex CLI v0.36.0 is too old for Haros. Upgrade to v0.37.0 or newer and restart Haros.",
         );
       }).pipe(
         Effect.provide(
@@ -2044,7 +2044,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         assert.strictEqual(status.unavailableReason, undefined);
         assert.strictEqual(
           status.message,
-          "Antigravity CLI 1.0.11 is too old for HarnessOS. Upgrade to 1.0.12 or newer.",
+          "Antigravity CLI 1.0.11 is too old for Haros. Upgrade to 1.0.12 or newer.",
         );
       }).pipe(
         Effect.provide(

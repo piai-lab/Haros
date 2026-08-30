@@ -125,7 +125,7 @@ async function writeProductManifest(worktree) {
   const manifestPath = path.join(worktree, "packages", "coding-agent", "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   manifest.name = "@harnessos/oa-runtime";
-  manifest.description = `HarnessOS OA runtime derived from Pi ${PI_VERSION}`;
+  manifest.description = `Haros OA runtime derived from Pi ${PI_VERSION}`;
   manifest.piConfig = { configDir: ".harnessos", name: "oa" };
   manifest.files = ["dist", "LICENSE"];
   delete manifest.bin;

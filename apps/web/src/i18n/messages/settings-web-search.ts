@@ -2,8 +2,8 @@ import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
   "settings.webSearchDescription":
-    "Configure HarnessOS Web Access routing, source review, and search services.",
-  "settings.webSearch.loading": "Loading HarnessOS Web Access settings…",
+    "Configure Haros Web Access routing, source review, and search services.",
+  "settings.webSearch.loading": "Loading Haros Web Access settings…",
   "settings.webSearch.loadFailed": "Could not load Web search settings",
   "settings.webSearch.saveFailed": "Could not save Web search settings",
   "settings.webSearch.loadRecovery":
@@ -87,7 +87,7 @@ const EN_MESSAGES = {
   "settings.webSearch.test": "Test",
   "settings.webSearch.testing": "Testing…",
   "settings.webSearch.statusAndFiles": "Status and advanced configuration",
-  "settings.webSearch.capability": "HarnessOS Web Access",
+  "settings.webSearch.capability": "Haros Web Access",
   "settings.webSearch.capabilityDescription":
     "Choose how the Agent searches, handles results, and whether to show the live process.",
   "settings.webSearch.searchCapability": "Network search",
@@ -148,11 +148,11 @@ const EN_MESSAGES = {
   "settings.webSearch.recovery.invalid-root":
     "The configuration file has an unsupported structure. The original file was preserved.",
   "settings.webSearch.recovery.future-schema":
-    "This file was written by a newer HarnessOS version. Update HarnessOS before editing it here.",
+    "This file was written by a newer Haros version. Update Haros before editing it here.",
   "settings.webSearch.recovery.too-large":
     "This config is too large to read safely. The original file was preserved. Reduce its size, then reload.",
   "settings.webSearch.recovery.unsafe-path":
-    "HarnessOS cannot safely use this configuration file. Check the file and its permissions.",
+    "Haros cannot safely use this configuration file. Check the file and its permissions.",
   "settings.webSearch.reloadFile": "Reload file",
   "settings.webSearch.overwriteWithDraft": "Overwrite with draft",
   "settings.webSearch.recoveryTitle": "The config file needs recovery",
@@ -167,8 +167,8 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
-  "settings.webSearchDescription": "配置 HarnessOS 网络访问的路由、来源审查与搜索服务。",
-  "settings.webSearch.loading": "正在加载 HarnessOS 网络访问设置…",
+  "settings.webSearchDescription": "配置 Haros 网络访问的路由、来源审查与搜索服务。",
+  "settings.webSearch.loading": "正在加载 Haros 网络访问设置…",
   "settings.webSearch.loadFailed": "无法加载网络搜索设置",
   "settings.webSearch.saveFailed": "无法保存网络搜索设置",
   "settings.webSearch.loadRecovery": "请重试加载；如果问题持续，请检查配置文件。",
@@ -245,7 +245,7 @@ const ZH_CN_MESSAGES = {
   "settings.webSearch.test": "测试",
   "settings.webSearch.testing": "正在测试…",
   "settings.webSearch.statusAndFiles": "状态与高级配置",
-  "settings.webSearch.capability": "HarnessOS 网络访问",
+  "settings.webSearch.capability": "Haros 网络访问",
   "settings.webSearch.capabilityDescription":
     "选择 Agent 如何搜索、如何处理结果，以及是否显示实时过程。",
   "settings.webSearch.searchCapability": "网络搜索",
@@ -296,11 +296,10 @@ const ZH_CN_MESSAGES = {
     "配置文件不是有效的 JSON。原文件已保留；请打开文件修复语法。",
   "settings.webSearch.recovery.invalid-root": "配置文件结构不受支持。原文件已保留。",
   "settings.webSearch.recovery.future-schema":
-    "该文件由更新版本的 HarnessOS 写入。请先更新 HarnessOS，再在此编辑。",
+    "该文件由更新版本的 Haros 写入。请先更新 Haros，再在此编辑。",
   "settings.webSearch.recovery.too-large":
     "此配置文件过大，无法安全读取。原文件已保留。请缩小文件后重新加载。",
-  "settings.webSearch.recovery.unsafe-path":
-    "HarnessOS 无法安全使用该配置文件。请检查文件及其权限。",
+  "settings.webSearch.recovery.unsafe-path": "Haros 无法安全使用该配置文件。请检查文件及其权限。",
   "settings.webSearch.reloadFile": "重新加载文件",
   "settings.webSearch.overwriteWithDraft": "用草稿覆盖",
   "settings.webSearch.recoveryTitle": "配置文件需要恢复",

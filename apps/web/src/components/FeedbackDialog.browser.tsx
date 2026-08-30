@@ -78,7 +78,7 @@ describe("FeedbackDialog", () => {
 
     expect(onOpenIssue).toHaveBeenCalledTimes(1);
     const url = new URL(onOpenIssue.mock.calls[0]?.[0] as string);
-    expect(url.origin + url.pathname).toBe("https://github.com/piai-lab/HarnessOS/issues/new");
+    expect(url.origin + url.pathname).toBe("https://github.com/piai-lab/Haros/issues/new");
     expect(url.searchParams.get("body")).toContain("Please keep this exact draft.");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });

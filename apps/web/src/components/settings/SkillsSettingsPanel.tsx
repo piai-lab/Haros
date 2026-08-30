@@ -21,7 +21,7 @@ import { useI18n } from "~/i18n";
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
-  isHarnessOSSkillSource,
+  isHarosSkillSource,
   engineDisplayName,
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
@@ -100,9 +100,9 @@ export function SkillsSettingsPanel() {
   };
 
   const harnessosSkillGroups = skillGroups.filter((group) =>
-    group.sources.some((source) => isHarnessOSSkillSource(source.skill)),
+    group.sources.some((source) => isHarosSkillSource(source.skill)),
   );
-  const enabledHarnessOSSkills = harnessosSkillGroups.filter(
+  const enabledHarosSkills = harnessosSkillGroups.filter(
     (group) => !disabledSkillNames.has(group.key),
   ).length;
   const harnessosSkillsDir = catalogQuery.data?.harnessosSkillsDir;
@@ -125,7 +125,7 @@ export function SkillsSettingsPanel() {
               {catalogQuery.isLoading
                 ? t("settings.scanning")
                 : t("settings.enabledSkillsSummary", {
-                    enabled: enabledHarnessOSSkills,
+                    enabled: enabledHarosSkills,
                     total: harnessosSkillGroups.length,
                   })}
             </span>
@@ -156,7 +156,7 @@ export function SkillsSettingsPanel() {
           <SettingsSection key={section.key} title={section.title}>
             {section.groups.map((group) => {
               const harnessosOwned = group.sources.some((source) =>
-                isHarnessOSSkillSource(source.skill),
+                isHarosSkillSource(source.skill),
               );
               const enabled = !disabledSkillNames.has(group.key);
               return (
@@ -197,7 +197,7 @@ export function SkillsSettingsPanel() {
                         onCheckedChange={(checked) =>
                           setSkillEnabled(group.primarySkill.name, Boolean(checked))
                         }
-                        aria-label={t("settings.enableHarnessOSSkill", {
+                        aria-label={t("settings.enableHarosSkill", {
                           skill: group.displayName,
                         })}
                       />

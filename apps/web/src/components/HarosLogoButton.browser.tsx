@@ -1,4 +1,4 @@
-// FILE: HarnessOSLogoButton.browser.tsx
+// FILE: HarosLogoButton.browser.tsx
 // Purpose: Verify the canonical Soft Orbit interaction in a real Chromium renderer.
 // Layer: Browser UI test
 
@@ -9,9 +9,9 @@ import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import type { SoftOrbitSnapshot } from "~/motion/softOrbit";
-import { HarnessOSLogoButton } from "./HarnessOSLogoButton";
+import { HarosLogoButton } from "./HarosLogoButton";
 
-describe("HarnessOSLogoButton", () => {
+describe("HarosLogoButton", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
@@ -21,7 +21,7 @@ describe("HarnessOSLogoButton", () => {
     const snapshots: SoftOrbitSnapshot[] = [];
     const onClick = vi.fn();
     const screen = await render(
-      <HarnessOSLogoButton
+      <HarosLogoButton
         aria-label="Focus composer"
         reducedMotion={false}
         onClick={onClick}
@@ -58,7 +58,7 @@ describe("HarnessOSLogoButton", () => {
   it("cancels an exited or cancelled press and accepts Enter and Space without delaying the action", async () => {
     const onClick = vi.fn();
     const screen = await render(
-      <HarnessOSLogoButton aria-label="Focus composer" reducedMotion={false} onClick={onClick} />,
+      <HarosLogoButton aria-label="Focus composer" reducedMotion={false} onClick={onClick} />,
     );
     const button = screen.getByRole("button", { name: "Focus composer" });
     const mark = button.element().querySelector<HTMLElement>(".harnessos-logo-motion-target");
@@ -91,7 +91,7 @@ describe("HarnessOSLogoButton", () => {
   it("uses a 180ms pulse without rotation when reduced motion is enabled", async () => {
     const snapshots: SoftOrbitSnapshot[] = [];
     const screen = await render(
-      <HarnessOSLogoButton
+      <HarosLogoButton
         aria-label="Focus composer"
         reducedMotion
         onMotionStateChange={(snapshot) => snapshots.push(snapshot)}
@@ -113,7 +113,7 @@ describe("HarnessOSLogoButton", () => {
   });
 
   it("keeps both official theme variants and a visible keyboard focus ring", async () => {
-    const screen = await render(<HarnessOSLogoButton aria-label="Focus composer" size={64} />);
+    const screen = await render(<HarosLogoButton aria-label="Focus composer" size={64} />);
     const button = screen.getByRole("button", { name: "Focus composer" });
     const images = button.element().querySelectorAll("image");
     expect(images[0]?.getAttribute("href")).toBe("/brand/harnessos-mark.svg");

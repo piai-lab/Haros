@@ -91,7 +91,7 @@ body:
     attributes:
       label: Environment
       description: OS, browser or desktop app version, Node/Bun version, and Engine/model if relevant.
-      placeholder: macOS 15.3, Chrome 135, Bun 1.3.12, OA ...
+      placeholder: macOS 15.3, Windows 11, Bun 1.3.12 ...
 
   - type: textarea
     id: logs

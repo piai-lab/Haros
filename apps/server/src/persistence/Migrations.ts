@@ -1,7 +1,7 @@
 /**
- * HarnessOS database schema owner.
+ * Haros database schema owner.
  *
- * The public repository starts from one fresh schema. HarnessOS never opens or
+ * The public repository starts from one fresh schema. Haros never opens or
  * upgrades predecessor-product databases; any non-empty untracked database or
  * foreign migration lineage is rejected before schema mutation.
  */
@@ -11,9 +11,11 @@ import * as Migrator from "effect/unstable/sql/Migrator";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { MigrationLineageError, MigrationSchemaTooNewError } from "./Errors.ts";
-import HarnessOSInitialSchema from "./Migrations/001_HarnessOSInitialSchema.ts";
+import InitialSchema from "./Migrations/001_HarnessOSInitialSchema.ts";
 
-export const migrationEntries = [[1, "HarnessOSInitialSchema", HarnessOSInitialSchema]] as const;
+// The recorded migration name is a persisted machine contract from the repository split. Keep it
+// stable even though the current product name is Haros.
+export const migrationEntries = [[1, "HarnessOSInitialSchema", InitialSchema]] as const;
 
 const LATEST_MIGRATION_ID = migrationEntries.at(-1)![0];
 const CANONICAL_MIGRATION_NAMES: ReadonlyMap<number, string> = new Map(
@@ -29,7 +31,7 @@ export const makeMigrationLoader = (throughId?: number) =>
     ),
   );
 
-const assertHarnessOSLineage = Effect.gen(function* () {
+const assertHarosLineage = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   const tables = yield* sql<{ readonly name: string }>`
     SELECT name
@@ -43,7 +45,7 @@ const assertHarnessOSLineage = Effect.gen(function* () {
   if (!hasTracker) {
     return yield* new MigrationLineageError({
       firstDivergedId: 0,
-      expectedName: "empty HarnessOS database",
+      expectedName: "empty Haros database",
       recordedName: "untracked non-empty database",
     });
   }
@@ -61,7 +63,7 @@ const assertHarnessOSLineage = Effect.gen(function* () {
     if (userTables.length === 0) return;
     return yield* new MigrationLineageError({
       firstDivergedId: 0,
-      expectedName: "empty HarnessOS database",
+      expectedName: "empty Haros database",
       recordedName: "untracked non-empty database",
     });
   }
@@ -94,7 +96,7 @@ export interface RunMigrationsOptions {
 
 export const runMigrations = ({ toMigrationInclusive }: RunMigrationsOptions = {}) =>
   Effect.gen(function* () {
-    yield* assertHarnessOSLineage;
+    yield* assertHarosLineage;
     return yield* run({ loader: makeMigrationLoader(toMigrationInclusive) });
   });
 

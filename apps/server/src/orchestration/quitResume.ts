@@ -333,7 +333,7 @@ function errorActivityCommand(input: {
       id: EventId.makeUnsafe(key),
       tone: "error",
       kind: "quit-resume.failed",
-      summary: "This task could not be resumed after HarnessOS restarted.",
+      summary: "This task could not be resumed after Haros restarted.",
       payload: { reason: input.reason },
       turnId: null,
       createdAt: input.now,

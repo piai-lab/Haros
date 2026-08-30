@@ -2,12 +2,12 @@ import type { BuiltInToolGroupId, EngineWorkSurface } from "@harnessos/contracts
 import type { ProductSurface } from "@harnessos/shared/productSurface";
 
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../automation/runEnvelope.ts";
-import { renderHarnessOSHarnessPolicy } from "../hostGateway/harnessPolicy.ts";
+import { renderHarosHarnessPolicy } from "../hostGateway/harnessPolicy.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "./goalMode.ts";
 import type { EngineTurnDispatchContext } from "./Services/EngineAdapter.ts";
 
 const HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT = [
-  "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+  "You are Haros, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
   "The academy's official Chinese name is 广东智慧医学国际研究院.",
   "",
   "Understand what the user is ultimately trying to achieve. Do not treat the user's first wording as a complete specification or assume specialized knowledge in the current domain. Adapt the density of explanation to evidence from the conversation without quizzing the user about their level.",
@@ -35,7 +35,7 @@ const HARNESSOS_CHAT_CONTRACT = [
   "",
   "Explicit file and folder references are inputs for the current conversation. They are not a working directory, Project, or trusted project root, and must not be treated as permission to scan nearby paths.",
   "Treat external references as read-and-understand inputs by default. If the user explicitly asks to write a named path or run an available Engine-native operation, follow the real permission and risk rules; Chat is not a hard filesystem, Git, or Terminal sandbox.",
-  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by HarnessOS.",
+  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by Haros.",
   "Use available tools when they materially improve accuracy, timeliness, or completeness. When the work naturally needs a durable Project boundary, sustained project execution, or trusted project-local context and resources, explain that boundary and suggest Send to Agent.",
 ].join("\n");
 
@@ -52,7 +52,7 @@ const HARNESSOS_AGENT_CONTRACT = [
 ].join("\n");
 
 const HARNESSOS_STUDIO_CONTRACT = [
-  "In Studio, work inside HarnessOS's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
+  "In Studio, work inside Haros's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
   "Create, edit, and organize the requested work in that managed Studio environment, and make useful results visible through its existing outputs and file surfaces.",
   "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
 ].join("\n");
@@ -64,7 +64,7 @@ export function makePiHostSystemPrompt(input: {
 }): string {
   return [
     "<harnessos_host_context>",
-    renderHarnessOSHarnessPolicy({
+    renderHarosHarnessPolicy({
       gatewayControlAvailable: input.gatewayControlAvailable,
       projection: {
         mode: "direct",

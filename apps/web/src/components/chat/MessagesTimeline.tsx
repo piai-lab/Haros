@@ -69,7 +69,7 @@ import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { composerOverlayScrollMaskImage } from "./composerOverlay";
 import { CrossTaskOriginLabel, type CrossTaskOrigin } from "./CrossTaskOriginLabel";
-import { HarnessOSThreadCreationCard } from "./HarnessOSThreadCreationCard";
+import { HarosThreadCreationCard } from "./HarosThreadCreationCard";
 import { ForkSourceDivider, type ForkSourceReference } from "./ForkSourceDivider";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
@@ -564,7 +564,7 @@ interface MessagesTimelineProps {
    * the anchored slide settles; ChatView's auto-follow re-snaps pause while set.
    */
   tailAnchorScrollInFlightRef?: RefObject<boolean> | undefined;
-  /** Provenance for a conversation created from another HarnessOS task. */
+  /** Provenance for a conversation created from another Haros task. */
   crossTaskOrigin?: CrossTaskOrigin | null;
   /** Immediate source chat for a forked transcript. */
   forkSource?: ForkSourceReference | null;
@@ -1666,9 +1666,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           (() => {
             const groupId = row.id;
             // Creation milestones are reserved for the end-of-turn recap card.
-            // The engine's actual HarnessOS MCP tool rows remain visible here.
+            // The engine's actual Haros MCP tool rows remain visible here.
             const groupedEntries = row.groupedEntries.filter(
-              (workEntry) => !workEntry.harnessosThreadCreation,
+              (workEntry) => !workEntry.harosThreadCreation,
             );
             if (groupedEntries.length === 0) {
               return null;
@@ -1837,7 +1837,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     )}
                   >
                     {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
-                    {/* The cross-task origin label already attributes this turn to another HarnessOS thread,
+                    {/* The cross-task origin label already attributes this turn to another Haros thread,
                       so suppress the dispatch chip here to avoid a duplicate "Sent by …" marker. */}
                     {showCrossTaskOrigin ? null : (
                       <UserDispatchModeChip
@@ -2046,16 +2046,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ? (goalAchievementByTurnId.get(row.message.turnId) ?? null)
                 : null;
             const allTurnWorkEntries = row.turnWorkEntries ?? [];
-            const harnessosThreadCreationRecaps = [
+            const harosThreadCreationRecaps = [
               ...new Map(
                 allTurnWorkEntries.flatMap((entry) =>
-                  entry.harnessosThreadCreation
-                    ? [
-                        [
-                          entry.harnessosThreadCreation.operationId,
-                          entry.harnessosThreadCreation,
-                        ] as const,
-                      ]
+                  entry.harosThreadCreation
+                    ? [[entry.harosThreadCreation.operationId, entry.harosThreadCreation] as const]
                     : [],
                 ),
               ).values(),
@@ -2078,9 +2073,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   ) : null}
                   {!row.assistantTurnInProgress && row.showAssistantCopyButton
-                    ? harnessosThreadCreationRecaps.map((creation) => (
+                    ? harosThreadCreationRecaps.map((creation) => (
                         <div key={creation.operationId} className="mt-2 mb-1">
-                          <HarnessOSThreadCreationCard
+                          <HarosThreadCreationCard
                             creation={creation}
                             {...(onOpenThread
                               ? {

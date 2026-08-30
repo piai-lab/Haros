@@ -43,7 +43,7 @@ const EN_MESSAGES = {
     "Summarize what changed on the main branch in the last 24 hours as a short standup update.",
   "automation.approvalNeeded": "Approval needed",
   "automation.approvalDescription":
-    "Approve this automation once before HarnessOS can save changes. If a warning blocks a manual run, Run now stays disabled until you approve it.",
+    "Approve this automation once before Haros can save changes. If a warning blocks a manual run, Run now stays disabled until you approve it.",
   "automation.approve": "Approve",
   "automation.approveAndRun": "Approve & run now",
   "automation.edit": "Edit automation",
@@ -106,7 +106,7 @@ const EN_MESSAGES = {
     "Scheduled full-access runs can make changes without per-step approval.",
   "automation.warningAutoLocalTitle": "Auto fallback may use the local checkout",
   "automation.warningAutoLocalDetail":
-    "If HarnessOS cannot create a worktree, runs may fall back to editing the active project checkout.",
+    "If Haros cannot create a worktree, runs may fall back to editing the active project checkout.",
   "automation.warningLocalTitle": "Local checkout",
   "automation.warningLocalDetail": "Runs may edit files in the active project checkout.",
   "automation.warningWorktreeTitle": "Worktree cleanup",
@@ -114,7 +114,7 @@ const EN_MESSAGES = {
     "Generated worktrees or branches remain after archiving until you remove them.",
   "automation.warningGeneratedTitle": "Review generated fields",
   "automation.warningGeneratedDetail":
-    "HarnessOS was not fully confident about the parsed automation fields.",
+    "Haros was not fully confident about the parsed automation fields.",
   "automation.warningSkillTitle": "Skill reference kept in prompt",
   "automation.warningSkillDetail":
     "Skill tokens stay as prompt text unless the selected Engine can resolve them at run time.",
@@ -261,13 +261,13 @@ const ZH_CN_MESSAGES = {
   "automation.warningFullAccessDetail": "计划中的完全访问运行可在无需逐步审批的情况下更改内容。",
   "automation.warningAutoLocalTitle": "自动回退可能使用本地检出",
   "automation.warningAutoLocalDetail":
-    "如果 HarnessOS 无法创建工作树，运行可能回退到编辑当前项目检出。",
+    "如果 Haros 无法创建工作树，运行可能回退到编辑当前项目检出。",
   "automation.warningLocalTitle": "本地检出",
   "automation.warningLocalDetail": "运行可能编辑当前项目检出中的文件。",
   "automation.warningWorktreeTitle": "清理工作树",
   "automation.warningWorktreeDetail": "归档后，生成的工作树或分支会继续保留，直到你主动移除。",
   "automation.warningGeneratedTitle": "检查生成的字段",
-  "automation.warningGeneratedDetail": "HarnessOS 无法完全确定解析出的自动化字段。",
+  "automation.warningGeneratedDetail": "Haros 无法完全确定解析出的自动化字段。",
   "automation.warningSkillTitle": "提示词中保留了技能引用",
   "automation.warningSkillDetail": "技能 token 会保留为提示词文本，除非所选引擎能在运行时解析。",
   "automation.fastIntervalLimit": "小于一分钟的间隔必须将最大运行次数设为 10 次或更少。",

@@ -53,7 +53,7 @@ function engineForSkillOrigin(origin: string): EngineKind | null {
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "oa":
-      return { label: "HarnessOS", engine: null };
+      return { label: "Haros", engine: null };
     case "agents":
       return { label: "Shared (.agents)", engine: null };
     case "project":
@@ -80,7 +80,7 @@ export function skillDisplayName(skill: EngineSkillDescriptor): string {
   return skill.interface?.displayName ?? skill.name;
 }
 
-export function isHarnessOSSkillSource(skill: EngineSkillDescriptor): boolean {
+export function isHarosSkillSource(skill: EngineSkillDescriptor): boolean {
   return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 

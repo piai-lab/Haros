@@ -123,13 +123,13 @@ describe("packaged desktop verification", () => {
   });
 
   it("selects the runnable macOS payload emitted by the release matrix", () => {
-    expect(selectMacPackagedPayload(["/assets/HarnessOS.dmg"])).toEqual({
+    expect(selectMacPackagedPayload(["/assets/Haros.dmg"])).toEqual({
       kind: "dmg",
-      path: "/assets/HarnessOS.dmg",
+      path: "/assets/Haros.dmg",
     });
-    expect(selectMacPackagedPayload(["/assets/HarnessOS.dmg", "/assets/HarnessOS.zip"])).toEqual({
+    expect(selectMacPackagedPayload(["/assets/Haros.dmg", "/assets/Haros.zip"])).toEqual({
       kind: "zip",
-      path: "/assets/HarnessOS.zip",
+      path: "/assets/Haros.zip",
     });
     expect(() => selectMacPackagedPayload(["/assets/first.dmg", "/assets/second.dmg"])).toThrow(
       "at most one macOS ZIP and one DMG",
@@ -177,7 +177,7 @@ describe("packaged desktop verification", () => {
 
     const firstLease = acquirePackagedProofLease(sourceCommit, root);
     expect(() => acquirePackagedProofLease(sourceCommit, root)).toThrow(
-      `Another HarnessOS packaged proof owns this host (pid=${process.pid}, source=${sourceCommit.slice(0, 12)})`,
+      `Another Haros packaged proof owns this host (pid=${process.pid}, source=${sourceCommit.slice(0, 12)})`,
     );
 
     firstLease.release();
@@ -254,7 +254,7 @@ describe("packaged desktop verification", () => {
   it("adds ephemeral loopback CDP arguments only to the journey launch", () => {
     expect(
       withPackagedJourneyDebugging({
-        command: "/payload/HarnessOS",
+        command: "/payload/Haros",
         args: ["--existing"],
         cwd: "/payload",
         appArchivePath: "/payload/resources/app.asar",

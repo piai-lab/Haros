@@ -12,8 +12,8 @@ An adoption or update is complete only when it records and verifies:
 2. redistribution rights and every required legal text;
 3. the exact source and shipped paths;
 4. deterministic artifact and patch digests where generated or patched bytes are involved;
-5. the narrow behavioral seam owned by HarnessOS;
-6. retained upstream tests plus focused HarnessOS lifecycle tests;
+5. the narrow behavioral seam owned by Haros;
+6. retained upstream tests plus focused Haros lifecycle tests;
 7. registration and state boundaries, including proof that source presence does not create ambient
    runtime activation; and
 8. a practical update, replacement, and deletion boundary.
@@ -29,4 +29,4 @@ Stop when an update would require a second product store, registry, authority, c
 or ambient lifecycle.
 
 Third-party identities belong in the adoption record, required legal files, functional selectors,
-and diagnostics only. They do not become HarnessOS product identity or normal repository narrative.
+and diagnostics only. They do not become Haros product identity or normal repository narrative.

@@ -13,7 +13,7 @@ const settledEmpty: ClassifierInput = {
   factsSettled: true,
   hasUsableExactBinding: false,
   hasRememberedIndependentEngineBinding: false,
-  hasRememberedHarnessOSBinding: false,
+  hasRememberedHarosBinding: false,
   modelServicesCapability: true,
   modelServicesTransport: "open" as const,
   passiveModelServicesState: "empty" as const,
@@ -48,8 +48,8 @@ describe("first-run readiness classifier", () => {
       expected: "recover-engine",
     },
     {
-      name: "remembered HarnessOS binding",
-      overrides: { hasRememberedHarnessOSBinding: true },
+      name: "remembered Haros binding",
+      overrides: { hasRememberedHarosBinding: true },
       expected: "recover-model-service",
     },
     {

@@ -33,10 +33,10 @@ function verifyCanonicalIdentity(): void {
     bin?: Record<string, string>;
   };
   if (rootPackage.name !== "@harnessos/monorepo" || rootPackage.version !== "0.1.0-alpha.0") {
-    throw new Error("Expected the canonical HarnessOS root identity and alpha baseline version.");
+    throw new Error("Expected the canonical Haros root identity and alpha baseline version.");
   }
   if (serverPackage.name !== "@harnessos/server") {
-    throw new Error("Expected the canonical HarnessOS server package.");
+    throw new Error("Expected the canonical Haros server package.");
   }
   if (
     JSON.stringify(serverPackage.bin ?? {}) !==
@@ -45,7 +45,7 @@ function verifyCanonicalIdentity(): void {
       "harnessos-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
     })
   ) {
-    throw new Error("Expected only canonical HarnessOS CLI entry points.");
+    throw new Error("Expected only canonical Haros CLI entry points.");
   }
   if (HARNESSOS_PRODUCTION_BUNDLE_ID !== "ai.piai.harnessos") {
     throw new Error(`Unexpected production bundle ID: ${HARNESSOS_PRODUCTION_BUNDLE_ID}.`);

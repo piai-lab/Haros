@@ -1,5 +1,5 @@
 // FILE: PluginLibrary.browser.tsx
-// Purpose: Browser proof for capability-gated HarnessOS Agent package management.
+// Purpose: Browser proof for capability-gated Haros Agent package management.
 // Layer: Browser UI regression
 
 import "../index.css";
@@ -105,7 +105,7 @@ async function renderLibrary(sourceThreadId: ThreadId | null = null) {
   return { queryClient, screen };
 }
 
-describe("PluginLibrary HarnessOS Agent packages", () => {
+describe("PluginLibrary Haros Agent packages", () => {
   beforeEach(() => {
     fixture.capability = true;
     fixture.list.mockReset().mockResolvedValue({
@@ -165,7 +165,7 @@ describe("PluginLibrary HarnessOS Agent packages", () => {
     await renderLibrary();
     await page.getByRole("button", { name: "Packages" }).click();
 
-    await expect.poll(() => document.body.textContent).toContain("HarnessOS Agent packages");
+    await expect.poll(() => document.body.textContent).toContain("Haros Agent packages");
     await expect.poll(() => document.body.textContent).toContain("@team/agent-tools");
     expect(fixture.list).toHaveBeenCalledWith();
     expect(fixture.listResources).not.toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe("PluginLibrary HarnessOS Agent packages", () => {
     expect(fixture.listResources).toHaveBeenCalledWith({ packageId });
   });
 
-  it("reloads resources only for the exact active HarnessOS task", async () => {
+  it("reloads resources only for the exact active Haros task", async () => {
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
     fixture.sourceThread = {
       id: threadId,
@@ -208,14 +208,14 @@ describe("PluginLibrary HarnessOS Agent packages", () => {
       .toContain("Resources were reloaded for the current task.");
   });
 
-  it("keeps reload unavailable when the Library has no active HarnessOS task", async () => {
+  it("keeps reload unavailable when the Library has no active Haros task", async () => {
     await renderLibrary();
     await page.getByRole("button", { name: "Packages" }).click();
 
     const reloadButton = page.getByRole("button", { name: "Reload current task" }).element();
     expect((reloadButton as HTMLButtonElement).disabled).toBe(true);
     expect(reloadButton.getAttribute("title")).toBe(
-      "Open Library from an active HarnessOS Agent task to reload its resources.",
+      "Open Library from an active Haros Agent task to reload its resources.",
     );
     expect(fixture.reload).not.toHaveBeenCalled();
   });

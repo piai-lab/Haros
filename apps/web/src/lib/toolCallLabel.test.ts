@@ -4,13 +4,13 @@ import {
   deriveInlineCommandCall,
   deriveReadableCommandDisplay,
   deriveReadableToolTitle,
-  deriveHarnessOSMcpToolTitle,
+  deriveHarosMcpToolTitle,
   extractWebFetchUrl,
   isInspectCommand,
-  isHarnessOSBrowserToolCall,
+  isHarosBrowserToolCall,
   normalizeCompactToolLabel,
   resolveCommandVisualKind,
-  sanitizeHarnessOSMcpToolPreview,
+  sanitizeHarosMcpToolPreview,
 } from "./toolCallLabel";
 
 describe("extractWebFetchUrl", () => {
@@ -61,11 +61,11 @@ describe("normalizeCompactToolLabel", () => {
   });
 });
 
-describe("deriveHarnessOSMcpToolTitle", () => {
-  it("uses stable action-first names for HarnessOS browser tools", () => {
+describe("deriveHarosMcpToolTitle", () => {
+  it("uses stable action-first names for Haros browser tools", () => {
     for (const status of ["running", "completed", "failed"] as const) {
       expect(
-        deriveHarnessOSMcpToolTitle({
+        deriveHarosMcpToolTitle({
           toolName: "mcp__harnessos__browser_open",
           status,
         }),
@@ -73,236 +73,216 @@ describe("deriveHarnessOSMcpToolTitle", () => {
     }
 
     expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS: Browser Snapshot",
+      deriveHarosMcpToolTitle({
+        title: "Haros: Browser Snapshot",
         status: "completed",
       }),
     ).toBe("Snapshot browser page");
   });
 
-  it("has intentional running and completed copy for every HarnessOS gateway action", () => {
+  it("has intentional running and completed copy for every Haros gateway action", () => {
     const cases = [
-      ["harnessos_context", "HarnessOS is checking its context", "HarnessOS checked its context"],
+      ["harnessos_context", "Haros is checking its context", "Haros checked its context"],
       [
         "harnessos_capabilities",
-        "HarnessOS is checking available agents",
-        "HarnessOS checked available agents",
+        "Haros is checking available agents",
+        "Haros checked available agents",
       ],
-      ["harnessos_list_projects", "HarnessOS is listing projects", "HarnessOS listed projects"],
-      ["harnessos_list_threads", "HarnessOS is listing threads", "HarnessOS listed threads"],
-      ["harnessos_read_thread", "HarnessOS is reading a thread", "HarnessOS read a thread"],
+      ["harnessos_list_projects", "Haros is listing projects", "Haros listed projects"],
+      ["harnessos_list_threads", "Haros is listing threads", "Haros listed threads"],
+      ["harnessos_read_thread", "Haros is reading a thread", "Haros read a thread"],
       [
         "harnessos_read_thread_activity",
-        "HarnessOS is reading thread activity",
-        "HarnessOS read thread activity",
+        "Haros is reading thread activity",
+        "Haros read thread activity",
       ],
       [
         "harnessos_read_thread_events",
-        "HarnessOS is reading thread events",
-        "HarnessOS read thread events",
+        "Haros is reading thread events",
+        "Haros read thread events",
       ],
       [
         "harnessos_read_thread_runtime_events",
-        "HarnessOS is reading thread runtime events",
-        "HarnessOS read thread runtime events",
+        "Haros is reading thread runtime events",
+        "Haros read thread runtime events",
       ],
-      [
-        "harnessos_diagnose_thread",
-        "HarnessOS is diagnosing a thread",
-        "HarnessOS diagnosed a thread",
-      ],
-      ["harnessos_create_thread", "HarnessOS is creating a thread", "HarnessOS created a thread"],
-      ["harnessos_create_threads", "HarnessOS is creating threads", "HarnessOS created threads"],
+      ["harnessos_diagnose_thread", "Haros is diagnosing a thread", "Haros diagnosed a thread"],
+      ["harnessos_create_thread", "Haros is creating a thread", "Haros created a thread"],
+      ["harnessos_create_threads", "Haros is creating threads", "Haros created threads"],
       [
         "harnessos_wait_for_threads",
-        "HarnessOS is waiting for threads",
-        "HarnessOS finished waiting for threads",
+        "Haros is waiting for threads",
+        "Haros finished waiting for threads",
       ],
-      ["harnessos_send_message", "HarnessOS is sending a message", "HarnessOS sent a message"],
+      ["harnessos_send_message", "Haros is sending a message", "Haros sent a message"],
       [
         "harnessos_interrupt_thread",
-        "HarnessOS is interrupting a thread",
-        "HarnessOS interrupted a thread",
+        "Haros is interrupting a thread",
+        "Haros interrupted a thread",
       ],
-      [
-        "harnessos_set_thread_title",
-        "HarnessOS is renaming a thread",
-        "HarnessOS renamed a thread",
-      ],
-      [
-        "harnessos_set_thread_archived",
-        "HarnessOS is updating a thread",
-        "HarnessOS updated a thread",
-      ],
+      ["harnessos_set_thread_title", "Haros is renaming a thread", "Haros renamed a thread"],
+      ["harnessos_set_thread_archived", "Haros is updating a thread", "Haros updated a thread"],
       [
         "harnessos_create_automation",
-        "HarnessOS is creating an automation",
-        "HarnessOS created an automation",
+        "Haros is creating an automation",
+        "Haros created an automation",
       ],
-      [
-        "harnessos_list_automations",
-        "HarnessOS is listing automations",
-        "HarnessOS listed automations",
-      ],
+      ["harnessos_list_automations", "Haros is listing automations", "Haros listed automations"],
       [
         "harnessos_cancel_automation",
-        "HarnessOS is stopping an automation",
-        "HarnessOS stopped an automation",
+        "Haros is stopping an automation",
+        "Haros stopped an automation",
       ],
-      [
-        "harnessos_overview",
-        "HarnessOS is gathering an overview",
-        "HarnessOS gathered an overview",
-      ],
+      ["harnessos_overview", "Haros is gathering an overview", "Haros gathered an overview"],
       [
         "harnessos_list_allowed_projects",
-        "HarnessOS is listing allowed projects",
-        "HarnessOS listed allowed projects",
+        "Haros is listing allowed projects",
+        "Haros listed allowed projects",
       ],
-      ["harnessos_create_task", "HarnessOS is creating a task", "HarnessOS created a task"],
+      ["harnessos_create_task", "Haros is creating a task", "Haros created a task"],
       [
         "harnessos_wait_for_task",
-        "HarnessOS is waiting for a task",
-        "HarnessOS finished waiting for a task",
+        "Haros is waiting for a task",
+        "Haros finished waiting for a task",
       ],
-      ["harnessos_read_task", "HarnessOS is reading a task", "HarnessOS read a task"],
+      ["harnessos_read_task", "Haros is reading a task", "Haros read a task"],
     ] as const;
 
     for (const [toolName, running, completed] of cases) {
-      expect(deriveHarnessOSMcpToolTitle({ toolName, status: "running" })).toBe(running);
-      expect(deriveHarnessOSMcpToolTitle({ toolName, status: "completed" })).toBe(completed);
+      expect(deriveHarosMcpToolTitle({ toolName, status: "running" })).toBe(running);
+      expect(deriveHarosMcpToolTitle({ toolName, status: "completed" })).toBe(completed);
     }
 
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "harnessos_create_threads",
         status: "failed",
       }),
-    ).toBe("HarnessOS couldn't create threads");
+    ).toBe("Haros couldn't create threads");
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "harnessos_create_thread",
         status: "cancelled",
       }),
-    ).toBe("HarnessOS stopped creating a thread");
+    ).toBe("Haros stopped creating a thread");
   });
 
   it("turns engine-specific create-thread identifiers into activity sentences", () => {
     expect(
-      deriveHarnessOSMcpToolTitle({
-        toolName: "HarnessOS__harnessos_create_thread",
+      deriveHarosMcpToolTitle({
+        toolName: "Haros__harnessos_create_thread",
         status: "running",
       }),
-    ).toBe("HarnessOS is creating a thread");
+    ).toBe("Haros is creating a thread");
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "mcp__harnessos__harnessos_create_thread",
         status: "completed",
       }),
-    ).toBe("HarnessOS created a thread");
+    ).toBe("Haros created a thread");
   });
 
-  it("recognizes bare and already-humanized HarnessOS tool names", () => {
+  it("recognizes bare and already-humanized Haros tool names", () => {
+    expect(deriveHarosMcpToolTitle({ toolName: "harnessos_send_message", status: "running" })).toBe(
+      "Haros is sending a message",
+    );
     expect(
-      deriveHarnessOSMcpToolTitle({ toolName: "harnessos_send_message", status: "running" }),
-    ).toBe("HarnessOS is sending a message");
-    expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS: HarnessOS List Threads",
+      deriveHarosMcpToolTitle({
+        title: "Haros: Haros List Threads",
         status: "completed",
       }),
-    ).toBe("HarnessOS listed threads");
+    ).toBe("Haros listed threads");
   });
 
   it("ignores tools from other MCP servers", () => {
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "mcp__codex_apps__github_fetch_pr",
         status: "running",
       }),
     ).toBeNull();
   });
 
-  it("keeps future HarnessOS actions branded without exposing raw identifiers", () => {
+  it("keeps future Haros actions branded without exposing raw identifiers", () => {
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "mcp__harnessos__harnessos_delete_project",
         status: "running",
       }),
-    ).toBe("HarnessOS is handling delete project");
+    ).toBe("Haros is handling delete project");
     expect(
-      deriveHarnessOSMcpToolTitle({
-        toolName: "HarnessOS__harnessos_delete_project",
+      deriveHarosMcpToolTitle({
+        toolName: "Haros__harnessos_delete_project",
         status: "completed",
       }),
-    ).toBe("HarnessOS handled delete project");
+    ).toBe("Haros handled delete project");
     expect(
-      deriveHarnessOSMcpToolTitle({
+      deriveHarosMcpToolTitle({
         toolName: "harnessos_is_handling_delete_project",
         status: "completed",
       }),
-    ).toBe("HarnessOS handled delete project");
+    ).toBe("Haros handled delete project");
   });
 
   it("does not reinterpret free text beginning with fallback status copy", () => {
     expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS is handling delete project after recovery",
+      deriveHarosMcpToolTitle({
+        title: "Haros is handling delete project after recovery",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS handled delete project after recovery",
+      deriveHarosMcpToolTitle({
+        title: "Haros handled delete project after recovery",
         status: "running",
       }),
     ).toBeNull();
     expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS couldn't handle delete project after recovery",
+      deriveHarosMcpToolTitle({
+        title: "Haros couldn't handle delete project after recovery",
         status: "failed",
       }),
     ).toBeNull();
   });
 
-  it("leaves free-text activity summaries starting with HarnessOS untouched", () => {
+  it("leaves free-text activity summaries starting with Haros untouched", () => {
     expect(
-      deriveHarnessOSMcpToolTitle({
-        title: "HarnessOS recovered a stale running state",
+      deriveHarosMcpToolTitle({
+        title: "Haros recovered a stale running state",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      deriveHarnessOSMcpToolTitle({
-        fallbackLabel: "HarnessOS restarted the engine session",
+      deriveHarosMcpToolTitle({
+        fallbackLabel: "Haros restarted the engine session",
         status: "running",
       }),
     ).toBeNull();
   });
 
-  it("removes transport identifiers without hiding meaningful HarnessOS details", () => {
+  it("removes transport identifiers without hiding meaningful Haros details", () => {
     expect(
-      sanitizeHarnessOSMcpToolPreview({
-        preview: "HarnessOS__harnessos_create_threads",
-        heading: "HarnessOS created threads",
+      sanitizeHarosMcpToolPreview({
+        preview: "Haros__harnessos_create_threads",
+        heading: "Haros created threads",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      sanitizeHarnessOSMcpToolPreview({
+      sanitizeHarosMcpToolPreview({
         preview: 'Unexpected key "reasoningEffort" for Claude Agent',
-        heading: "HarnessOS couldn't create threads",
+        heading: "Haros couldn't create threads",
         status: "failed",
       }),
     ).toBe('Unexpected key "reasoningEffort" for Claude Agent');
   });
 });
 
-describe("isHarnessOSBrowserToolCall", () => {
+describe("isHarosBrowserToolCall", () => {
   it("recognizes canonical presentation titles without a tool identifier", () => {
-    expect(isHarnessOSBrowserToolCall({ title: "Open browser tab" })).toBe(true);
-    expect(isHarnessOSBrowserToolCall({ fallbackLabel: "Snapshot browser page" })).toBe(true);
-    expect(isHarnessOSBrowserToolCall({ title: "HarnessOS listed threads" })).toBe(false);
+    expect(isHarosBrowserToolCall({ title: "Open browser tab" })).toBe(true);
+    expect(isHarosBrowserToolCall({ fallbackLabel: "Snapshot browser page" })).toBe(true);
+    expect(isHarosBrowserToolCall({ title: "Haros listed threads" })).toBe(false);
   });
 });
 

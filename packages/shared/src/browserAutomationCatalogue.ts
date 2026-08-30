@@ -108,7 +108,7 @@ export const DESTRUCTIVE_LOCAL = {
 } as const;
 
 const BROWSER_COMMON_AGENT_GUIDANCE =
-  "Controls only this thread's shared HarnessOS browser runtime (same DOM, cookies and session), never chat or desktop. It may continue in the background when another chat is active; no approval prompt is required.";
+  "Controls only this thread's shared Haros browser runtime (same DOM, cookies and session), never chat or desktop. It may continue in the background when another chat is active; no approval prompt is required.";
 const BROWSER_TAB_SCOPED_AGENT_GUIDANCE =
   " Omit tabId to use this engine session's assigned tab; only pass a tabId returned by browser_tabs/open in this thread scope.";
 const BROWSER_SNAPSHOT_TARGET_GUIDANCE =

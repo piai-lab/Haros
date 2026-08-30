@@ -170,7 +170,7 @@ export function buildAppSnapHelper({
           "swiftc",
           ...optimizationArguments,
           "-module-name",
-          "HarnessOSAppSnapHelper",
+          "HarosAppSnapHelper",
           "-target",
           target.target,
           ...frameworkArguments,

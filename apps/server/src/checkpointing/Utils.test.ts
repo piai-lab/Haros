@@ -14,7 +14,7 @@ import {
 describe("managed checkpoint refs", () => {
   const threadId = ThreadId.makeUnsafe("thread-1");
 
-  it("creates canonical HarnessOS refs", () => {
+  it("creates canonical Haros refs", () => {
     expect(checkpointRefForThreadTurn(threadId, 4)).toMatch(/^refs\/harnessos\/checkpoints\//);
   });
 

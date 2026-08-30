@@ -356,7 +356,7 @@ describe("BuiltInToolsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "HarnessOS could not confirm whether your choice was saved. The current choice is kept until the server status refreshes.",
+          "Haros could not confirm whether your choice was saved. The current choice is kept until the server status refreshes.",
         ),
       )
       .toBeVisible();

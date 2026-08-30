@@ -12,7 +12,7 @@ import {
   oaModelServicesQueryKeys,
 } from "./oaModelServicesReactQuery";
 
-describe("HarnessOS model services React Query options", () => {
+describe("Haros model services React Query options", () => {
   it("uses a path-free stable namespace and honors the inactive list gate", () => {
     const options = oaModelServicesListQueryOptions({ enabled: false });
 

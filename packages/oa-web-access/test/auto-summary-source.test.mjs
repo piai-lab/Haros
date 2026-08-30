@@ -33,6 +33,6 @@ test("auto-summary skips curator and reuses summary model fallback plumbing", ()
 
 test("README keeps workflow details behind the package boundary", () => {
 	assert.match(readmeSrc, /credential-blind settings contract/);
-	assert.match(readmeSrc, /HarnessOS owns the Timeline presentation and Session lifecycle/);
+	assert.match(readmeSrc, /Haros owns the Timeline presentation and Session lifecycle/);
 	assert.doesNotMatch(readmeSrc, /JINA_API_KEY|PI_CODING_AGENT_DIR|summaryGenerationDeadlineMs/);
 });

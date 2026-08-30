@@ -25,7 +25,7 @@ function toPiGatewayToolResult(result: unknown): AgentToolResult<unknown> {
           )
           .join("\n")
       : "";
-    throw new Error(message || "HarnessOS gateway tool failed.");
+    throw new Error(message || "Haros gateway tool failed.");
   }
   const content =
     isRecord(result) && Array.isArray(result.content)
@@ -121,7 +121,7 @@ export async function buildPiHostGatewayCustomTools(input: {
     ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
   });
   if (tools.length === 0) {
-    throw new Error("HarnessOS MCP returned an empty tool catalog.");
+    throw new Error("Haros MCP returned an empty tool catalog.");
   }
   input.onCatalog?.(tools);
   return buildPiHostGatewayCustomToolsFromDescriptors({ ...input, tools });

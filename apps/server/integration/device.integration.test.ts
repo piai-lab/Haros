@@ -1,5 +1,5 @@
 /**
- * Device pane end-to-end verification against a live HarnessOS server.
+ * Device pane end-to-end verification against a live Haros server.
  *
  * Gated on `DEVICE_E2E=1` because it boots a real iOS simulator, which needs
  * macOS with Xcode and takes tens of seconds. CI never runs it.
@@ -139,7 +139,7 @@ function firstTappableRow(node: unknown): { readonly x: number; readonly y: numb
 const SETTINGS_BUNDLE_ID = "com.apple.Preferences";
 
 /**
- * Reboot the simulator behind HarnessOS's back, the way `simctl` from a terminal,
+ * Reboot the simulator behind Haros's back, the way `simctl` from a terminal,
  * Simulator.app, or an agent's own shell does. Nothing tells the server, so the
  * long-running helper is left holding an attachment bound to the dead boot.
  */
@@ -506,7 +506,7 @@ describeE2e("device pane end-to-end", () => {
     await rpc.call(DEVICE_WS_METHODS.detach, { threadId: THREAD_ID });
   }, 300_000);
 
-  it("keeps input working after the simulator is rebooted outside HarnessOS", async () => {
+  it("keeps input working after the simulator is rebooted outside Haros", async () => {
     if (!target) throw new Error("no target device");
     const udid = target.udid;
 

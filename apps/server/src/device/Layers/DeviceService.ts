@@ -59,13 +59,13 @@ export function makeDeviceServiceLayer(options: DeviceServiceLiveOptions = {}) {
           if (reclaimed.length > 0) {
             console.info(
               `[device] shut down ${reclaimed.length} simulator(s) left booted by a previous ` +
-                `HarnessOS run: ${reclaimed.join(", ")}`,
+                `Haros run: ${reclaimed.join(", ")}`,
             );
           }
         });
       }
 
-      // App quit shuts down every simulator HarnessOS booted and leaves the
+      // App quit shuts down every simulator Haros booted and leaves the
       // user's own devices running.
       yield* Effect.addFinalizer(() => Effect.promise(() => manager.dispose()));
       return { supported: platform === "darwin", manager } satisfies DeviceServiceShape;

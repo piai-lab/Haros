@@ -324,14 +324,14 @@ describe("OAAgentPromptFilesLive", () => {
     fs.symlinkSync(outside, path.join(test.agentDir, "AGENTS.md"));
 
     await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
-      "HarnessOS Agent prompt file operation failed",
+      "Haros Agent prompt file operation failed",
     );
     expect(test.loadProjectContextFiles).not.toHaveBeenCalled();
 
     fs.unlinkSync(path.join(test.agentDir, "AGENTS.md"));
     fs.linkSync(outside, path.join(test.agentDir, "AGENTS.md"));
     await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
-      "HarnessOS Agent prompt file operation failed",
+      "Haros Agent prompt file operation failed",
     );
     expect(test.loadProjectContextFiles).not.toHaveBeenCalled();
   });
@@ -418,7 +418,7 @@ describe("OAAgentPromptFilesLive", () => {
     const directory = harness();
     fs.mkdirSync(path.join(directory.agentDir, "AGENTS.md"), { recursive: true });
     await expect(directory.run((service) => service.getSnapshot())).rejects.toThrow(
-      "HarnessOS Agent prompt file operation failed",
+      "Haros Agent prompt file operation failed",
     );
 
     const linkedRoot = harness();
@@ -426,7 +426,7 @@ describe("OAAgentPromptFilesLive", () => {
     fs.mkdirSync(outside);
     fs.symlinkSync(outside, linkedRoot.agentDir);
     await expect(linkedRoot.run((service) => service.getSnapshot())).rejects.toThrow(
-      "HarnessOS Agent prompt file operation failed",
+      "Haros Agent prompt file operation failed",
     );
   });
 
@@ -470,7 +470,7 @@ describe("OAAgentPromptFilesLive", () => {
     write(test.agentDir, "AGENTS.md", "stable");
 
     await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
-      "HarnessOS Agent prompt file operation failed",
+      "Haros Agent prompt file operation failed",
     );
     expect(fs.readFileSync(path.join(test.agentDir, "AGENTS.md"), "utf8")).toBe("stableraced");
   });

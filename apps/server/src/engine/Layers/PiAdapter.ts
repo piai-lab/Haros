@@ -391,7 +391,7 @@ export function makePiBashProcessSupervisor(
 }
 
 // Loads the Pi SDK only when the Pi engine is actually used. The SDK brings in
-// a native clipboard module, so importing it during HarnessOS startup can bloat the
+// a native clipboard module, so importing it during Haros startup can bloat the
 // desktop backend before any Pi session exists.
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
@@ -591,7 +591,7 @@ function hasModelConfigProviderIdentity(
 
 /**
  * Pi extensions own their model-provider catalogs, so normalize their display metadata
- * before it crosses HarnessOS's trimmed-string RPC contract. A single malformed
+ * before it crosses Haros's trimmed-string RPC contract. A single malformed
  * extension model must not make the complete Pi catalog unavailable.
  */
 export function toPiProviderModelDescriptor(
@@ -1005,7 +1005,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       tracked: PiTrackedToolCall,
     ) => {
       const message =
-        "HarnessOS Browser could not open this temporary Engine page. The Engine tool remains active; check Browser availability, then rerun the tool.";
+        "Haros Browser could not open this temporary Engine page. The Engine tool remains active; check Browser availability, then rerun the tool.";
       offerRuntimeEvent({
         ...makeEventBase(context),
         itemId: tracked.itemId,
@@ -1874,7 +1874,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         type: "runtime.warning",
         payload: {
           message:
-            "Task progress is unavailable for this HarnessOS session. Other capabilities remain available.",
+            "Task progress is unavailable for this Haros session. Other capabilities remain available.",
           detail: {
             source: "pi-resource-loader",
             capability: "turn-task-projection",
@@ -2160,7 +2160,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           return yield* new EngineAdapterValidationError({
             engine,
             operation: "session/start",
-            issue: "HarnessOS work surface is missing from Product session admission.",
+            issue: "Haros work surface is missing from Product session admission.",
           });
         }
         if (workSurface === "agent" && !projectContextRoot) {
@@ -2205,7 +2205,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                     new EngineAdapterRequestError({
                       engine,
                       method: "session/start",
-                      detail: "Failed to load HarnessOS settings.",
+                      detail: "Failed to load Haros settings.",
                       cause,
                     }),
                 ),
@@ -2221,7 +2221,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           return yield* new EngineAdapterValidationError({
             engine,
             operation: "session/start",
-            issue: "HarnessOS default instructions are unavailable.",
+            issue: "Haros default instructions are unavailable.",
           });
         }
         const processSupervisor = makePiBashProcessSupervisor({
@@ -2291,13 +2291,10 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                     hostGatewaySessionLease?.release();
                   }).pipe(
                     Effect.andThen(
-                      Effect.logWarning(
-                        "Pi could not install thread-scoped HarnessOS gateway tools",
-                        {
-                          engine,
-                          reason: "gateway-discovery-failed",
-                        },
-                      ),
+                      Effect.logWarning("Pi could not install thread-scoped Haros gateway tools", {
+                        engine,
+                        reason: "gateway-discovery-failed",
+                      }),
                     ),
                     Effect.as([] as ReadonlyArray<HostGatewayMcpToolDescriptor>),
                   ),
@@ -2553,7 +2550,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             type: "runtime.warning",
             payload: {
               message:
-                "Some HarnessOS Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
+                "Some Haros Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
               detail: {
                 source: "pi-resource-loader",
                 capability: "host-gateway-host-projection",
@@ -2578,7 +2575,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             type: "runtime.warning",
             payload: {
               message:
-                "HarnessOS Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
+                "Haros Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
               detail: {
                 source: "pi-resource-loader",
                 capability: "harnessos-web-access",
@@ -2607,7 +2604,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             ...makeEventBase(context, { includeTurnId: false }),
             type: "runtime.warning",
             payload: {
-              message: `${displayName} extensions are loaded with HarnessOS's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.`,
+              message: `${displayName} extensions are loaded with Haros's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.`,
               detail: {
                 extensionCount: loadedExtensions.length,
                 extensions: extensionNames,
@@ -2729,7 +2726,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   });
                   const configurationError = context.runtime.services.modelRuntime.getError();
                   if (configurationError !== undefined) {
-                    throw new Error("HarnessOS model-service state could not be reconciled.");
+                    throw new Error("Haros model-service state could not be reconciled.");
                   }
                   const piSdk = await family.loadModule();
                   context.modelRegistry = modelRegistryFacade(
@@ -2742,7 +2739,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   new EngineAdapterRequestError({
                     engine,
                     method: "model-services/reconcile",
-                    detail: "HarnessOS model-service changes could not be applied to this session.",
+                    detail: "Haros model-service changes could not be applied to this session.",
                     cause,
                   }),
               });
@@ -2765,7 +2762,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   new EngineAdapterRequestError({
                     engine,
                     method: "host-catalog/reconcile",
-                    detail: "HarnessOS Host tool changes could not be applied to this session.",
+                    detail: "Haros Host tool changes could not be applied to this session.",
                     cause,
                   }),
               });
@@ -2828,7 +2825,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 engine,
                 operation: "sendTurn",
                 issue:
-                  "This synthetic HarnessOS turn requires Host capabilities that are unavailable in the current Agent session.",
+                  "This synthetic Haros turn requires Host capabilities that are unavailable in the current Agent session.",
               });
             }
             yield* Effect.tryPromise({
@@ -2851,7 +2848,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   engine,
                   operation: "sendTurn",
                   issue:
-                    "This synthetic HarnessOS turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
+                    "This synthetic Haros turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
                   cause,
                 }),
             });
@@ -3077,7 +3074,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         new EngineAdapterRequestError({
           engine: engine,
           method,
-          detail: `${displayName} does not expose HarnessOS approval/user-input requests for thread ${threadId}.`,
+          detail: `${displayName} does not expose Haros approval/user-input requests for thread ${threadId}.`,
         }),
       );
 
@@ -3190,7 +3187,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                       new EngineAdapterRequestError({
                         engine,
                         method: "session/reload",
-                        detail: "Failed to load HarnessOS settings.",
+                        detail: "Failed to load Haros settings.",
                         cause,
                       }),
                   ),
@@ -3207,7 +3204,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             return yield* new EngineAdapterValidationError({
               engine,
               operation: "session/reload",
-              issue: "HarnessOS default instructions are unavailable.",
+              issue: "Haros default instructions are unavailable.",
             });
           }
           yield* Effect.tryPromise({

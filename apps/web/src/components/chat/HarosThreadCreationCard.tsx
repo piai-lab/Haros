@@ -1,26 +1,26 @@
-// FILE: HarnessOSThreadCreationCard.tsx
-// Purpose: End-of-turn recap for threads created through the HarnessOS MCP harness.
+// FILE: HarosThreadCreationCard.tsx
+// Purpose: End-of-turn recap for threads created through the Haros MCP harness.
 // Layer: Chat transcript UI
 
 import { formatModelDisplayName } from "@harnessos/shared/model";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { memo } from "react";
 
-import type { WorkLogHarnessOSThreadCreation } from "../../session-logic";
+import type { WorkLogHarosThreadCreation } from "../../session-logic";
 import { EngineIcon } from "../EngineIcon";
-import { HarnessOSLogo } from "../HarnessOSLogo";
+import { HarosLogo } from "../HarosLogo";
 import { Button } from "../ui/button";
 import { useI18n } from "../../i18n";
 
-export const HarnessOSThreadCreationCard = memo(function HarnessOSThreadCreationCard({
+export const HarosThreadCreationCard = memo(function HarosThreadCreationCard({
   creation,
   onOpenThread,
 }: {
-  readonly creation: WorkLogHarnessOSThreadCreation;
+  readonly creation: WorkLogHarosThreadCreation;
   readonly onOpenThread?: (threadId: string) => void;
 }) {
   const { t } = useI18n();
-  const threadMeta = (thread: WorkLogHarnessOSThreadCreation["threads"][number]): string => {
+  const threadMeta = (thread: WorkLogHarosThreadCreation["threads"][number]): string => {
     const model = formatModelDisplayName(thread.model) ?? thread.model;
     const environment = t(
       thread.environment === "worktree"
@@ -47,7 +47,7 @@ export const HarnessOSThreadCreationCard = memo(function HarnessOSThreadCreation
     >
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
-          <HarnessOSLogo size={22} aria-label="HarnessOS" />
+          <HarosLogo size={22} aria-label="Haros" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] font-medium text-foreground/95">

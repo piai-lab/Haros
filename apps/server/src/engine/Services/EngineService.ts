@@ -147,7 +147,7 @@ export interface EngineServiceShape {
    */
   readonly stopSession: (input: EngineStopSessionInput) => Effect.Effect<void, EngineServiceError>;
 
-  /** Reload resources only on the exact live HarnessOS Agent session. */
+  /** Reload resources only on the exact live Haros Agent session. */
   readonly reloadSessionResources: (
     input: OAEcosystemReloadInput,
   ) => Effect.Effect<OAEcosystemReloadResult, EngineServiceError>;

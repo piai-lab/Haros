@@ -93,7 +93,7 @@ const encodePersistableEvent = (event: EngineRuntimeEvent) =>
 
     // Preserve the canonical event instead of quarantining it solely because a
     // engine copied a huge tool result into payload detail/data. Raw keeps a
-    // compact HarnessOS diagnostic marker because retaining its duplicate bulk
+    // compact Haros diagnostic marker because retaining its duplicate bulk
     // would immediately consume the journal budget again.
     const compactedEvent = {
       ...event,

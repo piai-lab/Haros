@@ -1,5 +1,5 @@
 // FILE: ComposingOrb.tsx
-// Purpose: Runs HarnessOS's fixed 20px Composing/Ribbon canvas with product lifecycle guards.
+// Purpose: Runs Haros's fixed 20px Composing/Ribbon canvas with product lifecycle guards.
 // Layer: Web UI presentation primitive
 // Depends on: local copied-adapted painter, shared reduced-motion owner.
 //

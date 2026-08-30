@@ -967,7 +967,7 @@ describe("wsNativeApi", () => {
     });
   });
 
-  it("forwards credential-blind HarnessOS model-service reads", async () => {
+  it("forwards credential-blind Haros model-service reads", async () => {
     requestMock
       .mockResolvedValueOnce({ state: "empty", services: [], errorCode: null })
       .mockResolvedValueOnce({ state: "empty", service: null, errorCode: null });
@@ -1030,7 +1030,7 @@ describe("wsNativeApi", () => {
     );
   });
 
-  it("forwards typed HarnessOS Agent prompt file intents without path authority", async () => {
+  it("forwards typed Haros Agent prompt file intents without path authority", async () => {
     requestMock.mockResolvedValue({});
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
@@ -1057,7 +1057,7 @@ describe("wsNativeApi", () => {
     );
   });
 
-  it("forwards typed HarnessOS model-service credential operations", async () => {
+  it("forwards typed Haros model-service credential operations", async () => {
     const requestId = "00000000-0000-4000-8000-000000000041";
     const promptId = "00000000-0000-4000-8000-000000000042";
     requestMock

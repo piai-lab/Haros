@@ -3,20 +3,20 @@ import { defineMessageSlice } from "../messageCatalog";
 const EN_MESSAGES = {
   "settings.models": "Model services",
   "settings.modelsDescription":
-    "Configure the model services, credentials, and available models HarnessOS uses.",
+    "Configure the model services, credentials, and available models Haros uses.",
   "settings.configuredModelServices": "Connected",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
   "settings.modelServicesCapabilityChecking": "Checking Server support…",
   "settings.modelServicesServerUpdateRequired":
-    "This Server version doesn’t support Model services. Update HarnessOS Server to continue.",
+    "This Server version doesn’t support Model services. Update Haros Server to continue.",
   "settings.modelServicesConnectionUnavailable":
-    "HarnessOS couldn’t reach Model services. Check the Server connection and try again.",
+    "Haros couldn’t reach Model services. Check the Server connection and try again.",
   "settings.modelServicesUnavailable":
-    "HarnessOS couldn’t read model services. Check the local configuration and try again.",
+    "Haros couldn’t read model services. Check the local configuration and try again.",
   "settings.noModelServices": "No model services are available",
   "settings.noModelServicesDescription":
-    "Add credentials for a supported service to make models available to HarnessOS.",
+    "Add credentials for a supported service to make models available to Haros.",
   "settings.addModelService": "Add model service",
   "settings.customApiNotFoundPrompt": "Can’t find your service?",
   "settings.connectByApiAddress": "Connect with an API endpoint →",
@@ -68,7 +68,7 @@ const EN_MESSAGES = {
   "settings.customApiHeaderError.variable": "Enter a valid environment variable name.",
   "settings.customApiHeaderError.duplicate": "Each header name can appear only once here.",
   "settings.customApiHeadersPrivacy":
-    "HarnessOS shows only each header name and source type. Existing values and references stay hidden. New values can only be read from an environment variable.",
+    "Haros shows only each header name and source type. Existing values and references stay hidden. New values can only be read from an environment variable.",
   "settings.customApiHeaderCommandDescription.engine":
     "This connection has an imported command-backed header. Getting models or testing asks before running its hidden local command. Future model requests may run it without another Settings confirmation.",
   "settings.customApiHeaderCommandDescription.model":
@@ -97,7 +97,7 @@ const EN_MESSAGES = {
   "settings.customApiCredentialMethod.command": "Run a local command",
   "settings.customApiCredentialAdvanced": "Advanced credential source",
   "settings.customApiCredentialAdvancedDescription":
-    "Use an environment variable or local command only when you manage credentials outside HarnessOS.",
+    "Use an environment variable or local command only when you manage credentials outside Haros.",
   "settings.customApiCredentialPreserveDescription":
     "Keep the current hidden credential source: {source}. Nothing is revealed or executed while this page is open.",
   "settings.customApiCredentialSource.stored_key": "saved API key",
@@ -108,7 +108,7 @@ const EN_MESSAGES = {
   "settings.customApiEnvironmentVariable": "Environment variable name",
   "settings.customApiEnvironmentVariablePlaceholder": "MODEL_SERVICE_API_KEY",
   "settings.customApiEnvironmentDescription":
-    "HarnessOS stores only the variable name. The value is read when you test, get models, or send a request.",
+    "Haros stores only the variable name. The value is read when you test, get models, or send a request.",
   "settings.customApiCredentialCommand": "Credential command",
   "settings.customApiCredentialCommandPlaceholder":
     "security find-generic-password -w -s my-service",
@@ -190,7 +190,7 @@ const EN_MESSAGES = {
   "settings.customApiModelCostTier.cacheWrite": "Cache-write rate",
   "settings.customApiThinkingMap": "Thinking-level mapping",
   "settings.customApiThinkingMapDescription":
-    "Map HarnessOS thinking levels to the exact values expected by this model. Leave blank to use the service behavior.",
+    "Map Haros thinking levels to the exact values expected by this model. Leave blank to use the service behavior.",
   "settings.customApiThinkingMap.default": "Default",
   "settings.customApiThinkingMap.disabled": "Unavailable",
   "settings.customApiThinkingMap.mapped": "Map value",
@@ -284,7 +284,7 @@ const EN_MESSAGES = {
     "This connection is still used by a live model session. Stop that session, then try again.",
   "settings.connectableModelServices": "Connect a model service",
   "settings.chooseModelServiceDescription":
-    "Choose a service to connect. HarnessOS will discover its available models after authentication.",
+    "Choose a service to connect. Haros will discover its available models after authentication.",
   "settings.searchModelServices": "Search model services…",
   "settings.recommendedModelServices": "Recommended",
   "settings.otherModelServices": "Other services",
@@ -327,7 +327,7 @@ const EN_MESSAGES = {
   "settings.modelServiceDetails": "Service details",
   "settings.modelServiceDetailsNamed": "Service details · {name}",
   "settings.modelServiceDetailsLoading": "Loading service details…",
-  "settings.modelServiceDetailsUnavailable": "HarnessOS couldn’t read this service.",
+  "settings.modelServiceDetailsUnavailable": "Haros couldn’t read this service.",
   "settings.modelServiceNotFound": "This model service is no longer available.",
   "settings.modelServiceAuthentication": "Authentication",
   "settings.modelServiceCredentialSource": "Credential source",
@@ -412,9 +412,9 @@ const EN_MESSAGES = {
   "settings.modelServiceSignedOutSyncFailed":
     "Signed out, but the latest model state could not be loaded.",
   "settings.modelServiceSignOutFailed": "The model service could not be signed out.",
-  "settings.modelServiceOriginBuiltIn": "Built into HarnessOS",
+  "settings.modelServiceOriginBuiltIn": "Built into Haros",
   "settings.modelServiceOriginModelsJson": "Connected with an API endpoint",
-  "settings.modelServiceOriginExtension": "Provided by an HarnessOS extension",
+  "settings.modelServiceOriginExtension": "Provided by an Haros extension",
   "settings.modelServiceOriginUnknown": "Source unavailable",
   "settings.generationDefaults": "Generation defaults",
   "settings.gitWritingModel": "Git writing model",
@@ -435,18 +435,18 @@ const EN_MESSAGES = {
 
 const ZH_CN_MESSAGES = {
   "settings.models": "模型服务",
-  "settings.modelsDescription": "配置 HarnessOS 使用的模型服务、凭据与可用模型。",
+  "settings.modelsDescription": "配置 Haros 使用的模型服务、凭据与可用模型。",
   "settings.configuredModelServices": "已连接",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",
   "settings.modelServicesCapabilityChecking": "正在检查 Server 支持情况…",
   "settings.modelServicesServerUpdateRequired":
-    "当前 Server 版本不支持模型服务，请更新 HarnessOS Server 后继续。",
+    "当前 Server 版本不支持模型服务，请更新 Haros Server 后继续。",
   "settings.modelServicesConnectionUnavailable":
-    "HarnessOS 无法连接模型服务，请检查 Server 连接后重试。",
-  "settings.modelServicesUnavailable": "HarnessOS 无法读取模型服务，请检查本地配置后重试。",
+    "Haros 无法连接模型服务，请检查 Server 连接后重试。",
+  "settings.modelServicesUnavailable": "Haros 无法读取模型服务，请检查本地配置后重试。",
   "settings.noModelServices": "还没有可用的模型服务",
-  "settings.noModelServicesDescription": "为受支持的服务添加凭据，即可让 HarnessOS 使用模型。",
+  "settings.noModelServicesDescription": "为受支持的服务添加凭据，即可让 Haros 使用模型。",
   "settings.addModelService": "添加模型服务",
   "settings.customApiNotFoundPrompt": "没有找到你的服务？",
   "settings.connectByApiAddress": "通过 API 地址连接 →",
@@ -496,7 +496,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiHeaderError.variable": "请输入有效的环境变量名称。",
   "settings.customApiHeaderError.duplicate": "同一个请求头名称在这里不能重复。",
   "settings.customApiHeadersPrivacy":
-    "HarnessOS 只显示请求头名称和来源类型；现有值与引用保持隐藏。新值只能从环境变量读取。",
+    "Haros 只显示请求头名称和来源类型；现有值与引用保持隐藏。新值只能从环境变量读取。",
   "settings.customApiHeaderCommandDescription.engine":
     "此连接包含导入的命令型请求头。获取模型或测试前会先确认是否执行其隐藏的本机命令；之后发送模型请求时可能执行该命令，且不会再次经过设置页确认。",
   "settings.customApiHeaderCommandDescription.model":
@@ -522,7 +522,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiCredentialMethod.command": "运行本机命令",
   "settings.customApiCredentialAdvanced": "高级凭据来源",
   "settings.customApiCredentialAdvancedDescription":
-    "仅在你于 HarnessOS 外部管理凭据时，使用环境变量或本机命令。",
+    "仅在你于 Haros 外部管理凭据时，使用环境变量或本机命令。",
   "settings.customApiCredentialPreserveDescription":
     "保留当前隐藏的凭据来源：{source}。打开此页面不会显示或执行它。",
   "settings.customApiCredentialSource.stored_key": "已保存的 API Key",
@@ -533,7 +533,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiEnvironmentVariable": "环境变量名称",
   "settings.customApiEnvironmentVariablePlaceholder": "MODEL_SERVICE_API_KEY",
   "settings.customApiEnvironmentDescription":
-    "HarnessOS 只保存变量名；测试、获取模型或实际发送请求时才读取变量值。",
+    "Haros 只保存变量名；测试、获取模型或实际发送请求时才读取变量值。",
   "settings.customApiCredentialCommand": "凭据命令",
   "settings.customApiCredentialCommandPlaceholder":
     "security find-generic-password -w -s my-service",
@@ -613,7 +613,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiModelCostTier.cacheWrite": "缓存写入价格",
   "settings.customApiThinkingMap": "思考强度映射",
   "settings.customApiThinkingMapDescription":
-    "把 HarnessOS 的思考强度映射为此模型要求的精确值；留空即可使用服务行为。",
+    "把 Haros 的思考强度映射为此模型要求的精确值；留空即可使用服务行为。",
   "settings.customApiThinkingMap.default": "使用默认值",
   "settings.customApiThinkingMap.disabled": "不可用",
   "settings.customApiThinkingMap.mapped": "映射值",
@@ -700,8 +700,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiRemoveBlockedActive":
     "此连接仍被运行中的模型会话使用。请先停止该会话，再重试。",
   "settings.connectableModelServices": "连接模型服务",
-  "settings.chooseModelServiceDescription":
-    "选择要连接的服务，认证后 HarnessOS 会自动发现可用模型。",
+  "settings.chooseModelServiceDescription": "选择要连接的服务，认证后 Haros 会自动发现可用模型。",
   "settings.searchModelServices": "搜索模型服务…",
   "settings.recommendedModelServices": "推荐",
   "settings.otherModelServices": "其他服务",
@@ -741,7 +740,7 @@ const ZH_CN_MESSAGES = {
   "settings.modelServiceDetails": "服务详情",
   "settings.modelServiceDetailsNamed": "服务详情 · {name}",
   "settings.modelServiceDetailsLoading": "正在加载服务详情…",
-  "settings.modelServiceDetailsUnavailable": "HarnessOS 无法读取此服务。",
+  "settings.modelServiceDetailsUnavailable": "Haros 无法读取此服务。",
   "settings.modelServiceNotFound": "此模型服务已不可用。",
   "settings.modelServiceAuthentication": "认证",
   "settings.modelServiceCredentialSource": "凭据来源",
@@ -822,9 +821,9 @@ const ZH_CN_MESSAGES = {
   "settings.modelServiceSignedOut": "已退出登录。",
   "settings.modelServiceSignedOutSyncFailed": "已退出登录，但无法载入最新模型状态。",
   "settings.modelServiceSignOutFailed": "无法退出此模型服务。",
-  "settings.modelServiceOriginBuiltIn": "HarnessOS 内置",
+  "settings.modelServiceOriginBuiltIn": "Haros 内置",
   "settings.modelServiceOriginModelsJson": "通过 API 地址连接",
-  "settings.modelServiceOriginExtension": "由 HarnessOS 扩展提供",
+  "settings.modelServiceOriginExtension": "由 Haros 扩展提供",
   "settings.modelServiceOriginUnknown": "来源不可用",
   "settings.generationDefaults": "生成默认值",
   "settings.gitWritingModel": "Git 写作模型",

@@ -15,7 +15,7 @@ import {
 describe("formatSkillScope", () => {
   it("localizes known product scopes and preserves engine-specific identities", () => {
     expect(formatSkillScope("project", "zh-CN")).toBe("项目");
-    expect(formatSkillScope("oa", "zh-CN")).toBe("HarnessOS 能力库");
+    expect(formatSkillScope("oa", "zh-CN")).toBe("Haros 能力库");
     expect(formatSkillScope("factory-plugin:reviewer", "zh-CN")).toBe("Factory-plugin:reviewer");
   });
 });
@@ -126,15 +126,13 @@ describe("formatSkillDiscoveryWarning", () => {
     expect(
       formatSkillDiscoveryWarning({ source: "engine-native", reason: "discovery-failed" }, "Codex"),
     ).toBe(
-      "Codex native skill discovery failed. Any available HarnessOS Library skills are shown below.",
+      "Codex native skill discovery failed. Any available Haros Library skills are shown below.",
     );
     expect(
       formatSkillDiscoveryWarning(
         { source: "harnessos-library", reason: "discovery-failed" },
         "Codex",
       ),
-    ).toBe(
-      "HarnessOS Library discovery failed. Any available Codex native skills are shown below.",
-    );
+    ).toBe("Haros Library discovery failed. Any available Codex native skills are shown below.");
   });
 });

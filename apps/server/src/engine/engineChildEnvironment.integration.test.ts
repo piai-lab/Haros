@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildEngineChildEnvironment } from "./engineChildEnvironment";
 
 describe("buildEngineChildEnvironment", () => {
-  it("strips HarnessOS control-plane and inherited native capabilities", () => {
+  it("strips Haros control-plane and inherited native capabilities", () => {
     const env = buildEngineChildEnvironment({
       engine: "antigravity",
       baseEnv: {
@@ -36,7 +36,7 @@ describe("buildEngineChildEnvironment", () => {
         HARNESSOS_ALLOWED_CAPABILITY: "allowed",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
       },
-      inheritedHarnessOSKeys: ["HARNESSOS_ALLOWED_CAPABILITY"],
+      inheritedHarosKeys: ["HARNESSOS_ALLOWED_CAPABILITY"],
       inheritedNativeCapabilityKeys: ["NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS"],
     });
 

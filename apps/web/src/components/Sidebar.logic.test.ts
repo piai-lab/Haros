@@ -109,7 +109,7 @@ describe("resolveNewProjectDefaultEngineSelection", () => {
     expect(resolveNewProjectDefaultEngineSelection("pi")).toBeNull();
   });
 
-  it("keeps an HarnessOS project unbound until the runtime catalog supplies an exact model", () => {
+  it("keeps an Haros project unbound until the runtime catalog supplies an exact model", () => {
     expect(resolveNewProjectDefaultEngineSelection("oa")).toBeNull();
   });
 
@@ -532,18 +532,18 @@ describe("resolveThreadHoverCardMetadata", () => {
     ).toBeNull();
   });
 
-  it("labels project-less chat containers as HarnessOS instead of the slug folder", () => {
+  it("labels project-less chat containers as Haros instead of the slug folder", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({ branch: null }),
       project: {
         kind: "chat",
         name: "open-the-browser-search-house-music",
         folderName: "open-the-browser-search-house-music",
-        cwd: "/Users/me/Documents/HarnessOS/2026-08-01/open-the-browser-search-house-music",
+        cwd: "/Users/me/Documents/Haros/2026-08-01/open-the-browser-search-house-music",
       },
     });
 
-    expect(metadata.projectName).toBe("HarnessOS");
+    expect(metadata.projectName).toBe("Haros");
   });
 });
 

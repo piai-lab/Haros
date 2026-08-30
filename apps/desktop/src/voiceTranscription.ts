@@ -191,7 +191,7 @@ async function resolveDesktopVoiceAuth(
         params: {
           clientInfo: {
             name: "harnessos-desktop",
-            title: "HarnessOS Desktop",
+            title: "Haros Desktop",
             version: app.getVersion(),
           },
           capabilities: { experimentalApi: true },
