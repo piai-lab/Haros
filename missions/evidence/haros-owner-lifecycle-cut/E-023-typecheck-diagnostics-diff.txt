@@ -1,0 +1,11 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-023
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: ff73b9c7850edc04be78644f8d5244a08f0d498d
+Command: node missions/evidence/haros-owner-lifecycle-cut/check-typecheck-diagnostics.mjs
+Exit-Code: 0
+Result: PASS
+Observed: origin and candidate server typecheck both exited 2 with byte-identical 669-line normalized diagnostics; diagnostics sha256 c981fbca4adaad97a718761d4e0f27890b844d1be096c302bae7307e7265e47e.
+Claims: C-007
