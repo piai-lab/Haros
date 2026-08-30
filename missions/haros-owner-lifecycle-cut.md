@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `ff73b9c7850edc04be78644f8d5244a08f0d498d`
-- Worktree state: dirty only at `missions/haros-owner-lifecycle-cut.md`, `missions/haros-owner-lifecycle-cut-goal.md`, `missions/evidence/haros-owner-lifecycle-cut/E-023-typecheck-diagnostics-diff.txt`, and `missions/evidence/haros-owner-lifecycle-cut/check-typecheck-diagnostics.mjs`; product and protected paths are unchanged. This state will be committed and reconciled before the machine-contract check.
-- Last reconciled at: `2026-08-30T16:07:11+08:00`
+- Last reconciled revision: `a4c199653f8ebc9fa7ff5646a230331a3de8367f`
+- Worktree state: dirty only at `missions/haros-owner-lifecycle-cut.md` for this reconciliation update; product and protected paths are unchanged.
+- Last reconciled at: `2026-08-30T16:13:55+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
