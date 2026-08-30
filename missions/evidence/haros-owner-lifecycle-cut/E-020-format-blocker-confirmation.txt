@@ -1,0 +1,10 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-020
+Role: focused-diagnostic
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Candidate-Version: implementation candidate dfed597d7777eca28094d0b94d6d5f58792db6cf
+Command: bunx oxfmt --check apps/server/src/engine/acp/AcpWslCwd.test.ts apps/server/src/engine/debugMode.test.ts test/workspace-package-identity.test.mjs
+Exit-Code: 1
+Result: BLOCKED
+Observed: all three unchanged-origin files remain nonconforming after the in-scope Campaign spec was formatted and independently passed its targeted formatting check.
+Claims: C-007, C-009
