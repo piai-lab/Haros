@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
+- Last reconciled revision: `42d64e8b49bbbcc281580c607d20e86d2ba013e9`
 - Worktree state: clean at Executor handoff; the Campaign control baseline contains only this spec, Goal, and dedicated receipts, with no product changes. Last reconciled revision remains the product origin under the zq-goal control-file self-reference rule.
-- Last reconciled at: `2026-08-30T15:31:47+08:00`
+- Last reconciled at: `2026-08-30T15:36:13+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
