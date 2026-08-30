@@ -1,0 +1,10 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-014
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: 29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+Command: test "$(git grep -n 'const engineChildKind' -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts | wc -l | tr -d ' ')" = 2
+Exit-Code: 0
+Result: PASS
+Claims: C-001
