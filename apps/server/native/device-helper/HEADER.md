@@ -128,7 +128,7 @@ the stream (including the smoke test) must cause on-screen motion.
 ## Fidelity notes
 
 `describe-ui` is the **full** accessibility tree via `AXPTranslator` and
-`SimDevice.sendAccessibilityRequestAsync` — the same path idb uses — not a
+`SimDevice.sendAccessibilityRequestAsync` — the same path the pinned upstream reference uses — not a
 reduced SimulatorKit dump. Each node carries `role` (AX-prefix stripped),
 `label`, `value`, `identifier`, `title`, `frame` (x/y/width/height in points),
 `enabled` and `children`. Depth is capped (`maxDepth`, default 40) and a capped

@@ -531,7 +531,7 @@ describe("Antigravity CLI integration helpers", () => {
     // code 1, so the inactive hook must answer allow.
     const preInvocationResult = runCaptureCommand(
       buildAntigravityCaptureCommand(
-        "__synara_gui_must_not_launch__",
+        "__haros_gui_must_not_launch__",
         "__capture_script_must_not_run__",
         "pre-invocation",
       ),
@@ -841,7 +841,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("dedupes hook and transcript copies without collapsing repeated tool names", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-tool-dedup-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-tool-dedup-"));
     const transcriptDir = path.join(
       root,
       ".gemini",
@@ -1003,7 +1003,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("routes subagent hook events to a child thread without rebinding the session", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-subagent-events-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-subagent-events-"));
     let eventFile: string | undefined;
     let child: ChildProcess | undefined;
     const spawnProcess = ((
@@ -1180,7 +1180,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("settles an unfinished child turn when the parent process fails", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-child-failure-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-child-failure-"));
     let eventFile: string | undefined;
     let child: ChildProcess | undefined;
     const spawnProcess = ((
@@ -1416,7 +1416,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
   });
 
   it("emits a terminal interrupted turn.completed so the stop button unlocks", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-stop-button-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-stop-button-"));
     const children: ChildProcess[] = [];
     const spawnProcess = makeSpawnProcess(children);
 
@@ -1493,7 +1493,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
   });
 
   it("compacts multiline pre-invocation and stop hook payloads into single NDJSON lines", async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-compact-"));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-compact-"));
     const scriptPath = path.join(directory, "capture.cjs");
     const eventPath = path.join(directory, "events.ndjson");
     try {
@@ -1539,7 +1539,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
   });
 
   it("streams reasoning traces from thinking steps and assistant text from final steps in transcript", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-transcript-test-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-transcript-test-"));
     const transcriptDir = path.join(
       root,
       ".gemini",
@@ -1872,7 +1872,7 @@ describe("Antigravity background task helpers (#752)", () => {
   });
 
   it("settles a completed background task before handling the final stop hook", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-background-stop-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-background-stop-"));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
 
@@ -2009,7 +2009,7 @@ describe("Antigravity background task helpers (#752)", () => {
   });
 
   it("performs a fresh final hook drain when the process closes during a poll", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-final-drain-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-final-drain-"));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
 
@@ -2137,7 +2137,7 @@ describe("Antigravity background task helpers (#752)", () => {
   });
 
   it("ignores a hook poll that resumes after session replacement", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-stale-poll-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-stale-poll-"));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
 
@@ -2249,7 +2249,7 @@ describe("Antigravity background task helpers (#752)", () => {
   });
 
   it("settles pending background tasks on session replacement and process exit", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-background-restart-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "haros-antigravity-background-restart-"));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
     let eventFile: string | undefined;

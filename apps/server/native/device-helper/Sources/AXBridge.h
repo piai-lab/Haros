@@ -5,7 +5,7 @@
 // sendAccessibilityRequestAsync:completionQueue:completionHandler:]`) is
 // asynchronous. This class is installed as the translator's bridge-token
 // delegate and turns each synchronous callback into an async XPC round-trip it
-// waits on, which is the same shape idb's FBAXTranslationDispatcher uses.
+// waits on, which is the same shape the upstream FBAXTranslationDispatcher uses.
 //
 // It lives in Objective-C because conformance is to a private informal protocol
 // (`AXPTranslationTokenDelegateHelper`) whose callback returns a block; the

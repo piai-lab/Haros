@@ -110,7 +110,7 @@ describe("localServerMonitor", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
-        args: "node /Users/emanueledipietro/Developer/harnessos/apps/web/node_modules/.bin/vite",
+        args: "node /Users/haros-dev/Developer/harnessos/apps/web/node_modules/.bin/vite",
         ports: [5733],
       }),
     ).toBe(true);
@@ -232,7 +232,7 @@ describe("localServerMonitor", () => {
         {
           ppid: 12064,
           commandLine:
-            "node /Users/emanueledipietro/Developer/harnessos-website/node_modules/.bin/next dev",
+            "node /Users/haros-dev/Developer/harnessos-website/node_modules/.bin/next dev",
         },
       ],
       [

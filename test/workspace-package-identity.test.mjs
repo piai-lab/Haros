@@ -19,9 +19,22 @@ const EXPECTED_WORKSPACE_PACKAGES = new Map([
 
 async function readAdoptedDonorIdentity() {
   const record = JSON.parse(await readFile(path.join(root, "source-adoptions.json"), "utf8"));
-  const adoption = record.adopted.find((entry) => entry.id === "ui-mother");
-  assert.ok(adoption, "ui-mother adoption is required");
-  const pathname = new URL(adoption.url).pathname;
+  // The platform adoption is identified by shape, not by a donor name kept in
+  // this repo: it is the only record whose paths cover the root manifest plus
+  // the web and server workspaces.
+  const platformAdoptions = record.adopted.filter(
+    (entry) =>
+      Array.isArray(entry.paths) &&
+      entry.paths.includes("package.json") &&
+      entry.paths.includes("apps/web") &&
+      entry.paths.includes("apps/server"),
+  );
+  assert.equal(
+    platformAdoptions.length,
+    1,
+    "platform adoption record is required and unique",
+  );
+  const pathname = new URL(platformAdoptions[0].url).pathname;
   const repositoryName = path.posix.basename(pathname, ".git");
   assert.match(repositoryName, /^[a-z][a-z0-9-]+$/u);
   return repositoryName;

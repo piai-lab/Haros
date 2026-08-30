@@ -3,9 +3,8 @@
 // Layer: Web UI presentation primitive
 // Depends on: local copied-adapted painter, shared reduced-motion owner.
 //
-// Runtime behavior is copied-adapted from thinking-orbs@0.3.1 commit
-// bd204b73c9b6660fad7210b1ad48d9dc2adbb89d (src/ThinkingOrb.tsx).
-// MIT license: ../../../../../LICENSES/thinking-orbs-MIT.txt
+// Runtime behavior is copied-adapted from the pinned upstream Composing/Ribbon
+// painter recorded in source-adoptions.json (src/ThinkingOrb.tsx).
 
 import { useEffect, useRef } from "react";
 

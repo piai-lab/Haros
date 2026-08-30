@@ -96,7 +96,7 @@ describe("readOpenCodeAuthFileUtf8", () => {
   });
 
   it("reads ~/.local/share even when a Windows APPDATA candidate is also configured", async () => {
-    const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "synara-opencode-auth-"));
+    const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "haros-opencode-auth-"));
     tempDirs.push(homeDir);
     const xdgPath = nodePath.join(homeDir, ".local", "share", "opencode", "auth.json");
     mkdirSync(nodePath.dirname(xdgPath), { recursive: true });

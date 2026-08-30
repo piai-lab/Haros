@@ -45,7 +45,7 @@ function stubOutboundFetch(
 }
 
 function makeGrokHome(auth: Record<string, unknown>) {
-  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "synara-grok-usage-"));
+  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "haros-grok-usage-"));
   tempDirs.push(homeDir);
   const grokDir = nodePath.join(homeDir, ".grok");
   mkdirSync(grokDir, { recursive: true });
@@ -131,7 +131,7 @@ describe("parseGrokApiKeyIdentity", () => {
 
 describe("grokUsageFetcher", () => {
   it("returns needs-auth when no SuperGrok session or API key is present", async () => {
-    const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "synara-grok-empty-"));
+    const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "haros-grok-empty-"));
     tempDirs.push(homeDir);
     const snapshot = await grokUsageFetcher.fetch({
       homeDir,

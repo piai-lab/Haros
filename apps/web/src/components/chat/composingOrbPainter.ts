@@ -2,10 +2,9 @@
 // Purpose: Paints the fixed 20px Composing/Ribbon orb used by Haros's live status row.
 // Layer: Web UI presentation primitive
 //
-// Copied-adapted from thinking-orbs@0.3.1, commit
-// bd204b73c9b6660fad7210b1ad48d9dc2adbb89d:
+// Copied-adapted from the pinned upstream Composing/Ribbon 20px painter recorded
+// in source-adoptions.json:
 //   src/engine/core.ts, src/engine/profiles.ts, src/engine/ribbon.ts, src/presets.ts
-// MIT license: ../../../../../LICENSES/thinking-orbs-MIT.txt
 //
 // This file intentionally owns only the official Composing/Ribbon 20px preset.
 // The other eight states, 64px profiles, registries, and public configuration API

@@ -3,9 +3,9 @@
 // Events are Indigo messages (the simulator's internal HID wire format),
 // constructed by SimulatorKit's `IndigoHIDMessageFor*` C functions and delivered
 // through `SimDeviceLegacyHIDClient`. The struct layout and the two-payload
-// touch message below are ported from facebook/idb's FBSimulatorIndigoHID at
-// revision dd0cb550510331f2d11e9130cb003d2425688e28. See
-// ../LICENSE.facebook-idb for the exact source and MIT license notice.
+// touch message below are ported from the pinned upstream FBSimulatorIndigoHID
+// reference recorded in source-adoptions.json (device-helper-hid-reference).
+// See ../LICENSE.facebook-idb for the exact source and MIT license notice.
 //
 // Objective-C because it does raw struct surgery on private message buffers.
 

@@ -88,7 +88,7 @@ static const int kButtonTargetHardware = 0x33;
 static const int kButtonOpDown = 0x1;
 static const int kButtonOpUp = 0x2;
 
-// The mouse/touch seed message target, ported from idb.
+// The mouse/touch seed message target, ported from the pinned upstream HID reference.
 static const int kTouchTarget = 0x32;
 
 typedef HarosIndigoMessage *(*HarosIndigoButtonFn)(int keyCode, int op, int target);

@@ -1,9 +1,8 @@
 /*
- * Copied-adapted from Percho splash.css at
- * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
- * The synchronous golden-angle swarm, content-visibility isolation, and reduced-motion
- * structure are retained; identity, tokens, timing, and the quieter particle-only exit are
- * Haros-owned.
+ * Copied-adapted from the pinned upstream splash styles recorded in
+ * source-adoptions.json. The synchronous golden-angle swarm, content-visibility
+ * isolation, and reduced-motion structure are retained; identity, tokens, timing,
+ * and the quieter particle-only exit are Haros-owned.
  */
 
 html,

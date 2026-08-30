@@ -40,7 +40,7 @@ interface MutableThreadShell {
 const pullRequest: OrchestrationThreadPullRequest = {
   number: 574,
   title: "Cache engine usage",
-  url: "https://github.com/Emanuele-web04/harnessos/pull/574",
+  url: "https://github.com/haros-maintainer/harnessos/pull/574",
   baseBranch: "main",
   headBranch: "feat/provider-usage-snapshot-cache",
   state: "open",

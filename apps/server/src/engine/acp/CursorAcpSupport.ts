@@ -1212,7 +1212,7 @@ function collectCursorAcpConfigUpdates(
     updates.push({ configId: option.id, value: configValue });
   };
 
-  // Cursor's persisted/current preference can be true even when Synara has no
+  // Cursor's persisted/current preference can be true even when Haros has no
   // fast-mode override. The composer treats the lightning bolt as off unless
   // fastMode is explicitly true, so make that default authoritative whenever
   // the selected model exposes a dedicated ACP option. Apply effort last:

@@ -2537,9 +2537,9 @@ label:has(> select#reasoning-effort) select {
 }
 
 /* Live-status choreography. The hint entry/breathe timing is copied-adapted
-   from BitFun commit f9aebc102b21d6d4ac3ffd4088defebf7f4baff1
-   (ProcessingIndicator.scss, MIT). The symmetric tide is Haros-owned.
-   Source and rights: LICENSES/bitfun-MIT.txt. */
+   from the pinned upstream ProcessingIndicator.scss motion recorded in
+   source-adoptions.json. The symmetric tide is Haros-owned.
+   Source and rights are recorded in source-adoptions.json. */
 .harnessos-thinking-status {
   width: 100%;
   height: 24px;

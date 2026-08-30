@@ -1,8 +1,7 @@
 /**
- * Copied-adapted from Percho splash-dom.ts at
- * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
- * Keeps the donor's synchronous golden-angle particle construction while
- * adapting product identity and host lifecycle ownership.
+ * Copied-adapted from the pinned upstream splash DOM source recorded in
+ * source-adoptions.json. Keeps the upstream synchronous golden-angle particle
+ * construction while adapting product identity and host lifecycle ownership.
  */
 
 const DOT_COUNT = 64;

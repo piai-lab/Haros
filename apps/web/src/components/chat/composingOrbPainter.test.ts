@@ -19,7 +19,7 @@ function frameDigest(timeSeconds: number): string {
 }
 
 describe("ComposingOrb official 20px geometry", () => {
-  it("matches the fixed reduced-motion frame from thinking-orbs 0.3.1", () => {
+  it("matches the fixed reduced-motion frame from the pinned upstream 20px painter", () => {
     const frame = createComposingOrbFrame(0.6);
     expect(frame).toHaveLength(208);
     expect(frameDigest(0.6)).toBe(
