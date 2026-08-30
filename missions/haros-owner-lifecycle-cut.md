@@ -7,7 +7,7 @@
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
 - Last reconciled revision: `a4c199653f8ebc9fa7ff5646a230331a3de8367f`
-- Worktree state: dirty only at `missions/haros-owner-lifecycle-cut.md` for this reconciliation update; product and protected paths are unchanged.
+- Worktree state: clean after the reconciliation-only canonical-spec commit; product and protected paths are unchanged.
 - Last reconciled at: `2026-08-30T16:13:55+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
