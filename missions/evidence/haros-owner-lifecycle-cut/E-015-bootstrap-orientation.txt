@@ -1,0 +1,10 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-015
+Role: bootstrap
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: b2d4dea080aead5d84c7dd929ad56c273cdcad69
+Command: bun run public-surface:check
+Exit-Code: 0
+Result: PASS
+Claims: none

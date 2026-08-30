@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `42d64e8b49bbbcc281580c607d20e86d2ba013e9`
-- Worktree state: clean at Executor handoff; the Campaign control baseline contains only this spec, Goal, and dedicated receipts, with no product changes. Last reconciled revision remains the product origin under the zq-goal control-file self-reference rule.
-- Last reconciled at: `2026-08-30T15:36:13+08:00`
+- Last reconciled revision: `b2d4dea080aead5d84c7dd929ad56c273cdcad69`
+- Worktree state: clean at zero-memory Executor orientation; the Campaign control baseline contains only this spec, Goal, and dedicated receipts, with no product changes. Last reconciled revision follows the zq-goal control-file self-reference rule.
+- Last reconciled at: `2026-08-30T15:38:53+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
@@ -39,7 +39,7 @@
 
 - Bootstrap probe: Run the sole exact Bootstrap command below, reconcile its result, and perform no additional mandatory action.
 - Bootstrap command: `bun run public-surface:check`
-- Bootstrap result: E-006 passed at origin revision; it proves the existing dependency-free repository probe runs in the isolated worktree, not structural correctness.
+- Bootstrap result: E-015 passed at the reconciled Executor orientation revision; it proves the existing dependency-free repository probe runs in the isolated worktree, not structural correctness.
 - Mismatch policy: reconcile this spec before implementation; if truth cannot be established, set the affected Claim to `blocked`.
 
 ## 系统模型
@@ -94,6 +94,7 @@ Taste rubric: positive evidence is one survivor, fewer writers/entries/state, co
 | E-012 | core | source | K-012, K-017, C-004, security risk gate | `file:/Users/liuzaoqu/Desktop/Develop/solvinglab-skill-internal/skills/agent/zq-dev-rules/SKILL.md#执行锚点` | `sha256:c026e50dc00c7d09b498b839d8a970796b4e0225b45961a87e7da4fcc7e2d7d1`; `2026-08-30` | `sed -n '1,360p' /Users/liuzaoqu/Desktop/Develop/solvinglab-skill-internal/skills/agent/zq-dev-rules/SKILL.md` | current while SHA matches |
 | E-013 | core | source | K-019, execution continuity | `file:/Users/liuzaoqu/.codex/skills/zq-orchestrate/SKILL.md#先决定是否拒绝编排` | `sha256:5a156d8d848a59aa6f82835596e8e397931b36d88f3ca4e054f075608d0ab295`; `2026-08-30` | `sed -n '1,420p' /Users/liuzaoqu/.codex/skills/zq-orchestrate/SKILL.md` | current while SHA matches |
 | E-014 | task | focused | C-001, K-010, K-016 | `file:missions/evidence/haros-owner-lifecycle-cut/E-014-candidate-selection.txt#L1-L10` | candidate `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`; receipt `sha256:2e44193e7c83109e1a14479c4f397cbdbdf86b8ad20fdccd71788ffd5f5112b3`; `2026-08-30T15:31:47+08:00` | `test "$(git grep -n 'const engineChildKind' -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts | wc -l | tr -d ' ')" = 2` | current only at origin revision before consolidation |
+| E-015 | task | bootstrap | zero-memory orientation | `file:missions/evidence/haros-owner-lifecycle-cut/E-015-bootstrap-orientation.txt#L1-L10` | candidate `b2d4dea080aead5d84c7dd929ad56c273cdcad69`; receipt `sha256:c7169c4587b7469863ae78323aa4ae681e8d118f27185e5d778d336b5a39f005`; `2026-08-30T15:38:53+08:00` | `bun run public-surface:check` | current until candidate, command, or relevant source changes |
 
 ## 验收矩阵
 
@@ -111,11 +112,11 @@ Taste rubric: positive evidence is one survivor, fewer writers/entries/state, co
 
 ## 当前状态
 
-- Current checkpoint: read-only PORTFOLIO complete; seven construction facts frozen; C-001 is a producer candidate; product code remains untouched.
+- Current checkpoint: zero-memory orientation reconciled; `zq-orchestrate` selected `DIRECT_EXECUTION`; seven construction facts remain frozen; C-001 is a producer candidate; product code remains untouched.
 - Active Claim: C-002.
-- Next safe action: fresh task performs zero-memory orientation, invokes `zq-orchestrate`, selects `DIRECT_EXECUTION`, then consolidates the mapping inside the survivor and deletes both consumer copies.
+- Next safe action: consolidate the mapping inside the survivor and delete both consumer copies, then run the single focused proof.
 - Blockers: none. Any falsifier in K-017, protected-work overlap, or policy/behavior change blocks C-001/C-002 before further writes.
-- Last material change: disposition `CONSOLIDATE` frozen with K-010–K-019 and E-007–E-013.
+- Last material change: Executor orientation reconciled at `b2d4dea080aead5d84c7dd929ad56c273cdcad69`; exact Bootstrap PASS recorded as E-015; orchestration entry resolved to `DIRECT_EXECUTION`.
 
 ## 已知问题与方向
 
