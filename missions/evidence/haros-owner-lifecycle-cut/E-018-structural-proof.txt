@@ -1,9 +1,10 @@
 Campaign-ID: HAROS-OWNER-CUT-2026-08-30
 Evidence-ID: E-018
-Role: structural
+Role: focused
 Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
-Candidate-Version: worktree based on 315dbfc5e7df94c037b4d0c572c693628d041214
-Commands: consumer residue search; sole owner mapping count; direct Health/Usage call checks; scoped product diff audit against 315dbfc5e7df94c037b4d0c572c693628d041214
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: ff1b103d74da65b581c240de8b9230b237f209a4
+Command: ! rg -n 'engineChildKind' apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts && ! rg -n 'EngineChildKind' apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts && ! rg -n 'oa[^\n]*pi' apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts && ! rg -n 'pi[^\n]*oa' apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts && test "$(rg -c 'input\.engine === "oa" \? "pi" : input\.engine' apps/server/src/engine/engineChildEnvironment.ts)" = 1 && rg -q 'buildEngineChildEnvironment\(\{ engine \}\)' apps/server/src/engine/Layers/EngineHealth.ts && rg -q '^      engine,$' apps/server/src/engineUsage/index.ts && test -z "$(git diff --name-only 315dbfc5e7df94c037b4d0c572c693628d041214 -- apps/server/src ':(exclude)apps/server/src/engine/Layers/EngineHealth.ts' ':(exclude)apps/server/src/engine/engineChildEnvironment.integration.test.ts' ':(exclude)apps/server/src/engine/engineChildEnvironment.ts' ':(exclude)apps/server/src/engineUsage/index.ts')"
 Exit-Code: 0
 Result: PASS
 Observed: zero engineChildKind/EngineChildKind/oa-pi mapping residue in Health or Usage; exactly one private oa-to-pi mapping in engineChildEnvironment; product diff limited to survivor, two consumers, and owner characterization test; no registry, cache, writer, state, process, facade, adapter, compatibility path, or performance path added.

@@ -2,9 +2,10 @@ Campaign-ID: HAROS-OWNER-CUT-2026-08-30
 Evidence-ID: E-016
 Role: focused
 Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
-Candidate-Version: worktree based on 315dbfc5e7df94c037b4d0c572c693628d041214
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: dfed597d7777eca28094d0b94d6d5f58792db6cf
 Command: bun run test:focused -- apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.test.ts apps/server/src/engine/Layers/EngineHealth.integration.test.ts
 Exit-Code: 2
-Result: ENVIRONMENT_FAILURE
+Result: FAIL
 Observed: engineChildEnvironment 22/22 tests passed; EngineUsage and EngineHealth suites stopped during import because locked dependencies effect and @effect/platform-node were absent from node_modules.
-Claims: none
+Claims: C-004
