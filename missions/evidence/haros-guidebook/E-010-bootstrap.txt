@@ -1,0 +1,10 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-010
+Role: bootstrap
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: 29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+Command: bash missions/haros-guidebook/scripts/bootstrap.sh
+Exit-Code: 0
+Result: PASS
+Claims: none

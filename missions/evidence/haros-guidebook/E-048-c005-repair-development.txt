@@ -1,0 +1,44 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-048
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+HEAD: 29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+Command: bounded C-005 Judge-repair validation for Appendix B formatted text, Appendix E owner routes, deterministic cover composition, Run 5 aggregate validation, source contracts, failure injections, and four-format rendering
+Exit-Code: 0
+Result: PASS
+Claims: C-005
+Prior-Audit: E-047 FAIL/REVISE with exactly three blockers
+Prior-Candidate: sha256:bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa stale for C-005
+Old-Immutable-Output: preserved untouched at missions/evidence/haros-guidebook/output/sha256-bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa files=677 artifact-checksums=676 writable=0 bytes=411059966
+Appendix-B: PASS complete lifecycle-generation and response-command-identity recovery sentence; Uncertain routes to Reconcile before any new side effect
+Appendix-B-Rendered: PASS website, standalone HTML, PDF, and EPUB; orphan-code and collapsed-spacing assertions fail closed
+Appendix-E-Ch15: PASS canonical contract, decider, and projector owner routes; workLog explicitly remains a read-only presentation consumer and never a second event model
+Appendix-E-Ch47: PASS diagnostics, usage/profile/archive, retention, and Engine-maintenance owner and proof routes while preserving exactly one chapter mapping row
+Appendix-E-Map: PASS exactly 50 numbered chapter rows; all owner/proof paths exist; no test path is an owner
+Cover-Field: docs/guide/assets/generated/sources/cover-01-field.png sha256:18e8efcd54da10fd10f7fbebd1622129e2a11838b92b85d90582f90db2b076fc
+Cover-Canonical-Mark: assets/brand/harnessos-mark.svg sha256:a9784a60a3a5c3631507280009b15276b5fdd67ed0dfa7112d52cb7a51ec9c70 unchanged
+Cover-Mark-Layer: docs/guide/assets/generated/sources/cover-01-mark-layer.png sha256:9baa4d5888ee1ed38a512934edadb5c2cab349b72bb8a0b1678c7e4a51380376 bbox=130x130+105+110 canonical-SVG-render-AE=0
+Cover-Wordmark-Layer: docs/guide/assets/generated/sources/cover-01-wordmark-layer.png sha256:d3cd39baa49a6da3c494e358ac32ada0e44171e7425add5bbc923ac1231b4264 bbox=576x55+275+140
+Cover-Composer: docs/guide/publication/compose-cover.mjs sha256:b1480ada62eb5a5f1f39f6474db2e3dd367212965b0aaa231ebd148433ea8024 ImageMagick=7.1.2-15 JPEG-quality=92 strip=yes historical-typesetting=HelveticaNeue-74pt repo-runtime-font-dependency=none
+Cover-Validator: docs/guide/publication/validate-cover-composition.mjs sha256:e2a903026a0d7724d531639a29bf6f143aa9dbd0ae6c27f643fee53abf413385
+Cover-Composition: PASS field plus canonical-mark layer plus repo-bound wordmark layer recomposes byte-exact docs/guide/assets/generated/cover-01.jpg sha256:c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779
+Cover-OCR: PASS field contains exactly subtitle and edition text with no Haros, Guidebook, logo, or wordmark token; final contains Haros Guidebook plus subtitle and edition
+Raster-Drift: none; all 140 canonical JPG hashes byte-match the rejected candidate manifest; current ordered raster manifest sha256:4412ed6f710f7a61c789fc508e14a3e8bca5f1a4d8dd6e6a7e999e94d68c4212
+Raster-Proof: PASS 24 Run 5 figures with Tesseract 5.5.3 bidirectional transcript; cover sidecar binding updated without transcript or pixel change; proof sha256:c5b864e92b5337776574a29e70494c7d3d3967cda8d22cde03d0237bde235bda
+Run5-Aggregate: PASS chapters=50 appendices=8 source-tables=200 chapter-tables=181 appendix-tables=18 readme-tables=1 generated-total=140 captures-total=18 outputs=28 rejected=4
+Run5-Source-Contracts: PASS test-files=19 tests=129 identity=PASS source-adoptions=PASS
+Run5-Mutations: PASS cases=16 appendix-b-format=2 appendix-e-owner=2 cover=4 raster-text=3 and inherited inventory/descriptor/navigation cases=5
+Four-Format-Development: PASS build=/tmp/haros-guidebook-c005-repair-render2 website-pages=60 navigation-relations=175x4 figure-associations=140x4 tables=200 source/Website/standalone/EPUB PDF-pages=620 PDF-words=152200 EPUB=reflow
+Full-Prefreeze: PASS build=/tmp/haros-guidebook-c005-repair-prefreeze.rrmfjw Pilot/Run2/Run3/Run4/Run5 validators and four-format renders; all 18 capture replays; all inherited and Run 5 mutations; 140 rendered figure contracts; publication quality; Goal consistency
+Prefreeze-Tables: Pilot=62 Run2=58 Run3=125 Run4=169 Run5=200
+Prefreeze-PDF: pages=180,169,377,516,620 words=44500,41702,94310,128626,152200
+Frozen-Candidate-Preview: files=430 sha256:fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117
+Image-Calls: 0 during repair; no content or visual-slot expansion
+Focused-Gate-Calls-For-Repaired-Candidate: 0
+Final-Gate-Calls-For-Repaired-Candidate: 0
+Development-Failure-1: first post-repair canonical validation correctly rejected the stale cover sidecar hash in the raster proof
+Development-Failure-2: second post-repair canonical validation correctly rejected the stale proof aggregate hash after the sidecar binding was updated
+Failure-Disposition: both bindings were narrowly updated; raster, transcript, exceptions, bboxes, crops, and comparisons were unchanged; the next canonical validation passed
+Next: run full inherited pre-freeze regression, freeze one new exact candidate hash, then consume focused and final gates exactly once each
+Observed-At: 2026-08-31T06:21:38+08:00

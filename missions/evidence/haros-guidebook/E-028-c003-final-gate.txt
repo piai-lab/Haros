@@ -1,0 +1,24 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-028
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:bd2c2a14025696a4aa325a676d74844f832ec426da075e217cffceedcf27c1f4
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003
+Candidate-Hash: pre-gate and post-gate sha256:bd2c2a14025696a4aa325a676d74844f832ec426da075e217cffceedcf27c1f4
+Formatting: PASS 150 files
+Generated-Raster-Trim: PASS files=87 changed=0
+Visual-Truth-Projection: PASS rows=93 sidecar-owned
+Mutation-Proof: PASS cases=4 parts=I-IV
+Pilot-Validation: PASS chapters=3 generated=9 captures=3
+Run2-Validation: PASS chapters=15 generated=36 captures=6
+Run3-Validation: PASS chapters=34 generated=84 captures=14
+Rendered-Links-Accessibility: PASS Website, standalone HTML, PDF, EPUB; Figure 14.5 rows=5 invariants=2
+Rendered-Figure-Contracts: PASS figures=87 formats=4
+Publication-Quality: Pilot tables=62 PDF=179 pages/44,360 words EPUB=reflow; Run2 tables=58 PDF=167 pages/41,577 words EPUB=reflow; Run3 tables=125 PDF=375 pages/94,179 words EPUB=reflow
+Capture-Replay: PASS captures=14 normalized_rmse_range=0-0.000289881 maximum=0.002; synthetic task-specific state only
+Immutable-Inspection-Output: missions/evidence/haros-guidebook/output/sha256-bd2c2a14025696a4aa325a676d74844f832ec426da075e217cffceedcf27c1f4
+Observed-At: 2026-08-30T21:36:40+08:00

@@ -1,0 +1,17 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-030
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:428649f879ec7bf1e1c534460c572483e089435fdd8e73befce449ad6f736680
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 428649f879ec7bf1e1c534460c572483e089435fdd8e73befce449ad6f736680
+Exit-Code: 1
+Result: FAIL
+Candidate-Content-Proof: PASS through formatting, 87-raster trim and palette/natural-case validation, five failure mutations, source figure/navigation checks, Pilot/Run 2/Run 3 four-format rendering, 103 README-derived navigation relations, rendered Chapter 1 to Preface omission rejection, 87 figure-format contracts, all 14 isolated capture replays, 125-table PDF bounds, and EPUB reflow
+Failure: final zq-goal checker rejected C-003 candidate state because the Claim had been advanced before a dedicated focused/final evidence row existed
+Impact: no focused PASS may be claimed; no final gate was run; the partial package is retained read-only and cannot be reused as successful proof
+Immutable-Failed-Output: missions/evidence/haros-guidebook/output/sha256-428649f879ec7bf1e1c534460c572483e089435fdd8e73befce449ad6f736680 files=266 writable=0 bytes=144007168
+Raw-Log-SHA256: 3578f4b0c0a38cd011f5e42c25df68a81d2491b14ca0aeae499278bba069b311
+Correction: return C-003 to open before proof and stage focused output until all checks pass, atomically publishing only a successful hash-bound package
+Candidate-Disposition: superseded because the focused-gate lifecycle script changed; freeze one new candidate and disclose this failed attempt
+Observed-At: 2026-08-30T22:12:09+08:00

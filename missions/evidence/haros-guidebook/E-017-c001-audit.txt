@@ -1,0 +1,25 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-017
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd
+Command: fresh read-only Judge /root/guidebook_judge audited candidate sha256:1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd against C-001
+Exit-Code: 0
+Evaluator-Provenance: codex-task:/root/guidebook_judge
+Isolation: fresh-context; producer-context=not-inherited; read-only
+Inputs: Goal; canonical spec; 40-file candidate manifest; E-015; E-016; Figure 14.5 source, sidecar, derived formats, validators, captures, and raster hashes
+Result: PASS
+Claims: C-001
+Claim-Results: C-001=verified
+Candidate-Hash-Recomputed: 1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd
+Focused-Receipt-SHA256: 11402afed2e03e6c256226b8fe0156a89a07339272c252d1fdc4ee443325a291
+Final-Gate-Receipt-SHA256: 9abc9a32c18f9208d0356ec80f69182d9821df4f3a200526016d4320ada192b7
+Accessibility-Audit: PASS source plus Website, standalone HTML, EPUB, and PDF; five mappings and two invariants
+Mutation-Audit: PASS 8/8 removals rejected by sidecar-derived validator
+Raster-Regression: PASS 12 hashes unchanged
+Capture-Regression: PASS normalized RMSE range 0-0.000289881 maximum=0.002
+Link-Regression: PASS website=11 standalone=77 epub=79
+Material-Findings: none
+Nonblocking-Findings: none
+Observed-At: 2026-08-30T13:44:08+08:00

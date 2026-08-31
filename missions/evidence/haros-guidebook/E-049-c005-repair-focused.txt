@@ -1,0 +1,28 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-049
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005
+Gate-Lifecycle: sole focused invocation for repaired K-084 candidate; no retry
+Candidate-Hash-Recomputed: fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117 files=430 manifest=exact post-gate=unchanged
+Run5-Proof: PASS chapters=50 appendices=8 source-tables=200 chapter-tables=181 appendix-tables=18 README-tables=1 generated-new=24 generated-total=140 captures-total=18 rendered-outputs=28 rejected-temp-only=4 waiver=none
+Judge-Repair-Proof: PASS Appendix-B formatted-text=website+standalone+PDF+EPUB; Appendix-E Chapter15=contracts+decider+projector with workLog presentation-consumer-only; Chapter47=diagnostics+usage/profile/archive+retention+Engine-maintenance owners/proofs
+Cover-Reproduction: PASS field=18e8efcd54da10fd10f7fbebd1622129e2a11838b92b85d90582f90db2b076fc canonical-mark=a9784a60a3a5c3631507280009b15276b5fdd67ed0dfa7112d52cb7a51ec9c70 mark-layer=9baa4d5888ee1ed38a512934edadb5c2cab349b72bb8a0b1678c7e4a51380376 wordmark-layer=d3cd39baa49a6da3c494e358ac32ada0e44171e7425add5bbc923ac1231b4264 geometry=+105+110 AE=0 final=c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779 package-recomposition=byte-identical
+Raster-Text-Proof: PASS figures=24 tesseract=5.5.3 bidirectional=PASS proof=c5b864e92b5337776574a29e70494c7d3d3967cda8d22cde03d0237bde235bda exceptions=exact-raster-hash+bbox+crop-hash+PSM+confidence+coordinates+human-nontext-verdict reviewed-crop=hash+bbox+prepared-crop+PSM+confidence+coordinates
+Raster-Drift: none; all 140 canonical raster hashes byte-match rejected K-079 candidate manifest
+Run5-Mutations: PASS cases=16 Appendix-B-format=2 Appendix-E-owner=2 cover=4 raster-text=3 inherited-inventory/descriptor/table/navigation=5
+Source-Owner-Proof: PASS test-files=19 tests=129 identity=PASS source-adoptions=12 ENGINE_DESCRIPTORS=10 public-commands=34 product-events=41 runtime-events=51 chapter-source-routes=50 no-test-as-owner=PASS
+Navigation-Proof: PASS README-order entries=59 rendered-required-relations=175 formats=4 Chapter-1-to-Preface=live Chapter-46-to-47=live appendices=A-H omission-mutations=PASS
+Figure-Proof: PASS source=140 rendered-associations=560 formats=4 structured-relations=PASS accessible-equivalents=PASS K-037-trim=PASS natural-case=PASS palette=PASS
+Capture-Regression: PASS captures=18 fresh-task-specific-synthetic-production-component-replay maximum-normalized-rmse=0.002
+Publication-Proof: PASS Website-pages=60 media=158 tables=200 PDF-pages=620 PDF-words=152200 EPUB=reflow
+Inherited-Regression: PASS C-001/C-002/C-003/C-004 source four-format capture figure navigation table PDF EPUB palette natural-case OCR and failure-injection gates
+Immutable-Output: missions/evidence/haros-guidebook/output/sha256-fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117 files=687 artifact-checksums=686 artifact-sha256=6a9aa52bccee8b801d62143a7e20ef5ece1860bafbed2bdd1e865a3cd95a219e manifest-sha256=4590f9df6e905c4e43f6e281b9b34d6a527e576b1e10800524ae9f31657e1fe1 writable=0 bytes=414551420
+Old-Immutable-Output: rejected K-079 package remains untouched files=677 artifact-checksums=676 writable=0 bytes=411059966
+Image-Calls-During-Repair: 0
+Observed-At: 2026-08-31T06:44:31+08:00

@@ -1,0 +1,17 @@
+Evidence-ID: E-058
+Role: source
+Supports: K-093; C-006; C-007 Goal consistency and independent-Campaign boundary
+Source-Version: 8802205680f065be4cc1d5d84c2aef0a37ba0c23
+Candidate-Version: development inputs sha256:9f7834202c33996f0d5d137275968a51df54ff1e3209510640e529c7c7f24918
+Observed-At: 2026-08-31T08:59:31+08:00
+Command: PYTHONDONTWRITEBYTECODE=1 python3 missions/haros-guidebook/scripts/check-goal-scoped.py
+Result: PASS
+Upstream-Result: FAIL errors=2 warnings=1, limited exactly to the canonical spec untracked warning and the two independent completed owner-cut Campaign tombstone errors
+Scoped-Result: upstream errors=2, scoped independent-completed-campaign exception PASS
+Boundary: the adapter ran the upstream checker unchanged, accepted no missing, additional, or changed diagnostic, and did not modify the global skill or either owner-cut Campaign file
+Independent-Campaign-Proof: both state files and E-025/E-026 are tracked and HEAD-clean; control commit 8802205680f065be4cc1d5d84c2aef0a37ba0c23 is in HEAD and contains the durable chain; Campaign HAROS-OWNER-CUT-2026-08-30 has exactly C-001 through C-009 required and verified, checkpoint COMPLETE, Active Claim none in Goal and spec, and a Goal that points only to its own spec
+Mutations: PASS cases=4; active Claim non-none rejected; one required Claim non-verified rejected; extra fake competing-state diagnostic rejected; arbitrary new upstream error rejected
+Gate-Integration: focused-gate.sh and final-gate.sh both invoke only the repo-local fail-closed adapter for Goal consistency
+Candidate-Scope: 436 files; the adapter is the only new candidate input created by this transition
+Warnings: upstream remains nonzero by design under the precisely bounded independent-completed-Campaign false positive; this exception is not upstream zero-error and expires on any diagnostic, Git, Campaign identity, Claim, checkpoint, Active Claim, self-reference, or control-chain drift
+Freshness: current until HEAD, upstream checker output, either owner-cut Campaign file, E-025/E-026 tracking or bytes, Guidebook Goal/spec, or adapter/gate integration changes

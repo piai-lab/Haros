@@ -1,0 +1,21 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-020
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa
+Command: test "$(bash missions/haros-guidebook/scripts/candidate-hash.sh | awk -F= '/^candidate_sha256=/{print $2}')" = "7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa" && python3 docs/guide/publication/trim-generated-rasters.py --check && node docs/guide/publication/validate-pilot.mjs && bash docs/guide/publication/render-pilot.sh --verify && bash docs/guide/publication/replay-captures.sh && node docs/guide/publication/validate-run2.mjs && bash docs/guide/publication/render-run2.sh --verify && bash docs/guide/publication/replay-run2-captures.sh && test "$(bash missions/haros-guidebook/scripts/candidate-hash.sh | awk -F= '/^candidate_sha256=/{print $2}')" = "7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa"
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002
+Candidate-Inputs: docs/haros-guidebook-plan.md; both Guidebook capture fixtures; every regular non-cache file under docs/guide; every regular file under missions/haros-guidebook/scripts; 126 files total
+Candidate-Exclusions: missions/haros-guidebook-goal.md; missions/haros-guidebook.md; missions/evidence; .gitignore; standard build/cache output
+Candidate-Hash: pre-proof and post-proof sha256:7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa
+Inventory: chapters=15 tables=51 canonical-generated=39 run2-generated-refs=36 captures=6
+Generated-Raster-Trim: PASS files=39 changed=0; dimensions, crop metadata, and sidecar checks PASS
+Pilot-Validation: PASS chapters=3 generated=9 captures=3 raster_bytes=1961115
+Run2-Validation: PASS chapters=15 generated=36 captures=6 raster_bytes=6375987
+Rendered-Links: Pilot website=5 standalone=71 epub=73; Run2 website=25 standalone=415 epub=417
+Rendered-Accessibility: PASS formats=4 rows=5 invariants=2
+Capture-Replay: PASS captures=6 normalized_rmse_range=0-0.000289881 maximum=0.002; synthetic task-specific state only
+Observed-At: 2026-08-30T16:50:10+08:00

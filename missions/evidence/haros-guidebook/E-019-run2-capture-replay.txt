@@ -1,0 +1,16 @@
+evidence_id=E-019
+claim=C-002
+captured_at=2026-08-30T13:55:46+08:00
+workspace=/Users/liuzaoqu/Desktop/Develop/independent/Haros
+edition_commit=29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+fixture=apps/web/src/components/GuidebookRun2.capture.browser.tsx
+fixture_sha256=0e61266004841ec5a4a86a3afc219d95bae704365769f33bb2beb25b80ef20c2
+command=bash docs/guide/publication/replay-run2-captures.sh
+isolation=task-specific HARNESSOS_HOME + XDG_CONFIG_HOME + XDG_CACHE_HOME + synthetic state
+test_files=1 passed
+tests=3 passed
+capture=capture-04-engine-availability.png canonical_sha256=85799afb770218e8291fde0226bd82a8edbad5c373cdbee9fc10f8d67db59744 replay_sha256=85799afb770218e8291fde0226bd82a8edbad5c373cdbee9fc10f8d67db59744 normalized_rmse=0 maximum=0.002 result=PASS
+capture=capture-05-exact-model.png canonical_sha256=e53862e6edb8be9d9b6f5bb519310f44a70c740ca704dc03b0d730bd2e2a1b8f replay_sha256=e53862e6edb8be9d9b6f5bb519310f44a70c740ca704dc03b0d730bd2e2a1b8f normalized_rmse=0 maximum=0.002 result=PASS
+capture=capture-06-permission-decision.png canonical_sha256=fc88940d1fda033b4c1606d8beaf4625b6493ccb8bee5fcca7b9dbd18128955d replay_sha256=fc88940d1fda033b4c1606d8beaf4625b6493ccb8bee5fcca7b9dbd18128955d normalized_rmse=0 maximum=0.002 result=PASS
+run2_capture_replay=PASS
+private_state_touched=false

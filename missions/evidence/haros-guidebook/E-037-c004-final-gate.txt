@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-037
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Invocation: bash missions/haros-guidebook/scripts/final-gate.sh 18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004
+Candidate-Hash-Recomputed: 18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74 files=353 pre-gate=exact post-gate=unchanged
+Navigation-Proof: PASS README-order entries=47; rendered required relations=139 formats=4; Chapter 1 to Preface live in Website, standalone HTML, EPUB, and PDF semantic anchor; each edition's rendered omission mutation=PASS
+Palette-Proof: PASS generated=116 captures=excluded; deterministic full-raster HSV plus Run 4 semantic-red cap; saturated color and Run 4 red-cap mutations=PASS
+Natural-Case-Proof: PASS generated=116; title-case headings; sentence-case explanations; genuine acronyms only all-caps; no block all-caps
+Figure-Proof: PASS source=116 rendered-associations=464 formats=4; structured relations, accessible equivalents, K-037 trim, provenance, dimensions, and checksums
+Capture-Regression: PASS captures=18 fresh task-specific synthetic production-component replay; all normalized RMSE below 0.002
+Publication-Proof: PASS tables=169 Parts-I-VI; PDF pages=514 words=128443 bounds=PASS; EPUB reflow=PASS
+Run4-Proof: PASS chapters=12 range=35-46 words=2504-3062 tables=44 generated-new=29 captures-new=4 truth-rows=29 validator-mutations=5
+Inherited-Regression: PASS C-001/C-002/C-003 source, four-format, capture, figure, navigation, table, PDF, EPUB, palette, natural-case, and failure-injection gates
+Focused-Evidence: E-036 receipt-sha256=0cadc43f7d83a2107d4fc8a1db579470fb61461ba15c2f4faa7e5d872d2287d0 immutable-output-files=452 artifact-checksums=451 writable=0 bytes=264761378
+Raw-Log-SHA256: 16f32ca65a09c7c86214edff573fb4e9b7f5ffaa1137a3836f490bf06762cf3d
+Observed-At: 2026-08-31T02:05:36+08:00

@@ -1,0 +1,28 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-069
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Isolation-Preconditions: PASS freeze-owner mutations=2; metadata-isolation self-tests=3; formatting files=240.
+Canonical-Integrity: PASS Run 6 mutations=5 and EXIT-trap candidate file-set-and-bytes unchanged; canonical docs/guide/.DS_Store absent throughout the isolated mutation path.
+Whole-Guide: PASS chapters=50 appendices=8 source-tables=200 generated=140 captures=18 anchors=476.
+Source-Contracts: PASS test-files=19 tests=129 identity=PASS source-adoptions=12.
+Captures: PASS all 18 isolated replays; maximum normalized RMSE 0.000289881 below 0.002.
+Raster-Proof: PASS trim/palette/visual truth, Run 4 OCR figures=29 and mutations=9, Run 5 OCR figures=24 and mutations=16, cover recomposition byte-exact.
+Reproducibility: PASS files=231 Website=60 EPUB-members=226 tree-sha256=d3bfed17e079e678d181ff1d964aebd557f10775beb55a97b87e974704df2f7b Website-sha256=ccd20636fc1a80be789287d55eba7ad74db65e8dec799050552a590200af26bb HTML-sha256=f1bd0f15cbbd09cbe6cb1c0bcf70b0942fddc0849524ee7fc6a5da4f954684bc PDF-sha256=410abe1c9955fcfcc934186f8512ef35eebad5537b63311a49c47835cf38b322 EPUB-sha256=3101fc1c40beac07ac38028e9b838ab5e09b2a847c958d08b7f44fcdec4d1aba.
+Publication: PASS figures=140 formats=4; five editions tables=62/58/125/169/200 PDF-pages=180/169/377/516/620 PDF-words=44503/41704/94312/128628/152191 EPUB=reflow.
+Scoped-Goal: PASS exact upstream errors=2 warnings=1; four fail-closed mutations.
+Package: missions/evidence/haros-guidebook/output/sha256-ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Package-Stats: files=687 artifact-checksums=686 candidate-inputs=439 candidate-manifest-lines=441 bytes=414623216 writable=0 temporary-or-screenshot-files=0.
+Package-Checksums: PASS all 686 entries.
+Candidate-Hash-Post: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f files=439.
+Warnings: known nonblocking PDF renderer warnings for screen-only min(), overflow-x, and media screen declarations; browser/link/bounds/reflow checks pass.
+Final-Gate-Calls: 0 for this candidate.
+Observed-At: 2026-08-31T10:57:06+08:00

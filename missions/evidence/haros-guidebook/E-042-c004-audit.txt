@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-042
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430
+Command: same read-only Judge /root/guidebook_judge_4 rechecked repaired candidate f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430 against C-004 and E-038
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004
+Claim-Results: C-001=regression-pass; C-002=regression-pass; C-003=regression-pass; C-004=milestone-pass-candidate-state
+Evaluator-Provenance: codex-task:/root/guidebook_judge_4
+Isolation: same fresh C-004 Judge; read-only; producer-context=not-inherited
+Candidate-Hash-Recomputed: f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430 files=356 manifest=exact
+Immutable-Output-Audit: PASS files=452 artifact-checksums=451/451 bytes=264761732 writable=0
+Raster-Text-Audit: PASS figures=29 inventory-deltas=14 affected-unique-sidecars=13 unchanged-sidecars=16 tesseract=5.5.3 bidirectional=PASS proof-sha256=5d02880b0930785707bd8cd69a9185273cd056b3c5ab8dfe80df647b34258e57
+Raster-Text-Mutations: PASS cases=4 missing-title=1 removed-server=1 removed-settings=1 injected-token=1
+Publication-Audit: PASS figures=116 formats=4 associations=464 tables=169 PDF-pages=514 PDF-words=128443 EPUB=reflow captures=18
+Gate-Lifecycle: E-040-focused=PASS-once receipt-sha256=ba3fa167f6ac231bd35c061b7211f84fe52634fe9e70b0b5d0d7153613da944c; E-041-final=PASS-once receipt-sha256=61f449f9e2f6706a274e3efa96721f133b20cc2e77cd273384ae1c4309ce2412
+Old-Immutable-History: sha256:18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74 preserved; E-036/E-037 preserved-stale-for-C004; E-038 preserved-FAIL-REVISE
+Findings: material=0 nonblocking=0
+Repository-Mutation: none
+Observed-At: 2026-08-31T03:17:40+08:00

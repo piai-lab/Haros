@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-046
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Invocation: bash missions/haros-guidebook/scripts/final-gate.sh bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005
+Candidate-Hash-Recomputed: bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa files=424 pre-gate=exact post-gate=unchanged
+Run5-Proof: PASS chapters=50 appendices=8 source-tables=200 chapter-tables=181 appendix-tables=18 README-tables=1 generated-new=24 generated-total=140 captures-total=18 rendered-outputs=28 rejected-temp-only=4 waiver=none
+Raster-Text-Proof: PASS figures=24 tesseract=5.5.3 bidirectional=PASS exceptions=exact-raster-hash+bbox+crop-hash+PSM+confidence+coordinates+human-nontext-verdict reviewed-crop=hash+bbox+prepared-crop+PSM+confidence+coordinates
+Raster-Text-Mutations: PASS missing=detected extra-transcript=detected same-slot-nearby-readable-pixel-extra=detected token=Rogueword
+Source-Owner-Proof: PASS test-files=19 tests=129 identity=PASS source-adoptions=12 ENGINE_DESCRIPTORS=10 public-commands=34 product-events=41 runtime-events=51 chapter-source-routes=50
+Navigation-Proof: PASS README-order entries=59 rendered-required-relations=175 formats=4 Chapter-1-to-Preface=live Chapter-46-to-47=live appendices=A-H omission-mutations=PASS
+Figure-Proof: PASS source=140 rendered-associations=560 formats=4 structured-relations=PASS accessible-equivalents=PASS K-037-trim=PASS natural-case=PASS palette=PASS
+Capture-Regression: PASS captures=18 fresh-task-specific-synthetic-production-component-replay maximum-normalized-rmse=0.002
+Publication-Proof: PASS Website-pages=60 media=158 tables=200 PDF-pages=619 PDF-words=152041 EPUB=reflow
+Inherited-Regression: PASS C-001/C-002/C-003/C-004 source four-format capture figure navigation table PDF EPUB palette natural-case OCR and failure-injection gates
+Focused-Evidence: E-045 receipt-sha256=9d736feda00240d4999650cc33b21d30fd145458ae669ebd0ebfa4b4bf40ba55 immutable-output-files=677 artifact-checksums=676 artifact-sha256=4e8e9cc79b8a7cd70df82e2243d4a1998a883fb49488273859f02a3d655791cb manifest-sha256=dcbd0bf5c8916f43f5d8570b1888bfd9b9bcc27a89cada25fac6c2b2ebf39902 writable=0 bytes=411059966
+Observed-At: 2026-08-31T05:31:44+08:00

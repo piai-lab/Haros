@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-033
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04
+Command: same fresh read-only Judge /root/guidebook_judge_3 rechecked candidate sha256:44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04 against C-001 and C-003
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003
+Claim-Results: C-001=regression-pass; C-002=regression-pass; C-003=milestone-pass-candidate-state
+Evaluator-Provenance: codex-task:/root/guidebook_judge_3
+Isolation: same fresh C-003 Judge; read-only; producer-context=not-inherited
+Candidate-Hash-Recomputed: 44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04 files=270 manifest=exact
+Immutable-Output-Audit: PASS files=267 artifact-checksums=266/266 writable=0
+Blocker-1-Navigation: PASS; Preface remains in scope before numeric filtering; Chapter 1 to Preface is live across Website, standalone HTML, EPUB, and PDF semantics; required source relations and omission mutation fail closed
+Blocker-2-Palette: PASS; three exact palette-only slots preserve natural-case text and topology; deterministic full-raster palette evidence covers all 87 generated JPGs with captures excluded; saturated-color mutation fails closed
+Failed-Proof-History: PASS preserved; E-030 remains FAIL and its 266-file partial package remains read-only rather than being reused as successful proof
+Focused-And-Final-Evidence: E-031 PASS receipt-sha256=df5371015189d6789cf81fa64f3a514034c65336c6e5a1ce5c70f6754fda6650; E-032 PASS receipt-sha256=e6558122173779adb6c2ce14f5d6dbedf446f16c9b19ed26d863973712d8b480
+Material-Findings: none
+Nonblocking-Findings: none
+Disposition: C-003 milestone closed for production and future regression; retain candidate state under the zq-goal Git Campaign contract and activate C-004
+Observed-At: 2026-08-30T22:25:25+08:00

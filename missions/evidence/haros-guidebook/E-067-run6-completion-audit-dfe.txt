@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-067
+Role: audit
+Evaluator-Provenance: codex-task:01a0552a-2fc0-73a1-aacf-62f4bf090cf7; fresh-context; producer-context=not-inherited; same-evaluator repair recheck of E-055
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:dfe4421afaea517a68c3020e5c7d503f2f77ed8c242230f906098493626029c2
+Command: same fresh read-only completion Judge audited K-098 candidate, E-055/E-059-E-066, and immutable package
+Exit-Code: 1
+Result: FAIL
+Decision: REVISE with exactly one material proof-integrity finding.
+Finding: docs/guide/publication/test-run6-validator-mutations.sh created and removed canonical docs/guide/.DS_Store while both focused and final executed the mutation. Although pre/post hashes returned to 437 files and dfe4421, the candidate scope was transiently 438 files during each gate, violating the frozen-candidate invariant.
+Required-Repair: move metadata mutation to a task-specific temporary root through one production metadata guard or equivalent isolated mechanism; prove canonical candidate file-set and bytes stay exact across the entire mutation script, including failure cleanup; statically prevent a canonical docs/guide/.DS_Store write target; freeze the naturally new script-bound hash; run focused/final once each; return to the same Judge.
+Package: PASS files=687 artifact-checksums=686/686 bytes=414622951 writable-files-and-dirs=0 temp-screenshot-DS=0 candidate-manifest-sha256=e33155db package-artifact-manifest-sha256=fa52e6a6.
+E055-Repairs: PASS Website/standalone each one visible H1 with HTML title retained; Chapter 10 #onSend maps to a real source declaration; candidate/package contain no .DS_Store and freeze owner rejects it.
+Source-Reconciliation: PASS 17b exact three tracked paths, 83/83 pins, 476 anchors, 123 code fragments, 43 Markdown fragments.
+Scoped-Goal: PASS exact two independent-completed-Campaign errors plus one untracked warning; four fail-closed mutations; owner-cut control chain tracked, HEAD-clean, COMPLETE.
+Media-Baseline: PASS generated-JPG=140 mismatch=0 capture-PNG=18 mismatch=0.
+Publication: PASS Run5 files=231 Website=60 PDF-pages=620 PDF-words=152191 EPUB-members=226; tree/HTML/PDF/EPUB hashes match E-062-E-066; browser Website/standalone/mobile review passed.
+Regression: C-001-C-005 content/media PASS; C-006/C-007 eight-dimension content, visual, and same-source four-format substance PASS.
+Disposition: E-065/E-066 and K-098-K-100 are stale only as all-time frozen-candidate proof; dfe candidate/package remain immutable; E-062 visible audit remains valid because the repair must not change prose, render code, media, or product source.
+Observed-At: 2026-08-31T10:41:00+08:00

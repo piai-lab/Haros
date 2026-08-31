@@ -1,0 +1,19 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-016
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Exit-Code: 0
+Result: PASS
+Claims: C-001
+Formatting: PASS 23 files
+Pilot-Validation: PASS chapters=3 generated=9 captures=3 raster_bytes=2410698
+Rendered-Links: PASS website=11 standalone=77 epub=79
+Rendered-Accessibility: PASS formats=4 rows=5 invariants=2
+Capture-Replay: PASS captures=3 isolated task-specific HARNESSOS_HOME/XDG_CONFIG_HOME/XDG_CACHE_HOME
+Capture-01: normalized_rmse=0 maximum=0.002 replay_sha256=4eb94b62d933d47a78f551731fdbc61df97bfad391e2bfbfd2989505d3307a98
+Capture-02: normalized_rmse=0 maximum=0.002 replay_sha256=2435e54f1ff76c68855ba7c293f0274a96958a4ab290da07fbf9f2216a4c2105
+Capture-03: normalized_rmse=0.000289881 maximum=0.002 replay_sha256=f6c31e8ca4183dd5c5d753fddb08cd81f99508e89e316f7872edcd8f8b632644
+Observed-At: 2026-08-30T13:38:29+08:00

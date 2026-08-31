@@ -1,0 +1,20 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-061
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Source-Version: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: development inputs sha256:30c0ce85ff97575a7c7d08e97738b01083182d9dd959159e3eb12238387fa27d
+Observed-At: 2026-08-31T09:32:59+08:00
+Command: PYTHONDONTWRITEBYTECODE=1 python3 missions/haros-guidebook/scripts/check-goal-scoped.py
+Exit-Code: 0
+Result: PASS
+Claims: C-006; C-007
+Upstream-Result: FAIL errors=2 warnings=1, limited exactly to the canonical spec untracked warning and the two independent completed owner-cut Campaign tombstone errors
+Scoped-Result: upstream errors=2, scoped independent-completed-campaign exception PASS
+Boundary: the adapter ran the upstream checker unchanged, accepted no missing, additional, or changed diagnostic, and did not modify the global skill or either owner-cut Campaign file
+Independent-Campaign-Proof: both state files and E-025/E-026 are tracked and HEAD-clean; control commit 8802205680f065be4cc1d5d84c2aef0a37ba0c23 is an ancestor of 17b HEAD and contains the durable chain; Campaign HAROS-OWNER-CUT-2026-08-30 has exactly C-001 through C-009 required and verified, checkpoint COMPLETE, Active Claim none in Goal and spec, and a Goal that points only to its own spec
+Mutations: PASS cases=4; active Claim non-none rejected; one required Claim non-verified rejected; extra fake competing-state diagnostic rejected; arbitrary new upstream error rejected
+Fail-Closed-Transition-Probe: PASS; before canonical Evidence metadata reconciliation, the adapter rejected two additional upstream errors rather than accepting them; only the spec metadata was corrected, with adapter and owner-cut files unchanged
+Gate-Integration: focused-gate.sh and final-gate.sh both invoke only the repo-local fail-closed adapter for Goal consistency
+Freshness: current until HEAD, upstream checker output, either owner-cut Campaign file, E-025/E-026 tracking or bytes, Guidebook Goal/spec, or adapter/gate integration changes

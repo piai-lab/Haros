@@ -1,0 +1,13 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-011
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:2edd6fd9bc99f0b49c664ecf58ef9f41a846af1a5dd4de173827dbcb52b7d46c
+Command: node docs/guide/publication/validate-pilot.mjs && bash docs/guide/publication/render-pilot.sh --verify
+Exit-Code: 0
+Result: PASS
+Claims: C-001
+Candidate-Inputs: docs/haros-guidebook-plan.md; apps/web/src/components/GuidebookPilot.capture.browser.tsx; every regular file under docs/guide; every regular file under missions/haros-guidebook/scripts; 37 files total
+Candidate-Exclusions: missions/haros-guidebook-goal.md; missions/haros-guidebook.md; missions/evidence; .gitignore; standard build/cache output
+Candidate-Hash-Command: hash each lexicographically sorted input as "<file-sha256><two spaces><relative-path><newline>", then SHA-256 the resulting 37-line byte stream

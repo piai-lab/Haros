@@ -1,0 +1,34 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-053
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Gate-Lifecycle: sole focused invocation for frozen K-088 candidate; no retry
+Candidate-Hash-Recomputed: files=434 sha256=9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b pre-gate=exact post-gate=unchanged
+Whole-Guide-Proof: PASS chapters=50 appendices=8 source-tables=200 chapter-tables=181 appendix-tables=18 README-tables=1 generated-total=140 captures-total=18 model-checks=50 safe-exercises=39 lifecycle-chapters=12
+Eight-Dimension-Matrix: PASS narrative junior-comprehension technical-facts lifecycle visual identity security links-and-render
+Source-Owner-Proof: PASS test-files=19 tests=129 identity=PASS source-adoptions=12 ENGINE_DESCRIPTORS=10 public-commands=34 product-events=41 runtime-events=51 chapter-source-routes=50
+Navigation-Proof: PASS README-order entries=59 rendered-required-relations=175 formats=4 omission-mutations=PASS
+Figure-Proof: PASS source=140 rendered-associations=560 formats=4 structured-relations=PASS accessibility=PASS crop=PASS natural-case=PASS palette=PASS
+Capture-Regression: PASS captures=18 fresh-task-specific synthetic production-component replay maximum-normalized-rmse=0.000289881 threshold=0.002
+C005-Media-Baseline: PASS generated-JPG=140 mismatch=0 capture-PNG=18 mismatch=0 immutable-candidate=fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117
+Publication-Proof: PASS Website-pages=60 media=158 tables=200 standalone-tables=200 PDF-pages=620 PDF-words=152183 EPUB=reflow
+Reproducibility-Proof: PASS two independent 231-file trees byte-exact tree-sha256=ff86247ddc6886eff30ab5651bca21e72e6ec3ccac1ed4e24d963d5799ee534d Website-sha256=247dbd2e63641904761edd70ea1df3689869a4c7b50983c4d104a9d8af29a318 HTML-sha256=ff77ec0b87a8d94133cb020eb17d2a52b799a169eb6f606779d377c443b92e2e PDF-sha256=069176e60c658e6d61ead8211c10d79bc40700325f4014481a08fc5c2b41ac06 EPUB-sha256=35f3e2542037c82864493b46de70176eb05b6905b8650a7ce6876c6383b0876c
+PDF-Cover-Proof: PASS page=1 byte-exact-canonical-cover=c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779 pages=620 volatile-dates=none
+EPUB-Container-Proof: PASS members=226 fixed-identifier-date-modified-container-timestamps
+Run6-Mutations: PASS cases=2 source-alpha-cover-identity=detected PDF-byte-drift=detected
+Visible-Reflow-Proof: E-052 receipt-sha256=6441c23cb62a2f99c2973bce935b9049c0b116f8d8b0bf479265b79ff657f688 surfaces=Website-desktop+Website-mobile+standalone+PDF-original-size+EPUB-reflow screenshot-set=none
+Five-Edition-Regression: PASS tables=62,58,125,169,200 PDF-pages=180,169,377,516,620 PDF-words=44495,41696,94304,128620,152183 EPUB=reflow
+Mutations: PASS inherited=5 Run4=9 Run5=16 Run6=2 plus rendered-navigation omissions for every edition
+Immutable-Output: missions/evidence/haros-guidebook/output/sha256-9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b files=687 artifact-checksums=686 artifact-sha256=a3aeed3de10ab21a284f8e3a4ecc413cf516a5bd7aae91f9c8e55968e8bcc18f manifest-sha256=ad7cf43ad7751fdff0c091accba36f5d011206a5a2efb3d2c402c65bd9dfd21d writable=0 bytes=414627317
+Immutable-Output-Audit: PASS all artifact checksums verified; temporary-or-screenshot-files=0
+Image-Calls: 0
+Product-Behavior-Changes: none
+Release-Publish-Sign-Push-Commit: none
+Protected-Gitignore: preserved
+Observed-At: 2026-08-31T07:56:21+08:00

@@ -1,0 +1,21 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-015
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd
+Command: node docs/guide/publication/validate-pilot.mjs && bash docs/guide/publication/render-pilot.sh --verify && bash docs/guide/publication/replay-captures.sh
+Exit-Code: 0
+Result: PASS
+Claims: C-001
+Candidate-Inputs: docs/haros-guidebook-plan.md; apps/web/src/components/GuidebookPilot.capture.browser.tsx; every regular non-cache file under docs/guide; every regular file under missions/haros-guidebook/scripts; 40 files total
+Candidate-Exclusions: missions/haros-guidebook-goal.md; missions/haros-guidebook.md; missions/evidence; .gitignore; standard build/cache output
+Candidate-Hash-Command: hash each lexicographically sorted input as "<file-sha256><two spaces><relative-path><newline>", then SHA-256 the resulting 40-line byte stream
+Pilot-Validation: PASS chapters=3 generated=9 captures=3 raster_bytes=2410698
+Rendered-Links: PASS website=11 standalone=77 epub=79
+Rendered-Accessibility: PASS formats=4 rows=5 invariants=2
+Capture-Replay: PASS captures=3 isolated task-specific HARNESSOS_HOME/XDG_CONFIG_HOME/XDG_CACHE_HOME
+Capture-01: normalized_rmse=0.000158913 maximum=0.002
+Capture-02: normalized_rmse=0 maximum=0.002
+Capture-03: normalized_rmse=0.000289881 maximum=0.002 replay_sha256=f6c31e8ca4183dd5c5d753fddb08cd81f99508e89e316f7872edcd8f8b632644
+Observed-At: 2026-08-30T13:37:52+08:00

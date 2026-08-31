@@ -1,0 +1,56 @@
+Haros Guidebook C-004 Run 4 development receipt
+observed_at=2026-08-31T02:02:00+08:00
+workspace=/Users/liuzaoqu/Desktop/Develop/independent/Haros
+head=29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+branch=main
+claim=C-004
+state=development-complete-not-frozen
+
+chapters=12
+chapter_range=35-46
+chapter_words_min=2504
+chapter_words_max=3062
+chapter_tables_min=3
+chapter_tables_max=4
+chapter_tables_run4=44
+chapter_tables_total=168
+generated_new=29
+generated_total=116
+captures_new=4
+captures_total=18
+raster_bytes=22018763
+
+generated_final_attempt_distribution=v1:7,v2:13,v3:9
+generated_slot_cap=3
+generated_slots_over_cap=0
+initial_relationship_failures=20
+initial_relationship_failure_disposition=rejected-not-canonical
+fallback=authorized-built-in-imagegen-after-provider-method-mismatch-evidence
+part06_opener_postprocess=one-approved-deterministic-red-to-amber-bbox-mapping
+part06_opener_pre_sha256=ba473442635780819bd27be42216292aed171137615ff8298c3e39fde80797a9
+part06_opener_normalized_pre_crop_sha256=f2b994befa65c2f0f4c78c44255d127c25cfdebbe56416a9bafb976565449d20
+part06_opener_final_sha256=d72e37d7f31d09886a6b9e53ab65a6eed92795b98d07222364b3b77163da4f45
+part06_opener_red_fraction_after=0
+part06_opener_outside_bbox_diff_pixels=0
+
+command=node docs/guide/publication/validate-run4.mjs
+result=PASS chapters=46 run4_chapters=12 tables=168 generated_new=29 generated_total=116 captures_new=4 captures_total=18 red_cap=PASS truth_rows=29
+command=bash docs/guide/publication/test-run4-validator-mutations.sh
+result=PASS cases=5 navigation=1 relations=1 red-cap=1 natural-case=1 truth-hash=1
+command=bash docs/guide/publication/replay-run4-captures.sh
+result=PASS captures=4 normalized_rmse=0,0,0,0 maximum=0.002
+command=GUIDEBOOK_RUN4_BUILD_DIR=/tmp/haros-guidebook-run4-dev-build bash docs/guide/publication/render-run4.sh --verify
+result=PASS website+standalone-html+pdf+epub rendered-navigation-relations=139 rendered-accessibility=PASS
+command=python3 docs/guide/publication/validate-rendered-figures.py --build /tmp/haros-guidebook-run4-dev-build haros-guidebook-parts-01-06
+result=PASS figures=116 formats=4 associations=464
+command=python3 docs/guide/publication/validate-publication-quality.py --build /tmp/haros-guidebook-run4-dev-build haros-guidebook-parts-01-06 through-46
+result=PASS tables=169 pdf_pages=514 pdf_words=128444 epub=reflow
+command=worker-VI-final-delta-source-figure-QA
+result=PASS blockers=0
+
+focused_gate_calls=0
+final_gate_calls=0
+candidate_state=open
+protected_gitignore=preserved-user-change
+real_private_engine_state=not-read-not-mutated
+publish_commit_push=none

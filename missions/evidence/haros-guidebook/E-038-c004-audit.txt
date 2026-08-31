@@ -1,0 +1,24 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-038
+Role: audit
+Evaluator-Provenance: codex-task:/root/guidebook_judge_4
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+Command: fresh read-only Judge /root/guidebook_judge_4 audited all 29 Run 4 rasters at full resolution against final exact_text and candidate gates
+Exit-Code: 1
+Result: FAIL
+Disposition: REVISE
+Claims: C-004
+Blocking-Findings: 1
+Blocker: Run 4 raster text versus sidecar exact_text validation was false green because it trusted sidecar declarations instead of deriving a transcript from raster pixels.
+Missing-In-Raster-Inventory-Entries: ch-35-primary=Process landscape; ch-35-secondary=Authorized edges; ch-38-secondary=Projection repair; ch-43-primary=Startup layers; ch-43-secondary=Admission lanes; ch-44-extra=Cancellation path; ch-44-primary=Failure boundaries; ch-44-secondary=Command retry; ch-45-primary=Restart recovery; ch-45-secondary=Startup reconciliation; ch-46-extra=Bounded outbound request; ch-46-secondary=Independent security gates
+Uninventoried-Raster-Labels: ch-35-primary=Server; ch-36-secondary=Settings
+Correction-Scope: inventory-deltas=14 unique-sidecars=13 unchanged-run4-sidecars=16
+Source-Decision: the twelve removed strings are conceptual pair-map or explanatory-job titles rather than observed in-image text; Server and Settings are visible, source-supported, architecturally necessary node labels.
+Required-Proof: deterministic Tesseract 5.5.3 raster-derived normalized transcript for all 29 Run 4 JPGs; bidirectional final exact_text comparison; missing-title, removed-Server-or-Settings, and injected-extra-token mutations; fresh full-resolution 29-image checklist.
+Media-Decision: no raster regeneration or image call is authorized or needed unless a truly wrong visible label is independently found.
+Immutable-History: E-036 and E-037 remain intact historical PASS receipts for the rejected candidate but are stale for C-004; the 452-file package remains non-writable and unmodified.
+Immutable-Manifest-SHA256: 229ad87b8eebe2b0ee3f4fbaaced57ca0952a7c5f21910263bc3a350aa3db540
+Observed-At: 2026-08-31T02:28:10+08:00
+Revalidation-Condition: correct only the 14 transcript inventory deltas across the 13 listed sidecars, prove the other 16 Run 4 sidecars byte-identical to the rejected candidate, add direct raster OCR and mutations, rerun all regressions and four editions, then freeze and gate one new candidate.

@@ -1,0 +1,25 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-071
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Evaluator-Provenance: codex-task:01a0552a-2fc0-73a1-aacf-62f4bf090cf7; fresh-context; producer-context=not-inherited; same-evaluator repair recheck of E-055/E-067
+Candidate-Version: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Command: same fresh read-only completion Judge follow-up on E-067 closure, E-068–E-070, and frozen ac8 candidate/package
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007 substantive PASS
+Material-Findings: 0
+Nonblocking-Findings: 0
+E067-Closure: PASS; the sole canonical-input mutation-isolation proof-integrity finding is closed.
+Failure-Path-Counterexample: PASS; the Judge independently forced the mutation body to fail early, observed the EXIT trap still compare the canonical candidate manifest, preserve exit code 1, retain files=439 and hash=ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f before/after, and leak no temp or DS metadata.
+Production-Owner: PASS; candidate-hash fixes the production metadata guard to canonical docs/guide without an ambient override; the mutation uses the same guard only on a task-specific temporary root; static canonical-write self-test passes.
+Candidate-Recomputed: PASS files=439 sha256=ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f.
+Package-Recomputed: PASS files=687 checksums=686/686 candidate-manifest-lines=441 candidate-manifest-sha256=4c97590dd2b43126cbda8ec440ee417e461e609b3f7be96ae39f75a509afa69c artifact-manifest-sha256=1d5650c2cf7f066e772a3441696050d97a869708419764e207a1618da2dcf604 logical-bytes=414623216 writable-files=0 writable-dirs=0 temp-screenshot-DS=0; package candidate manifest byte-matches the current candidate.
+Bounded-Delta: PASS; dfe-to-ac8 candidate delta is exactly six isolation/control paths: one new guard, one new self-test, and four modified isolation/gate scripts; no Guidebook prose, media, or product source changed.
+Media-Baseline: PASS generated-JPG=140 mismatch=0 capture-PNG=18 mismatch=0 against immutable C-005.
+Publication-Regression: PASS; dfe/ac8 Run 5 trees are byte-exact at files=231 Website=60 PDF-pages=620 PDF-bbox-words=152191 EPUB-members=226, with tree/Website/HTML/PDF/EPUB hashes matching E-068–E-070; E-067's five-surface PASS is inherited unchanged.
+Gate-Receipts: PASS E-069 focused receipt sha256=68f8d9c8e406230510fed7cfb2f543d6915002666fbb63e759b881722bed8a5f; E-070 final receipt sha256=b1edec47e0836220405c53a648dea71489462ed3ee4da13db8e39893b6f17424; each gate ran exactly once; pre/post candidate remained ac8 with canonical integrity PASS.
+Status-Contract: C-001–C-007 are substantive PASS but remain candidate under zq-goal until they share one committed clean version and root performs the final status transition; the producer must not mark verified.
+Judge-Actions: read-only; focused/final not rerun; candidate/package unchanged; no commit or push.
+Observed-At: 2026-08-31T11:20:34+08:00

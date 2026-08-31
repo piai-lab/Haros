@@ -1,0 +1,19 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-055
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b
+Judge: /root/guidebook_completion_judge
+Command: fresh read-only completion Judge audited the K-088 candidate and immutable package against C-006/C-007
+Exit-Code: 1
+Result: FAIL
+Audit-Decision: REVISE
+Claims: C-006; C-007
+Blockers: 2 material plus 1 candidate-identity boundary
+Blocker-1: Run 5 Website and standalone cover surfaces render two consecutive visible Haros Guidebook H1 headings because Pandoc emits a metadata title block before the canonical README H1; the repaired DOM must expose one visible primary H1 while preserving the HTML title, README ownership, PDF page-one cover, and anchors.
+Blocker-2: Chapter 10 records the nonexistent apps/web/src/components/ChatView.tsx#sendMessage fragment instead of the canonical #onSend symbol; repaired validation must check every local code-symbol fragment against real source symbols and reject the stale fragment.
+Identity-Boundary: docs/guide/.DS_Store and docs/guide/assets/.DS_Store are nondeliverable OS metadata included in the candidate input scope; remove exactly those files and make candidate freeze reject any docs/guide/**/.DS_Store.
+Required-Disposition: reopen C-006/C-007 narrowly; preserve K-088/K-089/K-090, E-052/E-053/E-054, and the old 687-file package as immutable stale history; make no image, prose expansion, product behavior, release, commit, push, or .gitignore change; repair only the named owners, add deterministic assertions and mutations, run full inherited pre-freeze, then consume focused/final once for a new candidate and return to the same Judge.
+Immutable-Output-Preserved: missions/evidence/haros-guidebook/output/sha256-9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b files=687 artifact-checksums=686 writable=0 bytes=414627317
+Observed-At: 2026-08-31T08:30:00+08:00

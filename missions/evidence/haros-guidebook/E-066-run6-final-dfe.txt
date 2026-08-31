@@ -1,0 +1,30 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-066
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:dfe4421afaea517a68c3020e5c7d503f2f77ed8c242230f906098493626029c2
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Invocation: bash missions/haros-guidebook/scripts/final-gate.sh dfe4421afaea517a68c3020e5c7d503f2f77ed8c242230f906098493626029c2
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Freeze-Owner: PASS candidate-freeze-mutations=2; unformatted-control=1; formatted-control=1.
+Formatting: PASS files=240.
+Whole-Guide: PASS chapters=50 appendices=8 source-tables=200 generated=140 captures=18 anchors=476; identity, security, narrative spine, glossary routes, and edition honesty pass.
+Source-Contracts: PASS test-files=19 tests=129 identity=PASS source-adoptions=12.
+Captures: PASS all 18 isolated replays; maximum normalized RMSE 0.000289881 below 0.002.
+Raster-Proof: PASS trim/palette/visual truth, Run 4 OCR figures=29 and mutations=9, Run 5 OCR figures=24 and mutations=16, cover recomposition byte-exact.
+Run6-Mutations: PASS cases=5 stale-code-symbol=1 duplicate-cover-H1=1 candidate-OS-metadata=1 PDF-cover-identity=1 PDF-byte-drift=1.
+Reproducibility: PASS files=231 Website=60 EPUB-members=226 tree-sha256=d3bfed17e079e678d181ff1d964aebd557f10775beb55a97b87e974704df2f7b Website-sha256=ccd20636fc1a80be789287d55eba7ad74db65e8dec799050552a590200af26bb HTML-sha256=f1bd0f15cbbd09cbe6cb1c0bcf70b0942fddc0849524ee7fc6a5da4f954684bc PDF-sha256=410abe1c9955fcfcc934186f8512ef35eebad5537b63311a49c47835cf38b322 EPUB-sha256=3101fc1c40beac07ac38028e9b838ab5e09b2a847c958d08b7f44fcdec4d1aba.
+Publication: PASS figures=140 formats=4; five editions tables=62/58/125/169/200 PDF-pages=180/169/377/516/620 PDF-words=44503/41704/94312/128628/152191 EPUB=reflow.
+Scoped-Goal: PASS exact upstream errors=2 warnings=1; independent completed owner-cut exception; mutations=4.
+Immutable-Package: missions/evidence/haros-guidebook/output/sha256-dfe4421afaea517a68c3020e5c7d503f2f77ed8c242230f906098493626029c2; files=687 artifact-checksums=686 candidate-inputs=437 bytes=414622951 writable=0 temporary-or-screenshot-files=0.
+Candidate-Hash-Post: sha256:dfe4421afaea517a68c3020e5c7d503f2f77ed8c242230f906098493626029c2 files=437.
+Warnings: known nonblocking PDF renderer warnings for screen-only min(), overflow-x, and media screen declarations; browser/link/bounds/reflow checks pass.
+Focused-Gate-Calls: 1 PASS for this candidate.
+Final-Gate-Calls: 1 PASS for this candidate.
+Disposition: production frozen; producer does not mark verified; return this exact candidate and package to the same fresh completion Judge.
+Observed-At: 2026-08-31T10:26:20+08:00

@@ -1,0 +1,26 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-025
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:8bca35deb68d4114143bee210c82c6046081d5dc8f65385976f523056ba2990c
+Command: same fresh read-only Judge /root/guidebook_judge_2 rechecked candidate sha256:8bca35deb68d4114143bee210c82c6046081d5dc8f65385976f523056ba2990c against C-001 and C-002
+Exit-Code: 0
+Evaluator-Provenance: codex-task:/root/guidebook_judge_2
+Isolation: fresh-context; producer-context=not-inherited; same C-002 Judge; read-only
+Inputs: Goal; canonical spec; 133-file candidate manifest; E-022; E-023; E-024; immutable 43-file Website, standalone HTML, PDF, and EPUB output; all 39 generated figures and structured sidecars; Chapters 7-13 and 15; README-derived navigation; six capture fixtures and replay evidence
+Result: PASS
+Claims: C-001; C-002
+Claim-Results: C-001=verified; C-002=verified
+Candidate-Hash-Recomputed: 8bca35deb68d4114143bee210c82c6046081d5dc8f65385976f523056ba2990c files=133 manifest=exact
+Focused-Receipt-SHA256: 5836cd0dbbb0ee3f3664fbc8e2b5c535935cea1fd398cbbe662190af34144449
+Final-Gate-Receipt-SHA256: ee8bd7ac19bf7ff004be7f4f65b3855aac72c4f48e344c0aba0b11240f1a3329
+Immutable-Output-Audit: PASS files=43 all non-writable artifact checksums=42/42
+Prior-Findings: PASS 5/5 closed; prose, ownership and lifecycle topology, sole-owner continuous navigation, structured four-format figure contracts, persistent inspectable outputs and provenance
+Visual-Audit: PASS 39/39 at original resolution; seven reopened figures satisfy latest truth, natural-case, relation, style, and crop contracts
+Publication-Audit: PASS figure-format associations=156; PDF pages=167 words=41511 within bounds; EPUB reflow responsive; dense HTML tables semantic
+Capture-Regression: PASS captures=6 production components with synthetic task-specific state and fresh replay evidence
+Material-Findings: none
+Nonblocking-Findings: none
+Campaign-Completion-Audit: still required after all required Claims share one committed final version
+Observed-At: 2026-08-30T17:46:02+08:00
