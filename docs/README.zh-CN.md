@@ -1,27 +1,22 @@
 <div align="center">
-  <img src="../assets/brand/exports/app-icon-256.png" width="112" alt="Haros 应用图标" />
-  <h1>Haros</h1>
-  <p><strong>十个 Engine，一套本地优先的 Harness OS。</strong></p>
-  <p>切换 Engine，工作不断线。</p>
-  <p>
-    <img alt="Haros 内置 Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
-    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
-    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
-    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
-    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
-    <br />
-    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
-    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
-    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
-    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
-    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
-  </p>
   <img src="../assets/brand/exports/haros-system-schematic.png" width="960" alt="十个 Engine 进入 Haros，并在同一工作台中保留统一的产品状态" />
   <p>
     <a href="guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="../README.md">English</a> ·
     <a href="architecture.md">架构</a> ·
     <a href="../CONTRIBUTING.md">参与贡献</a>
+  </p>
+  <p>
+    <img alt="Haros 内置 Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
+    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
+    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
+    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
+    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
+    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
+    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
+    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
+    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
+    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
   </p>
 </div>
 
