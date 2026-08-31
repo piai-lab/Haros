@@ -77,7 +77,12 @@ assert.equal(webManifest.name, "Haros");
 assert.equal(webManifest.short_name, "Haros");
 
 const readme = await readFile(path.join(repositoryRoot, "README.md"), "utf8");
-assert.match(readme, /^# Haros$/mu);
+const chineseReadme = await readFile(path.join(repositoryRoot, "docs/README.zh-CN.md"), "utf8");
+const harosHeading = /(?:^# Haros$|<h1(?:\s+[^>]*)?>Haros<\/h1>)/mu;
+assert.match(readme, harosHeading);
+assert.match(chineseReadme, harosHeading);
 assert.match(readme, /github\.com\/piai-lab\/Haros/u);
+assert.match(readme, /docs\/README\.zh-CN\.md/u);
+assert.match(chineseReadme, /\.\.\/README\.md/u);
 
 console.log("Verified Haros public identity and retired-name absence.");
