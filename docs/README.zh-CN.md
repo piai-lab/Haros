@@ -18,7 +18,7 @@
   </p>
   <img src="../assets/brand/exports/haros-system-schematic.png" width="960" alt="十个 Engine 进入 Haros，并在同一工作台中保留统一的产品状态" />
   <p>
-    <a href="https://piai-lab.github.io/Haros/"><strong>Guidebook</strong></a> ·
+    <a href="guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="../README.md">English</a> ·
     <a href="architecture.md">架构</a> ·
     <a href="../CONTRIBUTING.md">参与贡献</a>
@@ -73,7 +73,7 @@ Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于�
 
 ## 继续了解
 
-- 从 [Haros Guidebook（英文）](https://piai-lab.github.io/Haros/) 开始，完整了解产品与架构。
+- 从 [Haros Guidebook（英文）](guide/README.md) 开始，完整了解产品与架构。
 - 阅读[架构说明](architecture.md)，了解 owner 边界与 runtime 设计。
 - 提交改动前请先阅读[参与贡献](../CONTRIBUTING.md)。
 - 使用[支持文档](../SUPPORT.md)获取帮助；安全问题请按[安全策略](../SECURITY.md)私下报告。

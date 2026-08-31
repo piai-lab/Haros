@@ -1,12 +1,6 @@
 name: Guidebook Pages
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/guidebook-pages.yml"
-      - "docs/guide/**"
   workflow_dispatch:
 
 permissions:

@@ -18,7 +18,7 @@
   </p>
   <img src="assets/brand/exports/haros-system-schematic.png" width="960" alt="Ten Engines enter Haros, which keeps shared product state in one workbench" />
   <p>
-    <a href="https://piai-lab.github.io/Haros/"><strong>Guidebook</strong></a> ·
+    <a href="docs/guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="docs/README.zh-CN.md">简体中文</a> ·
     <a href="docs/architecture.md">Architecture</a> ·
     <a href="CONTRIBUTING.md">Contributing</a>
@@ -74,7 +74,7 @@ local setup. A successful local build is unsigned source software, not an offici
 
 ## Go deeper
 
-- Start with the [Haros Guidebook](https://piai-lab.github.io/Haros/) for the complete, junior-friendly tour.
+- Start with the [Haros Guidebook](docs/guide/README.md) for the complete, junior-friendly tour.
 - Read [Architecture](docs/architecture.md) for ownership boundaries and runtime design.
 - See [Contributing](CONTRIBUTING.md) before proposing a change.
 - Use [Support](SUPPORT.md) for help and [Security](SECURITY.md) for private reports.
