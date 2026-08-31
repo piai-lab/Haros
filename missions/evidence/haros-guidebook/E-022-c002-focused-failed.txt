@@ -1,0 +1,16 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-022
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:18cb42451f8c405844aef87b217aae07898efd818730af463ea32e13cf7359ea
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 18cb42451f8c405844aef87b217aae07898efd818730af463ea32e13cf7359ea
+Exit-Code: 1
+Result: FAIL
+Claims: C-001; C-002
+Failure: render scripts resolved a relative candidate-bound build directory after changing into docs/guide, so artifacts landed under docs/guide/missions while the combined rendered-figure validator looked under the repository-root evidence path.
+Material-Impact: the failed run did not establish focused proof and transiently changed candidate inputs; the exact generated directory was moved intact to /tmp/haros-guidebook-failed-focused-18cb-render, the root manifest was preserved under missions/evidence/haros-guidebook/failed-output, and the 18cb candidate is stale.
+Revalidation: both render scripts now canonicalize explicit build roots before changing directory and focused-gate passes an absolute candidate-bound evidence path; freeze a new candidate and run its focused gate once.
+Preserved-Manifest: missions/evidence/haros-guidebook/failed-output/sha256-18cb42451f8c405844aef87b217aae07898efd818730af463ea32e13cf7359ea-attempt-1/candidate-manifest.txt
+Preserved-Manifest-SHA256: 430459a9f82f7229bc9c5a1972365d0d35f39ce90f1b0087bc613b77cb86b2a1
+Observed-At: 2026-08-30T17:30:25+08:00

@@ -1,0 +1,24 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-051
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117
+Command: same read-only Judge /root/guidebook_judge_5 rechecked repaired candidate fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117 against C-005 and E-047
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005
+Claim-Results: C-001=regression-pass; C-002=regression-pass; C-003=regression-pass; C-004=regression-pass; C-005=milestone-pass-candidate-state
+Evaluator-Provenance: codex-task:/root/guidebook_judge_5
+Isolation: same fresh C-005 Judge; read-only; producer-context=not-inherited
+Candidate-Hash-Recomputed: fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117 files=430 mismatch=0
+Immutable-Output-Audit: PASS files=687 artifact-checksums=686/686 bytes=414551420 writable=0 candidate-manifest-sha256=4590f9df6e905c4e43f6e281b9b34d6a527e576b1e10800524ae9f31657e1fe1 artifact-manifest-sha256=6a9aa52bccee8b801d62143a7e20ef5ece1860bafbed2bdd1e865a3cd95a219e
+Appendix-B-Audit: PASS natural sentence plus Website/standalone/PDF/EPUB formatted-text assertion; two negative mutations rejected
+Appendix-E-Audit: PASS 50 rows paths-exist no-test-as-owner Chapter15 contracts/decider/projector owners with workLog consumer-only Chapter47 four-subdomain owners/proofs; two negative mutations rejected
+Cover-Audit: PASS source and immutable package independently recompose; field OCR has no Haros/logo; canonical-SVG-to-mark-layer AE=0; final c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779 byte-identical; four negative mutations rejected
+Raster-Audit: PASS all 140 canonical JPG hashes line-match rejected K-079 candidate; no raster drift
+Gate-Lifecycle: E-049-focused=PASS-once receipt-sha256=dd1480275161282a2f271bc95410c551e1008e2c011e666e8e29002cecb4ef9c; E-050-final=PASS-once receipt-sha256=5930c7bc4eb51e177f1bef00ed3b3364f5a653b4b19235171287365fc0697606
+Prior-Audit: E-047 preserved FAIL/REVISE with exactly three blockers on rejected candidate bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa
+Findings: material=0 nonblocking=0; all three E-047 blockers closed
+Repository-Mutation: none
+Observed-At: 2026-08-31T07:04:44+08:00

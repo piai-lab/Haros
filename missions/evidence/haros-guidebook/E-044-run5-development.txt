@@ -1,0 +1,92 @@
+Haros Guidebook C-005 Run 5 development receipt
+observed_at=2026-08-31T04:46:33+08:00
+workspace=/Users/liuzaoqu/Desktop/Develop/independent/Haros
+head=29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+branch=main
+claim=C-005
+state=development-complete-not-frozen
+bootstrap=E-043-PASS
+regression_baseline=E-040,E-041,E-042
+
+chapters=50
+part_vii_chapters=4
+part_vii_words=2948,2887,2811,2957
+part_vii_tables=13
+appendices=8
+appendix_tables=18
+readme_tables=1
+chapter_tables=181
+source_markdown_purposeful_tables=200
+source_table_range=PASS-160-to-220
+reading_order=Preface-then-Chapters-1-to-50-then-Appendices-A-to-H
+chapter_46_to_47=PASS-restored
+
+generated_new=24
+generated_total=140
+captures_new=0
+captures_total=18
+image_provider=imagegen-built-in
+provider_selection=user-authorized-after-recorded-run4-gpt-provider-method-relationship-failure
+rendered_outputs=28
+accepted_outputs=24
+rejected_outputs=4-temp-only-not-canonical
+rejected_slots=ch-47-secondary-attempts-1-and-2,ch-48-secondary-attempt-1,appendix-B-02-attempt-1
+per_slot_cap=PASS-maximum-3
+waivers=none
+
+cover_generated_field_sha256=18e8efcd54da10fd10f7fbebd1622129e2a11838b92b85d90582f90db2b076fc
+cover_final_sha256=c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779
+cover_reserved_region=upper-third
+cover_brand_asset=assets/brand/harnessos-mark.svg
+cover_brand_sha256=a9784a60a3a5c3631507280009b15276b5fdd67ed0dfa7112d52cb7a51ec9c70
+cover_composition=deterministic-generated-field-then-canonical-mark-and-typeset-wordmark
+
+ocr_engine=tesseract-5.5.3
+ocr_figures=24
+ocr_comparison=PASS-bidirectional-raster-derived
+ocr_proof_schema=run5-v1-with-hash-bbox-confidence-crop-binding
+ocr_proof_internal_sha256=85cc56b6bb10abfe52007bb551aeeb51a376f4492e7659370e005c91d13d0d09
+ocr_proof_file_sha256=7439d15cfbe394519aef3207245bade12abb15c63069ac13b83271f7586321c2
+ocr_nontext_exceptions=appendix-A-01-tr,ch-47-primary-alll
+ocr_reviewed_crop=appendix-A-02-Engine
+ocr_exception_boundary=exact-raster-hash-plus-bbox-plus-crop-hash-plus-PSM-confidence-coordinates-plus-human-verdict
+ocr_mutations=PASS-missing,extra-transcript,same-slot-readable-pixel-extra
+
+appendix_c_derivation=PASS-10-ENGINE_DESCRIPTORS-rows-in-canonical-order
+appendix_d_index=PASS-34-public-commands,41-product-events,51-runtime-events
+appendix_e_map=PASS-50-chapter-to-owner-and-focused-proof-rows
+appendix_truth_qa=PASS-E-through-H-audit-findings-repaired
+
+command=node docs/guide/publication/validate-run5.mjs with fixture development path
+result=PASS chapters=50 appendices=8 source_tables=200 generated_total=140 captures_total=18 outputs=28 rejected=4
+command=bash docs/guide/publication/test-run5-validator-mutations.sh
+result=PASS cases=9
+command=bash docs/guide/publication/test-run5-source-contracts.sh
+result=PASS test_files=19 identity=PASS source_adoptions=PASS
+command=bash docs/guide/publication/render-run5.sh --verify
+result=PASS website_pages=60 media=158 figure_contracts=140x4 navigation_relations=175x4 source_tables=200 website_tables=200 standalone_tables=200 epub_tables=200 pdf_pages=619 pdf_words=152041 epub=reflow
+development_build=/tmp/haros-guidebook-run5.gZYl0E
+visual_review=/tmp/haros-run5-review.u2HeoL
+visual_review_result=PASS-desktop-mobile-wide-table-and-pdf-representatives
+prefreeze_build=/tmp/haros-guidebook-c005-prefreeze.QABfwo
+prefreeze_result=PASS-five-editions-all-18-capture-replays-all-mutations-source-tests-140-figure-contracts-publication-quality
+prefreeze_publication_tables=62,58,125,169,200
+prefreeze_pdf_pages=180,169,377,516,619
+prefreeze_pdf_words=44500,41702,94310,128626,152041
+
+development_failure_1=first nearby-pixel OCR mutation label was too small and not observed by the OCR pass
+development_failure_1_disposition=label-was-enlarged-and-moved-within-the-same-A01-slot-near-the-reviewed-region; validator-required-the-readable-Rogueword-token-in-the-failure-log; mutation-PASS
+development_failure_2=early-human-progress-summary-counted-203-source-tables-before-the-final-appendix-table-inventory-was-derived
+development_failure_2_disposition=canonical-source-count-recomputed-as-200-equals-181-chapter-plus-18-appendix-plus-1-README; validator-and-all-derived-format-counts-bind-200
+development_failure_3=first-default-aggregate-run-after-cover-integration-counted-Run5-cover-in-Run4-source-allocation
+development_failure_3_disposition=legacy-Pilot,Run2,Run3,Run4-source-scopes-exclude-only-cover-01-while-Run5-counts-it;-old-canonical-slot-counts-returned-to-9,36,84,116-and-Run5-remained-140
+development_failure_4=first-prefreeze-render-treated-README-appendix-links-as-in-scope-for-pre-Run5-editions-and-Pandoc-rejected-missing-appendix-anchors
+development_failure_4_disposition=links-filter-now-admits-appendix-targets-only-for-run5-or-all;-legacy-navigation-relations-pass
+development_failure_5=formatted-Appendix-H-table-width-invalidated-an-exact-string-mutation-fixture-anchor
+development_failure_5_disposition=mutation-now-selects-the-first-structural-separator-after-the-Candidate-surface-header;9-of-9-cases-PASS
+focused_gate_calls=0
+final_gate_calls=0
+candidate_state=not-frozen
+protected_gitignore=preserved-user-change
+real_private_engine_state=not-read-not-mutated
+publish_commit_push=none

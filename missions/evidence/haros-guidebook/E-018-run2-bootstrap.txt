@@ -1,0 +1,14 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-018
+Role: bootstrap
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: head:29b2b39c49ebba20aa38f95d76acd2284e91b1cc; verified-c001:sha256:1b94db9bc001fb158d7bc3e48da138cbbe264c7c778c4736222ee63b12542ecd; active-c002:none
+Command: bash missions/haros-guidebook/scripts/bootstrap.sh
+Exit-Code: 0
+Result: PASS
+Claims: C-002
+Plan-Contract: chapters=50 anchorRows=26 uniqueAnchorIds=26 uniqueAnchorSlots=26 chapterVisualPairs=50 plannedVisualSlots=140 pilotGeneratedAssets=9 pilotChapters=3
+Plan-SHA256: 788b719e2023ea97229b55f31b19d3d7d9d099a3f129e1c8b489be3e04a868e0
+Worktree: protected modified .gitignore; approved Guidebook/Campaign paths untracked; no unexpected tracked change
+Observed-At: 2026-08-30T13:47:46+08:00

@@ -1,0 +1,22 @@
+Haros Guidebook Run 6 fixed-17b pre-freeze receipt
+
+Observed: 2026-08-31T09:49:04+08:00
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Branch: codex/haros-guidebook
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate inputs: sha256:30c0ce85ff97575a7c7d08e97738b01083182d9dd959159e3eb12238387fa27d; files=436
+Result: PASS
+
+The complete inherited pre-freeze ran once from the fixed 17b HEAD. It passed branch/HEAD/candidate guards, bootstrap, formatting, raster trim and palette checks, visual-truth validation, all five edition validators and renders, all 18 isolated synthetic capture replays, Run 4 OCR for 29 figures with nine mutations, Run 5 OCR for 24 figures with byte-exact cover recomposition and sixteen mutations, 129 canonical source-owner tests, five Run 6 mutations, 140 rendered-figure contracts across four formats, publication-quality checks for all five editions, and the fail-closed scoped Goal adapter with four mutations.
+
+Run 6 source matrix: chapters=50; appendices=8; source_tables=200; generated_slots=140; captures=18; internal_anchors=476; code_fragments=123; markdown_fragments=43.
+Run 5 build: files=231; PDF pages=620; words=152191; EPUB members=226; Website pages=60.
+Double-build reproducibility: tree sha256:d3bfed17e079e678d181ff1d964aebd557f10775beb55a97b87e974704df2f7b; Website sha256:ccd20636fc1a80be789287d55eba7ad74db65e8dec799050552a590200af26bb; standalone HTML sha256:f1bd0f15cbbd09cbe6cb1c0bcf70b0942fddc0849524ee7fc6a5da4f954684bc; PDF sha256:410abe1c9955fcfcc934186f8512ef35eebad5537b63311a49c47835cf38b322; EPUB sha256:3101fc1c40beac07ac38028e9b838ab5e09b2a847c958d08b7f44fcdec4d1aba.
+Media regression: 140 generated JPGs aggregate sha256:9db1462d; 18 capture PNGs aggregate sha256:43ac2751; both byte-match the immutable C-005 baseline and no canonical media changed.
+Scoped Goal: PASS; unchanged upstream diagnostics are exactly errors=2 and warnings=1, limited to the independently completed owner-lifecycle Campaign plus the expected untracked canonical spec; any added or changed diagnostic fails closed.
+
+Representative publication-visible audit: Website cover at 1440x900 has one visible Haros Guidebook H1, zero horizontal overflow, and the canonical 1024x1536 cover; Website Chapter 41 at 390x844 has one H1, zero page overflow, three responsive figures, and four independently scrollable tables; standalone Chapter 14 at 1440x900 resolves the chapter anchor to the viewport top with TOC present and no overflow; EPUB Chapter 41 at 390x844 preserves one H1, Prev/Next navigation, responsive figures, and self-scrolling tables; PDF page 1 preserves the complete source-alpha cover, and page 469 remains readable with no crop or overflow. Browser viewport was reset, the audit tab was closed, and the temporary HTTP server was stopped. No screenshot set was retained.
+
+Known nonblocking renderer warnings: the PDF renderer ignores screen-only min(), overflow-x, and @media screen declarations; PDF bounds/readability, browser overflow, links, and EPUB reflow all pass.
+
+The candidate hash was recomputed after the pre-freeze and visual audit and remained exact. This receipt and Campaign state are excluded from candidate inputs. The candidate is eligible to freeze; focused and final call counts for this hash remain zero.

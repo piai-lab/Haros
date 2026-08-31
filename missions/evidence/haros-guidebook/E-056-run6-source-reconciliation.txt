@@ -1,0 +1,19 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-056
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Source-Revision: 8802205680f065be4cc1d5d84c2aef0a37ba0c23
+Previous-Source-Revision: 29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+Command: git diff 29b2b39c49ebba20aa38f95d76acd2284e91b1cc..8802205680f065be4cc1d5d84c2aef0a37ba0c23 -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engine/engineChildEnvironment.ts apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.ts
+Exit-Code: 0
+Result: PASS
+Claims: C-006; C-007
+Diff-Scope: exactly four product source/test paths; the remaining tracked changes belong to the completed HAROS-OWNER-CUT-2026-08-30 Campaign and do not alter Guidebook sources or publication tooling
+Owner-Audit: PASS; EngineHealth and engineUsage removed duplicate EngineKind-to-child-profile projections, while buildEngineChildEnvironment remains the sole child credential/environment filter and now privately resolves oa to the existing pi grant profile
+Lifecycle-Audit: PASS; child environments remain freshly rebuilt per invocation; the new repeated-call test proves no retained child state and preserves Haros control-plane stripping
+Guidebook-Audit: PASS; Chapters 39, 46, and 47 plus Appendices C, E, G, and H remain semantically accurate; ENGINE_DESCRIPTORS remains the Engine identity owner, EngineHealth remains health evidence, engineUsage remains a usage consumer, and no prose or owner route requires revision
+Edition-Pin: all canonical Guidebook Markdown, capture/visual metadata, and edition validators reconcile to 8802205680f065be4cc1d5d84c2aef0a37ba0c23; no prose, navigation, raster, or capture bytes changed for this source reconciliation
+Focused-Proof: buildEngineChildEnvironment.integration.test.ts PASS 22 tests; Run 5 source contracts PASS 19 files/129 tests; whole-guide source-anchor matrix PASS 476 local anchors/123 code fragments/43 Markdown fragments
+Pre-Freeze-Disposition: the pre-freeze run that started at 29b2b39c49ebba20aa38f95d76acd2284e91b1cc is invalid for candidate freeze because HEAD changed during execution; rerun the full inherited pre-freeze from stable 8802205680f065be4cc1d5d84c2aef0a37ba0c23
+Observed-At: 2026-08-31T08:53:00+08:00

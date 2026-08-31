@@ -1,0 +1,22 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-072
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+HEAD: 6b1f34540c451dc438553f38ca93517e73064114
+Parent: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Command: root-authorized exact product candidate commit mapping against the frozen package candidate manifest
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Authority: root established the exact product candidate commit; producer records control state only and does not commit, push, or mark verified.
+Commit-Mapping: PASS commit=6b1f34540c451dc438553f38ca93517e73064114 parent=17b578d3c65d72113accc17200b9b290f80139f6 committed-paths=439 candidate-manifest-paths=439 exact-pathset-match=PASS.
+Candidate-Precommit: PASS files=439 sha256=ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f.
+Candidate-Diff-After-Commit: none across all 439 candidate paths; product candidate bytes are unchanged from the Judge-approved ac8 manifest.
+Completion-Audit: E-071 PASS; material findings=0 nonblocking findings=0; C-001–C-007 substantive PASS.
+Protected-Gitignore: preserved modified and unstaged.
+Control-State: canonical spec, Goal, and evidence remain outside the 439-path product candidate commit and are intentionally pending a control-only descendant proof; Claims remain candidate.
+Next-Action: root establishes a clean worktree with a control-only descendant proof, then performs the final zq-goal status transition; producer does not mark verified or complete.
+Observed-At: 2026-08-31T11:23:36+08:00

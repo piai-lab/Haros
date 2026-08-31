@@ -1,0 +1,21 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-031
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003
+Candidate-Hash-Recomputed: 44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04 files=270 manifest=exact post-gate=unchanged
+Navigation-Proof: PASS README-order entries=35; rendered required relations=103 formats=4; Chapter 1 to Preface live in Website, standalone HTML, EPUB, and PDF semantic anchor; rendered omission mutation=PASS
+Palette-Proof: PASS generated=87 captures=excluded; full-raster HSV thresholds saturation>=0.60 value>=0.25 forbidden family maximum=0.0200-percent each; saturated purple/blue/green in-memory mutation=PASS
+Natural-Case-Proof: PASS generated=87; title-case headings; sentence-case explanations; only genuine acronyms all-caps; no block all-caps
+Figure-Proof: PASS source=87 rendered-associations=348 formats=4; structured relations, aligned alt and extended descriptions, K-037 trim, checksums, dimensions, provenance
+Capture-Regression: PASS captures=14 fresh task-specific synthetic production-component replay; all normalized RMSE below 0.002
+Publication-Proof: PASS tables=125 Parts-I-IV; PDF pages=375 words=94179 bounds=PASS; EPUB reflow=PASS
+Inherited-Regression: PASS C-001/C-002 Pilot and Run 2 source, four-format, capture, figure, table, PDF, and EPUB gates
+Immutable-Output: missions/evidence/haros-guidebook/output/sha256-44fed5d65fef978b3cfbc8c9ca4531551fc5476a46a19c5bd4ed778894774e04 files=267 artifact-checksums=266 writable=0 bytes=144039936
+Raw-Log-SHA256: 1d052c897b3c49a04b20a6fedd4735c8bdf2e5a370b5bb761d988e6dc0eec6a0
+Observed-At: 2026-08-30T22:15:46+08:00

@@ -1,0 +1,20 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-021
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa
+Command: bash missions/haros-guidebook/scripts/final-gate.sh
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002
+Run-Count-On-Frozen-Candidate: 1
+Candidate-Hash-After-Gate: sha256:7211228ea53244ab6645de74982d6e0c9e96284880f2379921c17e470aafb3aa
+Formatting: PASS files=71
+Generated-Raster-Trim: PASS files=39 changed=0
+Pilot-Validation: PASS chapters=3 generated=9 captures=3 raster_bytes=1961115
+Run2-Validation: PASS chapters=15 generated=36 captures=6 raster_bytes=6375987
+Rendered-Links: Pilot website=5 standalone=71 epub=73; Run2 website=25 standalone=415 epub=417
+Rendered-Accessibility: PASS formats=4 rows=5 invariants=2
+Capture-Replay: PASS captures=6 normalized_rmse_range=0-0.000289881 maximum=0.002; synthetic task-specific state only
+Observed-At: 2026-08-30T16:51:00+08:00

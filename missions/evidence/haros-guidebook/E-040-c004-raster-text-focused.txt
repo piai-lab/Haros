@@ -1,0 +1,23 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-040
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004
+Candidate-Hash-Recomputed: f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430 files=356 manifest=exact post-gate=unchanged
+Raster-Text-Proof: PASS figures=29 inventory-deltas=14 unique-sidecars=13 unchanged-sidecars=16 tesseract=5.5.3 bidirectional=PASS full-resolution-human-checklist=29/29 canonical-proof-sha256=5d02880b0930785707bd8cd69a9185273cd056b3c5ab8dfe80df647b34258e57
+Raster-Text-Mutations: PASS cases=4 missing-title=1 removed-server=1 removed-settings=1 injected-token=1
+Run4-Proof: PASS chapters=12 range=35-46 words=2504-3062 source-tables=44 generated-new=29 generated-total=116 captures-new=4 captures-total=18 truth-rows=29 validator-mutations=9
+Navigation-Proof: PASS README-order entries=47 rendered-required-relations=139 formats=4 Chapter-1-to-Preface=live omission-mutations=PASS
+Figure-Proof: PASS source=116 rendered-associations=464 formats=4 structured-relations=PASS accessible-equivalents=PASS K-037-trim=PASS
+Palette-Proof: PASS generated=116 captures=excluded deterministic-full-raster=PASS Run4-semantic-red-cap=PASS natural-case=PASS
+Capture-Regression: PASS captures=18 fresh-task-specific-synthetic-production-component-replay maximum-normalized-rmse=0.002
+Publication-Proof: PASS tables=169 Parts-I-VI PDF-pages=514 PDF-words=128443 EPUB=reflow
+Inherited-Regression: PASS C-001/C-002/C-003 source four-format capture figure navigation table PDF EPUB palette natural-case and failure-injection gates
+Immutable-Output: missions/evidence/haros-guidebook/output/sha256-f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430 files=452 artifact-checksums=451 artifact-sha256=4c2cab3fc96fce064c448227e89d5e67bb16a2cf5a44217614dc2dafb08b4e57 manifest-sha256=76931a7cf07ef0c522e782b2b461c16a3b99ab62691e2f7f4aed70d6db87def8 writable=0 bytes=264761732
+Old-Immutable-History: sha256:18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74 files=452 writable=0 bytes=264761378 E-036-and-E-037=stale-for-C004
+Observed-At: 2026-08-31T03:00:25+08:00

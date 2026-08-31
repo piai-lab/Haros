@@ -1,0 +1,27 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-068
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Candidate-Files: 439
+Command: E-067 bounded metadata-isolation control pre-freeze
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Metadata-Owner: one production assert-no-guidebook-metadata.sh guard; candidate-hash calls it only with canonical docs/guide; no ambient root override.
+Isolation-Self-Test: PASS cases=3 static-canonical-target=0 clean-temp=PASS temp-DS-rejected=PASS; mutation script contains no canonical docs/guide/.DS_Store write target or retired candidate_ds_store variable.
+Run6-Mutations: PASS cases=5; metadata mutation acts only on a task-specific temporary root; canonical candidate pre/post manifest comparison passes in the EXIT trap even on failure paths.
+Canonical-Integrity: PASS file-set-and-bytes=unchanged; canonical docs/guide/.DS_Store absent after full mutation; candidate before/after files=439 hash=ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f.
+Whole-Guide: PASS chapters=50 appendices=8 source-tables=200 generated=140 captures=18 anchors=476 code-fragments=123 markdown-fragments=43.
+Source-Contracts: PASS test-files=19 tests=129 identity=PASS source-adoptions=12.
+Reproducibility: PASS files=231 Website=60 EPUB-members=226 tree-sha256=d3bfed17e079e678d181ff1d964aebd557f10775beb55a97b87e974704df2f7b Website-sha256=ccd20636fc1a80be789287d55eba7ad74db65e8dec799050552a590200af26bb HTML-sha256=f1bd0f15cbbd09cbe6cb1c0bcf70b0942fddc0849524ee7fc6a5da4f954684bc PDF-sha256=410abe1c9955fcfcc934186f8512ef35eebad5537b63311a49c47835cf38b322 EPUB-sha256=3101fc1c40beac07ac38028e9b838ab5e09b2a847c958d08b7f44fcdec4d1aba.
+Publication: PASS figures=140 formats=4; five editions tables=62/58/125/169/200 PDF-pages=180/169/377/516/620 PDF-words=44503/41704/94312/128628/152191 EPUB=reflow.
+Scoped-Goal: PASS exact upstream errors=2 warnings=1; four fail-closed mutations.
+Media-Baseline: PASS generated-JPG=140 mismatch=0 sha256=9db1462d1e7a24b2a8da3a7a380c012c2f4a9b1394f8cc19cfd1609249b7ea37 capture-PNG=18 mismatch=0 sha256=43ac27513b169ecd67dba97f3fe9000b469866190ea29d1d33ba07cb71466ed0.
+Visible-Audit: inherited unchanged from E-062 and independently accepted except for the unrelated proof-integrity finding in E-067; no prose, render code, media, or product source changed.
+Focused-Gate-Calls: 0 for this candidate.
+Final-Gate-Calls: 0 for this candidate.
+Observed-At: 2026-08-31T10:44:33+08:00

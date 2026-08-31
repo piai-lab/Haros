@@ -1,0 +1,21 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-029
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:bd2c2a14025696a4aa325a676d74844f832ec426da075e217cffceedcf27c1f4
+Command: fresh read-only Judge /root/guidebook_judge_3 audited candidate bd2c2a14025696a4aa325a676d74844f832ec426da075e217cffceedcf27c1f4 against C-001 and C-003
+Exit-Code: 1
+Result: FAIL
+Judge-Decision: REVISE
+Isolation: fresh-context; producer-context=not-inherited; read-only
+Immutable-Identity: PASS; 268 candidate inputs; 82 read-only output files; manifest and 81 artifact checksums verified
+Blocker-1: R7/R8 derived navigation removes the required Chapter 1 to Preface href in Website, standalone HTML, and EPUB because links.lua filters 00-preface as numeric chapter 0 before its Preface special case; validate-rendered-links.py only inspects surviving hrefs and therefore false-greens the omission
+Blocker-1-Revalidation: treat Preface as in-scope before numeric filtering; restore Chapter 1 to Preface links in all derived formats; add a source-relation validator and a rendered omission mutation that must fail
+Blocker-2: R4/R8 visual-family drift in ch-25-primary, ch-28-secondary, and ch-31-primary introduces saturated blue/green/purple, multicolor fills, or neon glow while sync-visual-truth.mjs synthesizes style PASS without pixel evidence
+Blocker-2-Revalidation: palette-only edit the three exact slots; preserve text and topology; add deterministic generated-raster palette checks with documented thresholds and a saturated-purple/neon/multicolor failure injection; keep captures excluded
+Other-Findings: PASS; Parts III-IV prose/tables/source trails, remaining figure text/topology/crop, captures, Chapter 18 waiver, PDF bounds, EPUB reflow, and product identity/Engine/Session/HostGateway boundaries
+Nonblocking-Findings: none
+Disposition: bd2c candidate and E-027/E-028 are stale for C-003; preserve the immutable failed package; repair only the two blocker families and return the next frozen candidate to the same Judge
+Evaluator-Provenance: codex-task:/root/guidebook_judge_3
+Observed-At: 2026-08-30T21:51:09+08:00

@@ -1,0 +1,70 @@
+Haros Guidebook C-004 raster-text repair development receipt
+observed_at=2026-08-31T02:50:36+08:00
+workspace=/Users/liuzaoqu/Desktop/Develop/independent/Haros
+head=29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+branch=main
+claim=C-004
+state=development-complete-not-frozen
+judge_source=/root/guidebook_judge_4
+judge_receipt=E-038
+
+old_candidate_sha256=18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+old_candidate_state=immutable-stale-for-C004
+old_candidate_files=452
+old_candidate_writable_files=0
+old_candidate_bytes=264761378
+old_candidate_manifest_sha256=229ad87b8eebe2b0ee3f4fbaaced57ca0952a7c5f21910263bc3a350aa3db540
+old_focused_final=E-036-and-E-037-preserved-stale
+
+raster_changes=0
+image_calls=0
+inventory_deltas=14
+affected_unique_sidecars=13
+unchanged_run4_sidecars=16-byte-identical-to-old-candidate
+removed_conceptual_titles=12
+added_visible_labels=Server,Settings
+generation_provider_history=preserved
+pre_generation_requested_inventory=preserved-separately
+final_exact_text=full-resolution-raster-transcript
+
+ocr_engine=tesseract-5.5.3
+ocr_figures=29
+ocr_comparison=PASS-bidirectional
+full_resolution_human_checklist=PASS-29-of-29
+proof_schema=haros-guidebook-run4-raster-text-proof-v1
+proof_canonical_sha256=5d02880b0930785707bd8cd69a9185273cd056b3c5ab8dfe80df647b34258e57
+proof_file_sha256=70697de4e317a597c31604725cdc8ab2f582078cf12e2a56a8002e86598e85f5
+validator_sha256=c7dee00bbb9cc3ea1bf28c820b3b21cfd3a3e07af3940c0e3d1310eb9cdf181a
+
+command=python3 docs/guide/publication/validate-run4-raster-text.py
+result=PASS figures=29 inventory_deltas=14 unique_sidecars=13 unchanged_sidecars=16 tesseract=5.5.3 bidirectional=PASS
+command=bash docs/guide/publication/test-run4-raster-text-mutations.sh
+result=PASS cases=4 missing-title=1 removed-server=1 removed-settings=1 injected-token=1
+command=node docs/guide/publication/validate-run4.mjs
+result=PASS chapters=46 run4_chapters=12 tables=168 generated_new=29 generated_total=116 captures_new=4 captures_total=18 red_cap=PASS truth_rows=29
+command=bash docs/guide/publication/test-run4-validator-mutations.sh
+result=PASS cases=9 navigation=1 relations=1 red-cap=1 natural-case=1 truth-hash=1 raster-text=4
+command=bash docs/guide/publication/test-validator-mutations.sh
+result=PASS cases=5 parts=I-IV palette_cases=1
+command=bash docs/guide/publication/replay-run4-captures.sh
+result=PASS captures=4 normalized_rmse=0,0,0,0 maximum=0.002
+command=GUIDEBOOK_RUN4_BUILD_DIR=/tmp/haros-guidebook-run4-repair-dev.uaOWay bash docs/guide/publication/render-run4.sh --verify
+result=PASS website+standalone-html+pdf+epub rendered-navigation-relations=139 rendered-accessibility=PASS
+command=python3 docs/guide/publication/validate-rendered-figures.py --build /tmp/haros-guidebook-run4-repair-dev.uaOWay haros-guidebook-parts-01-06
+result=PASS figures=116 formats=4 associations=464
+command=python3 docs/guide/publication/validate-publication-quality.py --build /tmp/haros-guidebook-run4-repair-dev.uaOWay haros-guidebook-parts-01-06 through-46
+result=PASS tables=169 pdf_pages=514 pdf_words=128443 epub=reflow
+
+development_failure_1=first aggregate validation rejected the truthful new Final raster transcript contract wording because the legacy palette validator recognized only Final prompt contract
+development_failure_1_disposition=validator vocabulary extended narrowly; no sidecar history was falsified; second aggregate validation PASS
+development_failure_2=first mutation-harness draft changed the preserved pre-generation inventory instead of final exact_text and therefore did not exercise the intended failure
+development_failure_2_disposition=fixture anchor narrowed to exact_text; all four required mutation cases then failed for the intended raster-text reason
+waivers=none
+budgets=no-new-image-output-no-provider-call
+focused_gate_calls_for_repaired_candidate=0
+final_gate_calls_for_repaired_candidate=0
+candidate_inputs=356
+candidate_pre_freeze_sha256=f8034dac3b74d7106d0e654c2a68a84f2c06a2e0601d72a93928397c2e728430
+protected_gitignore=preserved-user-change
+real_private_engine_state=not-read-not-mutated
+publish_commit_push=none

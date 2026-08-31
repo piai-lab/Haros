@@ -1,0 +1,18 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-063
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+HEAD: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:30c0ce85ff97575a7c7d08e97738b01083182d9dd959159e3eb12238387fa27d
+Candidate-Files: 436
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 30c0ce85ff97575a7c7d08e97738b01083182d9dd959159e3eb12238387fa27d
+Exit-Code: 1
+Result: FAIL
+Failure: bootstrap passed, then the focused formatting precondition rejected only missions/haros-guidebook.md after K-096/E-062 had been written without a final Oxfmt pass.
+Material-Impact: candidate validation and packaging were not entered; the immutable output path does not exist; this candidate cannot establish focused proof and must not be rerun.
+Correction: format canonical control state, move the same formatting precondition into the candidate-hash freeze owner, and add a candidate-bound mutation proving unformatted control state cannot produce a candidate identity while formatted control state passes.
+Candidate-Disposition: superseded because the candidate-bound freeze-owner scripts changed; freeze one naturally new candidate without changing Guidebook prose or media.
+Package: absent at missions/evidence/haros-guidebook/output/sha256-30c0ce85ff97575a7c7d08e97738b01083182d9dd959159e3eb12238387fa27d
+Observed-At: 2026-08-31T09:50:20+08:00

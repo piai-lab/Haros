@@ -1,0 +1,22 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-036
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+Command: bash missions/haros-guidebook/scripts/focused-gate.sh 18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004
+Candidate-Hash-Recomputed: 18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74 files=353 manifest=exact post-gate=unchanged
+Navigation-Proof: PASS README-order entries=47; rendered required relations=139 formats=4; Chapter 1 to Preface live in Website, standalone HTML, EPUB, and PDF semantic anchor; each edition's rendered omission mutation=PASS
+Palette-Proof: PASS generated=116 captures=excluded; deterministic full-raster HSV plus Run 4 semantic-red cap; saturated color and Run 4 red-cap mutations=PASS
+Natural-Case-Proof: PASS generated=116; title-case headings; sentence-case explanations; genuine acronyms only all-caps; no block all-caps
+Figure-Proof: PASS source=116 rendered-associations=464 formats=4; structured relations, aligned alt and extended descriptions, K-037 trim, checksums, dimensions, provenance
+Capture-Regression: PASS captures=18 fresh task-specific synthetic production-component replay; all normalized RMSE below 0.002
+Publication-Proof: PASS tables=169 Parts-I-VI; PDF pages=514 words=128443 bounds=PASS; EPUB reflow=PASS
+Run4-Proof: PASS chapters=12 range=35-46 words=2504-3062 tables=44 generated-new=29 captures-new=4 truth-rows=29 validator-mutations=5
+Inherited-Regression: PASS C-001/C-002/C-003 source, four-format, capture, figure, navigation, table, PDF, EPUB, palette, natural-case, and failure-injection gates
+Immutable-Output: missions/evidence/haros-guidebook/output/sha256-18f1252a7369286c4657c1674a8c4194d5662b8a5cff0bb9cf139a251f855e74 files=452 artifact-checksums=451 artifact-sha256=69c87ca69337d59f4623bb3802b987a4805995efe3623316befceb11fd1e3c6d writable=0 bytes=264761378
+Raw-Log-SHA256: 301c5241ccc49f2cd4941cd0595133fb52acd20be4bf19f81099451964ec3bf7
+Observed-At: 2026-08-31T02:00:34+08:00

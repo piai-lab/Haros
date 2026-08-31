@@ -1,0 +1,19 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-047
+Role: audit
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: sha256:bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa
+Judge: /root/guidebook_judge_5
+Command: fresh read-only Judge /root/guidebook_judge_5 audited the K-079 candidate and immutable package against C-005
+Exit-Code: 1
+Result: FAIL
+Audit-Decision: REVISE
+Claims: C-005
+Blockers: 3
+Blocker-1: Appendix B pending-interaction recovery contains orphan punctuation and collapsed code spacing; repaired publication must preserve lifecycle generation plus response command identity and require Uncertain to reconcile before a new side effect.
+Blocker-2: Appendix E misclassifies the Chapter 15 workLog presentation consumer as canonical owner and compresses Chapter 47 diagnostics, usage/profile/archive, retention, and Engine maintenance into one diagnostics owner route.
+Blocker-3: Cover validation lacks candidate-bound generated field and deterministic composition inputs; a validator must actually recompose the exact final raster from stored support sources and fail on field, layer, coordinate, or final drift.
+Required-Disposition: reopen C-005 narrowly; preserve old immutable package; mark K-079/E-045/E-046 stale; make no image calls or content expansion; freeze and gate a repaired candidate before returning to the same Judge.
+Immutable-Output-Preserved: missions/evidence/haros-guidebook/output/sha256-bc0a83d6bcb3af53391fd0ebcf5f841196cfaefdbafd877a4f1d1a923f315aaa files=677 artifact-checksums=676 writable=0 bytes=411059966
+Observed-At: 2026-08-31T05:40:00+08:00

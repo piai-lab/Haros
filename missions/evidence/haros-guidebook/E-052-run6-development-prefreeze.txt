@@ -1,0 +1,49 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-052
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Repository-Identity: git@github.com:piai-lab/Haros.git
+HEAD: 29b2b39c49ebba20aa38f95d76acd2284e91b1cc
+Candidate-Version: sha256:9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b
+Command: C-006/C-007 whole-guide validation, five-edition pre-freeze regression, two independent Run 5 builds, reproducibility comparison, negative mutations, and representative visible/reflow audit
+Exit-Code: 0
+Result: PASS
+Claims: C-006; C-007
+Whole-Guide: PASS chapters=50 appendices=8 source-tables=200 chapter-tables=181 appendix-tables=18 README-tables=1 generated-total=140 captures-total=18 Website-pages=60 media=158
+Eight-Dimension-Matrix: PASS narrative-spine=PASS junior-model-checks=50 safe-exercises=39 technical-source-owners=PASS lifecycle-chapters=12 visual=PASS identity=PASS security=PASS links-and-render=PASS
+Narrative: PASS README, Preface, Chapters 1, 2, and 40 preserve the outside-in durable-work/replaceable-Engine/authorized-capability spine
+Junior-Comprehension: PASS every chapter has The question, at least two Check your model items, and a Source trail; safe exercises remain bounded
+Technical-Facts: PASS 19 source-contract files, 129 tests, ENGINE_DESCRIPTORS=10, public-commands=34, product-events=41, runtime-events=51, source-adoptions=12, owner-routes=50
+Lifecycle: PASS explicit failure/recovery treatment in Chapters 9, 14, 18, 22, 24, 34, 38, 42, 43, 44, 45, and 46
+Identity-Security-Honesty: PASS Haros-only normal identity, no private paths/secrets/bearer values, HostGateway boundary preserved, source-alpha/no-release honesty visible
+Markdown-Truth: PASS docs/guide/README.md remains the sole reading-order owner; source Markdown remains the sole prose, caption, table, and navigation truth
+Publication-Tree: PASS files=231 tree-sha256=ff86247ddc6886eff30ab5651bca21e72e6ec3ccac1ed4e24d963d5799ee534d
+Website: PASS files=60 tables=200 manifest-sha256=247dbd2e63641904761edd70ea1df3689869a4c7b50983c4d104a9d8af29a318
+Standalone-HTML: PASS tables=200 media=158 sha256=ff77ec0b87a8d94133cb020eb17d2a52b799a169eb6f606779d377c443b92e2e
+PDF: PASS pages=620 words=152183 tables=200 sha256=069176e60c658e6d61ead8211c10d79bc40700325f4014481a08fc5c2b41ac06 title=Haros-Guidebook volatile-dates=none
+PDF-Cover: PASS page=1 image=1024x1536 extracted-sha256=c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779 canonical-cover=byte-exact source-alpha-edition=visible no-crop=PASS
+EPUB: PASS reflow tables=200 media=158 members=226 sha256=35f3e2542037c82864493b46de70176eb05b6905b8650a7ce6876c6383b0876c identifier=urn:uuid:29b2b39c-49eb-5a20-aa38-f95d76acd228 date=2026-08-31 modified=2026-08-31T00:00:00Z
+Reproducibility: PASS two independent full build trees are byte-exact for Website, standalone HTML, PDF, EPUB, and cover reproduction
+PDF-Determinism-Policy: byte-exact after removal of volatile CreationDate/ModDate; canonical cover is machine-enforced on page one
+EPUB-Determinism-Policy: byte-exact with fixed edition identifier/date, dcterms:modified, SOURCE_DATE_EPOCH, and ZIP member timestamps
+Run6-Mutations: PASS cases=2 missing-source-alpha-cover-identity=detected PDF-byte-drift=detected
+Visible-Audit-1: PASS Website cover desktop viewport=1440x900 overflow=0 canonical-cover=1024x1536 natural Haros-mark-title-subtitle-source-alpha=visible
+Visible-Audit-2: PASS Website Chapter-41 mobile viewport=390x844 overflow=0 figures=3 responsive tables=4 self-scroll
+Visible-Audit-3: PASS standalone Chapter-14 desktop viewport=1440x900 overflow=0 anchor-top=0 TOC=present tables=200 media=158
+Visible-Audit-4: PASS PDF original-size pages=1,469 cover-and-dense-technical-page no-crop=PASS source-paths-and-navigation-readable=PASS
+Visible-Audit-5: PASS EPUB Chapter-41 reflow viewport=390x844 source-xhtml-sha256=f1c906a1add05dae30dd9a71d9ec65b0100a8aea9938dafb59f4316b25efe64e overflow=0 tables=4 self-scroll figures=3 responsive
+Visible-Audit-Artifacts: no screenshot set retained; visible evidence is bound by candidate/build/page/viewport/XHTML hashes and verdicts only
+Five-Edition-Prefreeze: PASS Pilot/Run2/Run3/Run4/Run5 tables=62,58,125,169,200 PDF-pages=180,169,377,516,620 PDF-words=44495,41696,94304,128620,152183 EPUB=reflow
+Navigation-Figures: PASS Run5-navigation-relations=175 formats=4 figure-associations=560 accessibility=PASS rendered-formatted-text=PASS
+Capture-Regression: PASS captures=18 fresh-task-specific synthetic production-component replay maximum-normalized-rmse=0.000289881 threshold=0.002
+C005-Media-Baseline: PASS immutable-candidate=fc28d110830fbb9769530f06530d96c0fb1f21d9448b749cc56df1713c536117 generated-JPG=140 mismatch=0 ordered-manifest-sha256=9db1462d1e7a24b2a8da3a7a380c012c2f4a9b1394f8cc19cfd1609249b7ea37 capture-PNG=18 mismatch=0 ordered-manifest-sha256=43ac27513b169ecd67dba97f3fe9000b469866190ea29d1d33ba07cb71466ed0
+Prefreeze-Mutations: PASS inherited=5 Run4=9 Run5=16 Run6=2 rendered-navigation-omissions=all-editions
+Candidate-Hash-Recomputed: files=434 sha256=9f9382dcfe4f6c51e71caff17ec75afb9d6c3a08860fcfc806af6cc88e6d7b1b
+Warnings: local renderer reports historical unsupported screen-only CSS declarations while every Website/mobile/standalone/PDF/EPUB visible, overflow, link, navigation, accessibility, table, and reflow assertion passes; no missing-anchor warning remains
+Image-Calls: 0
+Product-Behavior-Changes: none
+Release-Publish-Sign-Push-Commit: none
+Protected-Gitignore: preserved
+Focused-Gate-Calls: 0
+Final-Gate-Calls: 0
+Observed-At: 2026-08-31T07:44:00+08:00
