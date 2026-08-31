@@ -4,16 +4,17 @@
   <p><strong>Ten Engines. One local-first Harness OS.</strong></p>
   <p>Choose the right Engine for each turn without splitting your projects, tools, or history across ten products.</p>
   <p>
-    <code>Haros built-in</code>
-    <code>Codex</code>
-    <code>Claude</code>
-    <code>Cursor</code>
-    <code>Antigravity</code>
-    <code>Grok</code>
-    <code>Droid</code>
-    <code>Kilo</code>
-    <code>OpenCode</code>
-    <code>Pi</code>
+    <img alt="Haros built-in Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
+    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
+    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
+    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
+    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
+    <br />
+    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
+    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
+    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
+    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
+    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
   </p>
   <p>
     <a href="docs/README.zh-CN.md">简体中文</a> ·
@@ -23,10 +24,6 @@
     <a href="SECURITY.md">Security</a>
   </p>
 </div>
-
-> [!IMPORTANT]
-> Haros is currently a source alpha. There are no official installers, releases, or update feeds
-> yet. Engine availability depends on the corresponding CLI, account, and local setup.
 
 ## Every Engine enters the same workbench
 
@@ -76,8 +73,9 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Haros is currently version `0.1.0-alpha.0`. A successful local build is still an unsigned source
-build, not an official release.
+Haros is currently version `0.1.0-alpha.0`. Engine availability depends on the corresponding CLI,
+account, and local setup. A successful local build is still an unsigned source build, not an
+official release.
 
 <details>
 <summary>Development checks and repository map</summary>

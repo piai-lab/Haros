@@ -4,16 +4,17 @@
   <p><strong>十个 Engine，一套本地优先的 Harness OS。</strong></p>
   <p>每轮任务都可以选择最合适的 Agent，不必把项目、工具和历史拆进十个产品。</p>
   <p>
-    <code>Haros built-in</code>
-    <code>Codex</code>
-    <code>Claude</code>
-    <code>Cursor</code>
-    <code>Antigravity</code>
-    <code>Grok</code>
-    <code>Droid</code>
-    <code>Kilo</code>
-    <code>OpenCode</code>
-    <code>Pi</code>
+    <img alt="Haros built-in Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
+    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
+    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
+    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
+    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
+    <br />
+    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
+    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
+    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
+    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
+    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
   </p>
   <p>
     <a href="../README.md">English</a> ·
@@ -23,10 +24,6 @@
     <a href="../SECURITY.md">安全策略</a>
   </p>
 </div>
-
-> [!IMPORTANT]
-> Haros 当前处于源码 alpha 阶段，尚未提供正式安装包、Release 或更新通道。每个 Engine
-> 是否可用，取决于对应的 CLI、账号和本机配置。
 
 ## 所有 Engine 进入同一套工作台
 
@@ -76,8 +73,8 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Haros 当前版本为 `0.1.0-alpha.0`。本机构建成功仍然只是 unsigned source build，不代表
-已经正式发行。
+Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于对应的 CLI、账号和
+本机配置。本机构建成功仍然只是 unsigned source build，不代表已经正式发行。
 
 <details>
 <summary>开发检查与仓库结构</summary>
