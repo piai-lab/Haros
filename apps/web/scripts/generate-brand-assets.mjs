@@ -24,6 +24,7 @@ const sources = {
 await Promise.all([
   mkdir(exportRoot, { recursive: true }),
   mkdir(path.join(publicRoot, "brand"), { recursive: true }),
+  mkdir(path.join(publicRoot, "app-icons"), { recursive: true }),
   mkdir(desktopRoot, { recursive: true }),
 ]);
 
@@ -142,6 +143,9 @@ const outputs = new Map([
   [path.join(publicRoot, "favicon-32x32.png"), markPng.get(32)],
   [path.join(publicRoot, "favicon.ico"), faviconIco],
   [path.join(publicRoot, "apple-touch-icon.png"), appPng.get(180)],
+  [path.join(publicRoot, "app-icons", "default.png"), appPng.get(512)],
+  [path.join(publicRoot, "app-icons", "alternate.png"), appPng.get(512)],
+  [path.join(publicRoot, "app-icons", "dark.png"), darkAppPng.get(512)],
   [path.join(publicRoot, "brand", "harnessos-mark.svg"), sourceText.mark],
   [path.join(publicRoot, "brand", "harnessos-mark-dark.svg"), sourceText.markDark],
   [path.join(publicRoot, "brand", "harnessos-mark-mono.svg"), sourceText.markMono],

@@ -11,6 +11,7 @@ Colors:
 
 - Charcoal: `#242528`
 - Warm white: `#F6F3EA`
+- Light app-icon surface: `#FFFFFF`
 - Amber: `#E2A11A`
 
 Do not add source lineage, third-party marks, gradients, taglines, or product
