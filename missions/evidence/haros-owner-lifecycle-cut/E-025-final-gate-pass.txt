@@ -1,0 +1,11 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-025
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: 7f0979fb747d9bba1781a83b2d991cfd09ed147a
+Command: bun run fmt:check -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engine/engineChildEnvironment.ts apps/server/src/engineUsage/index.ts missions/haros-owner-lifecycle-cut.md && bun run lint && node missions/evidence/haros-owner-lifecycle-cut/check-typecheck-diagnostics.mjs && bun run build:desktop && bun run test:focused -- apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.test.ts apps/server/src/engine/Layers/EngineHealth.integration.test.ts
+Exit-Code: 0
+Result: PASS
+Observed: scoped format passed; lint completed with 633 warnings and 0 errors; origin/candidate server typecheck diagnostics were byte-identical across 669 lines with sha256 c981fbca4adaad97a718761d4e0f27890b844d1be096c302bae7307e7265e47e; Desktop/server build completed 6/6 tasks; focused lifecycle proof passed 3/3 files and 133/133 tests.
+Claims: C-007, C-009

@@ -1,33 +1,34 @@
 ## 目标
 
-在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut` 完成 Campaign `HAROS-OWNER-CUT-2026-08-30`：把 Health 与 Usage 各自手写的 `EngineKind → EngineChildKind` 安全 profile 映射收回现有 `buildEngineChildEnvironment` owner，删除两个 consumer truth，并在同一不可变 candidate 上证明凭据隔离/失败语义不变、修改半径缩小且没有新 owner。当前 Active Claim 是 `C-002`；`C-001` 已有 producer candidate，仍待 fresh Judge 终验。
+在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut` 核验 Campaign `HAROS-OWNER-CUT-2026-08-30` 的 durable terminal truth。被测试和独立终验的产品 candidate 固定为 `7f0979fb747d9bba1781a83b2d991cfd09ed147a`；其 clean control-only 后代只承载 Goal、canonical spec 与首次新增的 E-025/E-026 receipts。当前 owner cut 已把 Health 与 Usage 手写的 `EngineKind → EngineChildKind` 安全 profile 映射收回唯一幸存 owner `buildEngineChildEnvironment`，并由同一 candidate 上的真实 gate 与唯一 fresh Judge 证明。
 
 ## 范围与边界
 
-只纳入所选责任直接涉及的代码、测试、必要配置、唯一 canonical spec/Goal 和专属 proof receipts。排除第二个 owner cut、全仓治理/inventory、用户可见行为或文案、公共合同、持久数据/真实用户状态、兼容/迁移/alias/dual track、权限安全、发布签名、真实外部服务、依赖/框架替换、猜测式性能优化、广域格式化及 `docs/**`。共享 checkout、Guidebook task `01a05090-be0d-7af1-9f26-0df1c3cdb468`、`.gitignore`、Guidebook plans/outputs 和全部未知修改受保护；不得读入 branch、修改、暂存或提交。授权仅限本分支/worktree内的范围写入、focused checks 和聚焦 commits；不得 push、merge、rebase 共享分支、发布或产生外部副作用。停止条件：任何行为、公共合同、兼容、数据、安全、权限、发布分叉，或工作区/证据冲突，都必须进入 `BLOCKED`。
+范围内授权：只读 Goal、canonical spec、core evidence、candidate/control diff 和工作区现实，确认 durable 状态仍匹配。范围外：修改或重跑产品代码、测试、build、Final gate 或审计，寻找第二个 owner cut，创建 Executor/Supervisor/Sentinel/第二位 Judge，以及 push、merge、rebase、发布、签名或外部副作用。`docs/**`、`.gitignore`、`packages/oa-web-access/**`、Guidebook task `01a05090-be0d-7af1-9f26-0df1c3cdb468` 及未知修改受保护。若 candidate、control-only 边界、证据字节、clean 状态或产品/合同/安全事实失配，必须停止并把准确终态视为 `BLOCKED` 或 `CANDIDATE_WITH_OPEN`，不得修饰成完成。
 
 ## 零记忆启动
 
-你处于 fresh、零记忆会话，不得依赖未外置聊天记忆。任何写操作前必须：
+你处于 fresh、零记忆会话，不得依赖聊天记忆。任何写操作前（本 Goal 默认不授权写入）以及任何终态结论前必须：
 
-1. 解析上述绝对工作区、仓库、适用 `AGENTS.md`、branch、HEAD 和 `git status --short`；
+1. 解析上述绝对工作区、仓库、适用 `AGENTS.md`、branch、HEAD 与 `git status --short`；
 2. 按 canonical spec 的 Core Read Order 读取全部 core evidence；
-3. 原样运行 exact Bootstrap command `bun run public-surface:check`，与 Last reconciled revision、worktree state 和 Active Claim 对账；
-4. 在当前上下文给出一次不落盘的 Orientation Receipt：根目录/版本、权威 spec、Active Claim、关键不变量、证据缺口或冲突；
-5. 路径、证据、版本或状态失配时先更新 spec 对账；无法建立事实则把受影响 Claim 标为 `blocked`，不得猜测实施。
+3. 原样运行 exact Bootstrap command `bun run public-surface:check`，与 Last reconciled revision、clean control-only worktree 和 Active Claim 对账；
+4. 给出不落盘 Orientation Receipt：workspace、产品 candidate、control HEAD、Active Claim、关键不变量、证据缺口或冲突；
+5. 核验 `candidate..HEAD` 仅含 Goal、spec、E-025、E-026，产品/测试/依赖/配置无 post-candidate 漂移；
+6. 路径、版本、状态或证据失配时不得实施补偿性产品修改，也不得沿用 verified 结论。
 
-第一安全动作：读取 E-007–E-013 完成 owner/security/orchestration 对账，然后调用 `zq-orchestrate` 的入口裁决。
+第一安全动作：按 canonical spec 的 Core Read Order 完成只读对账，再运行修复后 zq-goal checker；任何 material drift 立即停止。
 
 ## 执行协议
 
-按 E-011/E-012 执行已冻结的 `CONSOLIDATE`：让现有深模块直接接受产品 `EngineKind` 并在内部私有地解析 child profile；保留 `acp` 等直接 child-kind 输入；删除 Health/Usage 两个映射和多余类型 import。不得导出浅 helper、创建 registry/manager/cache、改变 grants/过滤策略/错误语义，或触碰 P-003–P-005。
+Active Claim: none — all required Claims are verified and no Claim remains active.
 
-调用 E-013 的 `zq-orchestrate` 后应选择 `DIRECT_EXECUTION`：本 fresh task 是唯一 writer/integrator，不建 Worker、Supervisor、第二 Goal Spine/ledger 或语义 Sentinel；宿主任务本身提供连续执行。普通可逆工程判断直接做；K-017 反证、行为/合同/兼容/数据/安全策略/权限/发布分叉进入 `BLOCKED`。每次只跑能推翻当前 Claim 的最窄 focused proof：`bun run test:focused -- apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.test.ts apps/server/src/engine/Layers/EngineHealth.integration.test.ts`。candidate 未变化不重复终验。完整 owner cut 后立即停止，不寻找第二项。
+这是 terminal verification launcher。不得调用 `zq-orchestrate` 启动施工，也不得重复 Final gate 或 fresh audit。产品 candidate 始终是 `7f0979fb747d9bba1781a83b2d991cfd09ed147a`，当前 HEAD 只可为该 candidate 本身或其 clean control-only 后代。focused proof E-014/E-017/E-018/E-023 可按 spec 的祖先证据规则继承；E-025 Final gate 与 E-026 audit 必须直接绑定产品 candidate。E-022 是 immutable historical FAIL，不进入当前 Claim 证明图。
 
-每次 material transition 都把事实、证据句柄、Claim 状态、blocker 和 Last reconciled revision 更新回唯一 canonical spec；不得另建进度文件。Focused proof 后 Executor 可把匹配 Claims 从 open 推到 candidate，但不能写 verified。Final gate 前必须在 clean worktree 原样运行 spec 指定的 zq-goal checker并取得 PASS。
+任何 material transition 都必须先把事实、证据句柄、Claim 状态、blocker 与 Last reconciled revision 更新回唯一 canonical spec；本 Goal 不授权创建第二状态文件或产品写入。若只读核验通过，立即停止；若不通过，精确报告失配项和唯一安全重启动作。
 
 ## 验收与完成权
 
-受影响 Claims 为 `C-001`–`C-009`，均为 `[required]`。最终 candidate 只运行一次 exact Final gate：`bun run fmt:check -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engine/engineChildEnvironment.ts apps/server/src/engineUsage/index.ts missions/haros-owner-lifecycle-cut.md && bun run lint && node missions/evidence/haros-owner-lifecycle-cut/check-typecheck-diagnostics.mjs && bun run build:desktop && bun run test:focused -- apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.test.ts apps/server/src/engine/Layers/EngineHealth.integration.test.ts`，并执行 spec 的 residue（两个 `engineChildKind` 消失）、radius、no-new-owner 与重复调用/Health/Usage lifecycle proof。Executor 只能把 Claims 推到 `candidate` 并冻结聚焦 commit。之后最多创建一位未参与生产的 fresh、只读 Judge；只有它可在同一完整 commit SHA（同一版本）上置为 `verified`。DONE/COMPLETE 要求 `C-001`–`C-009` 全部 verified、blocked=0、Final gate PASS、fresh audit 无 material finding、reviewed candidate 与交付 candidate 一致且所有角色/进程关闭；否则只能是 CANDIDATE_WITH_OPEN、BLOCKED 或 STOPPED。没有明确性能前后数据就不声称变快；未测 packaged bytes、真实服务和平台边界必须标为 unknown。
+`C-001`–`C-009` 均为 `[required]`。`COMPLETE` 仅在同一版本、同一 SHA 的产品 candidate 上保持：逐 Claim 真实证据映射、E-025 Final gate PASS、唯一 Judge E-026 无 material finding、blocked=0、Goal/spec 均无 Active Claim、worktree clean、post-candidate 无产品/测试/依赖/配置漂移、受保护路径未触碰。只有符合 canonical spec 的独立 evaluator 可以写 `verified`；Producer/Executor 不能自证完成。packaged bytes、真实服务、动态外部 consumer 与额外平台边界仍为 unknown。没有同口径性能数据，不声称全局变快。
 
 详见：missions/haros-owner-lifecycle-cut.md
