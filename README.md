@@ -2,69 +2,51 @@
   <img src="assets/brand/exports/app-icon-256.png" width="112" alt="Haros app icon" />
   <h1>Haros</h1>
   <p><strong>Ten Engines. One local-first Harness OS.</strong></p>
-  <p>Choose the right Engine for each turn without splitting your projects, tools, or history across ten products.</p>
+  <p>Switch Engines. Keep the work.</p>
   <p>
-    <img alt="Haros built-in Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
-    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
-    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
-    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
-    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
-    <br />
-    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
-    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
-    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
-    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
-    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
-  </p>
-  <p>
+    <a href="docs/guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="docs/README.zh-CN.md">简体中文</a> ·
     <a href="docs/architecture.md">Architecture</a> ·
-    <a href="CONTRIBUTING.md">Contributing</a> ·
-    <a href="SUPPORT.md">Support</a> ·
-    <a href="SECURITY.md">Security</a>
+    <a href="CONTRIBUTING.md">Contributing</a>
   </p>
 </div>
 
+Haros brings Codex, Claude, Cursor, Antigravity, Grok, Droid, Kilo, OpenCode, Pi, and its built-in
+Engine into one coherent workbench. Pick the right Engine for each turn without moving the project,
+rebuilding context, or giving up a shared history.
+
 ## Every Engine enters the same workbench
 
-Haros currently registers ten complete agent runtimes. Each Engine keeps its own models, options,
-authentication, and native session semantics. Haros gives them one product around the work: the
-same Project, Thread, Queue, Timeline, tools, permissions, and recovery model.
+Each Engine keeps its own models, options, authentication, and native session semantics. Haros owns
+the product around them: Projects, Threads, Queue, Timeline, tools, permissions, and recovery.
 
-Pick Codex for one task and Claude, Cursor, OpenCode, or another Engine for the next. Haros freezes
-the exact Engine, model, and options admitted to each queued turn. It never fabricates continuation
-between Engines and never hides a launch failure by silently choosing a different one.
+That boundary is deliberate. Haros freezes the exact Engine, model, and options admitted to every
+queued turn. It never invents continuation across Engines and never hides a launch failure by
+silently choosing another one.
 
 ## What the Harness OS owns
 
-| Responsibility       | One Haros owner                                                             |
-| -------------------- | --------------------------------------------------------------------------- |
-| Work identity        | Projects, Threads, messages, attachments, and workspace state               |
-| Turn admission       | The exact Engine, model, options, and runtime mode selected for a turn      |
-| Local capabilities   | Files, Git, terminal, browser, and device access through one trust boundary |
-| Orchestration        | Queue, Timeline, current activity, interruption, and follow-up work         |
-| Failure and recovery | Submitted prompts and queued work that remain available for reconciliation  |
-
-The Engine can change without fragmenting the product history because Haros, not an Engine's
-private session, owns that history. An Engine adapter receives a narrow projection of the current
-turn; it does not acquire a parallel permission system or product store.
-
-The full ownership model is documented in [docs/architecture.md](docs/architecture.md).
+| One Haros owner | What stays consistent                                    |
+| --------------- | -------------------------------------------------------- |
+| Work            | Projects, Threads, messages, attachments, and workspaces |
+| Orchestration   | Queue, Timeline, interruption, and follow-up work        |
+| Local tools     | Files, Git, terminal, browser, and devices               |
+| Recovery        | Submitted prompts and queued work remain recoverable     |
 
 ## Three ways into the Harness OS
 
-| Surface | Use it when                                             | Workspace                                  |
-| ------- | ------------------------------------------------------- | ------------------------------------------ |
-| Agent   | The work belongs to a real project                      | A folder you choose                        |
-| Chat    | You want a focused conversation without project setup   | A Haros-managed workspace                  |
-| Studio  | You are creating and iterating on concrete deliverables | An isolated managed workspace with outputs |
+| Surface | Best for                                   | Workspace                    |
+| ------- | ------------------------------------------ | ---------------------------- |
+| Agent   | Work attached to a real project            | A folder you choose          |
+| Chat    | Focused conversation without project setup | A Haros-managed workspace    |
+| Studio  | Iterating on concrete deliverables         | An isolated output workspace |
 
-Agent, Chat, and Studio share the same product state. They change the workspace lifecycle and the
-way work is presented, not the owner of Project, Thread, Queue, Timeline, or recovery.
+Agent, Chat, and Studio share the same product state. They change how a workspace begins and how
+work is presented—not who owns its history.
 
 ## Run Haros from source
 
-You need Bun 1.3.12, Node.js 24.13.1, and macOS, Linux, or Windows.
+Requires Bun 1.3.12, Node.js 24.13.1, and macOS, Linux, or Windows.
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
@@ -73,9 +55,15 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Haros is currently version `0.1.0-alpha.0`. Engine availability depends on the corresponding CLI,
-account, and local setup. A successful local build is still an unsigned source build, not an
-official release.
+Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching CLI, account, and
+local setup. A successful local build is unsigned source software, not an official release.
+
+## Go deeper
+
+- Start with the [Haros Guidebook](docs/guide/README.md) for the complete, junior-friendly tour.
+- Read [Architecture](docs/architecture.md) for ownership boundaries and runtime design.
+- See [Contributing](CONTRIBUTING.md) before proposing a change.
+- Use [Support](SUPPORT.md) for help and [Security](SECURITY.md) for private reports.
 
 <details>
 <summary>Development checks and repository map</summary>
@@ -90,27 +78,15 @@ bun run build:desktop
 
 ```text
 apps/desktop   Desktop shell and OS integration
-apps/server    Product orchestration, execution, local capabilities, and persistence
+apps/server    Product orchestration, local capabilities, and persistence
 apps/web       Agent, Chat, and Studio workbench
 packages/      Typed contracts, shared logic, and runtime composition
-scripts/       Deterministic development, legal, and packaged-proof tooling
-docs/          Architecture and contributor documentation
+docs/          Guidebook, architecture, and contributor documentation
 ```
 
-Generated build output, caches, test artifacts, and reproducible legal reports are not committed.
-A fixed runtime input is the only vendored runtime artifact in the source tree.
-
 </details>
-
-## Contributing
-
-Use [GitHub Issues](https://github.com/piai-lab/Haros/issues) for reproducible bugs and focused
-proposals. Use [GitHub Discussions](https://github.com/piai-lab/Haros/discussions) for broader
-questions. Start with [CONTRIBUTING.md](CONTRIBUTING.md), and report security issues through
-[SECURITY.md](SECURITY.md).
 
 ## License
 
 Haros is licensed under the [Apache License 2.0](LICENSE). Third-party code and assets retain their
-original licenses and required notices; see [NOTICE](NOTICE) and the machine-readable
-[source adoption record](source-adoptions.json).
+original licenses and notices; see [NOTICE](NOTICE) and [source-adoptions.json](source-adoptions.json).
