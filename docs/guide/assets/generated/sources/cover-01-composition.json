@@ -1,0 +1,44 @@
+{
+  "schema": "haros-guidebook-cover-composition-v1",
+  "canvas": "1024x1536",
+  "generatedField": {
+    "path": "assets/generated/sources/cover-01-field.png",
+    "sha256": "18e8efcd54da10fd10f7fbebd1622129e2a11838b92b85d90582f90db2b076fc",
+    "exactText": ["A Visual Guide from First Task to Runtime Architecture", "Source alpha edition"],
+    "forbiddenText": ["Haros", "Guidebook", "logo", "wordmark"]
+  },
+  "canonicalMark": {
+    "path": "assets/brand/harnessos-mark.svg",
+    "sha256": "a9784a60a3a5c3631507280009b15276b5fdd67ed0dfa7112d52cb7a51ec9c70",
+    "resize": "130x130",
+    "geometry": "+105+110",
+    "alphaBbox": "130x130+105+110"
+  },
+  "markLayer": {
+    "path": "assets/generated/sources/cover-01-mark-layer.png",
+    "sha256": "9baa4d5888ee1ed38a512934edadb5c2cab349b72bb8a0b1678c7e4a51380376",
+    "alphaBbox": "130x130+105+110"
+  },
+  "wordmarkLayer": {
+    "path": "assets/generated/sources/cover-01-wordmark-layer.png",
+    "sha256": "d3cd39baa49a6da3c494e358ac32ada0e44171e7425add5bbc923ac1231b4264",
+    "alphaBbox": "576x55+275+140",
+    "historicalTypesetting": "Helvetica Neue 74 pt, charcoal #242528, annotate origin +270+140",
+    "runtimeFontDependency": false
+  },
+  "encoding": {
+    "tool": "ImageMagick",
+    "verifiedVersionPrefix": "Version: ImageMagick 7.1.2-15 Q16-HDRI",
+    "strip": true,
+    "jpegQuality": 92
+  },
+  "final": {
+    "path": "assets/generated/cover-01.jpg",
+    "sha256": "c073234de73ff85ae972cdd46ded9e5bf89d0c5f76ae3d3f63f9976b9bc02779",
+    "exactText": [
+      "Haros Guidebook",
+      "A Visual Guide from First Task to Runtime Architecture",
+      "Source alpha edition"
+    ]
+  }
+}

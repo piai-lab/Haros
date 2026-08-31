@@ -1,0 +1,198 @@
+:root {
+  --ink: #242528;
+  --paper: #f6f3ea;
+  --amber: #e2a11a;
+  --slate: #526069;
+  --teal: #317f78;
+}
+
+html {
+  color: var(--ink);
+  background: var(--paper);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 17px;
+  line-height: 1.62;
+}
+
+body {
+  box-sizing: border-box;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 3rem clamp(1.2rem, 4vw, 5rem) 6rem;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--ink);
+  line-height: 1.18;
+}
+
+h1 {
+  margin-top: 1.5rem;
+  font-size: 3.4rem;
+}
+
+h2 {
+  margin-top: 3rem;
+  padding-top: 0.4rem;
+  border-top: 0.18rem solid var(--amber);
+  font-size: 2rem;
+}
+
+h3 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+}
+
+a {
+  color: var(--teal);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+
+blockquote {
+  margin: 1.5rem 0;
+  padding: 0.75rem 1.25rem;
+  border-left: 0.35rem solid var(--amber);
+  background: #fff8e8;
+}
+
+table {
+  width: 100%;
+  margin: 1.5rem 0 2rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  padding: 0.62rem 0.72rem;
+  border: 1px solid #c9c6bd;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #e9e4d8;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 2rem auto 0.8rem;
+  border-radius: 0.45rem;
+}
+
+code {
+  overflow-wrap: anywhere;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.86em;
+}
+
+nav#TOC {
+  margin: 1.5rem 0 3rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid #d7d1c4;
+  background: #fffdf7;
+}
+
+@media screen and (max-width: 48rem) {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    padding-inline: 1rem;
+  }
+
+  h1 {
+    font-size: 2.3rem;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    font-size: 0.82rem;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm;
+  }
+
+  html {
+    background: white;
+    font-size: 10.5pt;
+  }
+
+  body {
+    max-width: none;
+    padding: 0;
+  }
+
+  header#title-block-header {
+    display: none;
+  }
+
+  h1#haros-guidebook {
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  figure.pdf-cover {
+    height: 259mm;
+    margin: 0;
+    break-after: page;
+  }
+
+  figure.pdf-cover img {
+    width: auto;
+    max-width: 100%;
+    max-height: 259mm;
+    margin: 0 auto;
+    border-radius: 0;
+  }
+
+  figure.pdf-cover figcaption {
+    display: none;
+  }
+
+  nav#TOC {
+    break-after: page;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  table,
+  img,
+  blockquote {
+    break-inside: avoid;
+  }
+
+  a {
+    color: var(--ink);
+  }
+}
