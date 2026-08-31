@@ -1,0 +1,25 @@
+Campaign-ID: Haros Guidebook
+Evidence-ID: E-073
+Role: source
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros
+Verification-Worktree: /Users/liuzaoqu/Desktop/Develop/independent/Haros-guidebook-final
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Branch: codex/haros-guidebook
+Control-Commit-1: cef48170705e40424ffa1d8f4d541c4e7d32a67c
+Product-Version: 6b1f34540c451dc438553f38ca93517e73064114
+Product-Parent: 17b578d3c65d72113accc17200b9b290f80139f6
+Candidate-Version: sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f
+Command: root-authorized clean control transition proof in the dedicated verification worktree
+Exit-Code: 0
+Result: PASS
+Claims: C-001; C-002; C-003; C-004; C-005; C-006; C-007
+Clean-Checkout: PASS status=0 at control commit 1 before final control-state writing; product commit is its direct parent and ancestor.
+Product-Mapping: PASS product commit paths=439, exactly equal to the frozen ac8 package candidate manifest in the canonical original workspace; candidate-hash files=439 sha256=ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f.
+Run6-Validation: PASS chapters=50 appendices=8 model-checks=50 safe-exercises=39 lifecycle-chapters=12 source-anchors=476 code-fragments=123 markdown-fragments=43.
+Completion-Audit: E-071 PASS material-findings=0 nonblocking-findings=0; E-072 exact product commit mapping PASS.
+Control-Mapping: PASS control commit 1 contains canonical Goal, spec, and E-010–E-072 only; it changes none of the 439 candidate paths.
+Protected-Gitignore: PASS the original workspace's user-owned modification was excluded from product and control commit 1 and remains preserved there; the verification checkout has only the tracked baseline.
+Authority: root established the product commit, clean verification checkout, control commit 1, and final verified-state transition; the Executor records that authorized control state only.
+Final-Control-Commit: intentionally not self-recorded because this receipt is contained by that commit; no SHA is fabricated, and this receipt does not authorize push.
+Disposition: C-001–C-007 verified on shared Git product version 6b1f34540c451dc438553f38ca93517e73064114 and content sha256:ac8ebba19cbc7b6570dbbaaf1c7e8bea8c9cff8229a6b9731c38d228c3709d2f; checkpoint COMPLETE; Active Claim none; blocked=0.
+Observed-At: 2026-08-31T11:28:42+08:00
