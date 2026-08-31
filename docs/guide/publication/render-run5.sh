@@ -37,24 +37,7 @@ edition_source_date_epoch="1788134400"
 edition_date="2026-08-31"
 edition_identifier="urn:uuid:29b2b39c-49eb-5a20-aa38-f95d76acd228"
 
-for source in "${all_sources[@]}"; do
-  base="$(basename "$source" .md)"
-  if [[ "$base" == "README" ]]; then
-    base="index"
-  fi
-  pandoc "$source" \
-    --from=markdown+yaml_metadata_block+pipe_tables \
-    --standalone \
-    --embed-resources \
-    --resource-path="$guide_root:$(dirname "$guide_root/$source")" \
-    --css=publication/guide.css \
-    --lua-filter=publication/links.lua \
-    --metadata=link-mode:website \
-    --metadata=edition-scope:run5 \
-    --metadata=title: \
-    --metadata=pagetitle:"Haros Guidebook" \
-    --output="$website_root/$base.html"
-done
+GUIDEBOOK_WEBSITE_DIR="$website_root" "$script_dir/render-website.sh"
 
 pandoc "${all_sources[@]}" \
   --from=markdown+yaml_metadata_block+pipe_tables \

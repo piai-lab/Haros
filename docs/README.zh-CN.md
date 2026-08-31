@@ -4,7 +4,21 @@
   <p><strong>十个 Engine，一套本地优先的 Harness OS。</strong></p>
   <p>切换 Engine，工作不断线。</p>
   <p>
-    <a href="guide/README.md"><strong>Guidebook</strong></a> ·
+    <img alt="Haros 内置 Engine" src="https://img.shields.io/badge/Haros_Built--in-111827?style=flat-square" />
+    <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
+    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
+    <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
+    <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
+    <br />
+    <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
+    <img alt="Droid Engine" src="https://img.shields.io/badge/Droid-7C3AED?style=flat-square" />
+    <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
+    <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
+    <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
+  </p>
+  <img src="../assets/brand/exports/haros-system-schematic.png" width="960" alt="十个 Engine 进入 Haros，并在同一工作台中保留统一的产品状态" />
+  <p>
+    <a href="https://piai-lab.github.io/Haros/"><strong>Guidebook</strong></a> ·
     <a href="../README.md">English</a> ·
     <a href="architecture.md">架构</a> ·
     <a href="../CONTRIBUTING.md">参与贡献</a>
@@ -59,7 +73,7 @@ Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于�
 
 ## 继续了解
 
-- 从 [Haros Guidebook（英文）](guide/README.md) 开始，完整了解产品与架构。
+- 从 [Haros Guidebook（英文）](https://piai-lab.github.io/Haros/) 开始，完整了解产品与架构。
 - 阅读[架构说明](architecture.md)，了解 owner 边界与 runtime 设计。
 - 提交改动前请先阅读[参与贡献](../CONTRIBUTING.md)。
 - 使用[支持文档](../SUPPORT.md)获取帮助；安全问题请按[安全策略](../SECURITY.md)私下报告。
