@@ -1,4 +1,4 @@
-import { ThreadId } from "@harnessos/contracts";
+import { EngineSessionAdmission, ThreadId } from "@harnessos/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import { Effect, Layer, Option, Schema, Struct } from "effect";
@@ -17,6 +17,7 @@ import {
 const EngineSessionRuntimeDbRowSchema = EngineSessionRuntime.mapFields(
   Struct.assign({
     resumeCursor: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
+    admission: Schema.NullOr(Schema.fromJsonString(EngineSessionAdmission)),
     runtimePayload: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
   }),
 );
@@ -45,6 +46,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           lifecycle_generation,
           last_seen_at,
           resume_cursor_json,
+          admission_json,
           runtime_payload_json
         )
         VALUES (
@@ -56,6 +58,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           ${runtime.lifecycleGeneration},
           ${runtime.lastSeenAt},
           ${runtime.resumeCursor},
+          ${runtime.admission},
           ${runtime.runtimePayload}
         )
         ON CONFLICT (thread_id)
@@ -67,6 +70,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           lifecycle_generation = excluded.lifecycle_generation,
           last_seen_at = excluded.last_seen_at,
           resume_cursor_json = excluded.resume_cursor_json,
+          admission_json = excluded.admission_json,
           runtime_payload_json = excluded.runtime_payload_json
       `,
   });
@@ -85,6 +89,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           lifecycle_generation AS "lifecycleGeneration",
           last_seen_at AS "lastSeenAt",
           resume_cursor_json AS "resumeCursor",
+          admission_json AS admission,
           runtime_payload_json AS "runtimePayload"
         FROM engine_session_runtime
         WHERE thread_id = ${threadId}
@@ -105,6 +110,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           lifecycle_generation AS "lifecycleGeneration",
           last_seen_at AS "lastSeenAt",
           resume_cursor_json AS "resumeCursor",
+          admission_json AS admission,
           runtime_payload_json AS "runtimePayload"
         FROM engine_session_runtime
         ORDER BY last_seen_at ASC, thread_id ASC

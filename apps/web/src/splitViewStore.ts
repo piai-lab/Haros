@@ -8,6 +8,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { type ChatRightPanel } from "./diffRouteSearch";
+import { resolveLocalStateStorage } from "./lib/storage";
 import { randomUUID } from "./lib/utils";
 import {
   canSubdividePane,
@@ -23,6 +24,7 @@ import {
 } from "./splitView.logic";
 
 export type SplitViewId = string;
+const splitViewStorage = resolveLocalStateStorage();
 export type PaneId = string;
 export type SplitDirection = "horizontal" | "vertical";
 // "first" maps to the top/left side of a split; "second" maps to the bottom/right side.
@@ -95,6 +97,28 @@ interface SplitViewStore {
   hasHydrated: boolean;
   splitViewsById: Record<SplitViewId, SplitView | undefined>;
   splitViewIdBySourceThreadId: Record<string, SplitViewId | undefined>;
+  browserPresentationByThreadId: Record<
+    string,
+    | {
+        presentationId: string;
+        splitViewId: SplitViewId;
+        paneId: PaneId;
+        threadId: ThreadId;
+        suppressedByUser: boolean;
+      }
+    | undefined
+  >;
+  acquireBrowserPresentation: (input: {
+    presentationId: string;
+    splitViewId: SplitViewId;
+    paneId: PaneId;
+    threadId: ThreadId;
+  }) => void;
+  releaseBrowserPresentation: (
+    threadId: ThreadId,
+    presentationId: string,
+    disposition: "restore" | "preserve",
+  ) => void;
   createFromThread: (input: CreateFromThreadInput) => SplitViewId;
   createFromDrop: (input: CreateFromDropInput) => SplitViewId;
   removeSplitView: (splitViewId: SplitViewId) => void;
@@ -348,9 +372,56 @@ export function resolveSplitViewPaneIdForThread(
   return null;
 }
 
-export function selectSplitView(splitViewId: SplitViewId | null) {
+const projectedSplitViewCache = new WeakMap<SplitView, Map<string, SplitView>>();
+
+function projectBrowserPresentations(store: SplitViewStore, base: SplitView): SplitView {
+  const presentations = Object.values(store.browserPresentationByThreadId)
+    .filter((presentation): presentation is NonNullable<typeof presentation> =>
+      Boolean(
+        presentation && !presentation.suppressedByUser && presentation.splitViewId === base.id,
+      ),
+    )
+    .toSorted((left, right) => left.presentationId.localeCompare(right.presentationId));
+  if (presentations.length === 0) return base;
+  const cacheKey = presentations.map((presentation) => presentation.presentationId).join(":");
+  let byPresentation = projectedSplitViewCache.get(base);
+  if (!byPresentation) {
+    byPresentation = new Map();
+    projectedSplitViewCache.set(base, byPresentation);
+  }
+  const cached = byPresentation.get(cacheKey);
+  if (cached) return cached;
+  let root = base.root;
+  for (const presentation of presentations) {
+    const leaf = findLeafPaneById(root, presentation.paneId);
+    if (!leaf || leaf.threadId !== presentation.threadId) continue;
+    root = replacePaneInTree(root, leaf.id, {
+      ...leaf,
+      panel: {
+        ...leaf.panel,
+        panel: "browser",
+        diffTurnId: null,
+        diffFilePath: null,
+        hasOpenedPanel: true,
+        lastOpenPanel: "browser",
+      },
+    });
+  }
+  const projected = root === base.root ? base : { ...base, root };
+  byPresentation.set(cacheKey, projected);
+  return projected;
+}
+
+export function selectCanonicalSplitView(splitViewId: SplitViewId | null) {
   return (store: SplitViewStore) =>
     splitViewId ? (store.splitViewsById[splitViewId] ?? null) : null;
+}
+
+export function selectSplitView(splitViewId: SplitViewId | null) {
+  return (store: SplitViewStore) => {
+    const base = selectCanonicalSplitView(splitViewId)(store);
+    return base ? projectBrowserPresentations(store, base) : null;
+  };
 }
 
 // Deterministic membership lookup: restore only if a thread has one clear split,
@@ -391,6 +462,65 @@ export const useSplitViewStore = create<SplitViewStore>()(
       hasHydrated: false,
       splitViewsById: {},
       splitViewIdBySourceThreadId: {},
+      browserPresentationByThreadId: {},
+      acquireBrowserPresentation: (input) =>
+        set((state) => {
+          const splitView = state.splitViewsById[input.splitViewId];
+          const leaf = splitView ? findLeafPaneById(splitView.root, input.paneId) : null;
+          if (!leaf || leaf.threadId !== input.threadId) return {};
+          const existing = state.browserPresentationByThreadId[input.threadId];
+          if (
+            existing?.presentationId === input.presentationId &&
+            existing.splitViewId === input.splitViewId &&
+            existing.paneId === input.paneId
+          ) {
+            return {};
+          }
+          return {
+            browserPresentationByThreadId: {
+              ...state.browserPresentationByThreadId,
+              [input.threadId]: { ...input, suppressedByUser: false },
+            },
+          };
+        }),
+      releaseBrowserPresentation: (threadId, presentationId, disposition) =>
+        set((state) => {
+          const presentation = state.browserPresentationByThreadId[threadId];
+          if (!presentation || presentation.presentationId !== presentationId) return {};
+          const nextPresentations = { ...state.browserPresentationByThreadId };
+          delete nextPresentations[threadId];
+          const splitView = state.splitViewsById[presentation.splitViewId];
+          const leaf = splitView ? findLeafPaneById(splitView.root, presentation.paneId) : null;
+          const shouldAdoptBrowser =
+            disposition === "preserve" &&
+            !presentation.suppressedByUser &&
+            leaf?.threadId === threadId;
+          if (!shouldAdoptBrowser || !splitView || !leaf) {
+            return { browserPresentationByThreadId: nextPresentations };
+          }
+          const nextLeaf: LeafPane = {
+            ...leaf,
+            panel: {
+              ...leaf.panel,
+              panel: "browser",
+              diffTurnId: null,
+              diffFilePath: null,
+              hasOpenedPanel: true,
+              lastOpenPanel: "browser",
+            },
+          };
+          return {
+            browserPresentationByThreadId: nextPresentations,
+            splitViewsById: {
+              ...state.splitViewsById,
+              [splitView.id]: {
+                ...splitView,
+                root: replacePaneInTree(splitView.root, leaf.id, nextLeaf),
+                updatedAt: resolveUpdatedAt(),
+              },
+            },
+          };
+        }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       createFromThread: (input) => {
         const existingId = get().splitViewIdBySourceThreadId[input.sourceThreadId] ?? null;
@@ -728,20 +858,25 @@ export const useSplitViewStore = create<SplitViewStore>()(
             };
           }
 
-          if (!didChange) {
+          const hasPresentation = Object.hasOwn(state.browserPresentationByThreadId, threadId);
+          if (!didChange && !hasPresentation) {
             return state;
           }
+
+          const nextPresentations = { ...state.browserPresentationByThreadId };
+          delete nextPresentations[threadId];
 
           return {
             splitViewsById: nextSplitViewsById,
             splitViewIdBySourceThreadId: nextSplitViewIdBySourceThreadId,
+            browserPresentationByThreadId: nextPresentations,
           };
         }),
     }),
     {
       name: SPLIT_VIEW_STORAGE_KEY,
       version: SPLIT_VIEW_STORAGE_VERSION,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => splitViewStorage),
       partialize: (state) => ({
         splitViewsById: state.splitViewsById,
         splitViewIdBySourceThreadId: state.splitViewIdBySourceThreadId,

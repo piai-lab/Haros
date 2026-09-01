@@ -76,6 +76,10 @@ import {
 import { engineQueryKeys } from "../lib/engineReactQuery";
 import { invalidateProjectFileQueriesForCwds, projectQueryKeys } from "../lib/projectReactQuery";
 import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
+import {
+  closeDeletedThreadClientResources,
+  findThreadsRemovedByAuthoritativeSnapshot,
+} from "../lib/deletedThreadClientReconciliation";
 import { useProjectRunStore } from "../projectRunStore";
 import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
@@ -1649,7 +1653,14 @@ function EventRouter() {
         return;
       }
       const promotedDraftThreadIds = collectSubscribedDraftsInShell(snapshot.threads);
+      const removedThreadIds = findThreadsRemovedByAuthoritativeSnapshot({
+        currentThreadIds: useStore.getState().threadIds ?? EMPTY_THREAD_IDS,
+        snapshotThreadIds: snapshot.threads.map((thread) => thread.id),
+      });
       shellSnapshotSequence = snapshot.snapshotSequence;
+      if (removedThreadIds.length > 0) {
+        void closeDeletedThreadClientResources(removedThreadIds);
+      }
       syncServerShellSnapshot(snapshot);
       observeTurnsFromShellThreads(snapshot.threads);
       reconcilePromotedDraftsFromShellThreads(snapshot.threads);
@@ -2041,7 +2052,14 @@ function EventRouter() {
     const unsubShellEvent = api.orchestration.onShellEvent((item) => {
       if (item.kind === "snapshot") {
         const promotedDraftThreadIds = collectSubscribedDraftsInShell(item.snapshot.threads);
+        const removedThreadIds = findThreadsRemovedByAuthoritativeSnapshot({
+          currentThreadIds: useStore.getState().threadIds ?? EMPTY_THREAD_IDS,
+          snapshotThreadIds: item.snapshot.threads.map((thread) => thread.id),
+        });
         shellSnapshotSequence = item.snapshot.snapshotSequence;
+        if (removedThreadIds.length > 0) {
+          void closeDeletedThreadClientResources(removedThreadIds);
+        }
         syncServerShellSnapshot(item.snapshot);
         observeTurnsFromShellThreads(item.snapshot.threads);
         reconcilePromotedDraftsFromShellThreads(item.snapshot.threads);
@@ -2059,6 +2077,9 @@ function EventRouter() {
         return;
       }
       shellSnapshotSequence = item.sequence;
+      if (item.kind === "thread-removed") {
+        void closeDeletedThreadClientResources([item.threadId]);
+      }
       applyShellEvent(item);
       if (item.kind === "thread-upserted") {
         observeTurnsFromShellThreads([item.thread]);

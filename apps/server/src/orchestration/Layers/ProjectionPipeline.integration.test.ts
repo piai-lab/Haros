@@ -56,6 +56,7 @@ const makeObservedEventStoreLayer = (
     OrchestrationEventStore,
     Effect.gen(function* () {
       const eventStore = yield* OrchestrationEventStore;
+      const sql = yield* SqlClient.SqlClient;
       return {
         ...eventStore,
         readFromSequence(sequenceExclusive, limit, throughSequenceInclusive, filter) {
@@ -3641,6 +3642,7 @@ it.layer(
       const path = yield* Path.Path;
       const projectionPipeline = yield* OrchestrationProjectionPipeline;
       const eventStore = yield* OrchestrationEventStore;
+      const sql = yield* SqlClient.SqlClient;
       const { attachmentsDir } = yield* ServerConfig;
       const now = new Date().toISOString();
       const threadId = ThreadId.makeUnsafe("Thread Delete.Files");
@@ -3736,6 +3738,18 @@ it.layer(
       assert.isTrue(yield* exists(threadAttachmentPath));
       assert.isTrue(yield* exists(otherThreadAttachmentPath));
 
+      yield* sql`
+        INSERT INTO projection_pending_interactions (
+          interaction_kind, request_id, thread_id, turn_id, lifecycle_generation, status,
+          decision, response_command_id, response_requested_at, created_at, resolved_at,
+          draft_json, draft_revision, draft_updated_at
+        ) VALUES (
+          'userInput', 'request-delete-draft', ${threadId}, NULL, 'generation-delete', 'pending',
+          NULL, NULL, NULL, ${now}, NULL,
+          '{"version":1,"answers":{},"activeQuestionIndex":0}', 1, ${now}
+        )
+      `;
+
       yield* appendAndProject({
         type: "thread.deleted",
         eventId: EventId.makeUnsafe("evt-delete-files-4"),
@@ -3754,6 +3768,12 @@ it.layer(
 
       assert.isFalse(yield* exists(threadAttachmentPath));
       assert.isTrue(yield* exists(otherThreadAttachmentPath));
+      const remainingPending = yield* sql<{ readonly count: number }>`
+        SELECT COUNT(*) AS count
+        FROM projection_pending_interactions
+        WHERE thread_id = ${threadId}
+      `;
+      assert.strictEqual(remainingPending[0]?.count, 0);
     }),
   );
 });

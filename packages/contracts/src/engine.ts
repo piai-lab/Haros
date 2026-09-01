@@ -46,13 +46,32 @@ export type EngineSession = typeof EngineSession.Type;
 export const EngineWorkSurface = Schema.Literals(["agent", "chat"]);
 export type EngineWorkSurface = typeof EngineWorkSurface.Type;
 
+/** Immutable Product admission for one native Engine Session. */
+export const EngineSessionAdmission = Schema.Union([
+  Schema.Struct({
+    productSurface: Schema.Literal("agent"),
+    workSurface: Schema.Literal("agent"),
+    projectContextRoot: TrimmedNonEmptyString,
+  }),
+  Schema.Struct({
+    productSurface: Schema.Literal("chat"),
+    workSurface: Schema.Literal("chat"),
+    projectContextRoot: Schema.Null,
+  }),
+  Schema.Struct({
+    productSurface: Schema.Literal("studio"),
+    workSurface: Schema.Literal("chat"),
+    projectContextRoot: Schema.Null,
+  }),
+]);
+export type EngineSessionAdmission = typeof EngineSessionAdmission.Type;
+
 export const EngineSessionStartInput = Schema.Struct({
   threadId: ThreadId,
   engine: Schema.optional(EngineKind),
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
   cwd: Schema.optional(TrimmedNonEmptyString),
-  workSurface: Schema.optional(EngineWorkSurface),
-  projectContextRoot: Schema.optional(TrimmedNonEmptyString),
+  admission: EngineSessionAdmission,
   engineSelection: Schema.optional(EngineSelection),
   resumeCursor: Schema.optional(Schema.Unknown),
   forkSourceResumeCursor: Schema.optional(Schema.Unknown),

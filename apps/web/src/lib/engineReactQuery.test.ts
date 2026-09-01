@@ -95,12 +95,15 @@ describe("checkpointDiffQueryOptions", () => {
     const queryClient = new QueryClient();
     await queryClient.fetchQuery(options);
 
-    expect(getTurnDiff).toHaveBeenCalledWith({
-      threadId,
-      fromTurnCount: 3,
-      toTurnCount: 4,
-      ignoreWhitespace: true,
-    });
+    expect(getTurnDiff).toHaveBeenCalledWith(
+      {
+        threadId,
+        fromTurnCount: 3,
+        toTurnCount: 4,
+        ignoreWhitespace: true,
+      },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(getFullThreadDiff).not.toHaveBeenCalled();
   });
 
@@ -120,11 +123,14 @@ describe("checkpointDiffQueryOptions", () => {
     const queryClient = new QueryClient();
     await queryClient.fetchQuery(options);
 
-    expect(getFullThreadDiff).toHaveBeenCalledWith({
-      threadId,
-      toTurnCount: 2,
-      ignoreWhitespace: false,
-    });
+    expect(getFullThreadDiff).toHaveBeenCalledWith(
+      {
+        threadId,
+        toTurnCount: 2,
+        ignoreWhitespace: false,
+      },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(getTurnDiff).not.toHaveBeenCalled();
   });
 
@@ -144,12 +150,15 @@ describe("checkpointDiffQueryOptions", () => {
     const queryClient = new QueryClient();
     await queryClient.fetchQuery(options);
 
-    expect(getTurnDiff).toHaveBeenCalledWith({
-      threadId,
-      fromTurnCount: 0,
-      toTurnCount: 1,
-      ignoreWhitespace: true,
-    });
+    expect(getTurnDiff).toHaveBeenCalledWith(
+      {
+        threadId,
+        fromTurnCount: 0,
+        toTurnCount: 1,
+        ignoreWhitespace: true,
+      },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(getFullThreadDiff).not.toHaveBeenCalled();
   });
 

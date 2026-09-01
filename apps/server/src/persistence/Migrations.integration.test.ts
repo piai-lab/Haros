@@ -12,7 +12,11 @@ layer("Haros initial schema", (it) => {
   it.effect("creates the complete canonical schema once", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      assert.deepStrictEqual(yield* runMigrations(), [[1, "HarnessOSInitialSchema"]]);
+      assert.deepStrictEqual(yield* runMigrations(), [
+        [1, "HarnessOSInitialSchema"],
+        [2, "EngineSessionAdmission"],
+        [3, "PendingUserInputDraft"],
+      ]);
       assert.deepStrictEqual(yield* runMigrations(), []);
 
       const requiredObjects = yield* sql<{ readonly name: string }>`
@@ -37,11 +41,19 @@ layer("Haros initial schema", (it) => {
       assert.lengthOf(requiredObjects, 12);
 
       const engineColumns = yield* sql<{ readonly name: string }>`
-        SELECT name FROM pragma_table_info('projection_thread_sessions')
+        SELECT name FROM pragma_table_info('engine_session_runtime')
       `;
       assert.includeMembers(
         engineColumns.map(({ name }) => name),
-        ["engine", "engine_session_id", "engine_thread_id"],
+        ["engine", "admission_json"],
+      );
+
+      const pendingInteractionColumns = yield* sql<{ readonly name: string }>`
+        SELECT name FROM pragma_table_info('projection_pending_interactions')
+      `;
+      assert.includeMembers(
+        pendingInteractionColumns.map(({ name }) => name),
+        ["draft_json", "draft_revision", "draft_updated_at"],
       );
 
       const schemaSql = yield* sql<{ readonly sql: string | null }>`
@@ -86,12 +98,121 @@ untrackedLayer("untracked database", (it) => {
 });
 
 describe("Haros migration registry", () => {
-  it("starts at one fresh baseline", () => {
+  it("extends the one fresh baseline with numbered Product migrations", () => {
     assert.deepStrictEqual(
       migrationEntries.map(([id, name]) => [id, name]),
-      [[1, "HarnessOSInitialSchema"]],
+      [
+        [1, "HarnessOSInitialSchema"],
+        [2, "EngineSessionAdmission"],
+        [3, "PendingUserInputDraft"],
+      ],
     );
   });
+});
+
+const admissionBackfillLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
+
+admissionBackfillLayer("Engine Session admission migration", (it) => {
+  it.effect("backfills exact Product admission and leaves orphan bindings invalid", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      assert.deepStrictEqual(yield* runMigrations({ toMigrationInclusive: 1 }), [
+        [1, "HarnessOSInitialSchema"],
+      ]);
+
+      for (const project of [
+        { id: "project-agent", kind: "project", root: "/repo/agent" },
+        { id: "project-chat", kind: "chat", root: "" },
+        { id: "project-studio", kind: "studio", root: "" },
+      ] as const) {
+        yield* sql`
+          INSERT INTO projection_projects (
+            project_id, kind, title, workspace_root, scripts_json, created_at, updated_at
+          ) VALUES (
+            ${project.id}, ${project.kind}, ${project.id}, ${project.root}, '{}',
+            '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z'
+          )
+        `;
+        yield* sql`
+          INSERT INTO projection_threads (
+            thread_id, project_id, title, created_at, updated_at
+          ) VALUES (
+            ${`thread-${project.kind}`}, ${project.id}, ${project.id},
+            '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z'
+          )
+        `;
+      }
+
+      for (const threadId of ["thread-project", "thread-chat", "thread-studio", "thread-orphan"]) {
+        yield* sql`
+          INSERT INTO engine_session_runtime (
+            thread_id, engine, adapter_key, runtime_mode, status, last_seen_at,
+            resume_cursor_json, runtime_payload_json, lifecycle_generation
+          ) VALUES (
+            ${threadId}, 'oa', 'oa', 'full-access', 'stopped',
+            '2026-09-01T00:00:00.000Z', NULL,
+            '{"workSurface":"agent","projectContextRoot":"/stale","kept":true}',
+            'legacy'
+          )
+        `;
+      }
+
+      assert.deepStrictEqual(yield* runMigrations(), [
+        [2, "EngineSessionAdmission"],
+        [3, "PendingUserInputDraft"],
+      ]);
+
+      const rows = yield* sql<{
+        readonly threadId: string;
+        readonly admission: string | null;
+        readonly runtimePayload: string | null;
+      }>`
+        SELECT
+          thread_id AS "threadId",
+          admission_json AS admission,
+          runtime_payload_json AS "runtimePayload"
+        FROM engine_session_runtime
+        ORDER BY thread_id
+      `;
+      assert.deepStrictEqual(
+        rows.map((row) => ({
+          threadId: row.threadId,
+          admission: row.admission === null ? null : JSON.parse(row.admission),
+          runtimePayload: row.runtimePayload === null ? null : JSON.parse(row.runtimePayload),
+        })),
+        [
+          {
+            threadId: "thread-chat",
+            admission: {
+              productSurface: "chat",
+              workSurface: "chat",
+              projectContextRoot: null,
+            },
+            runtimePayload: { kept: true },
+          },
+          { threadId: "thread-orphan", admission: null, runtimePayload: { kept: true } },
+          {
+            threadId: "thread-project",
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/repo/agent",
+            },
+            runtimePayload: { kept: true },
+          },
+          {
+            threadId: "thread-studio",
+            admission: {
+              productSurface: "studio",
+              workSurface: "chat",
+              projectContextRoot: null,
+            },
+            runtimePayload: { kept: true },
+          },
+        ],
+      );
+    }),
+  );
 });
 
 const foreignTrackerLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
@@ -109,7 +230,7 @@ foreignTrackerLayer("foreign migration tracker", (it) => {
       `;
       yield* sql`
         INSERT INTO effect_sql_migrations (migration_id, name)
-        VALUES (2, 'ForeignSchema')
+        VALUES (4, 'ForeignSchema')
       `;
 
       const exit = yield* Effect.exit(runMigrations());

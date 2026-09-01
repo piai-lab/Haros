@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   setPendingUserInputCustomText,
   togglePendingUserInputCustomSelection,
@@ -20,6 +20,7 @@ interface PendingUserInputPanelProps {
   onAdvance: () => void;
   onPrevious: () => void;
   onCancel: () => void;
+  onFlushDraft: () => void;
 }
 
 const NAV_BUTTON_CLASS_NAME =
@@ -35,6 +36,7 @@ export function ComposerPendingUserInputPanel({
   onAdvance,
   onPrevious,
   onCancel,
+  onFlushDraft,
 }: PendingUserInputPanelProps) {
   return (
     <ComposerPendingUserInputCard
@@ -46,6 +48,7 @@ export function ComposerPendingUserInputPanel({
       onAdvance={onAdvance}
       onPrevious={onPrevious}
       onCancel={onCancel}
+      onFlushDraft={onFlushDraft}
     />
   );
 }
@@ -58,6 +61,7 @@ function ComposerPendingUserInputCard({
   onAdvance,
   onPrevious,
   onCancel,
+  onFlushDraft,
 }: {
   active: PendingUserInputControllerActive;
   isFocusedPane: boolean;
@@ -66,6 +70,7 @@ function ComposerPendingUserInputCard({
   onAdvance: () => void;
   onPrevious: () => void;
   onCancel: () => void;
+  onFlushDraft: () => void;
 }) {
   const { t } = useI18n();
   const { request: prompt, progress, isResponding } = active;
@@ -90,7 +95,34 @@ function ComposerPendingUserInputCard({
     if (isFocusedPane) questionHeadingRef.current?.focus({ preventScroll: true });
   }, [activeQuestion?.id, isFocusedPane]);
 
-  if (!activeQuestion) return null;
+  const handleCardBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onFlushDraft();
+  };
+
+  if (!activeQuestion) {
+    return (
+      <div
+        className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
+        onBlurCapture={handleCardBlur}
+        aria-busy={isResponding}
+      >
+        <p className="text-[13px] font-medium text-foreground/90">
+          {t("pendingInput.unrenderableTitle")}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/75">
+          {t("pendingInput.unrenderableDescription")}
+        </p>
+        <button
+          type="button"
+          disabled={isResponding}
+          onClick={onCancel}
+          className="mt-2 rounded-md border border-border/70 px-2 py-1 text-xs text-foreground/80 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+        >
+          {t("pendingInput.cancelMalformed")}
+        </button>
+      </div>
+    );
+  }
   const questionCount = prompt.questions.length;
   const canGoBack = progress.questionIndex > 0;
   const canGoForward = !progress.isLastQuestion && progress.canAdvance;
@@ -128,6 +160,7 @@ function ComposerPendingUserInputCard({
     <div
       className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
       onKeyDown={handleScopedKeyboard}
+      onBlurCapture={handleCardBlur}
       aria-busy={isResponding}
     >
       <div className="flex items-start justify-between gap-3">

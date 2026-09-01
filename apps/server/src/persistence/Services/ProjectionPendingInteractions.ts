@@ -1,6 +1,7 @@
 /** Durable settlement authority shared by approvals and structured user input. */
 import {
   ApprovalRequestId,
+  CanonicalUserInputDraftV1,
   CommandId,
   IsoDateTime,
   NonNegativeInt,
@@ -27,6 +28,13 @@ export const ProjectionPendingInteraction = Schema.Struct({
   responseRequestedAt: Schema.NullOr(IsoDateTime),
   createdAt: IsoDateTime,
   resolvedAt: Schema.NullOr(IsoDateTime),
+  draft: Schema.optional(Schema.NullOr(CanonicalUserInputDraftV1)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  draftRevision: Schema.optional(NonNegativeInt).pipe(Schema.withDecodingDefault(() => 0)),
+  draftUpdatedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
 });
 export type ProjectionPendingInteraction = typeof ProjectionPendingInteraction.Type;
 
@@ -58,6 +66,26 @@ export const ClaimProjectionPendingInteractionResponseInput = Schema.Struct({
 
 export const DeleteProjectionPendingInteractionInput = GetProjectionPendingInteractionInput;
 
+export const DeleteProjectionPendingInteractionsByThreadInput = Schema.Struct({
+  threadId: ThreadId,
+});
+
+export const UpdateProjectionPendingUserInputDraftInput = Schema.Struct({
+  threadId: ThreadId,
+  requestId: ApprovalRequestId,
+  lifecycleGeneration: Schema.NullOr(Schema.String),
+  draft: CanonicalUserInputDraftV1,
+  updatedAt: IsoDateTime,
+});
+
+export const UpdateProjectionPendingUserInputDraftResult = Schema.Struct({
+  updated: Schema.Boolean,
+  draftRevision: NonNegativeInt,
+  draftUpdatedAt: Schema.NullOr(IsoDateTime),
+});
+export type UpdateProjectionPendingUserInputDraftResult =
+  typeof UpdateProjectionPendingUserInputDraftResult.Type;
+
 export interface ProjectionPendingInteractionRepositoryShape {
   readonly upsert: (
     row: ProjectionPendingInteraction,
@@ -80,8 +108,14 @@ export interface ProjectionPendingInteractionRepositoryShape {
   readonly claimResponse: (
     input: typeof ClaimProjectionPendingInteractionResponseInput.Type,
   ) => Effect.Effect<boolean, ProjectionRepositoryError>;
+  readonly updateUserInputDraft: (
+    input: typeof UpdateProjectionPendingUserInputDraftInput.Type,
+  ) => Effect.Effect<UpdateProjectionPendingUserInputDraftResult, ProjectionRepositoryError>;
   readonly deleteByIdentity: (
     input: typeof DeleteProjectionPendingInteractionInput.Type,
+  ) => Effect.Effect<void, ProjectionRepositoryError>;
+  readonly deleteByThreadId: (
+    input: typeof DeleteProjectionPendingInteractionsByThreadInput.Type,
   ) => Effect.Effect<void, ProjectionRepositoryError>;
 }
 

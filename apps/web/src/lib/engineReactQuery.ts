@@ -19,6 +19,7 @@ interface CheckpointDiffQueryInput {
   ignoreWhitespace: boolean;
   cacheScope?: string | null;
   enabled?: boolean;
+  gcTimeMs?: number;
 }
 
 export const engineQueryKeys = {
@@ -129,22 +130,23 @@ export function checkpointDiffQueryOptions(input: CheckpointDiffQueryInput) {
 
   return queryOptions({
     queryKey: engineQueryKeys.checkpointDiff(input),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const api = ensureNativeApi();
       if (!input.threadId || decodedRequest._tag === "None") {
         throw new Error("Checkpoint diff is unavailable.");
       }
       try {
         if (decodedRequest.value.kind === "fullThreadDiff") {
-          return await api.orchestration.getFullThreadDiff(decodedRequest.value.input);
+          return await api.orchestration.getFullThreadDiff(decodedRequest.value.input, { signal });
         }
-        return await api.orchestration.getTurnDiff(decodedRequest.value.input);
+        return await api.orchestration.getTurnDiff(decodedRequest.value.input, { signal });
       } catch (error) {
         throw new Error(normalizeCheckpointErrorMessage(error), { cause: error });
       }
     },
     enabled: (input.enabled ?? true) && !!input.threadId && decodedRequest._tag === "Some",
     staleTime: Infinity,
+    ...(input.gcTimeMs === undefined ? {} : { gcTime: input.gcTimeMs }),
     retry: (failureCount, error) => {
       if (isCheckpointTemporarilyUnavailable(error)) {
         return failureCount < 12;

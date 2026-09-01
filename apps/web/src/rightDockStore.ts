@@ -7,6 +7,7 @@ import type { ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { resolveLocalStateStorage } from "./lib/storage";
 import { randomUUID } from "./lib/utils";
 import {
   type OpenPaneInput,
@@ -23,9 +24,25 @@ import {
 } from "./rightDockStore.logic";
 
 const RIGHT_DOCK_STORAGE_KEY = "harnessos:right-dock-state:v1";
+const rightDockStorage = resolveLocalStateStorage();
 
 interface RightDockStore {
   dockStateByThreadId: Record<string, RightDockThreadState | undefined>;
+  browserPresentationByThreadId: Record<
+    string,
+    | {
+        presentationId: string;
+        paneId: string;
+        suppressedByUser: boolean;
+      }
+    | undefined
+  >;
+  acquireBrowserPresentation: (threadId: ThreadId, presentationId: string) => void;
+  releaseBrowserPresentation: (
+    threadId: ThreadId,
+    presentationId: string,
+    disposition: "restore" | "preserve",
+  ) => void;
   openPane: (
     threadId: ThreadId,
     input: Omit<OpenPaneInput, "paneId"> & { paneId?: string },
@@ -68,26 +85,106 @@ function commit(
   set: (fn: (store: RightDockStore) => Partial<RightDockStore>) => void,
   threadId: ThreadId,
   transform: (state: RightDockThreadState) => RightDockThreadState,
+  suppressPresentation = true,
 ): void {
   set((store) => {
     const previous = store.dockStateByThreadId[threadId] ?? DEFAULT_RIGHT_DOCK_STATE;
     const next = transform(previous);
-    if (next === previous) {
+    const presentation = store.browserPresentationByThreadId[threadId];
+    const shouldSuppress =
+      suppressPresentation && presentation !== undefined && !presentation.suppressedByUser;
+    if (next === previous && !shouldSuppress) {
       return {};
     }
     return {
-      dockStateByThreadId: {
-        ...store.dockStateByThreadId,
-        [threadId]: next,
-      },
+      ...(next !== previous
+        ? {
+            dockStateByThreadId: {
+              ...store.dockStateByThreadId,
+              [threadId]: next,
+            },
+          }
+        : {}),
+      ...(shouldSuppress
+        ? {
+            browserPresentationByThreadId: {
+              ...store.browserPresentationByThreadId,
+              [threadId]: { ...presentation, suppressedByUser: true },
+            },
+          }
+        : {}),
     };
   });
+}
+
+const projectedDockStateCache = new WeakMap<
+  RightDockThreadState,
+  Map<string, RightDockThreadState>
+>();
+
+function projectBrowserPresentation(
+  base: RightDockThreadState,
+  presentation: { presentationId: string; paneId: string; suppressedByUser: boolean },
+): RightDockThreadState {
+  if (presentation.suppressedByUser) return base;
+  let byPresentation = projectedDockStateCache.get(base);
+  if (!byPresentation) {
+    byPresentation = new Map();
+    projectedDockStateCache.set(base, byPresentation);
+  }
+  const cached = byPresentation.get(presentation.presentationId);
+  if (cached) return cached;
+  const projected = openPaneInState(base, {
+    kind: "browser",
+    paneId: presentation.paneId,
+  });
+  byPresentation.set(presentation.presentationId, projected);
+  return projected;
 }
 
 export const useRightDockStore = create<RightDockStore>()(
   persist(
     (set) => ({
       dockStateByThreadId: {},
+      browserPresentationByThreadId: {},
+      acquireBrowserPresentation: (threadId, presentationId) =>
+        set((store) => {
+          const existing = store.browserPresentationByThreadId[threadId];
+          if (existing?.presentationId === presentationId) return {};
+          return {
+            browserPresentationByThreadId: {
+              ...store.browserPresentationByThreadId,
+              [threadId]: {
+                presentationId,
+                paneId: `engine-web-surface:${presentationId}`,
+                suppressedByUser: false,
+              },
+            },
+          };
+        }),
+      releaseBrowserPresentation: (threadId, presentationId, disposition) =>
+        set((store) => {
+          const presentation = store.browserPresentationByThreadId[threadId];
+          if (!presentation || presentation.presentationId !== presentationId) return {};
+          const nextPresentations = { ...store.browserPresentationByThreadId };
+          delete nextPresentations[threadId];
+          const base = store.dockStateByThreadId[threadId] ?? DEFAULT_RIGHT_DOCK_STATE;
+          const shouldAdoptBrowser = disposition === "preserve" && !presentation.suppressedByUser;
+          return {
+            browserPresentationByThreadId: nextPresentations,
+            ...(shouldAdoptBrowser
+              ? {
+                  dockStateByThreadId: {
+                    ...store.dockStateByThreadId,
+                    [threadId]: openPaneInState(base, {
+                      kind: "browser",
+                      paneId: randomUUID(),
+                    }),
+                  },
+                }
+              : {}),
+          };
+        }),
       openPane: (threadId, input) =>
         commit(set, threadId, (state) =>
           openPaneInState(state, { ...input, paneId: input.paneId ?? randomUUID() }),
@@ -103,20 +200,28 @@ export const useRightDockStore = create<RightDockStore>()(
       setDockOpen: (threadId, open) =>
         commit(set, threadId, (state) => setDockOpenInState(state, open)),
       updatePane: (threadId, paneId, patch) =>
-        commit(set, threadId, (state) => updatePaneInState(state, paneId, patch)),
+        commit(set, threadId, (state) => updatePaneInState(state, paneId, patch), false),
       clearThreadDockState: (threadId) =>
         set((store) => {
-          if (!Object.hasOwn(store.dockStateByThreadId, threadId)) {
+          if (
+            !Object.hasOwn(store.dockStateByThreadId, threadId) &&
+            !Object.hasOwn(store.browserPresentationByThreadId, threadId)
+          ) {
             return {};
           }
           const next = { ...store.dockStateByThreadId };
           delete next[threadId];
-          return { dockStateByThreadId: next };
+          const nextPresentations = { ...store.browserPresentationByThreadId };
+          delete nextPresentations[threadId];
+          return {
+            dockStateByThreadId: next,
+            browserPresentationByThreadId: nextPresentations,
+          };
         }),
     }),
     {
       name: RIGHT_DOCK_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => rightDockStorage),
       // Validate persisted panes on rehydrate so a stale/unknown pane kind from
       // an older app version can never crash the dock during render.
       merge: (persisted, current) => ({
@@ -125,6 +230,7 @@ export const useRightDockStore = create<RightDockStore>()(
           (persisted as { dockStateByThreadId?: unknown } | undefined)?.dockStateByThreadId,
         ),
       }),
+      partialize: (store) => ({ dockStateByThreadId: store.dockStateByThreadId }),
     },
   ),
 );
@@ -132,6 +238,10 @@ export const useRightDockStore = create<RightDockStore>()(
 export function selectRightDockState(threadId: ThreadId | null) {
   // Keep the fallback snapshot stable so React does not observe phantom store
   // changes while mounting a thread that has no persisted dock state yet.
-  return (store: RightDockStore) =>
-    (threadId ? store.dockStateByThreadId[threadId] : undefined) ?? DEFAULT_RIGHT_DOCK_STATE;
+  return (store: RightDockStore) => {
+    const base =
+      (threadId ? store.dockStateByThreadId[threadId] : undefined) ?? DEFAULT_RIGHT_DOCK_STATE;
+    const presentation = threadId ? store.browserPresentationByThreadId[threadId] : undefined;
+    return presentation ? projectBrowserPresentation(base, presentation) : base;
+  };
 }

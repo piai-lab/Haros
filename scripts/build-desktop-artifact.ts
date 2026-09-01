@@ -33,6 +33,11 @@ import {
   PACKAGED_WORKSPACE_MANIFEST_PATHS,
 } from "./lib/packaged-workspace-manifests.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
+import {
+  expectedPrimaryArtifactSuffix,
+  findPrimaryDesktopArtifacts,
+} from "./lib/desktop-artifact-output.ts";
+import { acquireElectronDistribution } from "./lib/electron-artifacts.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -43,6 +48,9 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
 const BuildArch = Schema.Literals(["arm64", "x64", "universal"]);
 const requireFromScriptsWorkspace = createRequire(new URL("./package.json", import.meta.url));
+const requireFromDesktopWorkspace = createRequire(
+  new URL("../apps/desktop/package.json", import.meta.url),
+);
 
 const RepoRoot = Effect.service(Path.Path).pipe(
   Effect.flatMap((path) => path.fromFileUrl(new URL("..", import.meta.url))),
@@ -101,12 +109,6 @@ const PLATFORM_CONFIG: Record<typeof BuildPlatform.Type, PlatformConfig> = {
   },
 };
 
-const PACKAGED_ARTIFACT_SUFFIX: Record<typeof BuildPlatform.Type, string> = {
-  mac: ".dmg",
-  linux: ".AppImage",
-  win: ".exe",
-};
-
 interface BuildCliInput {
   readonly platform: Option.Option<typeof BuildPlatform.Type>;
   readonly target: Option.Option<string>;
@@ -118,6 +120,7 @@ interface BuildCliInput {
   readonly skipBuild: Option.Option<boolean>;
   readonly keepStage: Option.Option<boolean>;
   readonly verbose: Option.Option<boolean>;
+  readonly localApp: Option.Option<boolean>;
 }
 
 function detectHostBuildPlatform(hostPlatform: string): typeof BuildPlatform.Type | undefined {
@@ -213,6 +216,8 @@ interface ResolvedBuildOptions {
   readonly skipBuild: boolean;
   readonly keepStage: boolean;
   readonly verbose: boolean;
+  readonly localApp: boolean;
+  readonly replaceLocalOutput: boolean;
 }
 
 interface StagePackageJson {
@@ -244,6 +249,7 @@ const BuildEnvConfig = Config.all({
   skipBuild: Config.string("HARNESSOS_DESKTOP_SKIP_BUILD").pipe(Config.option),
   keepStage: Config.string("HARNESSOS_DESKTOP_KEEP_STAGE").pipe(Config.option),
   verbose: Config.string("HARNESSOS_DESKTOP_VERBOSE").pipe(Config.option),
+  localApp: Config.string("HARNESSOS_DESKTOP_LOCAL_APP").pipe(Config.option),
 });
 
 const resolveBooleanFlag = (flag: Option.Option<boolean>, envValue: boolean) =>
@@ -283,21 +289,30 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     });
   }
 
-  const target = mergeOptions(input.target, env.target, PLATFORM_CONFIG[platform].defaultTarget);
+  const envLocalApp = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_LOCAL_APP", env.localApp);
+  const localApp = resolveBooleanFlag(input.localApp, envLocalApp);
+  const target = mergeOptions(
+    input.target,
+    env.target,
+    localApp ? "dir" : PLATFORM_CONFIG[platform].defaultTarget,
+  );
   const arch = mergeOptions(input.arch, env.arch, getDefaultArch(platform));
   const version = mergeOptions(input.buildVersion, env.version, undefined);
   const sourceCommit = mergeOptions(
     input.sourceCommit,
     env.sourceCommit,
-    resolveGitCommitHash(repoRoot),
+    localApp ? undefined : resolveGitCommitHash(repoRoot),
   );
   const lockfileSha256 = mergeOptions(input.lockfileSha256, env.lockfileSha256, undefined);
   const envSkipBuild = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_SKIP_BUILD", env.skipBuild);
   const envKeepStage = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_KEEP_STAGE", env.keepStage);
   const envVerbose = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_VERBOSE", env.verbose);
-  const defaultOutputDir = sourceCommit
-    ? path.join("artifacts", sourceCommit.toLowerCase(), `${platform}-${arch}`)
-    : "artifacts";
+  const hasExplicitOutputDir = Option.isSome(input.outputDir) || Option.isSome(env.outputDir);
+  const defaultOutputDir = localApp
+    ? path.join("apps/desktop/.electron-runtime/local-app", arch)
+    : sourceCommit
+      ? path.join("artifacts", sourceCommit.toLowerCase(), `${platform}-${arch}`)
+      : "artifacts";
   const outputDir = path.resolve(
     repoRoot,
     mergeOptions(input.outputDir, env.outputDir, defaultOutputDir),
@@ -318,6 +333,8 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     skipBuild,
     keepStage,
     verbose,
+    localApp,
+    replaceLocalOutput: localApp && !hasExplicitOutputDir,
   } satisfies ResolvedBuildOptions;
 });
 
@@ -785,6 +802,14 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       message: `Unsupported platform '${options.platform}'.`,
     });
   }
+  yield* Effect.try({
+    try: () => expectedPrimaryArtifactSuffix(options.platform, options.target),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: `Unsupported primary desktop artifact target ${options.platform}/${options.target}.`,
+        cause,
+      }),
+  });
   const nativeBuildHostIssue = validateDesktopNativeBuildHost({
     platform: options.platform,
     arch: options.arch,
@@ -798,6 +823,38 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
 
   const electronVersion = desktopPackageJson.dependencies.electron;
+  if (!/^\d+\.\d+\.\d+$/u.test(electronVersion)) {
+    return yield* new BuildScriptError({
+      message: `Desktop Electron dependency must be an exact version, got '${electronVersion}'.`,
+    });
+  }
+  const installedElectronPackage = yield* Effect.try({
+    try: () =>
+      JSON.parse(
+        readFileSync(requireFromDesktopWorkspace.resolve("electron/package.json"), "utf8"),
+      ) as { version?: unknown },
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not resolve the installed Electron package metadata.",
+        cause,
+      }),
+  });
+  if (installedElectronPackage.version !== electronVersion) {
+    return yield* new BuildScriptError({
+      message: `Installed Electron version ${String(installedElectronPackage.version)} does not match apps/desktop (${electronVersion}). Run 'bun install --frozen-lockfile'.`,
+    });
+  }
+  const electronChecksums = yield* Effect.try({
+    try: () =>
+      JSON.parse(
+        readFileSync(requireFromDesktopWorkspace.resolve("electron/checksums.json"), "utf8"),
+      ) as Record<string, string>,
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not resolve Electron's official packaged checksum manifest.",
+        cause,
+      }),
+  });
 
   const serverDependencies = serverPackageJson.dependencies;
   if (!serverDependencies || Object.keys(serverDependencies).length === 0) {
@@ -847,17 +904,31 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   });
 
   const appVersion = options.version ?? serverPackageJson.version;
+  if (options.localApp && (options.platform !== "mac" || options.target !== "dir")) {
+    return yield* new BuildScriptError({
+      message: "--local-app is restricted to the unsigned macOS dir target.",
+    });
+  }
+  if (options.localApp && options.lockfileSha256) {
+    return yield* new BuildScriptError({
+      message: "--local-app cannot carry release lockfile provenance or release authority.",
+    });
+  }
   if (yield* fs.exists(options.outputDir)) {
     const existingOutputs = yield* fs.readDirectory(options.outputDir);
     if (existingOutputs.length > 0) {
-      return yield* new BuildScriptError({
-        message: `Desktop artifact output directory is not empty: ${options.outputDir}. Use a fresh --output-dir; candidate artifacts are immutable.`,
-      });
+      if (options.replaceLocalOutput) {
+        yield* fs.remove(options.outputDir, { recursive: true });
+      } else {
+        return yield* new BuildScriptError({
+          message: `Desktop artifact output directory is not empty: ${options.outputDir}. Use a fresh --output-dir; candidate artifacts are immutable.`,
+        });
+      }
     }
   }
   const hasSourceCommit = options.sourceCommit !== undefined;
   const hasLockfileSha256 = options.lockfileSha256 !== undefined;
-  if (!hasSourceCommit) {
+  if (!options.localApp && !hasSourceCommit) {
     return yield* new BuildScriptError({
       message: "Desktop candidate builds require --source-commit with the exact full Git SHA.",
     });
@@ -892,7 +963,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       message: `Packaged lockfile digest mismatch: expected ${options.lockfileSha256}, got ${resolvedLockfileSha256}.`,
     });
   }
-  if (hasSourceCommit) {
+  if (hasSourceCommit && !options.localApp) {
     const gitStatus = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
       cwd: repoRoot,
       encoding: "utf8",
@@ -949,6 +1020,27 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
 
   yield* validateBundledClientAssets(path.dirname(bundledClientEntry));
+
+  yield* Effect.log(`[desktop-artifact] Resolving Electron ${electronVersion} artifacts...`);
+  const electronDistribution = yield* Effect.try({
+    try: () =>
+      acquireElectronDistribution({
+        version: electronVersion,
+        platform: options.platform,
+        arch: options.arch,
+        checksums: electronChecksums,
+        repositoryRoot: repoRoot,
+        stageRoot,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not acquire a verified Electron distribution.",
+        cause,
+      }),
+  });
+  yield* Effect.log(
+    `[desktop-artifact] Electron distribution ready (${electronDistribution.files.length} archive(s), proxy=${electronDistribution.proxySource}).`,
+  );
 
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/desktop"), { recursive: true });
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/server"), { recursive: true });
@@ -1063,15 +1155,26 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     `[desktop-artifact] Building ${options.platform}/${options.target} (arch=${options.arch}, version=${appVersion})...`,
   );
   const electronBuilderCliPath = requireFromScriptsWorkspace.resolve("electron-builder/cli.js");
-  yield* runCommand(
-    ChildProcess.make({
-      cwd: stageAppDir,
-      env: buildEnv,
-      ...commandOutputOptions(options.verbose),
-    })`${process.execPath} ${electronBuilderCliPath} ${platformConfig.cliFlag} --${options.arch} --publish never`,
-  );
+  const builderProcessOptions = {
+    cwd: stageAppDir,
+    env: buildEnv,
+    ...commandOutputOptions(options.verbose),
+  } as const;
+  if (options.localApp) {
+    yield* runCommand(
+      ChildProcess.make(
+        builderProcessOptions,
+      )`${process.execPath} ${electronBuilderCliPath} ${platformConfig.cliFlag} --${options.arch} --publish never --config.electronDist=${electronDistribution.directory} --config.directories.output=${options.outputDir}`,
+    );
+  } else {
+    yield* runCommand(
+      ChildProcess.make(
+        builderProcessOptions,
+      )`${process.execPath} ${electronBuilderCliPath} ${platformConfig.cliFlag} --${options.arch} --publish never --config.electronDist=${electronDistribution.directory}`,
+    );
+  }
 
-  const stageDistDir = path.join(stageAppDir, "dist");
+  const stageDistDir = options.localApp ? options.outputDir : path.join(stageAppDir, "dist");
   if (!(yield* fs.exists(stageDistDir))) {
     return yield* new BuildScriptError({
       message: `Build completed but dist directory was not found at ${stageDistDir}`,
@@ -1096,25 +1199,41 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "Haros");
   }
 
-  const stageEntries = yield* fs.readDirectory(stageDistDir);
-  yield* fs.makeDirectory(options.outputDir, { recursive: true });
-
-  const copiedArtifacts: string[] = [];
-  for (const entry of stageEntries) {
-    if (!entry.endsWith(PACKAGED_ARTIFACT_SUFFIX[options.platform])) continue;
-    const from = path.join(stageDistDir, entry);
-    const stat = yield* fs.stat(from).pipe(Effect.catch(() => Effect.succeed(null)));
-    if (!stat || stat.type !== "File") continue;
-
-    const to = path.join(options.outputDir, entry);
-    yield* fs.copyFile(from, to);
-    copiedArtifacts.push(to);
+  const primaryArtifacts = yield* Effect.try({
+    try: () =>
+      findPrimaryDesktopArtifacts({
+        outputDirectory: stageDistDir,
+        platform: options.platform,
+        target: options.target,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: `Could not inspect primary desktop artifacts in ${stageDistDir}.`,
+        cause,
+      }),
+  });
+  if (primaryArtifacts.length !== 1) {
+    return yield* new BuildScriptError({
+      message: `Expected exactly one primary ${options.platform}/${options.target} product artifact in ${stageDistDir}, found ${primaryArtifacts.length}. Metadata, blockmaps and builder diagnostics do not count as a successful build.`,
+    });
   }
 
-  if (copiedArtifacts.length === 0) {
+  const primaryArtifact = primaryArtifacts[0];
+  if (!primaryArtifact) {
     return yield* new BuildScriptError({
-      message: `Build completed but no files were produced in ${stageDistDir}`,
+      message: "Primary desktop artifact disappeared before output publication.",
     });
+  }
+  const copiedArtifacts: string[] = [];
+  if (options.localApp) {
+    copiedArtifacts.push(primaryArtifact);
+  } else {
+    yield* fs.makeDirectory(options.outputDir, { recursive: true });
+    const destination = path.join(options.outputDir, path.basename(primaryArtifact));
+    const stat = yield* fs.stat(primaryArtifact);
+    if (stat.type === "Directory") yield* fs.copy(primaryArtifact, destination);
+    else yield* fs.copyFile(primaryArtifact, destination);
+    copiedArtifacts.push(destination);
   }
 
   yield* Effect.log("[desktop-artifact] Done. Artifacts:").pipe(
@@ -1167,6 +1286,12 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   ),
   verbose: Flag.boolean("verbose").pipe(
     Flag.withDescription("Stream subprocess stdout (env: HARNESSOS_DESKTOP_VERBOSE)."),
+    Flag.optional,
+  ),
+  localApp: Flag.boolean("local-app").pipe(
+    Flag.withDescription(
+      "Build a replaceable unsigned macOS .app for local iteration; never grants release, signing, notarization or update authority (env: HARNESSOS_DESKTOP_LOCAL_APP).",
+    ),
     Flag.optional,
   ),
 }).pipe(

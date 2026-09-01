@@ -281,6 +281,7 @@ type MessagesTimelineRowContent =
       phase: "running" | "waiting-for-user" | "settled";
       items: TurnProcessItem[];
       elapsedMs: number | null;
+      hasFollowingResult: boolean;
       turnDiffSummary?: TurnDiffSummary | undefined;
     }
   | {
@@ -506,7 +507,9 @@ function isOutsideTurnProcessWork(entry: WorkLogEntry): boolean {
     entry.harosThreadCreation ||
     isVisibleGeneratedImageEntry(entry) ||
     entry.attachmentTransferFailures ||
-    entry.engineWebSurface?.status === "waiting-for-user",
+    entry.engineWebSurface?.status === "waiting-for-user" ||
+    entry.activityKind === "user-input.requested" ||
+    entry.activityKind === "user-input.resolved",
   );
 }
 
@@ -794,7 +797,14 @@ export function deriveMessagesTimelineRows(input: {
         : (terminalMessageRow?.message.completedAt ?? latestTimestamp);
     const shouldRenderProcess =
       processItems.length > 0 ||
+      (mergedTurnDiffSummary !== undefined && terminalMessageRow !== null) ||
       (segmentIsActive && configuredPhase.kind === "running" && !input.worktreeSetupOpen);
+    const hasFollowingResult = resultRows.some(
+      (row) =>
+        row.kind === "work" ||
+        row.kind === "proposed-plan" ||
+        (row.kind === "message" && row.message.role === "assistant"),
+    );
 
     if (shouldRenderProcess && startedAt) {
       const lastProcessTurnId = processItems
@@ -811,6 +821,7 @@ export function deriveMessagesTimelineRows(input: {
         phase: segmentPhase,
         items: processItems,
         elapsedMs: endedAt ? elapsedMilliseconds(startedAt, endedAt) : null,
+        hasFollowingResult,
         ...(mergedTurnDiffSummary ? { turnDiffSummary: mergedTurnDiffSummary } : {}),
       });
     }
@@ -1002,36 +1013,18 @@ function workLogToolOutputsEqual(
   );
 }
 
-function workLogToolEditsEqual(
-  left: NonNullable<WorkLogEntry["toolDetails"]>["edits"],
-  right: NonNullable<WorkLogEntry["toolDetails"]>["edits"],
-) {
-  if (left === right) return true;
-  if (!left || !right) return false;
-  if (left.length !== right.length) return false;
-  return left.every((edit, index) => {
-    const other = right[index];
-    return (
-      other !== undefined &&
-      edit.path === other.path &&
-      edit.oldText === other.oldText &&
-      edit.newText === other.newText
-    );
-  });
-}
-
 function workLogToolDetailsEqual(a: WorkLogEntry["toolDetails"], b: WorkLogEntry["toolDetails"]) {
   if (a === b) return true;
   if (!a || !b) return false;
   return (
     a.kind === b.kind &&
     a.title === b.title &&
+    a.toolCallId === b.toolCallId &&
+    a.toolName === b.toolName &&
+    a.input === b.input &&
     a.command === b.command &&
-    a.diff === b.diff &&
-    a.content === b.content &&
     stringArraysEqual(a.files, b.files) &&
-    workLogToolOutputsEqual(a.output, b.output) &&
-    workLogToolEditsEqual(a.edits, b.edits)
+    workLogToolOutputsEqual(a.output, b.output)
   );
 }
 
@@ -1172,6 +1165,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.turnId === bp.turnId &&
         a.phase === bp.phase &&
         a.elapsedMs === bp.elapsedMs &&
+        a.hasFollowingResult === bp.hasFollowingResult &&
         a.turnDiffSummary === bp.turnDiffSummary &&
         turnProcessItemsEqual(a.items, bp.items)
       );

@@ -240,7 +240,7 @@ describe("MessagesTimeline tool details", () => {
     const screen = await render(<LiveActivityTimeline />, { container: host });
 
     try {
-      expect(document.body.textContent ?? "").toContain("Ran 1 command bun install");
+      expect(document.body.textContent ?? "").toContain("Running command bun install");
       expect(document.body.textContent ?? "").toContain("Active");
       expect(document.body.textContent ?? "").toContain("2m 14s elapsed");
       expect(document.body.textContent ?? "").toContain("42%");
@@ -249,7 +249,7 @@ describe("MessagesTimeline tool details", () => {
       const activityMeta = document.querySelector("[data-live-activity-meta='true']");
       expect(displayText?.closest("p")).toBe(activityMeta?.closest("p"));
       expect(displayText?.closest("p")?.textContent ?? "").toContain(
-        "Ran 1 command bun install · Active",
+        "Running command bun install · Active",
       );
 
       const trigger = document.querySelector<HTMLButtonElement>(
@@ -305,7 +305,7 @@ describe("MessagesTimeline tool details", () => {
 
     try {
       expect(document.body.textContent ?? "").toContain(
-        "Search the web AI agent memory frameworks",
+        "Accessed the web AI agent memory frameworks",
       );
       expect(document.body.textContent ?? "").not.toContain("Web_search");
       expect(document.body.textContent ?? "").not.toContain("Search completed with three sources");
@@ -326,7 +326,7 @@ describe("MessagesTimeline tool details", () => {
     }
   });
 
-  it("shows equal tool output once while keeping raw stdout available", async () => {
+  it("keeps native output and explicit stdout as separate ordered facts", async () => {
     const host = createTimelineHost();
     const screen = await render(<DuplicateToolOutputTimeline />, { container: host });
 
@@ -338,17 +338,12 @@ describe("MessagesTimeline tool details", () => {
       trigger?.click();
 
       await expect.poll(() => document.body.textContent ?? "").toContain("Technical name");
-      expect(document.querySelector("[data-tool-activity-summary='true']")).not.toBeNull();
-      expect(document.querySelectorAll("[data-tool-output-primary='true']")).toHaveLength(1);
-      expect(document.body.textContent ?? "").toContain("View raw standard output");
-      const rawDetails = document.querySelector<HTMLDetailsElement>(
-        "[data-tool-output-raw='true']",
-      );
-      expect(rawDetails).not.toBeNull();
-      expect(rawDetails?.open).toBe(false);
-
-      rawDetails?.setAttribute("open", "");
-      expect(document.body.textContent ?? "").toContain('{"items":[{"title":"Example"}]}');
+      const payload = document.querySelector<HTMLElement>("[data-tool-payload-panel='output']");
+      expect(payload).not.toBeNull();
+      const matches = payload?.textContent?.match(/\{"items":\[\{"title":"Example"\}\]\}/g) ?? [];
+      expect(matches).toHaveLength(2);
+      expect(payload?.textContent ?? "").toContain("Standard output");
+      expect(document.querySelector("[data-tool-output-raw='true']")).toBeNull();
     } finally {
       await screen.unmount();
       host.remove();
@@ -426,7 +421,7 @@ describe("MessagesTimeline tool details", () => {
 
     try {
       const rowText = document.querySelector("[data-work-entry-display-text='true']")?.textContent;
-      expect(rowText).toBe("Ran 1 command for toolDetails in web/src");
+      expect(rowText).toBe("Ran command for toolDetails in web/src");
       expect(document.querySelector("[data-live-activity-meta='true']")).toBeNull();
       expect(document.body.textContent ?? "").not.toContain("Completed");
       expect(document.body.textContent ?? "").not.toContain("elapsed");
@@ -622,6 +617,65 @@ describe("MessagesTimeline tool details", () => {
       expect(openFile).toHaveBeenCalledWith("src/app.ts");
       expect(document.querySelector("[data-tool-details-inline='true']")).toBeNull();
       expect(document.body.textContent ?? "").toContain("Read file app.ts");
+    } finally {
+      await screen.unmount();
+      host.remove();
+      await settleLayout();
+    }
+  });
+
+  it("separates a read row's primary file action from its technical disclosure", async () => {
+    const openFile = vi.fn(() => true);
+    const host = createTimelineHost();
+    const screen = await render(
+      <WorkspaceFileOpenerContext.Provider value={{ openFile }}>
+        <TimelineWorkEntryRow
+          workEntry={{
+            id: "read-with-details",
+            createdAt: "2026-03-17T19:12:28.000Z",
+            label: "Read file",
+            tone: "tool",
+            toolActionKind: "read",
+            changedFiles: ["src/owner.ts"],
+            toolDetails: {
+              kind: "tool",
+              title: "Read file",
+              files: ["src/owner.ts"],
+              input: '{"path":"src/owner.ts"}',
+            },
+          }}
+          chatMetaFontSizePx={12}
+          textFontSizePx={13}
+          density="compact"
+          onImageExpand={() => {}}
+          markdownCwd={undefined}
+          timestampFormat="locale"
+        />
+      </WorkspaceFileOpenerContext.Provider>,
+      { container: host },
+    );
+
+    try {
+      const primary = document.querySelector<HTMLButtonElement>(
+        "[data-tool-primary-action='true']",
+      );
+      const details = document.querySelector<HTMLButtonElement>(
+        "[data-tool-detail-trigger='true']",
+      );
+      expect(primary).not.toBeNull();
+      expect(details).not.toBeNull();
+      expect(primary).not.toBe(details);
+
+      primary?.click();
+      expect(openFile).toHaveBeenCalledWith("src/owner.ts");
+      expect(document.querySelector("[data-tool-details-inline='true']")).toBeNull();
+
+      details?.click();
+      await expect
+        .poll(() => document.querySelector("[data-tool-details-inline='true']"))
+        .not.toBeNull();
+      expect(openFile).toHaveBeenCalledTimes(1);
+      expect(document.body.textContent ?? "").toContain("src/owner.ts");
     } finally {
       await screen.unmount();
       host.remove();

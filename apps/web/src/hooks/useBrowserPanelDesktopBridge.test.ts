@@ -1,8 +1,8 @@
-// FILE: useBrowserPanelDesktopBridge.test.ts
-// Purpose: Characterize the shared desktop browser-panel menu and open-request subscriptions.
-// Layer: Web hook test
-
-import { ThreadId } from "@harnessos/contracts";
+import {
+  ThreadId,
+  type BrowserUseOpenPanelRequest,
+  type EngineWebSurfacePresentationRelease,
+} from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {
@@ -12,20 +12,13 @@ const reactHarness = vi.hoisted(() => {
     current?: (...args: never[]) => unknown;
     value?: (...args: never[]) => unknown;
   }
-
   let slots: EffectSlot[] = [];
   let cursor = 0;
-  const nextSlot = () => {
-    const slot = (slots[cursor] ??= {});
-    cursor += 1;
-    return slot;
-  };
-  // oxlint-disable-next-line consistent-function-scoping
+  const nextSlot = () => ((slots[cursor] ??= {}), slots[cursor++]!);
   const depsEqual = (left: readonly unknown[] | undefined, right: readonly unknown[]) =>
     left !== undefined &&
     left.length === right.length &&
     left.every((value, index) => Object.is(value, right[index]));
-
   return {
     beginRender() {
       cursor = 0;
@@ -57,106 +50,196 @@ vi.mock("react", () => ({
 }));
 
 import { useBrowserPanelDesktopBridge } from "./useBrowserPanelDesktopBridge";
+import { useRightDockStore } from "../rightDockStore";
+import { useSplitViewStore } from "../splitViewStore";
 
-interface DesktopBridgeHarness {
-  menuListener: ((action: string) => void) | null;
-  openListener: ((payload: { threadId: ThreadId }) => void) | null;
-  unsubscribeMenu: ReturnType<typeof vi.fn>;
-  unsubscribeOpen: ReturnType<typeof vi.fn>;
-  onMenuAction: ReturnType<typeof vi.fn>;
-  onOpenRequest: ReturnType<typeof vi.fn>;
-}
-
-function createDesktopBridgeHarness(): DesktopBridgeHarness {
-  const harness: DesktopBridgeHarness = {
-    menuListener: null,
-    openListener: null,
+function createDesktopBridgeHarness() {
+  const harness = {
+    menuListener: null as ((action: string) => void) | null,
+    openListener: null as ((request: BrowserUseOpenPanelRequest) => void) | null,
+    releaseListener: null as ((release: EngineWebSurfacePresentationRelease) => void) | null,
     unsubscribeMenu: vi.fn(),
     unsubscribeOpen: vi.fn(),
+    unsubscribeRelease: vi.fn(),
     onMenuAction: vi.fn(),
     onOpenRequest: vi.fn(),
+    onRelease: vi.fn(),
+    respond: vi.fn().mockResolvedValue(undefined),
+    acknowledge: vi.fn().mockResolvedValue(undefined),
+    replay: vi.fn().mockResolvedValue(undefined),
+    suppress: vi.fn().mockResolvedValue({ status: "acknowledged", presentations: [] }),
   };
   harness.onMenuAction.mockImplementation((listener: (action: string) => void) => {
     harness.menuListener = listener;
     return harness.unsubscribeMenu;
   });
   harness.onOpenRequest.mockImplementation(
-    (listener: (payload: { threadId: ThreadId }) => void) => {
+    (listener: (request: BrowserUseOpenPanelRequest) => void) => {
       harness.openListener = listener;
       return harness.unsubscribeOpen;
+    },
+  );
+  harness.onRelease.mockImplementation(
+    (listener: (release: EngineWebSurfacePresentationRelease) => void) => {
+      harness.releaseListener = listener;
+      return harness.unsubscribeRelease;
     },
   );
   return harness;
 }
 
-function render(input: { onToggle: (() => void) | null; onOpen: (() => void) | null }) {
+function installBridge(harness: ReturnType<typeof createDesktopBridgeHarness>) {
+  vi.stubGlobal("window", {
+    desktopBridge: {
+      onMenuAction: harness.onMenuAction,
+      browser: {
+        onBrowserUseOpenPanelRequest: harness.onOpenRequest,
+        onEngineWebSurfacePresentationRelease: harness.onRelease,
+        respondToEngineWebSurfacePresentationReveal: harness.respond,
+        acknowledgeEngineWebSurfacePresentationRelease: harness.acknowledge,
+        replayEngineWebSurfacePresentations: harness.replay,
+        suppressEngineWebSurfacePresentations: harness.suppress,
+      },
+    },
+  });
+}
+
+function render(input: {
+  onToggle: (() => void) | null;
+  onOpen:
+    | ((
+        threadId: ThreadId,
+        presentationId: string,
+        acquireLease: boolean,
+      ) => {
+        result: { status: "visible" | "background" | "unavailable" };
+        release?: (disposition: "restore" | "preserve") => void;
+      })
+    | null;
+  availability?: "available" | "missing" | "pending";
+}) {
   reactHarness.beginRender();
-  useBrowserPanelDesktopBridge(input);
+  useBrowserPanelDesktopBridge({
+    onToggle: input.onToggle,
+    onOpen: input.onOpen,
+    getThreadAvailability: () => input.availability ?? "available",
+  });
 }
 
 beforeEach(() => {
   reactHarness.reset();
   vi.unstubAllGlobals();
+  useRightDockStore.setState({ browserPresentationByThreadId: {} });
+  useSplitViewStore.setState({ browserPresentationByThreadId: {} });
 });
 
 describe("useBrowserPanelDesktopBridge", () => {
-  it("routes only the browser menu action and delivers the requested thread", () => {
+  it("acknowledges an exact reveal and terminal release", () => {
     const bridge = createDesktopBridgeHarness();
-    vi.stubGlobal("window", {
-      desktopBridge: {
-        onMenuAction: bridge.onMenuAction,
-        browser: { onBrowserUseOpenPanelRequest: bridge.onOpenRequest },
-      },
-    });
+    installBridge(bridge);
     const onToggle = vi.fn();
-    const onOpen = vi.fn();
-    const requestedThreadId = ThreadId.makeUnsafe("thread-requested-by-agent");
-
+    const release = vi.fn();
+    const onOpen = vi.fn(() => ({ result: { status: "visible" as const }, release }));
+    const threadId = ThreadId.makeUnsafe("thread-engine-surface");
     render({ onToggle, onOpen });
-    bridge.menuListener?.("open-settings");
+
     bridge.menuListener?.("toggle-browser");
-    bridge.openListener?.({ threadId: requestedThreadId });
-
-    expect(onToggle).toHaveBeenCalledOnce();
-    expect(onOpen).toHaveBeenCalledExactlyOnceWith(requestedThreadId);
-  });
-
-  it("keeps subscriptions stable, invokes the latest callbacks, and unsubscribes when inactive", () => {
-    const bridge = createDesktopBridgeHarness();
-    vi.stubGlobal("window", {
-      desktopBridge: {
-        onMenuAction: bridge.onMenuAction,
-        browser: { onBrowserUseOpenPanelRequest: bridge.onOpenRequest },
-      },
+    bridge.openListener?.({
+      requestId: "request-1",
+      presentationId: "presentation-1",
+      threadId,
+      surfaceId: "surface-1",
+      tabId: "tab-1",
     });
+    expect(onToggle).toHaveBeenCalledOnce();
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith(threadId, "presentation-1", true);
+    expect(bridge.respond).toHaveBeenCalledWith({ requestId: "request-1", status: "visible" });
 
-    const firstToggle = vi.fn();
-    const firstOpen = vi.fn();
-    const latestToggle = vi.fn();
-    const latestOpen = vi.fn();
-    const requestedThreadId = ThreadId.makeUnsafe("thread-latest-handler");
-    render({ onToggle: firstToggle, onOpen: firstOpen });
-    render({ onToggle: latestToggle, onOpen: latestOpen });
-
-    expect(bridge.onMenuAction).toHaveBeenCalledOnce();
-    expect(bridge.onOpenRequest).toHaveBeenCalledOnce();
-    expect(bridge.unsubscribeMenu).not.toHaveBeenCalled();
-    expect(bridge.unsubscribeOpen).not.toHaveBeenCalled();
-    bridge.menuListener?.("toggle-browser");
-    bridge.openListener?.({ threadId: requestedThreadId });
-    expect(firstToggle).not.toHaveBeenCalled();
-    expect(firstOpen).not.toHaveBeenCalled();
-    expect(latestToggle).toHaveBeenCalledOnce();
-    expect(latestOpen).toHaveBeenCalledExactlyOnceWith(requestedThreadId);
-
-    render({ onToggle: null, onOpen: null });
-    expect(bridge.unsubscribeMenu).toHaveBeenCalledOnce();
-    expect(bridge.unsubscribeOpen).toHaveBeenCalledOnce();
+    bridge.releaseListener?.({
+      presentationId: "presentation-1",
+      threadId,
+      disposition: "restore",
+      suppressedByUser: false,
+    });
+    expect(release).toHaveBeenCalledExactlyOnceWith("restore");
+    expect(bridge.acknowledge).toHaveBeenCalledWith({
+      presentationId: "presentation-1",
+      threadId,
+    });
+    expect(bridge.replay).toHaveBeenCalledOnce();
   });
 
-  it("does not subscribe outside the desktop bridge", () => {
-    vi.stubGlobal("window", {});
+  it("never reveals a deleted thread and acknowledges a terminal-before-hydration no-op", () => {
+    const bridge = createDesktopBridgeHarness();
+    installBridge(bridge);
+    const onOpen = vi.fn(() => ({ result: { status: "visible" as const } }));
+    const threadId = ThreadId.makeUnsafe("thread-deleted");
+    render({ onToggle: null, onOpen, availability: "missing" });
+    bridge.openListener?.({
+      requestId: "request-deleted",
+      presentationId: "presentation-deleted",
+      threadId,
+      surfaceId: "surface-deleted",
+      tabId: "tab-deleted",
+    });
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(bridge.respond).toHaveBeenCalledWith({
+      requestId: "request-deleted",
+      status: "unavailable",
+    });
+  });
 
-    expect(() => render({ onToggle: vi.fn(), onOpen: vi.fn() })).not.toThrow();
+  it("acknowledges settlement that wins the Product State hydration race", () => {
+    const bridge = createDesktopBridgeHarness();
+    installBridge(bridge);
+    const onOpen = vi.fn(() => ({ result: { status: "visible" as const } }));
+    const threadId = ThreadId.makeUnsafe("thread-hydrating");
+    render({ onToggle: null, onOpen, availability: "pending" });
+    bridge.openListener?.({
+      requestId: "request-hydrating",
+      presentationId: "presentation-hydrating",
+      threadId,
+      surfaceId: "surface-hydrating",
+      tabId: "tab-hydrating",
+    });
+    bridge.releaseListener?.({
+      presentationId: "presentation-hydrating",
+      threadId,
+      disposition: "restore",
+      suppressedByUser: false,
+    });
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(bridge.respond).toHaveBeenCalledWith({
+      requestId: "request-hydrating",
+      status: "unavailable",
+    });
+    expect(bridge.acknowledge).toHaveBeenCalledWith({
+      presentationId: "presentation-hydrating",
+      threadId,
+    });
+  });
+
+  it("keeps subscriptions stable and sends ordinary Browser reveals without a lease", () => {
+    const bridge = createDesktopBridgeHarness();
+    installBridge(bridge);
+    const firstOpen = vi.fn(() => ({ result: { status: "visible" as const } }));
+    const latestOpen = vi.fn(() => ({ result: { status: "background" as const } }));
+    const threadId = ThreadId.makeUnsafe("thread-ordinary-browser");
+    render({ onToggle: null, onOpen: firstOpen });
+    render({ onToggle: null, onOpen: latestOpen });
+    expect(bridge.onOpenRequest).toHaveBeenCalledOnce();
+    bridge.openListener?.({
+      requestId: "ordinary-request",
+      presentationId: "browser-reveal:ordinary",
+      threadId,
+      surfaceId: null,
+      tabId: "tab-ordinary",
+    });
+    expect(firstOpen).not.toHaveBeenCalled();
+    expect(latestOpen).toHaveBeenCalledExactlyOnceWith(threadId, "browser-reveal:ordinary", false);
+    expect(bridge.respond).toHaveBeenCalledWith({
+      requestId: "ordinary-request",
+      status: "background",
+    });
   });
 });

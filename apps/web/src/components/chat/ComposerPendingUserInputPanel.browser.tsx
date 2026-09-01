@@ -139,6 +139,7 @@ function Harness({
         onAdvance={onAdvance}
         onPrevious={vi.fn()}
         onCancel={onCancel}
+        onFlushDraft={vi.fn()}
       />
     </I18nProvider>
   );
@@ -209,6 +210,26 @@ describe("ComposerPendingUserInputPanel", () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(page.getByRole("button", { name: "停止生成" }).query()).toBeNull();
+    await screen.unmount();
+  });
+
+  it("keeps a malformed earliest request visibly cancellable", async () => {
+    const onCancel = vi.fn();
+    const screen = await render(
+      <Harness
+        pending={{
+          requestId: ApprovalRequestId.makeUnsafe("ask-malformed"),
+          createdAt: "2026-08-25T00:00:00.000Z",
+          questions: [],
+          unrenderable: true,
+        }}
+        onCancel={onCancel}
+      />,
+    );
+
+    await expect.element(page.getByText("无法显示此问题", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "取消问题" }).click();
+    expect(onCancel).toHaveBeenCalledTimes(1);
     await screen.unmount();
   });
 

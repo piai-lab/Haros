@@ -167,6 +167,7 @@ describe("Pi native resource projection", () => {
 
   it("keeps Haros identity immutable while selecting three distinct Product contracts", () => {
     const chatPrompt = makeOAEngineSystemPrompt({
+      productSurface: "chat",
       workSurface: "chat",
     });
     const agentPrompt = makeOAEngineSystemPrompt({
@@ -327,7 +328,11 @@ describe("Haros Agent Plan lifecycle", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -593,8 +598,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId: agentThreadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -653,8 +661,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId: agentThreadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
@@ -683,7 +694,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId: chatThreadId,
               cwd,
-              workSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -799,7 +814,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId: noUiThreadId,
               cwd,
-              workSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1080,6 +1099,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "pi",
               threadId,
               cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineOptions: { pi: { agentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
@@ -1178,8 +1202,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1310,8 +1337,11 @@ describe("Pi native Haros gateway tools", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1911,8 +1941,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -2057,9 +2090,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: agentThreadId,
               cwd: projectA,
-              workSurface: "agent",
-              productSurface: "agent",
-              projectContextRoot: projectA,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: projectA,
+              },
               engineSelection: {
                 engine: "oa",
                 model: "local/safe-model",
@@ -2102,8 +2137,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: chatThreadId,
               cwd: projectA,
-              workSurface: "chat",
-              productSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: {
                 engine: "oa",
                 model: "local/safe-model",
@@ -2122,8 +2160,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: studioThreadId,
               cwd: projectB,
-              workSurface: "chat",
-              productSurface: "studio",
+              admission: {
+                productSurface: "studio",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: {
                 engine: "oa",
                 model: "local/safe-model",
@@ -2180,8 +2221,11 @@ describe("getPiDiscoverableModels", () => {
                 engine: "pi",
                 threadId: ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000094"),
                 cwd: projectA,
-                workSurface: "chat",
-                projectContextRoot: projectA,
+                admission: {
+                  productSurface: "chat",
+                  workSurface: "chat",
+                  projectContextRoot: projectA,
+                } as never,
                 engineOptions: { pi: { agentDir } },
                 engineSelection: { engine: "pi", model: "local/safe-model" },
                 runtimeMode: "full-access",
@@ -2191,8 +2235,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "pi",
               threadId: chatThreadId,
               cwd: projectA,
-              workSurface: "chat",
-              productSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineOptions: { pi: { agentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
@@ -2210,8 +2257,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "pi",
               threadId: studioThreadId,
               cwd: projectB,
-              workSurface: "chat",
-              productSurface: "studio",
+              admission: {
+                productSurface: "studio",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineOptions: { pi: { agentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
@@ -2334,8 +2384,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: agentThreadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -2368,8 +2421,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: agentThreadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
@@ -2389,7 +2445,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId: chatThreadId,
               cwd,
-              workSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -2425,6 +2485,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "pi",
               threadId: stockThreadId,
               cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineOptions: { pi: { agentDir: stockAgentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
@@ -2546,7 +2611,11 @@ describe("getPiDiscoverableModels", () => {
                 engine: "oa",
                 threadId,
                 cwd,
-                workSurface: "chat",
+                admission: {
+                  productSurface: "chat",
+                  workSurface: "chat",
+                  projectContextRoot: null,
+                },
                 engineSelection: { engine: "oa", model: "local/safe-model" },
                 runtimeMode: "full-access",
               });
@@ -2670,8 +2739,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -2763,7 +2835,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("fails closed when Product admission omits or contradicts the Haros work surface", async () => {
+  it("defensively rejects malformed or out-of-bound Product admission", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-work-surface-admission-"));
     const cwd = path.join(serverRoot, "workspace");
     const otherRoot = path.join(serverRoot, "other-project");
@@ -2780,30 +2852,16 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OAAgentAdapter;
-            const missingSurface = yield* Effect.exit(
-              adapter.startSession({
-                engine: "oa",
-                threadId: ThreadId.makeUnsafe("harnessos-missing-surface"),
-                cwd,
-                runtimeMode: "full-access",
-              }),
-            );
-            const missingRoot = yield* Effect.exit(
-              adapter.startSession({
-                engine: "oa",
-                threadId: ThreadId.makeUnsafe("harnessos-missing-root"),
-                cwd,
-                workSurface: "agent",
-                runtimeMode: "full-access",
-              }),
-            );
             const chatWithRoot = yield* Effect.exit(
               adapter.startSession({
                 engine: "oa",
                 threadId: ThreadId.makeUnsafe("harnessos-chat-with-root"),
                 cwd,
-                workSurface: "chat",
-                projectContextRoot: cwd,
+                admission: {
+                  productSurface: "chat",
+                  workSurface: "chat",
+                  projectContextRoot: cwd,
+                } as never,
                 runtimeMode: "full-access",
               }),
             );
@@ -2812,28 +2870,22 @@ describe("getPiDiscoverableModels", () => {
                 engine: "oa",
                 threadId: ThreadId.makeUnsafe("harnessos-cwd-outside-root"),
                 cwd,
-                workSurface: "agent",
-                projectContextRoot: otherRoot,
+                admission: {
+                  productSurface: "agent",
+                  workSurface: "agent",
+                  projectContextRoot: otherRoot,
+                },
                 runtimeMode: "full-access",
               }),
             );
-            return { chatWithRoot, cwdOutsideRoot, missingRoot, missingSurface };
+            return { chatWithRoot, cwdOutsideRoot };
           }).pipe(Effect.provide(layer)),
         ),
       );
 
-      expect(result.missingSurface._tag).toBe("Failure");
-      expect(result.missingRoot._tag).toBe("Failure");
       expect(result.chatWithRoot._tag).toBe("Failure");
       expect(result.cwdOutsideRoot._tag).toBe("Failure");
-      if (
-        result.missingSurface._tag === "Failure" &&
-        result.missingRoot._tag === "Failure" &&
-        result.chatWithRoot._tag === "Failure" &&
-        result.cwdOutsideRoot._tag === "Failure"
-      ) {
-        expect(Cause.pretty(result.missingSurface.cause)).toContain("work surface is missing");
-        expect(Cause.pretty(result.missingRoot.cause)).toContain("canonical Project context root");
+      if (result.chatWithRoot._tag === "Failure" && result.cwdOutsideRoot._tag === "Failure") {
         expect(Cause.pretty(result.chatWithRoot.cause)).toContain(
           "Chat cannot receive a Project context root",
         );
@@ -2913,7 +2965,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "chat",
+              admission: {
+                productSurface: "chat",
+                workSurface: "chat",
+                projectContextRoot: null,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3040,8 +3096,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3142,8 +3201,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3256,8 +3318,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3354,8 +3419,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3460,8 +3528,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3571,8 +3642,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3719,8 +3793,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3818,8 +3895,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -3943,8 +4023,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -4135,8 +4218,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "oa",
               threadId,
               cwd,
-              workSurface: "agent",
-              projectContextRoot: cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -4398,6 +4484,11 @@ describe("getPiDiscoverableModels", () => {
               engine: "pi",
               threadId,
               cwd,
+              admission: {
+                productSurface: "agent",
+                workSurface: "agent",
+                projectContextRoot: cwd,
+              },
               engineOptions: { pi: { agentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",

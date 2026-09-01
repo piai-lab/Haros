@@ -4,6 +4,7 @@
 
 import {
   type ApprovalRequestId,
+  type CanonicalUserInputDraftV1,
   type CanonicalUserInputResponse,
   type OrchestrationPendingInteraction,
   type OrchestrationThreadActivity,
@@ -62,6 +63,43 @@ export interface PendingUserInputController {
     readonly advance: () => boolean;
     readonly previous: () => void;
     readonly cancel: () => void;
+    readonly flushDraft: () => void;
+  };
+}
+
+function localAnswersFromCanonicalDraft(
+  draft: CanonicalUserInputDraftV1 | null,
+): Record<string, PendingUserInputDraftAnswer> {
+  if (!draft) return {};
+  return Object.fromEntries(
+    Object.entries(draft.answers).map(([questionId, answer]) => [
+      questionId,
+      {
+        selectedOptionLabels: [...answer.selectedOptionLabels],
+        ...(answer.customText !== undefined ? { customText: answer.customText } : {}),
+        ...(answer.customSelected === true ? { customSelected: true } : {}),
+      },
+    ]),
+  );
+}
+
+function canonicalDraftFromLocal(
+  answers: Record<string, PendingUserInputDraftAnswer>,
+  activeQuestionIndex: number,
+): CanonicalUserInputDraftV1 {
+  return {
+    version: 1,
+    activeQuestionIndex,
+    answers: Object.fromEntries(
+      Object.entries(answers).map(([questionId, answer]) => [
+        questionId,
+        {
+          selectedOptionLabels: [...(answer.selectedOptionLabels ?? [])],
+          ...(answer.customText !== undefined ? { customText: answer.customText } : {}),
+          ...(answer.customSelected === true ? { customSelected: true } : {}),
+        },
+      ]),
+    ),
   };
 }
 
@@ -103,6 +141,16 @@ export function usePendingUserInputController(
   const [questionIndexByRequestKey, setQuestionIndexByRequestKey] = useState<
     Record<string, number>
   >({});
+  const questionIndexByRequestKeyRef = useRef(questionIndexByRequestKey);
+  const initializedDraftKeysRef = useRef<Set<string>>(new Set());
+  const lastDurableDraftByKeyRef = useRef<Map<string, string>>(new Map());
+  const latestDraftWriteSerialByKeyRef = useRef<Map<string, number>>(new Map());
+  const dirtyDraftKeysRef = useRef<Set<string>>(new Set());
+  const inFlightDraftWritesByKeyRef = useRef<
+    Map<string, { readonly fingerprint: string; readonly promise: Promise<boolean> }>
+  >(new Map());
+  const draftWriteSerialRef = useRef(0);
+  const draftWriteTimerRef = useRef<number | null>(null);
   const claimedResponseKeysRef = useRef<Set<string>>(new Set());
   const previousPendingKeysByThreadRef = useRef<Map<ThreadId, Set<string>>>(new Map());
   const previousActiveThreadRef = useRef<ThreadId | null>(null);
@@ -169,6 +217,32 @@ export function usePendingUserInputController(
     : false;
 
   useEffect(() => {
+    if (
+      !activeRequestKey ||
+      !activeRequest ||
+      initializedDraftKeysRef.current.has(activeRequestKey)
+    ) {
+      return;
+    }
+    initializedDraftKeysRef.current.add(activeRequestKey);
+    if (!activeRequest.draft) return;
+    const restoredAnswers = localAnswersFromCanonicalDraft(activeRequest.draft);
+    const nextAnswersByRequestKey = {
+      ...answersByRequestKeyRef.current,
+      [activeRequestKey]: restoredAnswers,
+    };
+    answersByRequestKeyRef.current = nextAnswersByRequestKey;
+    setAnswersByRequestKey(nextAnswersByRequestKey);
+    const nextQuestionIndexes = {
+      ...questionIndexByRequestKeyRef.current,
+      [activeRequestKey]: activeRequest.draft.activeQuestionIndex,
+    };
+    questionIndexByRequestKeyRef.current = nextQuestionIndexes;
+    setQuestionIndexByRequestKey(nextQuestionIndexes);
+    lastDurableDraftByKeyRef.current.set(activeRequestKey, JSON.stringify(activeRequest.draft));
+  }, [activeRequest, activeRequestKey]);
+
+  useEffect(() => {
     if (!threadId || !threadDetailReady) return;
 
     const threadKeyPrefix = `${threadId}:`;
@@ -197,6 +271,11 @@ export function usePendingUserInputController(
       if (!currentKeys.has(key)) {
         removedResolvedRequest = true;
         claimedResponseKeysRef.current.delete(key);
+        initializedDraftKeysRef.current.delete(key);
+        lastDurableDraftByKeyRef.current.delete(key);
+        latestDraftWriteSerialByKeyRef.current.delete(key);
+        dirtyDraftKeysRef.current.delete(key);
+        inFlightDraftWritesByKeyRef.current.delete(key);
       }
     }
     for (const key of locallyRetryableKeys) claimedResponseKeysRef.current.delete(key);
@@ -222,6 +301,7 @@ export function usePendingUserInputController(
           changed = true;
         }
       }
+      if (changed) questionIndexByRequestKeyRef.current = next;
       return changed ? next : existing;
     });
     setRespondingKeys((existing) => {
@@ -247,13 +327,136 @@ export function usePendingUserInputController(
   const setQuestionIndex = useCallback(
     (nextQuestionIndex: number) => {
       if (!activeRequestKey) return;
-      setQuestionIndexByRequestKey((existing) => ({
-        ...existing,
+      const next = {
+        ...questionIndexByRequestKeyRef.current,
         [activeRequestKey]: nextQuestionIndex,
-      }));
+      };
+      questionIndexByRequestKeyRef.current = next;
+      setQuestionIndexByRequestKey(next);
+      dirtyDraftKeysRef.current.add(activeRequestKey);
     },
     [activeRequestKey],
   );
+
+  const flushActiveDraft = useCallback(
+    async (options: { readonly allowUnfocused?: boolean } = {}): Promise<boolean> => {
+      if (draftWriteTimerRef.current !== null) {
+        window.clearTimeout(draftWriteTimerRef.current);
+        draftWriteTimerRef.current = null;
+      }
+      if (
+        !threadId ||
+        !activeRequest ||
+        !activeRequestKey ||
+        activeRequest.settlementStatus !== "pending" ||
+        activeIsResponding ||
+        (!isFocusedPane && options.allowUnfocused !== true)
+      ) {
+        return false;
+      }
+      if (!dirtyDraftKeysRef.current.has(activeRequestKey)) return true;
+      const api = readNativeApi();
+      if (!api) return false;
+      const draft = canonicalDraftFromLocal(
+        answersByRequestKeyRef.current[activeRequestKey] ?? {},
+        questionIndexByRequestKeyRef.current[activeRequestKey] ?? 0,
+      );
+      const fingerprint = JSON.stringify(draft);
+      if (lastDurableDraftByKeyRef.current.get(activeRequestKey) === fingerprint) return true;
+      const existingWrite = inFlightDraftWritesByKeyRef.current.get(activeRequestKey);
+      if (existingWrite?.fingerprint === fingerprint) return existingWrite.promise;
+
+      const writeSerial = ++draftWriteSerialRef.current;
+      latestDraftWriteSerialByKeyRef.current.set(activeRequestKey, writeSerial);
+      const writePromise = api.orchestration
+        .updatePendingUserInputDraft({
+          threadId,
+          requestId: activeRequest.requestId,
+          lifecycleGeneration: activeRequest.lifecycleGeneration ?? null,
+          draft,
+        })
+        .then((result) => {
+          if (latestDraftWriteSerialByKeyRef.current.get(activeRequestKey) !== writeSerial) {
+            return result.updated;
+          }
+          if (result.updated) {
+            lastDurableDraftByKeyRef.current.set(activeRequestKey, fingerprint);
+            const currentFingerprint = JSON.stringify(
+              canonicalDraftFromLocal(
+                answersByRequestKeyRef.current[activeRequestKey] ?? {},
+                questionIndexByRequestKeyRef.current[activeRequestKey] ?? 0,
+              ),
+            );
+            if (currentFingerprint === fingerprint)
+              dirtyDraftKeysRef.current.delete(activeRequestKey);
+          }
+          return result.updated;
+        })
+        .catch(() => false);
+      const write = { fingerprint, promise: writePromise };
+      inFlightDraftWritesByKeyRef.current.set(activeRequestKey, write);
+      try {
+        return await writePromise;
+      } finally {
+        if (inFlightDraftWritesByKeyRef.current.get(activeRequestKey) === write) {
+          inFlightDraftWritesByKeyRef.current.delete(activeRequestKey);
+        }
+      }
+    },
+    [activeIsResponding, activeRequest, activeRequestKey, isFocusedPane, threadId],
+  );
+
+  useEffect(() => {
+    if (
+      !isFocusedPane ||
+      !activeRequestKey ||
+      activeRequest?.settlementStatus !== "pending" ||
+      activeIsResponding
+    ) {
+      return;
+    }
+    if (draftWriteTimerRef.current !== null) window.clearTimeout(draftWriteTimerRef.current);
+    draftWriteTimerRef.current = window.setTimeout(() => {
+      draftWriteTimerRef.current = null;
+      void flushActiveDraft();
+    }, 250);
+    return () => {
+      if (draftWriteTimerRef.current !== null) {
+        window.clearTimeout(draftWriteTimerRef.current);
+        draftWriteTimerRef.current = null;
+      }
+    };
+  }, [
+    activeAnswers,
+    activeIsResponding,
+    activeQuestionIndex,
+    activeRequest?.settlementStatus,
+    activeRequestKey,
+    flushActiveDraft,
+    isFocusedPane,
+  ]);
+
+  useEffect(() => {
+    if (!isFocusedPane) return;
+    return () => {
+      void flushActiveDraft({ allowUnfocused: true });
+    };
+  }, [flushActiveDraft, isFocusedPane]);
+
+  useEffect(() => {
+    const flushForPageLoss = () => {
+      if (document.visibilityState === "hidden") {
+        void flushActiveDraft({ allowUnfocused: true });
+      }
+    };
+    const flushForPageHide = () => void flushActiveDraft({ allowUnfocused: true });
+    document.addEventListener("visibilitychange", flushForPageLoss);
+    window.addEventListener("pagehide", flushForPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", flushForPageLoss);
+      window.removeEventListener("pagehide", flushForPageHide);
+    };
+  }, [flushActiveDraft]);
 
   const changeAnswer = useCallback(
     (questionId: string, answer: PendingUserInputDraftAnswer) => {
@@ -268,6 +471,7 @@ export function usePendingUserInputController(
       };
       answersByRequestKeyRef.current = nextAnswersByRequestKey;
       setAnswersByRequestKey(nextAnswersByRequestKey);
+      dirtyDraftKeysRef.current.add(activeRequestKey);
     },
     [activeIsResponding, activeRequestKey],
   );
@@ -290,6 +494,7 @@ export function usePendingUserInputController(
           claimedKeys: claimedResponseKeysRef.current,
           key: requestKey,
           dispatch: async () => {
+            await flushActiveDraft({ allowUnfocused: true });
             setRespondingKeys((existing) => new Set(existing).add(requestKey));
             await api.orchestration.dispatchCommand({
               type: "thread.user-input.respond",
@@ -315,7 +520,7 @@ export function usePendingUserInputController(
         return false;
       }
     },
-    [reportSubmissionError, t],
+    [flushActiveDraft, reportSubmissionError, t],
   );
 
   const selectSinglePreset = useCallback(
@@ -421,6 +626,7 @@ export function usePendingUserInputController(
       advance,
       previous,
       cancel,
+      flushDraft: () => void flushActiveDraft({ allowUnfocused: true }),
     },
   };
 }

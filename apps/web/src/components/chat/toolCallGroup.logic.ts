@@ -1,6 +1,6 @@
 // FILE: toolCallGroup.logic.ts
 // Purpose: Summarizes a settled run of tool-call work entries into one compact
-//          label ("Ran 2 commands, Edited 2 files, Searched 3 files") for the
+//          label ("Ran 2 commands, Edited 2 files, Performed 3 web searches") for the
 //          collapsed tool-group disclosure in the transcript.
 // Layer: Web chat presentation helpers
 // Exports: MIN_COLLAPSIBLE_TOOL_GROUP_SIZE, ToolCallSummaryCategory,
@@ -18,7 +18,7 @@ export type ToolCallSummaryCategory =
   | "command"
   | "edit"
   | "read"
-  | "search"
+  | "webSearch"
   | "agent"
   | "tool"
   | "image_view"
@@ -66,7 +66,7 @@ export function classifyToolCallSummaryCategory(
     return "read";
   }
   if (entry.itemType === "web_search") {
-    return "search";
+    return "webSearch";
   }
   if (entry.itemType === "image_view") {
     return "image_view";
@@ -117,7 +117,7 @@ const CATEGORY_ORDER: ReadonlyArray<ToolCallSummaryCategory> = [
   "command",
   "edit",
   "read",
-  "search",
+  "webSearch",
   "agent",
   "tool",
   "image_view",
@@ -132,8 +132,8 @@ function summaryPartLabel(category: ToolCallSummaryCategory, count: number): str
       return `Edited ${count} ${pluralize(count, "file")}`;
     case "read":
       return `Read ${count} ${pluralize(count, "file")}`;
-    case "search":
-      return `Searched ${count} ${pluralize(count, "file")}`;
+    case "webSearch":
+      return `Performed ${count} web ${pluralize(count, "search", "searches")}`;
     case "agent":
       return `Ran ${count} agent ${pluralize(count, "task")}`;
     case "tool":

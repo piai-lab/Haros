@@ -228,7 +228,11 @@ async function run() {
             engine: "oa",
             threadId,
             cwd,
-            workSurface: "chat",
+            admission: {
+              productSurface: "chat",
+              workSurface: "chat",
+              projectContextRoot: null,
+            },
             engineSelection: {
               engine: "oa",
               model: `${target.providerId}/${target.modelId}`,

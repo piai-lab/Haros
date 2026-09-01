@@ -3,7 +3,12 @@
 // Layer: Web diff utilities
 // Depends on: @pierre/diffs patch parsing
 
-import { parsePatchFiles } from "@pierre/diffs";
+import {
+  COMMIT_METADATA_SPLIT,
+  GIT_DIFF_FILE_BREAK_REGEX,
+  parsePatchFiles,
+  UNIFIED_DIFF_FILE_BREAK_REGEX,
+} from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 
 export type FileDiffStat = { additions: number; deletions: number };
@@ -259,6 +264,63 @@ export function getRenderablePatch(
   }
 }
 
+function rawPatchFileSections(patch: string): string[] {
+  const rawPatches =
+    patch.startsWith("From ") || patch.includes("\nFrom ")
+      ? patch.split(COMMIT_METADATA_SPLIT)
+      : [patch];
+  return rawPatches.flatMap((rawPatch) => {
+    const isGitDiff = rawPatch.startsWith("diff --git") || rawPatch.includes("\ndiff --git");
+    const sections = rawPatch.split(
+      isGitDiff ? GIT_DIFF_FILE_BREAK_REGEX : UNIFIED_DIFF_FILE_BREAK_REGEX,
+    );
+    return sections.filter((section) =>
+      isGitDiff ? section.startsWith("diff --git") : /^---\s+\S/.test(section),
+    );
+  });
+}
+
+function sameFileIdentity(left: FileDiffMetadata, right: FileDiffMetadata): boolean {
+  return left.name === right.name && left.prevName === right.prevName && left.type === right.type;
+}
+
+/**
+ * Pair parsed files with exact source sections for clipboard use. When parsing
+ * cannot prove a one-to-one identity, callers must fall back to Copy All.
+ */
+export function rawPatchByFileRenderKey(
+  patch: string | undefined,
+  files: ReadonlyArray<FileDiffMetadata>,
+  cacheScope = "diff-copy",
+): ReadonlyMap<string, string> {
+  if (!patch || files.length === 0) return new Map();
+  const sections = rawPatchFileSections(patch);
+  if (sections.length !== files.length) return new Map();
+
+  const pairs = new Map<string, string>();
+  for (const [index, section] of sections.entries()) {
+    try {
+      const sectionFiles = parsePatchFiles(section, `${cacheScope}:section:${index}`, true).flatMap(
+        (parsedPatch) => parsedPatch.files,
+      );
+      const file = files[index];
+      const sectionFile = sectionFiles[0];
+      if (
+        !file ||
+        sectionFiles.length !== 1 ||
+        !sectionFile ||
+        !sameFileIdentity(file, sectionFile)
+      ) {
+        return new Map();
+      }
+      pairs.set(buildFileDiffRenderKey(file), section);
+    } catch {
+      return new Map();
+    }
+  }
+  return pairs;
+}
+
 // Resolve the working-tree-relative path for a parsed file diff, stripping the
 // conventional `a/` / `b/` patch prefixes so callers can match git status paths.
 export function resolveFileDiffPath(fileDiff: FileDiffMetadata): string {
@@ -330,72 +392,4 @@ export function summarizePatchTotals(
 ): { additions: number; deletions: number; fileCount: number } | null {
   const renderable = getRenderablePatch(patch, "diff-panel:stats");
   return summarizeRenderablePatchStats(renderable);
-}
-
-// Per-file +N/-M parsed from a unified diff/patch, keyed by working-tree-relative
-// path (a/ b/ prefixes stripped via resolveFileDiffPath). Lets transcript
-// "Edited <file>" rows surface diff stats from a tool call's own patch when no
-// turn-diff summary is in scope (e.g. standalone work rows). Empty map when the
-// patch is missing or unparsable, so callers can fall back gracefully.
-export function fileDiffStatsByPath(patch: string | undefined): Map<string, FileDiffStat> {
-  const stats = new Map<string, FileDiffStat>();
-  const renderable = getRenderablePatch(patch, "tool-row:stats");
-  if (!renderable || renderable.kind !== "files") {
-    return stats;
-  }
-  for (const file of renderable.files) {
-    const path = resolveFileDiffPath(file);
-    if (path.length === 0) {
-      continue;
-    }
-    stats.set(path, summarizeFileDiffStats([file]));
-  }
-  return stats;
-}
-
-function normalizeDiffStatPath(path: string): string {
-  return path
-    .replace(/\\/g, "/")
-    .replace(/^\.\/+/, "")
-    .replace(/\/+/g, "/");
-}
-
-function diffStatPathsReferToSameFile(left: string, right: string): boolean {
-  const normalizedLeft = normalizeDiffStatPath(left);
-  const normalizedRight = normalizeDiffStatPath(right);
-  return (
-    normalizedLeft === normalizedRight ||
-    normalizedLeft.endsWith(`/${normalizedRight}`) ||
-    normalizedRight.endsWith(`/${normalizedLeft}`)
-  );
-}
-
-// Resolve a parsed patch stat for a visible changed-file row. Parsed patch paths are
-// usually repo-relative, while work-log changedFiles can be absolute or basename-only.
-export function resolveFileDiffStatByChangedPath(
-  statsByPath: ReadonlyMap<string, FileDiffStat>,
-  changedFilePath: string,
-  changedFileCount: number,
-): FileDiffStat | undefined {
-  if (statsByPath.size === 0) {
-    return undefined;
-  }
-
-  const direct = statsByPath.get(changedFilePath);
-  if (direct) {
-    return direct;
-  }
-
-  const matchingStats = Array.from(statsByPath.entries())
-    .filter(([path]) => diffStatPathsReferToSameFile(path, changedFilePath))
-    .map(([, stat]) => stat);
-  const uniqueMatch = matchingStats.length === 1 ? matchingStats.at(0) : undefined;
-  if (uniqueMatch) {
-    return uniqueMatch;
-  }
-
-  if (statsByPath.size === 1 && changedFileCount === 1) {
-    return statsByPath.values().next().value;
-  }
-  return undefined;
 }

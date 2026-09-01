@@ -99,6 +99,8 @@ describe("EngineSessionReaperLive", () => {
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),
+      readToolResult: () =>
+        Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
       closeRuntimeEvents: Effect.void,
       streamEvents: Stream.empty,
     };
@@ -167,6 +169,8 @@ describe("EngineSessionReaperLive", () => {
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),
+      readToolResult: () =>
+        Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
       closeRuntimeEvents: Effect.void,
       streamEvents: Stream.empty,
     };

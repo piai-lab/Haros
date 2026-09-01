@@ -14,6 +14,7 @@ import {
   deriveAssociatedWorktreeMetadata,
   workspaceRootsEqual,
 } from "@harnessos/shared/threadWorkspace";
+import { projectKindToEngineSessionAdmission } from "@harnessos/shared/productSurface";
 import type { FileSystem, Path } from "effect";
 import { Data, Effect, Option } from "effect";
 
@@ -356,17 +357,20 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       thread.projectId,
     );
     const project = Option.getOrNull(projectOption);
+    if (!project) {
+      return yield* importMessagesError(
+        `Project '${thread.projectId}' was not found while deriving Engine Session admission.`,
+      );
+    }
     const cwd = resolveThreadWorkspaceCwd({
       thread,
-      projects: project
-        ? [
-            {
-              id: project.id,
-              kind: project.kind,
-              workspaceRoot: project.workspaceRoot,
-            },
-          ]
-        : [],
+      projects: [
+        {
+          id: project.id,
+          kind: project.kind,
+          workspaceRoot: project.workspaceRoot,
+        },
+      ],
     });
     const externalId = body.externalId.trim();
 
@@ -407,6 +411,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     const session = yield* options.engineService.startSession(thread.id, {
       threadId: thread.id,
       engine: thread.engineSelection.engine,
+      admission: projectKindToEngineSessionAdmission(project.kind, project.workspaceRoot),
       ...((importedProviderContext?.runtimeCwd ?? cwd)
         ? { cwd: importedProviderContext?.runtimeCwd ?? cwd }
         : {}),

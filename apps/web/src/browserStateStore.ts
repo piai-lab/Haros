@@ -9,6 +9,7 @@ import type { ThreadBrowserState, ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
+import { resolveLocalStateStorage } from "./lib/storage";
 
 const BROWSER_STATE_STORAGE_KEY = "harnessos:browser-state:v1";
 const BROWSER_HISTORY_LIMIT = 12;
@@ -127,29 +128,31 @@ export function sanitizeRecentHistoryByThreadId(
 }
 
 export function createDedupedBrowserStateStorage(
-  resolveStorage: () => StringStorage,
+  resolveStorage: () => StringStorage | null,
 ): StringStorage {
   const lastWrittenValueByName = new Map<string, string>();
 
   return {
-    getItem: (name) => resolveStorage().getItem(name),
+    getItem: (name) => resolveStorage()?.getItem(name) ?? null,
     setItem: (name, value) => {
-      const previousValue = lastWrittenValueByName.get(name) ?? resolveStorage().getItem(name);
+      const storage = resolveStorage();
+      const previousValue = lastWrittenValueByName.get(name) ?? storage?.getItem(name) ?? null;
       if (previousValue === value) {
         lastWrittenValueByName.set(name, value);
         return;
       }
       lastWrittenValueByName.set(name, value);
-      resolveStorage().setItem(name, value);
+      storage?.setItem(name, value);
     },
     removeItem: (name) => {
       lastWrittenValueByName.delete(name);
-      resolveStorage().removeItem(name);
+      resolveStorage()?.removeItem(name);
     },
   };
 }
 
-const browserStateStorage = createDedupedBrowserStateStorage(() => localStorage);
+const browserBaseStorage = resolveLocalStateStorage();
+const browserStateStorage = createDedupedBrowserStateStorage(() => browserBaseStorage);
 
 export const useBrowserStateStore = create<BrowserStateStore>()(
   persist(

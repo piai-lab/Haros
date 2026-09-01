@@ -1,0 +1,10 @@
+Campaign-ID: OMNIMIND-ABSORPTION-2026-09-01
+Evidence-ID: E-006
+Role: bootstrap
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: cef48170705e40424ffa1d8f4d541c4e7d32a67c
+Command: bun run source-adoptions:check && bun run test:focused -- packages/contracts/src/engine.test.ts apps/server/src/persistence/Migrations.integration.test.ts apps/server/src/engine/Layers/EngineService.integration.test.ts apps/server/src/orchestration/engineSessionThread.test.ts apps/server/src/engine/askUserHostBridge.test.ts apps/server/src/engineWebSurface/engineWebSurfaceHost.test.ts apps/desktop/src/browserManager.test.ts packages/shared/src/engineDeliveryBlock.test.ts packages/shared/src/pendingInteractions.test.ts apps/web/src/components/chat/MessagesTimeline.logic.test.ts apps/web/src/components/chat/MessagesTimeline.test.tsx apps/web/src/components/chat/transcriptScroll.test.ts scripts/build-desktop-artifact.test.ts scripts/build-desktop-artifact-mac-config.test.ts packages/oa-web-access/test/curator-fallback.test.mjs packages/oa-web-access/test/curator-server-timeout.test.mjs packages/oa-web-access/test/harnessos-curator-presentation.test.mjs packages/oa-web-access/test/parallel-curator-state.test.mjs
+Exit-Code: 0
+Result: PASS
+Claims: none

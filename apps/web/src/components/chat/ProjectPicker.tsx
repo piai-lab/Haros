@@ -61,6 +61,8 @@ interface ProjectPickerProps {
   addActionLabel?: string;
   resetActionLabel?: string;
   searchPlaceholder?: string;
+  /** Optional scope/continuity notice shown before selectable projects. */
+  notice?: string;
 }
 
 interface ActiveFolderOption {
@@ -146,6 +148,7 @@ export const ProjectPicker = memo(function ProjectPicker({
   addActionLabel,
   resetActionLabel: resetActionLabelProp,
   searchPlaceholder: searchPlaceholderProp,
+  notice,
 }: ProjectPickerProps) {
   const { t } = useI18n();
   const align = alignProp ?? "start";
@@ -657,6 +660,14 @@ export const ProjectPicker = memo(function ProjectPicker({
             </>
           }
         >
+          {notice ? (
+            <p
+              className="border-b border-border/55 px-3 py-2 text-muted-foreground text-xs leading-relaxed"
+              data-project-picker-notice="true"
+            >
+              {notice}
+            </p>
+          ) : null}
           <ComboboxEmpty>
             {isLoadingDirectories
               ? t("projectPicker.loadingFolders")

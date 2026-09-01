@@ -97,6 +97,15 @@ export function liveActivityElapsedMs(activity: WorkLogLiveActivity, nowMs: numb
   return lastActivityAtMs - startedAtMs;
 }
 
+export function presentLiveActivityDuration(
+  elapsedMs: number | null,
+): { kind: "subsecond" } | { kind: "seconds"; seconds: number } | null {
+  if (elapsedMs === null) return null;
+  return elapsedMs < 1_000
+    ? { kind: "subsecond" }
+    : { kind: "seconds", seconds: Math.max(1, Math.round(elapsedMs / 1_000)) };
+}
+
 export function formatLiveActivityProgress(progress: number): string {
   const percent = progress >= 0 && progress <= 1 ? progress * 100 : progress;
   return `${Math.round(Math.min(100, Math.max(0, percent)))}%`;

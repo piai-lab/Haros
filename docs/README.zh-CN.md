@@ -73,6 +73,10 @@ Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于�
 - 提交改动前请先阅读[参与贡献](../CONTRIBUTING.md)。
 - 使用[支持文档](../SUPPORT.md)获取帮助；安全问题请按[安全策略](../SECURITY.md)私下报告。
 
+在 macOS 上，`bun run dist:desktop:local-app` 会把可替换的 unsigned `.app` 构建到
+`apps/desktop/.electron-runtime/local-app/`。该本地路径不会签名、公证、发布或生成更新元数据；
+一旦显式指定输出目录，仍遵守正式产物不可覆盖规则。
+
 <details>
 <summary>开发检查与仓库结构</summary>
 

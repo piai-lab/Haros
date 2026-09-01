@@ -20,6 +20,11 @@ function build(error: string, unblocking = false) {
     error,
     threadId,
     unblocking,
+    copy: {
+      deliveryFailed: "Message was not sent to the Engine.",
+      unblock: "Unblock task",
+      unblocking: "Unblocking…",
+    },
     onClose: () => {},
     onUnblock: () => {},
   });
@@ -40,7 +45,10 @@ describe("buildThreadErrorToastOptions", () => {
   });
 
   it("offers the unblock action for a engine-delivery quarantine", () => {
-    expect(build(blockedError).actionProps).toMatchObject({ children: "Unblock thread" });
+    expect(build(blockedError)).toMatchObject({
+      title: "Message was not sent to the Engine.",
+      actionProps: { children: "Unblock task" },
+    });
   });
 
   it("disables the action while unblocking", () => {

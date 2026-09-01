@@ -1,0 +1,17 @@
+C-005 dirty-tree focused proof
+Observed: 2026-09-01T21:28:00+08:00
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption
+Revision base: cef48170705e40424ffa1d8f4d541c4e7d32a67c (dirty working tree)
+
+PASS: 334 tests in 9 unit files covering bounded/redacted tool snapshots, structured activity projection, Timeline rows, lazy checkpoint diff identity/cancellation, and transcript ownership.
+PASS: 28 Chromium tests in 4 browser files covering mixed native text/image/stdout/stderr ordering, technical disclosure, checkpoint Changed Files, exact per-file copy, process-divider placement, tail anchoring, and bilingual Send-to-Agent continuity notice.
+PASS: packages/contracts `tsc --noEmit` (two informational Effect schema messages only).
+PASS: changed-path oxlint (warnings only; no errors).
+PASS: `bun run source-adoptions:check` verified 13 source adoptions and retained paths.
+PASS: `git diff --check`.
+
+Known non-C005 baseline/earlier failures:
+- apps/server typecheck: debugMode.test.ts optional test fixture; two ProjectionSnapshotQuery.integration.test.ts draft version literals inferred as number instead of 1.
+- apps/web typecheck: two Guidebook capture fixture contract errors and two threadBootstrap.ts nullish diagnostics; no C-005 path error.
+
+Deferred proof: real packaged Electron reproof must use the deterministic unsigned artifact produced by C-006; this receipt does not claim packaged-product completion or Linux/Windows artifact production.

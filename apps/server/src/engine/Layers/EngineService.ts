@@ -28,10 +28,11 @@ import {
   EngineSessionStartInput,
   EngineStopSessionInput,
   EngineStartOptions,
-  EngineWorkSurface,
   TurnId,
   type EngineRuntimeEvent,
   type EngineSession,
+  type EngineSessionAdmission,
+  ToolResultReadInput,
 } from "@harnessos/contracts";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -250,8 +251,6 @@ function toRuntimePayloadFromSession(
   extra?: {
     readonly engineSelection?: unknown;
     readonly engineOptions?: unknown;
-    readonly workSurface?: unknown;
-    readonly projectContextRoot?: unknown;
     readonly lastRuntimeEvent?: string;
     readonly lastRuntimeEventAt?: string;
     readonly lifecycleGeneration?: string;
@@ -267,10 +266,6 @@ function toRuntimePayloadFromSession(
     lastError: nonEmptyTrimmed(session.lastError) ?? null,
     ...(extra?.engineSelection !== undefined ? { engineSelection: extra.engineSelection } : {}),
     ...(extra?.engineOptions !== undefined ? { engineOptions: extra.engineOptions } : {}),
-    ...(extra?.workSurface !== undefined ? { workSurface: extra.workSurface } : {}),
-    ...(extra?.projectContextRoot !== undefined
-      ? { projectContextRoot: extra.projectContextRoot }
-      : {}),
     ...(extra?.lastRuntimeEvent !== undefined ? { lastRuntimeEvent: extra.lastRuntimeEvent } : {}),
     ...(extra?.lastRuntimeEventAt !== undefined
       ? { lastRuntimeEventAt: extra.lastRuntimeEventAt }
@@ -314,20 +309,15 @@ function readPersistedCwd(
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function readPersistedWorkSurface(
-  runtimePayload: EngineRuntimeBinding["runtimePayload"],
-): EngineWorkSurface | undefined {
-  const raw = runtimePayloadRecord(runtimePayload).workSurface;
-  return Schema.is(EngineWorkSurface)(raw) ? raw : undefined;
-}
-
-function readPersistedProjectContextRoot(
-  runtimePayload: EngineRuntimeBinding["runtimePayload"],
-): string | undefined {
-  const rawRoot = runtimePayloadRecord(runtimePayload).projectContextRoot;
-  if (typeof rawRoot !== "string") return undefined;
-  const trimmed = rawRoot.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
+function engineSessionAdmissionsEqual(
+  left: EngineSessionAdmission,
+  right: EngineSessionAdmission,
+): boolean {
+  return (
+    left.productSurface === right.productSurface &&
+    left.workSurface === right.workSurface &&
+    left.projectContextRoot === right.projectContextRoot
+  );
 }
 
 function runtimePayloadRecord(value: unknown): Record<string, unknown> {
@@ -817,8 +807,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         readonly lifecycleGeneration?: string;
         readonly engineSelection?: unknown;
         readonly engineOptions?: unknown;
-        readonly workSurface?: unknown;
-        readonly projectContextRoot?: unknown;
+        readonly admission?: EngineSessionAdmission;
         readonly lastRuntimeEvent?: string;
         readonly lastRuntimeEventAt?: string;
       },
@@ -832,6 +821,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           ? { lifecycleGeneration: extra.lifecycleGeneration }
           : {}),
         ...(session.resumeCursor !== undefined ? { resumeCursor: session.resumeCursor } : {}),
+        ...(extra?.admission !== undefined ? { admission: extra.admission } : {}),
         runtimePayload: toRuntimePayloadFromSession(session, extra),
       });
 
@@ -1612,7 +1602,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
     const recoverSessionForThread = (input: {
       readonly binding: EngineRuntimeBinding;
       readonly operation: string;
-      readonly productSurface?: import("@harnessos/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const threadId = input.binding.threadId;
@@ -1726,14 +1715,13 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
             const persistedCwd = readPersistedCwd(binding.runtimePayload);
             const persistedEngineSelection = readPersistedEngineSelection(binding.runtimePayload);
             const persistedEngineOptions = readPersistedEngineOptions(binding.runtimePayload);
-            const persistedWorkSurface =
-              binding.engine === "oa" || binding.engine === "pi"
-                ? readPersistedWorkSurface(binding.runtimePayload)
-                : undefined;
-            const persistedProjectContextRoot =
-              persistedWorkSurface === "agent"
-                ? readPersistedProjectContextRoot(binding.runtimePayload)
-                : undefined;
+            const persistedAdmission = binding.admission ?? undefined;
+            if (persistedAdmission === undefined) {
+              return yield* toValidationError(
+                input.operation,
+                `Cannot recover thread '${threadId}' because its immutable Product admission is missing or invalid. Send a new message to create a new native Engine Session.`,
+              );
+            }
             yield* validateRuntimeModeStructure(
               input.operation,
               binding.engine,
@@ -1747,15 +1735,9 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               ...(persistedCwd ? { cwd: persistedCwd } : {}),
               ...(persistedEngineSelection ? { engineSelection: persistedEngineSelection } : {}),
               ...(persistedEngineOptions ? { engineOptions: persistedEngineOptions } : {}),
-              ...(persistedWorkSurface ? { workSurface: persistedWorkSurface } : {}),
-              ...(persistedProjectContextRoot
-                ? { projectContextRoot: persistedProjectContextRoot }
-                : {}),
+              admission: persistedAdmission,
               ...(hasPersistedResumeCursor ? { resumeCursor: binding.resumeCursor } : {}),
               runtimeMode: binding.runtimeMode ?? "full-access",
-              ...(input.productSurface === undefined
-                ? {}
-                : { productSurface: input.productSurface }),
             });
             if (resumed.engine !== adapter.engine) {
               return yield* toValidationError(
@@ -1768,12 +1750,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               threadId,
               upsertSessionBinding(resumed, threadId, {
                 lifecycleGeneration: lease.generation,
-                ...(persistedWorkSurface === undefined
-                  ? {}
-                  : {
-                      workSurface: persistedWorkSurface,
-                      projectContextRoot: persistedProjectContextRoot ?? null,
-                    }),
+                admission: persistedAdmission,
               }).pipe(
                 Effect.andThen(
                   requiresCredentialRotation
@@ -1836,17 +1813,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           yield* Effect.yieldNow;
           const binding = Option.getOrUndefined(yield* directory.getBinding(event.threadId));
           if (!binding) return;
-          // EngineWorkSurface intentionally collapses Chat and Studio to the
-          // same untrusted execution surface, so it cannot reconstruct the
-          // immutable three-way ProductSurface prompt. Only Agent is
-          // unambiguous here; Chat/Studio recover on the next authoritative
-          // turn dispatch, which supplies ProductSurface from Project.kind.
-          if (
-            (binding.engine === "oa" || binding.engine === "pi") &&
-            readPersistedWorkSurface(binding.runtimePayload) !== "agent"
-          ) {
-            return;
-          }
           yield* recoverSessionForThread({
             binding,
             operation: "EngineService.proactiveGatewayCredentialRotation",
@@ -1920,7 +1886,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
       readonly threadId: ThreadId;
       readonly operation: string;
       readonly allowRecovery: boolean;
-      readonly productSurface?: import("@harnessos/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
@@ -1982,14 +1947,13 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           adapter: yield* recoverSessionForThread({
             binding,
             operation: input.operation,
-            ...(input.productSurface === undefined ? {} : { productSurface: input.productSurface }),
           }),
           isActive: true,
           lifecycleGeneration: lifecycle.currentGeneration(input.threadId),
         } as const;
       });
 
-    const startSession: EngineServiceShape["startSession"] = (threadId, rawInput, context) =>
+    const startSession: EngineServiceShape["startSession"] = (threadId, rawInput) =>
       Effect.gen(function* () {
         const parsed = yield* decodeInputOrValidationError({
           operation: "EngineService.startSession",
@@ -2074,32 +2038,28 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               input.forkSourceResumeCursor !== undefined
                 ? undefined
                 : (input.resumeCursor ??
-                  (persistedBinding?.engine === input.engine
+                  (persistedBinding?.engine === input.engine &&
+                  persistedBinding.admission !== null &&
+                  persistedBinding.admission !== undefined &&
+                  engineSessionAdmissionsEqual(persistedBinding.admission, input.admission)
                     ? persistedBinding.resumeCursor
                     : undefined));
             const adapterStartInput = { ...input };
             delete adapterStartInput.resumeCursor;
-            delete adapterStartInput.workSurface;
-            delete adapterStartInput.projectContextRoot;
+            if (
+              persistedBinding?.admission &&
+              !engineSessionAdmissionsEqual(persistedBinding.admission, input.admission)
+            ) {
+              return yield* toValidationError(
+                "EngineService.startSession",
+                `Cannot reuse thread '${threadId}' across immutable Product admissions. Create a new Product Thread instead.`,
+              );
+            }
             const effectiveEngineOptions =
               input.engineOptions ??
               (persistedBinding?.engine === input.engine
                 ? readPersistedEngineOptions(persistedBinding.runtimePayload)
                 : undefined);
-            const effectiveWorkSurface =
-              input.engine === "oa" || input.engine === "pi"
-                ? (input.workSurface ??
-                  (persistedBinding?.engine === input.engine
-                    ? readPersistedWorkSurface(persistedBinding.runtimePayload)
-                    : undefined))
-                : undefined;
-            const effectiveProjectContextRoot =
-              effectiveWorkSurface === "agent"
-                ? (input.projectContextRoot ??
-                  (persistedBinding?.engine === input.engine
-                    ? readPersistedProjectContextRoot(persistedBinding.runtimePayload)
-                    : undefined))
-                : undefined;
             const adapter = yield* registry.getByEngine(input.engine);
             const startAndPersistReplacement = Effect.gen(function* () {
               // Publish the lifecycle owner before entering adapter code. An
@@ -2116,6 +2076,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   runtimeMode: input.runtimeMode,
                   status: "starting",
                   lifecycleGeneration: lease.generation,
+                  admission: input.admission,
                   runtimePayload: {
                     activeTurnId: null,
                     lastRuntimeEvent: "engine.startSession.requested",
@@ -2127,14 +2088,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                     ...(effectiveEngineOptions === undefined
                       ? {}
                       : { engineOptions: effectiveEngineOptions }),
-                    ...(effectiveWorkSurface === undefined
-                      ? {}
-                      : { workSurface: effectiveWorkSurface }),
-                    ...(effectiveWorkSurface === undefined
-                      ? {}
-                      : {
-                          projectContextRoot: effectiveProjectContextRoot ?? null,
-                        }),
                   },
                 }),
               );
@@ -2149,18 +2102,9 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   ...(effectiveEngineOptions !== undefined
                     ? { engineOptions: effectiveEngineOptions }
                     : {}),
-                  ...(effectiveWorkSurface !== undefined
-                    ? { workSurface: effectiveWorkSurface }
-                    : {}),
-                  ...(effectiveProjectContextRoot !== undefined
-                    ? { projectContextRoot: effectiveProjectContextRoot }
-                    : {}),
                   ...(effectiveResumeCursor !== undefined
                     ? { resumeCursor: effectiveResumeCursor }
                     : {}),
-                  ...(context?.productSurface === undefined
-                    ? {}
-                    : { productSurface: context.productSurface }),
                 })
                 .pipe(Effect.timeoutOption(ENGINE_START_SESSION_TIMEOUT));
               if (Option.isNone(started)) {
@@ -2190,12 +2134,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                 upsertSessionBinding(session, threadId, {
                   engineSelection: input.engineSelection,
                   engineOptions: effectiveEngineOptions,
-                  ...(effectiveWorkSurface === undefined
-                    ? {}
-                    : {
-                        workSurface: effectiveWorkSurface,
-                        projectContextRoot: effectiveProjectContextRoot ?? null,
-                      }),
+                  admission: input.admission,
                   lifecycleGeneration: lease.generation,
                 }).pipe(
                   Effect.andThen(
@@ -2338,14 +2277,13 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
             const previousEngineOptions = readPersistedEngineOptions(
               persistedBinding.runtimePayload,
             );
-            const previousWorkSurface =
-              persistedBinding.engine === "oa" || persistedBinding.engine === "pi"
-                ? readPersistedWorkSurface(persistedBinding.runtimePayload)
-                : undefined;
-            const previousProjectContextRoot =
-              previousWorkSurface === "agent"
-                ? readPersistedProjectContextRoot(persistedBinding.runtimePayload)
-                : undefined;
+            const previousAdmission = persistedBinding.admission ?? undefined;
+            if (previousAdmission === undefined) {
+              return yield* toValidationError(
+                "EngineService.startSession",
+                `Cannot replace thread '${threadId}' because its live Engine binding has no valid immutable Product admission. Stop it before creating a new native Engine Session.`,
+              );
+            }
             const previousCwd =
               previousLiveSession?.cwd ?? readPersistedCwd(persistedBinding.runtimePayload);
             const previousResumeCursor =
@@ -2444,6 +2382,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                     runtimeMode: previousRuntimeMode,
                     status: "starting",
                     lifecycleGeneration: restoreGeneration,
+                    admission: previousAdmission,
                     ...(previousResumeCursor !== undefined
                       ? { resumeCursor: previousResumeCursor }
                       : {}),
@@ -2459,14 +2398,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                       ...(previousEngineOptions !== undefined
                         ? { engineOptions: previousEngineOptions }
                         : {}),
-                      ...(previousWorkSurface !== undefined
-                        ? { workSurface: previousWorkSurface }
-                        : {}),
-                      ...(previousWorkSurface === undefined
-                        ? {}
-                        : {
-                            projectContextRoot: previousProjectContextRoot ?? null,
-                          }),
                     },
                   }),
                 );
@@ -2482,12 +2413,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   ...(previousEngineOptions !== undefined
                     ? { engineOptions: previousEngineOptions }
                     : {}),
-                  ...(previousWorkSurface !== undefined
-                    ? { workSurface: previousWorkSurface }
-                    : {}),
-                  ...(previousProjectContextRoot !== undefined
-                    ? { projectContextRoot: previousProjectContextRoot }
-                    : {}),
+                  admission: previousAdmission,
                   ...(previousResumeCursor !== undefined
                     ? { resumeCursor: previousResumeCursor }
                     : {}),
@@ -2506,12 +2432,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                     lifecycleGeneration: restoreGeneration,
                     engineSelection: previousEngineSelection,
                     engineOptions: previousEngineOptions,
-                    ...(previousWorkSurface === undefined
-                      ? {}
-                      : {
-                          workSurface: previousWorkSurface,
-                          projectContextRoot: previousProjectContextRoot ?? null,
-                        }),
+                    admission: previousAdmission,
                   }),
                 ),
               );
@@ -2616,6 +2537,13 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         if (!sourceBinding) {
           return null;
         }
+        const sourceAdmission = sourceBinding.admission ?? undefined;
+        if (sourceAdmission === undefined) {
+          // An orphaned legacy binding cannot confer Product authority on a
+          // new native Session. The caller may fall back to a fresh start with
+          // an admission derived from the target Product Thread.
+          return null;
+        }
 
         const effectiveEngineOptions =
           input.engineOptions ?? readPersistedEngineOptions(sourceBinding.runtimePayload);
@@ -2682,6 +2610,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               if (forkedSession) {
                 yield* upsertSessionBinding(forkedSession, input.threadId, {
                   lifecycleGeneration: lease.generation,
+                  admission: sourceAdmission,
                   ...(input.engineSelection !== undefined
                     ? { engineSelection: input.engineSelection }
                     : {}),
@@ -2698,6 +2627,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   runtimeMode: input.runtimeMode,
                   status: "stopped",
                   lifecycleGeneration: lease.generation,
+                  admission: sourceAdmission,
                   ...(forked.resumeCursor !== undefined
                     ? { resumeCursor: forked.resumeCursor }
                     : {}),
@@ -2748,9 +2678,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               threadId: input.threadId,
               operation: "EngineService.sendTurn",
               allowRecovery: true,
-              ...(dispatchContext?.productSurface === undefined
-                ? {}
-                : { productSurface: dispatchContext.productSurface }),
             });
             yield* validateInteractionModeStructure(
               "EngineService.sendTurn",
@@ -3776,6 +3703,30 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         );
       });
 
+    const readToolResult: EngineServiceShape["readToolResult"] = (rawInput) =>
+      Effect.gen(function* () {
+        const input = yield* decodeInputOrValidationError({
+          operation: "EngineService.readToolResult",
+          schema: ToolResultReadInput,
+          payload: rawInput,
+        });
+        const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
+        if (!binding) {
+          return { status: "unavailable", reason: "session_unavailable" } as const;
+        }
+        const adapter = yield* registry.getByEngine(binding.engine);
+        if (!adapter.readToolResult || !(yield* adapter.hasSession(input.threadId))) {
+          return { status: "unavailable", reason: "session_unavailable" } as const;
+        }
+        return yield* adapter
+          .readToolResult(input)
+          .pipe(
+            Effect.catch(() =>
+              Effect.succeed({ status: "unavailable", reason: "read_failed" } as const),
+            ),
+          );
+      });
+
     const runStopAll = () =>
       Effect.gen(function* () {
         const stoppedAt = new Date().toISOString();
@@ -3869,6 +3820,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
       getCapabilities,
       rollbackConversation,
       compactThread,
+      readToolResult,
       closeRuntimeEvents,
       getRuntimeEventPumpHealth: () => Effect.sync(runtimeEventPumpHealth.snapshot),
       // Each access creates a fresh PubSub subscription so that multiple

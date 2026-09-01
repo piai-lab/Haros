@@ -100,6 +100,10 @@ const EN_MESSAGES = {
   "pendingInput.questionAnnouncement": "Question {current} of {total}",
   "pendingInput.submit": "Submit",
   "pendingInput.submitFailed": "Failed to submit answer.",
+  "pendingInput.unrenderableTitle": "This question cannot be displayed",
+  "pendingInput.unrenderableDescription":
+    "The Engine sent a malformed Ask User request. Cancel it to unblock this task.",
+  "pendingInput.cancelMalformed": "Cancel question",
   "pendingInput.recommended": "Recommended",
   "pendingInput.preview": "Preview",
   "pendingInput.hidePreview": "Hide preview",
@@ -128,6 +132,8 @@ const EN_MESSAGES = {
   "openIn.noEditors": "No installed editors found",
   "composer.send": "Send message",
   "composer.sendToAgent": "Send to Agent",
+  "chatToAgent.continuityBoundary":
+    "Creates a new Agent task. Only visible messages and recoverable attachments are copied; running tools, temporary state, and the native Engine Session are not continued.",
   "composer.thinking": "Thinking",
   "composer.resolveApproval": "Resolve this approval request to continue",
   "composer.answer": "Type your answer to continue",
@@ -383,6 +389,10 @@ const ZH_CN_MESSAGES = {
   "pendingInput.questionAnnouncement": "第 {current} 题，共 {total} 题",
   "pendingInput.submit": "提交",
   "pendingInput.submitFailed": "提交回答失败。",
+  "pendingInput.unrenderableTitle": "无法显示此问题",
+  "pendingInput.unrenderableDescription":
+    "引擎发来的用户提问请求格式不正确。取消该问题即可解除任务阻塞。",
+  "pendingInput.cancelMalformed": "取消问题",
   "pendingInput.recommended": "推荐",
   "pendingInput.preview": "预览",
   "pendingInput.hidePreview": "收起预览",
@@ -411,6 +421,8 @@ const ZH_CN_MESSAGES = {
   "openIn.noEditors": "未找到已安装的编辑器",
   "composer.send": "发送消息",
   "composer.sendToAgent": "发送到 Agent",
+  "chatToAgent.continuityBoundary":
+    "这会创建一个新的 Agent 任务，仅复制可见消息和可恢复附件；正在运行的工具、临时状态和原生引擎会话不会延续。",
   "composer.thinking": "思考",
   "composer.resolveApproval": "请先处理此授权请求",
   "composer.answer": "输入回答以继续",

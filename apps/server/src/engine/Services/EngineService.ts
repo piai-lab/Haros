@@ -32,10 +32,11 @@ import type {
   EngineStopTaskInput,
   ThreadId,
   EngineTurnStartResult,
+  ToolResultReadInput,
+  ToolResultFullReadResult,
 } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
-import type { ProductSurface } from "@harnessos/shared/productSurface";
 
 import type { EngineServiceError } from "../Errors.ts";
 import type { PersistedEngineRuntimeEvent } from "../../persistence/Services/EngineRuntimeEvents.ts";
@@ -65,7 +66,6 @@ export interface EngineServiceShape {
   readonly startSession: (
     threadId: ThreadId,
     input: EngineSessionStartInput,
-    context?: { readonly productSurface?: ProductSurface },
   ) => Effect.Effect<EngineSession, EngineServiceError>;
 
   /**
@@ -237,6 +237,11 @@ export interface EngineServiceShape {
   readonly compactThread: (input: {
     readonly threadId: ThreadId;
   }) => Effect.Effect<void, EngineServiceError>;
+
+  /** Read one full native tool result without changing Engine lifecycle. */
+  readonly readToolResult: (
+    input: ToolResultReadInput,
+  ) => Effect.Effect<ToolResultFullReadResult, EngineServiceError>;
 
   /**
    * Stop engine event producers, drain the lossless fan-out while subscribers

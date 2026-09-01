@@ -23,7 +23,10 @@ import {
   LazyDiffPanel,
   noopChatSurfaceAction,
 } from "./ChatThreadSurfacePrimitives";
-import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
+import {
+  commitSplitViewMutationAfterEngineWebSurfaceSuppression,
+  useBrowserPanelDesktopBridge,
+} from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDeviceEventBridge } from "../../hooks/useDeviceEventBridge";
 import { useHandleNewChat } from "../../hooks/useHandleNewChat";
 import type { ChatRightPanel } from "../../diffRouteSearch";
@@ -693,9 +696,9 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(props.splitViewId), [props.splitViewId]),
   );
-  const setFocusedPane = useSplitViewStore((store) => store.setFocusedPane);
+  const commitSetFocusedPane = useSplitViewStore((store) => store.setFocusedPane);
   const setRatioForNode = useSplitViewStore((store) => store.setRatioForNode);
-  const setPanePanelState = useSplitViewStore((store) => store.setPanePanelState);
+  const commitSetPanePanelState = useSplitViewStore((store) => store.setPanePanelState);
   const replacePaneThread = useSplitViewStore((store) => store.replacePaneThread);
   const dropThreadOnPane = useSplitViewStore((store) => store.dropThreadOnPane);
   const removeSplitView = useSplitViewStore((store) => store.removeSplitView);
@@ -750,7 +753,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       focusedLeaf?.threadId !== null &&
       focusedLeaf?.threadId !== undefined
     ) {
-      setFocusedPane(activeSplitView.id, routePaneId);
+      commitSetFocusedPane(activeSplitView.id, routePaneId);
       return;
     }
 
@@ -774,25 +777,28 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     props.routeThreadId,
     removeSplitView,
     routePaneId,
-    setFocusedPane,
+    commitSetFocusedPane,
   ]);
 
   const setPaneFocus = (paneId: PaneId) => {
     if (!activeSplitView) return;
     const leaf = findLeafPaneById(activeSplitView.root, paneId);
     const nextThreadId = leaf?.threadId ?? resolveSplitViewFocusedThreadId(activeSplitView);
-    setFocusedPane(activeSplitView.id, paneId);
-    if (!nextThreadId || nextThreadId === props.routeThreadId) {
-      return;
-    }
-    void navigate({
-      to: "/$threadId",
-      params: { threadId: nextThreadId },
-      replace: true,
-      search: (previous) => ({
-        ...stripDiffSearchParams(previous),
-        splitViewId: activeSplitView.id,
-      }),
+    void commitSplitViewMutationAfterEngineWebSurfaceSuppression({
+      splitViewId: activeSplitView.id,
+      paneId: activeSplitView.focusedPaneId,
+      commit: () => commitSetFocusedPane(activeSplitView.id, paneId),
+    }).then(({ committed }) => {
+      if (!committed || !nextThreadId || nextThreadId === props.routeThreadId) return;
+      void navigate({
+        to: "/$threadId",
+        params: { threadId: nextThreadId },
+        replace: true,
+        search: (previous) => ({
+          ...stripDiffSearchParams(previous),
+          splitViewId: activeSplitView.id,
+        }),
+      });
     });
   };
 
@@ -804,13 +810,18 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     const leaf = findLeafPaneById(activeSplitView.root, paneId);
     if (!leaf) return;
     const nextPanel = patch.panel ?? leaf.panel.panel;
-    setPanePanelState(activeSplitView.id, paneId, {
-      ...patch,
-      hasOpenedPanel: leaf.panel.hasOpenedPanel || nextPanel !== null,
-      lastOpenPanel:
-        patch.panel === "browser" || patch.panel === "diff"
-          ? patch.panel
-          : leaf.panel.lastOpenPanel,
+    void commitSplitViewMutationAfterEngineWebSurfaceSuppression({
+      splitViewId: activeSplitView.id,
+      paneId,
+      commit: () =>
+        commitSetPanePanelState(activeSplitView.id, paneId, {
+          ...patch,
+          hasOpenedPanel: leaf.panel.hasOpenedPanel || nextPanel !== null,
+          lastOpenPanel:
+            patch.panel === "browser" || patch.panel === "diff"
+              ? patch.panel
+              : leaf.panel.lastOpenPanel,
+        }),
     });
   };
 
@@ -828,20 +839,21 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       ? () => togglePanePanel(activeSplitView.focusedPaneId, "browser")
       : null,
     onOpen: activeSplitView
-      ? (requestedThreadId) => {
+      ? (requestedThreadId, presentationId, acquireLease) =>
           routeSplitBrowserPanelOpenRequest({
+            presentationId,
+            acquireLease,
             splitView: activeSplitView,
             requestedThreadId,
             openBrowserPanel: (paneId) =>
-              setPanePanelState(activeSplitView.id, paneId, {
+              commitSetPanePanelState(activeSplitView.id, paneId, {
                 panel: "browser",
                 diffTurnId: null,
                 diffFilePath: null,
                 hasOpenedPanel: true,
                 lastOpenPanel: "browser",
               }),
-          });
-        }
+          })
       : null,
   });
 
@@ -1027,23 +1039,30 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     }
 
     const leaf = findLeafPaneById(activeSplitView.root, paneId);
-    setFocusedPane(activeSplitView.id, paneId);
-    if (leaf && leaf.threadId !== threadId) {
-      replacePaneThread(activeSplitView.id, paneId, threadId);
-      setPanePanelState(activeSplitView.id, paneId, {
-        diffTurnId: null,
-        diffFilePath: null,
+    void commitSplitViewMutationAfterEngineWebSurfaceSuppression({
+      splitViewId: activeSplitView.id,
+      paneId,
+      commit: () => {
+        commitSetFocusedPane(activeSplitView.id, paneId);
+        if (leaf && leaf.threadId !== threadId) {
+          replacePaneThread(activeSplitView.id, paneId, threadId);
+          commitSetPanePanelState(activeSplitView.id, paneId, {
+            diffTurnId: null,
+            diffFilePath: null,
+          });
+        }
+      },
+    }).then(({ committed }) => {
+      if (!committed) return;
+      void navigate({
+        to: "/$threadId",
+        params: { threadId },
+        replace: true,
+        search: (previous) => ({
+          ...stripDiffSearchParams(previous),
+          splitViewId: activeSplitView.id,
+        }),
       });
-    }
-
-    void navigate({
-      to: "/$threadId",
-      params: { threadId },
-      replace: true,
-      search: (previous) => ({
-        ...stripDiffSearchParams(previous),
-        splitViewId: activeSplitView.id,
-      }),
     });
   };
 

@@ -1,5 +1,6 @@
 import {
   ApprovalRequestId,
+  type CanonicalUserInputDraftV1,
   type OrchestrationPendingInteraction,
   type OrchestrationThreadActivity,
   type TurnId,
@@ -31,6 +32,9 @@ export interface PendingUserInput {
   createdAt: string;
   turnId?: TurnId;
   questions: ReadonlyArray<UserInputQuestion>;
+  unrenderable?: boolean;
+  draft?: CanonicalUserInputDraftV1 | null;
+  draftRevision?: number;
   settlementStatus?: OrchestrationPendingInteraction["status"];
   responseClaimable?: boolean;
 }
@@ -434,15 +438,13 @@ export function derivePendingUserInputs(
       responseFailedActivityKind: "engine.user-input.respond.failed",
       parseRequested: ({ activity, payload, requestId, lifecycleGeneration }) => {
         const questions = parseUserInputQuestions(payload);
-        if (!questions) {
-          return null;
-        }
         return {
           requestId,
           ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
           createdAt: activity.createdAt,
           ...(activity.turnId ? { turnId: activity.turnId } : {}),
-          questions,
+          questions: questions ?? [],
+          ...(questions === null ? { unrenderable: true } : {}),
         };
       },
     },
@@ -465,6 +467,7 @@ export function derivePendingUserInputs(
       pendingRequestInstanceKey(request.requestId, request.lifecycleGeneration),
     );
     if (!settlement) return request;
+    const draftRevision = settlement.draftRevision ?? 0;
     const responseClaimable =
       settlement.status === "pending" ||
       settlement.status === "retryable" ||
@@ -476,6 +479,8 @@ export function derivePendingUserInputs(
         }));
     return {
       ...request,
+      ...(settlement.draft ? { draft: settlement.draft } : {}),
+      ...(draftRevision > 0 ? { draftRevision } : {}),
       settlementStatus: settlement.status,
       responseClaimable,
     };

@@ -23,7 +23,10 @@ import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
 import { readEditorViewState, storeEditorViewState } from "../../editorViewState";
 import { basenameOfPath } from "../../file-icons";
-import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
+import {
+  commitRightDockMutationAfterEngineWebSurfaceSuppression,
+  useBrowserPanelDesktopBridge,
+} from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
 import { useHandleNewThread } from "../../hooks/useHandleNewThread";
 import { useDeviceEventBridge } from "../../hooks/useDeviceEventBridge";
@@ -326,12 +329,45 @@ export function SingleChatSurface(props: {
       chatFocusReturnRef.current = null;
     }
   }, [workbenchPresentation]);
-  const openPane = useRightDockStore((store) => store.openPane);
-  const toggleSingletonPane = useRightDockStore((store) => store.toggleSingletonPane);
-  const closePane = useRightDockStore((store) => store.closePane);
-  const setActivePane = useRightDockStore((store) => store.setActivePane);
-  const setDockOpen = useRightDockStore((store) => store.setDockOpen);
+  const commitOpenPane = useRightDockStore((store) => store.openPane);
+  const commitToggleSingletonPane = useRightDockStore((store) => store.toggleSingletonPane);
+  const commitClosePane = useRightDockStore((store) => store.closePane);
+  const commitSetActivePane = useRightDockStore((store) => store.setActivePane);
+  const commitSetDockOpen = useRightDockStore((store) => store.setDockOpen);
   const updatePane = useRightDockStore((store) => store.updatePane);
+  const commitDockMutation = useCallback((threadId: ThreadId, commit: () => void) => {
+    void commitRightDockMutationAfterEngineWebSurfaceSuppression({ threadId, commit });
+  }, []);
+  const openPane = useCallback(
+    (threadId: ThreadId, input: Parameters<typeof commitOpenPane>[1]) => {
+      commitDockMutation(threadId, () => commitOpenPane(threadId, input));
+    },
+    [commitDockMutation, commitOpenPane],
+  );
+  const toggleSingletonPane = useCallback(
+    (threadId: ThreadId, input: Parameters<typeof commitToggleSingletonPane>[1]) => {
+      commitDockMutation(threadId, () => commitToggleSingletonPane(threadId, input));
+    },
+    [commitDockMutation, commitToggleSingletonPane],
+  );
+  const closePane = useCallback(
+    (threadId: ThreadId, paneId: string) => {
+      commitDockMutation(threadId, () => commitClosePane(threadId, paneId));
+    },
+    [commitClosePane, commitDockMutation],
+  );
+  const setActivePane = useCallback(
+    (threadId: ThreadId, paneId: string) => {
+      commitDockMutation(threadId, () => commitSetActivePane(threadId, paneId));
+    },
+    [commitDockMutation, commitSetActivePane],
+  );
+  const setDockOpen = useCallback(
+    (threadId: ThreadId, open: boolean) => {
+      commitDockMutation(threadId, () => commitSetDockOpen(threadId, open));
+    },
+    [commitDockMutation, commitSetDockOpen],
+  );
   const activeProject = useStore(
     useMemo(() => createProjectSelector(props.projectId), [props.projectId]),
   );
@@ -703,14 +739,15 @@ export function SingleChatSurface(props: {
       requestImmediateDockHydration("browser");
       toggleSingletonPane(props.threadId, { kind: "browser" });
     },
-    onOpen: (requestedThreadId) => {
+    onOpen: (requestedThreadId, presentationId, acquireLease) =>
       routeSingleBrowserPanelOpenRequest({
+        presentationId,
+        acquireLease,
         currentThreadId: props.threadId,
         requestedThreadId,
         requestImmediateBrowserHydration: () => requestImmediateDockHydration("browser"),
         openBrowserPane: (threadId) => openPane(threadId, { kind: "browser" }),
-      });
-    },
+      }),
   });
 
   useDeviceEventBridge({

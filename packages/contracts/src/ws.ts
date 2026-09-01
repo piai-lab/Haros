@@ -27,6 +27,7 @@ import {
   ORCHESTRATION_WS_CHANNELS,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetThreadDetailSnapshotInput,
+  OrchestrationUpdatePendingUserInputDraftInput,
   OrchestrationGetShellSnapshotInput,
   OrchestrationRepairStateInput,
   ORCHESTRATION_WS_METHODS,
@@ -142,6 +143,7 @@ import {
 } from "./engineDiscovery";
 import { EngineExecutionCapabilitiesInput } from "./engineExecution";
 import { EngineCompactThreadInput } from "./engine";
+import { ToolResultReadInput } from "./toolResults";
 import {
   HarosCustomModelServiceRemoveInput,
   HarosCustomModelServiceDiscoverInput,
@@ -315,6 +317,7 @@ export const WS_METHODS = {
   engineGetComposerCapabilities: "engine.getComposerCapabilities",
   engineGetExecutionCapabilities: "engine.getExecutionCapabilities",
   engineCompactThread: "engine.compactThread",
+  engineReadToolResult: "engine.readToolResult",
   engineListCommands: "engine.listCommands",
   engineListSkills: "engine.listSkills",
   engineListSkillsCatalog: "engine.listSkillsCatalog",
@@ -430,6 +433,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(
     ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
     OrchestrationGetThreadDetailSnapshotInput,
+  ),
+  tagRequestBody(
+    ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft,
+    OrchestrationUpdatePendingUserInputDraftInput,
   ),
   tagRequestBody(ORCHESTRATION_WS_METHODS.repairState, OrchestrationRepairStateInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getTurnDiff, OrchestrationGetTurnDiffInput),
@@ -572,6 +579,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.engineGetComposerCapabilities, EngineGetComposerCapabilitiesInput),
   tagRequestBody(WS_METHODS.engineGetExecutionCapabilities, EngineExecutionCapabilitiesInput),
   tagRequestBody(WS_METHODS.engineCompactThread, EngineCompactThreadInput),
+  tagRequestBody(WS_METHODS.engineReadToolResult, ToolResultReadInput),
   tagRequestBody(WS_METHODS.engineListCommands, EngineListCommandsInput),
   tagRequestBody(WS_METHODS.engineListSkills, EngineListSkillsInput),
   tagRequestBody(WS_METHODS.engineListSkillsCatalog, EngineSkillsCatalogInput),

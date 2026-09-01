@@ -847,6 +847,39 @@ describe("derivePendingUserInputs", () => {
     expect(derivePendingUserInputs(activities)[0]?.questions[0]?.options).toEqual([]);
   });
 
+  it("retains the earliest malformed Ask lifecycle so the composer can cancel it", () => {
+    const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "user-input-malformed",
+        createdAt: "2026-02-23T00:00:01.000Z",
+        kind: "user-input.requested",
+        summary: "User input requested",
+        tone: "info",
+        payload: {
+          requestId: "req-user-input-malformed",
+          questions: [{ id: "broken", prompt: 42 }],
+        },
+      }),
+      makeActivity({
+        id: "user-input-valid-later",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        kind: "user-input.requested",
+        summary: "User input requested",
+        tone: "info",
+        payload: {
+          requestId: "req-user-input-valid-later",
+          questions: [{ id: "later", header: "Later", question: "Later?", options: [] }],
+        },
+      }),
+    ];
+
+    expect(derivePendingUserInputs(activities)[0]).toMatchObject({
+      requestId: "req-user-input-malformed",
+      questions: [],
+      unrenderable: true,
+    });
+  });
+
   it("projects canonical choice and text metadata into the shared Composer shape", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({

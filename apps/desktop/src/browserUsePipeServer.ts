@@ -8,7 +8,7 @@ import * as Net from "node:net";
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-import type { BrowserToolName, ThreadId } from "@harnessos/contracts";
+import type { BrowserPanelRevealResult, BrowserToolName, ThreadId } from "@harnessos/contracts";
 
 import {
   DesktopBrowserAutomationHost,
@@ -66,7 +66,12 @@ export interface BrowserHostPipeServerOptions {
   readonly pipePath?: string;
   readonly capability?: string;
   readonly platform?: NodeJS.Platform;
-  readonly requestOpenPanel?: (threadId: ThreadId) => void | Promise<void>;
+  readonly requestOpenPanel?: (
+    threadId: ThreadId,
+    tabId: string,
+    presentationId?: string,
+    surfaceId?: string,
+  ) => BrowserPanelRevealResult | void | Promise<BrowserPanelRevealResult | void>;
   readonly automationHost?: BrowserHostAutomationShape;
   readonly maxInFlightRequests?: number;
   readonly maxQueuedOutputBytes?: number;

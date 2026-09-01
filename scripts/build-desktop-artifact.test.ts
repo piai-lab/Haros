@@ -54,4 +54,27 @@ describe("desktop artifact candidate ownership", () => {
     );
     expect(`${result.stdout}\n${result.stderr}`).toContain("candidate artifacts are immutable");
   });
+
+  it.runIf(process.platform === "darwin")(
+    "restricts local-app to an unsigned macOS dir build without release provenance",
+    () => {
+      const wrongTarget = runBuildScript(["--local-app", "--target", "dmg"]);
+      expect(wrongTarget.status).not.toBe(0);
+      expect(`${wrongTarget.stdout}\n${wrongTarget.stderr}`).toContain(
+        "--local-app is restricted to the unsigned macOS dir target",
+      );
+
+      const releaseInput = runBuildScript([
+        "--local-app",
+        "--target",
+        "dir",
+        "--lockfile-sha256",
+        "a".repeat(64),
+      ]);
+      expect(releaseInput.status).not.toBe(0);
+      expect(`${releaseInput.stdout}\n${releaseInput.stderr}`).toContain(
+        "cannot carry release lockfile provenance",
+      );
+    },
+  );
 });

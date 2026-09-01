@@ -1,0 +1,28 @@
+E-009 C-007/C-008 dirty-tree finalization receipt
+
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption
+Branch: codex/omnimind-absorption
+Origin: cef48170705e40424ffa1d8f4d541c4e7d32a67c
+Donor: b5a966bb9de09861c98a1d7ac3936b092614fed3
+Observed: 2026-09-01, Asia/Shanghai
+
+PASS — `source-adoptions:check`: 13 records. The OmniMind record has 131 unique retained target paths and 105 unique frozen-donor source paths; duplicate and missing sets are empty.
+PASS — changed-tree format audit: all 149 matched TS/TSX/JS/MJS/JSON/Markdown files use repository format.
+PASS — `git diff --check`.
+PASS — repository lint: 648 warnings and zero errors.
+PASS — repository unit gate: 9/9 Turbo tasks succeeded across eight packages.
+PASS — Desktop smoke: 7/7 build/smoke tasks succeeded and Electron launched.
+PASS — final Web regression probe after storage/RPC/i18n cleanup: 60/60 tests.
+PASS — import admission integration fixture after Project-truth correction: 1/1.
+PASS — browser regressions fixed in the Browser lease mock and structured Web Search group title: 30/30 focused Chromium tests.
+PASS — the full stable-browser rerun executed 732 tests: 728 passed and 3 todo. Its sole same-Engine draft timing failure passed both the first full run and an isolated rerun; the unchanged test remains a known concurrency flake rather than a product compensation path.
+
+NOT CLEAN — root format gate reports four unchanged origin files: AcpWslCwd.test.ts, debugMode.test.ts, haros-owner-lifecycle-cut.md, and workspace-package-identity.test.mjs.
+NOT CLEAN — root typecheck succeeds in seven of eight packages and reports only two unchanged Guidebook capture errors (Run2 exact-optional model description and Run4 missing projectId).
+NOT CLEAN — broad Server integration ran 2,786 tests: 2,768 passed and 16 skipped. The attributable import-admission fixture was fixed and reran green; the remaining unchanged PiRuntimeIsolation assertion observes the ambient codexhost-delegation skill in stock Pi's discovered resources.
+NOT CLEAN — stable-browser aggregate remains non-zero because of the unchanged timing flake described above, despite the isolated pass.
+NOT AVAILABLE — this macOS host cannot produce native Linux AppImage/node-pty or Windows NSIS evidence. E-008 proves only the unsigned arm64 macOS `.app` and packaged journey.
+NOT FROZEN — no commit/push was authorized, so the tested implementation remains a dirty working tree and no immutable candidate SHA exists.
+NOT AUDITED — current constraints did not authorize a fresh independent evaluator; Producer evidence cannot mark required Claims verified.
+
+No signing, notarization, publishing, updater feed, release credential, real private Engine state, or original-worktree user change was used. Three guide screenshots rewritten by test execution were restored exactly to the origin revision before this receipt.

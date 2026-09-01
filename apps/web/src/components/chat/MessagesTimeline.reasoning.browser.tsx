@@ -1314,14 +1314,16 @@ describe("Timeline public reasoning disclosure", () => {
         "Before grouped work.",
         "Read 2 files",
         "Reasoning between grouped tools.",
-        "Searched 2 files",
+        "Performed 2 web searches",
         "After grouped work.",
       ];
       const positions = orderedText.map((value) => text.indexOf(value));
       expect(positions.every((position) => position >= 0)).toBe(true);
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
       expect(screen.getByRole("button", { name: /Read 2 files/ }).element()).toBeTruthy();
-      expect(screen.getByRole("button", { name: /Searched 2 files/ }).element()).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /Performed 2 web searches/ }).element(),
+      ).toBeTruthy();
     } finally {
       await screen.unmount();
       host.remove();

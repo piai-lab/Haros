@@ -1221,18 +1221,21 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       yield* sql`
         INSERT INTO projection_pending_interactions (
           interaction_kind, request_id, thread_id, turn_id, lifecycle_generation, status,
-          decision, response_command_id, response_requested_at, created_at, resolved_at
+          decision, response_command_id, response_requested_at, created_at, resolved_at,
+          draft_json, draft_revision, draft_updated_at
         ) VALUES
           (
             'userInput', 'request-retryable', 'thread-causal-message-snapshot', NULL,
-            'generation-current', 'retryable', NULL, 'command-response',
-            '2026-07-14T12:11:00.000Z', '2026-07-14T12:10:30.000Z', NULL
+            'generation-current', 'pending', NULL, NULL,
+            NULL, '2026-07-14T12:10:30.000Z', NULL,
+            '{"version":1,"answers":{"q1":{"selectedOptionLabels":[],"customSelected":true,"customText":"  raw draft  "}},"activeQuestionIndex":0}',
+            4, '2026-07-14T12:10:45.000Z'
           ),
           (
             'approval', 'request-confirmed', 'thread-causal-message-snapshot', NULL,
             'generation-current', 'confirmed', 'accept', 'command-approval',
             '2026-07-14T12:12:00.000Z', '2026-07-14T12:11:30.000Z',
-            '2026-07-14T12:12:01.000Z'
+            '2026-07-14T12:12:01.000Z', NULL, 0, NULL
           )
       `;
 
@@ -1245,12 +1248,25 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           threadId,
           turnId: null,
           lifecycleGeneration: "generation-current",
-          status: "retryable" as const,
+          status: "pending" as const,
           decision: null,
-          responseCommandId: CommandId.makeUnsafe("command-response"),
-          responseRequestedAt: "2026-07-14T12:11:00.000Z",
+          responseCommandId: null,
+          responseRequestedAt: null,
           createdAt: "2026-07-14T12:10:30.000Z",
           resolvedAt: null,
+          draft: {
+            version: 1 as const,
+            answers: {
+              q1: {
+                selectedOptionLabels: [],
+                customSelected: true,
+                customText: "  raw draft  ",
+              },
+            },
+            activeQuestionIndex: 0,
+          },
+          draftRevision: 4,
+          draftUpdatedAt: "2026-07-14T12:10:45.000Z",
         },
       ];
       assert.isTrue(Option.isSome(detail));

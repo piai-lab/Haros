@@ -4,11 +4,14 @@ import type { AgentSession as PiAgentSession } from "@earendil-works/pi-coding-a
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 import {
   EventId,
+  type EngineToolActionKind,
   type EngineKind,
   type EngineSession,
   RuntimeItemId,
   type TurnId,
 } from "@harnessos/contracts";
+
+import { buildToolResultSnapshot } from "./toolResultSnapshot.ts";
 
 import {
   engineWebSurfacePresentationMetadata,
@@ -191,31 +194,6 @@ export function makePiGatewayLoadWarning(displayName: string) {
   };
 }
 
-function toolExitCode(result: unknown): number | null | undefined {
-  const source = record(result);
-  if (!source) return undefined;
-  if (typeof source.exitCode === "number" && Number.isFinite(source.exitCode)) {
-    return source.exitCode;
-  }
-  if (typeof source.code === "number" && Number.isFinite(source.code)) return source.code;
-  return null;
-}
-
-function toolRawOutput(result: unknown): Record<string, unknown> | undefined {
-  if (result === undefined) return undefined;
-  const text = textFromToolResult(result);
-  const exitCode = toolExitCode(result);
-  if (typeof result === "string") return { stdout: result, content: result };
-  if (result === null) return {};
-  const source = record(result);
-  if (!source) return text ? { stdout: text, content: text } : undefined;
-  return {
-    ...source,
-    ...(text ? { stdout: text, content: text } : {}),
-    ...(exitCode !== undefined ? { exitCode } : {}),
-  };
-}
-
 function toolPath(args: unknown): string | undefined {
   return firstString(record(args), ["path", "filePath", "file", "relativePath"]);
 }
@@ -232,25 +210,29 @@ function toolSearchQuery(toolName: string, args: unknown): string | undefined {
     : firstString(source, ["query", "pattern"]);
 }
 
-function toolEditEntries(args: unknown): ReadonlyArray<Record<string, unknown>> | undefined {
-  const source = record(args);
-  if (!source) return undefined;
-  if (Array.isArray(source.edits)) {
-    return source.edits.flatMap((edit) => {
-      const entry = record(edit);
-      return entry ? [entry] : [];
-    });
+export function piToolActionKind(toolName: string): EngineToolActionKind {
+  switch (toolName) {
+    case "bash":
+      return "execute";
+    case "read":
+      return "read";
+    case "edit":
+      return "edit";
+    case "write":
+      return "write";
+    case "find":
+    case "grep":
+      return "search";
+    case "ls":
+      return "listFiles";
+    case "web_search":
+    case "source_check":
+    case "fetch_content":
+    case "get_search_content":
+      return "webAccess";
+    default:
+      return "unknown";
   }
-  const oldText = firstString(source, ["oldText", "old_string", "oldString"]);
-  const newText = firstString(source, ["newText", "new_string", "newString"]);
-  return oldText !== undefined || newText !== undefined
-    ? [
-        {
-          ...(oldText !== undefined ? { oldText } : {}),
-          ...(newText !== undefined ? { newText } : {}),
-        },
-      ]
-    : undefined;
 }
 
 export function piToolItemType(toolName: string): PiTrackedToolCall["itemType"] {
@@ -263,6 +245,9 @@ export function piToolItemType(toolName: string): PiTrackedToolCall["itemType"] 
     case "grep":
     case "find":
     case "web_search":
+    case "source_check":
+    case "fetch_content":
+    case "get_search_content":
       return "web_search";
     default:
       return "dynamic_tool_call";
@@ -294,27 +279,19 @@ export function piToolLifecycleData(input: {
   engineWebSurfaceId?: string;
 }): Record<string, unknown> {
   const { toolCallId, toolName, args } = input;
-  const rawOutput = toolRawOutput(input.result ?? input.partialResult);
+  const result = input.result ?? input.partialResult;
   const path = toolPath(args);
-  const query = toolSearchQuery(toolName, args);
-  const command = toolCommand(args);
-  const edits = toolEditEntries(args);
-  const content = record(args)?.content;
-  const unifiedDiff = firstString(record(rawOutput?.details), ["diff"]);
+  const actionKind = piToolActionKind(toolName);
   const base: Record<string, unknown> = {
-    toolCallId,
-    callId: toolCallId,
-    toolName,
-    name: toolName,
-    tool: toolName,
-    kind: toolName,
-    args,
-    input: args,
-    rawInput: args,
-    ...(rawOutput ? { rawOutput } : {}),
-    ...(input.partialResult !== undefined ? { partialResult: input.partialResult } : {}),
-    ...(input.result !== undefined ? { result: input.result } : {}),
-    ...(input.isError !== undefined ? { isError: input.isError } : {}),
+    kind: actionKind,
+    toolResultSnapshot: buildToolResultSnapshot({
+      toolCallId,
+      toolName,
+      actionKind,
+      args,
+      ...(result !== undefined ? { result } : {}),
+      ...(input.isError !== undefined ? { isError: input.isError } : {}),
+    }),
     ...(input.engineWebSurfaceStatus
       ? {
           engineWebSurface: engineWebSurfacePresentationMetadata(
@@ -327,12 +304,7 @@ export function piToolLifecycleData(input: {
 
   switch (toolName) {
     case "bash":
-      return {
-        ...base,
-        kind: "execute",
-        ...(command ? { command } : {}),
-        ...(rawOutput?.exitCode !== undefined ? { exitCode: rawOutput.exitCode } : {}),
-      };
+      return base;
     case "read":
       return {
         ...base,
@@ -340,9 +312,7 @@ export function piToolLifecycleData(input: {
         ...(path
           ? {
               path,
-              filePath: path,
-              files: [{ path }],
-              commandActions: [{ type: "read", name: "read", path }],
+              files: [path],
             }
           : {}),
       };
@@ -350,38 +320,26 @@ export function piToolLifecycleData(input: {
       return {
         ...base,
         kind: "edit",
-        ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
-        ...(edits ? { edits: edits.map((edit) => ({ ...edit, ...(path ? { path } : {}) })) } : {}),
-        ...(unifiedDiff ? { unifiedDiff } : {}),
+        ...(path ? { path, files: [path] } : {}),
       };
     case "write":
       return {
         ...base,
         kind: "write",
-        ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
-        ...(typeof content === "string" ? { content } : {}),
+        ...(path ? { path, files: [path] } : {}),
       };
     case "find":
     case "grep": {
-      const searchKind = toolName;
       return {
         ...base,
-        kind: "search",
-        searchKind,
-        ...(query ? { query } : {}),
+        searchKind: toolName,
         ...(path ? { path } : {}),
-        ...(query || path
-          ? { commandActions: [{ type: "search", name: searchKind, query, path }] }
-          : {}),
       };
     }
     case "ls":
       return {
         ...base,
-        kind: "listFiles",
-        ...(path
-          ? { path, query: path, commandActions: [{ type: "listFiles", name: "ls", path }] }
-          : {}),
+        ...(path ? { path } : {}),
       };
     default:
       return base;
@@ -416,7 +374,6 @@ export function mapPiMessageHistory(session: PiAgentSession): unknown[] {
             toolName: content.name,
             itemType: piToolItemType(content.name),
             title: piToolTitle(content.name, content.arguments),
-            args: content.arguments,
             data: piToolLifecycleData({
               toolCallId: content.id,
               toolName: content.name,
@@ -442,7 +399,6 @@ export function mapPiMessageHistory(session: PiAgentSession): unknown[] {
       toolName,
       itemType: piToolItemType(toolName),
       title: piToolTitle(toolName, args),
-      output: piToolTimelineDetail(safeResult),
       isError: message.isError,
       data: piToolLifecycleData({
         toolCallId: message.toolCallId,

@@ -7,6 +7,7 @@ import type { OrchestrationListEngineDeliveryBlockersResult } from "@harnessos/c
 import { ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
+import { translate } from "../i18n";
 import {
   describeThreadUnblockResult,
   isEngineDeliveryReconciliationConflict,
@@ -171,9 +172,12 @@ describe("describeThreadUnblockResult", () => {
       { kind: "already-clear" },
       { kind: "resolved-elsewhere" },
     ] as const) {
-      const notice = describeThreadUnblockResult(result);
+      const notice = describeThreadUnblockResult(result, (key) => translate("en", key));
       expect(notice.title.length).toBeGreaterThan(0);
-      expect(notice.description.toLowerCase()).toContain("resend");
+      expect(notice.description.toLowerCase()).toContain("failed message");
+      expect(
+        describeThreadUnblockResult(result, (key) => translate("zh-CN", key)).description,
+      ).toContain("失败消息");
     }
   });
 });

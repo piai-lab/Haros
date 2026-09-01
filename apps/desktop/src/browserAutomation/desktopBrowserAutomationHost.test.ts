@@ -351,7 +351,13 @@ const createManager = () => {
       Promise.resolve(getVisibleAutomationRuntime({ threadId: THREAD_ID, tabId: TAB_ID })),
     ),
     getEngineWebSurfaceContext: vi.fn(() => ({ locale: "en" as const, theme: "light" as const })),
-    presentEngineWebSurface: vi.fn(() => state),
+    presentEngineWebSurface: vi.fn(() => ({
+      ...state,
+      state,
+      presentationId: "presentation-1",
+      tabId: TAB_ID,
+    })),
+    isEngineWebSurfacePresentationSuppressed: vi.fn(() => false),
     reopenEngineWebSurface: vi.fn(() => state),
     settleEngineWebSurface: vi.fn(() => state),
     closeAutomationTab: vi.fn(() => ({ ...state, activeTabId: null, tabs: [] })),
@@ -360,6 +366,29 @@ const createManager = () => {
 };
 
 describe("DesktopBrowserAutomationHost", () => {
+  it("releases an Engine Web Surface when native runtime startup fails", async () => {
+    const { manager, raw } = createManager();
+    raw.getEngineWebSurfaceRuntime.mockRejectedValueOnce(new Error("runtime failed"));
+    const host = new DesktopBrowserAutomationHost(manager, {
+      requestOpenPanel: vi.fn(async () => ({ status: "visible" as const })),
+    });
+
+    await expect(
+      host.presentEngineWebSurface({
+        threadId: THREAD_ID,
+        surfaceId: "surface-runtime-failure",
+        url: "http://127.0.0.1:43123/?session=opaque",
+        title: "Haros Web Access",
+        expiresAt: Date.now() + 60_000,
+      }),
+    ).rejects.toThrow("runtime failed");
+    expect(raw.settleEngineWebSurface).toHaveBeenCalledTimes(1);
+    expect(raw.settleEngineWebSurface).toHaveBeenCalledWith({
+      threadId: THREAD_ID,
+      surfaceId: "surface-runtime-failure",
+    });
+  });
+
   it("blocks new DOM tools while a human annotation picker is interactive", async () => {
     const { manager, raw } = createManager();
     raw.isAnnotationInteractive.mockReturnValue(true);
@@ -616,7 +645,7 @@ describe("DesktopBrowserAutomationHost", () => {
     const second = await host.executeTool(request);
     expect(first).toEqual(second);
     expect(raw.prepareAutomationTab).toHaveBeenCalledTimes(1);
-    expect(openPanel).toHaveBeenCalledWith(THREAD_ID);
+    expect(openPanel).toHaveBeenCalledWith(THREAD_ID, TAB_ID);
     await expect(
       host.executeTool({
         sessionId: "session-1",
@@ -996,7 +1025,7 @@ describe("DesktopBrowserAutomationHost", () => {
         arguments: { idempotencyKey: "open-blank" },
       }),
     ).resolves.toMatchObject({ tabId: TAB_ID, finalUrl: "about:blank" });
-    expect(openPanel).toHaveBeenCalledWith(THREAD_ID);
+    expect(openPanel).toHaveBeenCalledWith(THREAD_ID, TAB_ID);
     expect(raw.getVisibleAutomationRuntime).not.toHaveBeenCalled();
   });
 
@@ -2227,7 +2256,7 @@ describe("DesktopBrowserAutomationHost", () => {
     });
 
     await vi.waitFor(() => {
-      expect(requestOpenPanel).toHaveBeenCalledWith(THREAD_ID);
+      expect(requestOpenPanel).toHaveBeenCalledWith(THREAD_ID, TAB_ID);
     });
     await expect(operation).resolves.toMatchObject({
       structuredContent: { tabId: TAB_ID },

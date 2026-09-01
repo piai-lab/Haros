@@ -7,6 +7,7 @@ import type { ThreadId } from "@harnessos/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { toastManager } from "../components/ui/toast";
+import { useI18n } from "../i18n";
 import { describeThreadUnblockResult, unblockThreadFromClient } from "../lib/threadUnblock";
 import { readNativeApi } from "../nativeApi";
 
@@ -21,6 +22,7 @@ export function useThreadUnblock(input: {
   readonly onUnblocked: (threadId: ThreadId) => void;
 }): { readonly unblockThread: () => void; readonly unblocking: boolean } {
   const { threadId, onUnblocked } = input;
+  const { t } = useI18n();
   const [unblockingThreadId, setUnblockingThreadId] = useState<ThreadId | null>(null);
   const inFlightThreadIdRef = useRef<ThreadId | null>(null);
   const mountedRef = useRef(true);
@@ -42,22 +44,20 @@ export function useThreadUnblock(input: {
         if (!api) throw new Error("Not connected to the Haros server.");
         const result = await unblockThreadFromClient(api.orchestration, threadId);
         onUnblocked(threadId);
-        toastManager.add(describeThreadUnblockResult(result));
+        toastManager.add(describeThreadUnblockResult(result, t));
       } catch (error) {
+        console.error("Could not unblock Engine delivery", error);
         toastManager.add({
           type: "error",
-          title: "Could not unblock thread",
-          description:
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred while clearing the engine failure.",
+          title: t("conversation.unblockTaskFailed"),
+          description: t("conversation.unblockTaskFailedDescription"),
         });
       } finally {
         inFlightThreadIdRef.current = null;
         if (mountedRef.current) setUnblockingThreadId(null);
       }
     })();
-  }, [onUnblocked, threadId]);
+  }, [onUnblocked, t, threadId]);
 
   return {
     unblockThread,

@@ -100,7 +100,14 @@ it.effect("imports Codex history through a engine-owned fork", () =>
       } as unknown as OrchestrationEngineShape,
       projectionSnapshotQuery: {
         getThreadDetailById: () => Effect.succeed(Option.some(makeCodexThread())),
-        getProjectShellById: () => Effect.succeed(Option.none()),
+        getProjectShellById: () =>
+          Effect.succeed(
+            Option.some({
+              id: projectId,
+              kind: "chat",
+              workspaceRoot: "/repo",
+            } as never),
+          ),
       } as unknown as ProjectionSnapshotQueryShape,
       engineAdapterRegistry: {
         getByEngine: () =>
@@ -122,6 +129,11 @@ it.effect("imports Codex history through a engine-owned fork", () =>
       {
         threadId,
         engine: "codex",
+        admission: {
+          productSurface: "chat",
+          workSurface: "chat",
+          projectContextRoot: null,
+        },
         engineSelection: { engine: "codex", model: "gpt-5.5" },
         forkSourceResumeCursor: { threadId: externalId },
         runtimeMode: "full-access",

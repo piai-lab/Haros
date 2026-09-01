@@ -137,6 +137,7 @@ import {
   OrchestrationThreadStreamItem,
 } from "./orchestration";
 import { EngineCompactThreadInput } from "./engine";
+import { ToolResultFullReadResult, ToolResultReadInput } from "./toolResults";
 import {
   HarosCustomModelServiceRemoveInput,
   HarosCustomModelServiceRemoveResult,
@@ -372,6 +373,15 @@ export const WsOrchestrationGetThreadDetailSnapshotRpc = Rpc.make(
   {
     payload: OrchestrationRpcSchemas.getThreadDetailSnapshot.input,
     success: OrchestrationRpcSchemas.getThreadDetailSnapshot.output,
+    error: WsRpcError,
+  },
+);
+
+export const WsOrchestrationUpdatePendingUserInputDraftRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft,
+  {
+    payload: OrchestrationRpcSchemas.updatePendingUserInputDraft.input,
+    success: OrchestrationRpcSchemas.updatePendingUserInputDraft.output,
     error: WsRpcError,
   },
 );
@@ -1197,6 +1207,12 @@ export const WsEngineCompactThreadRpc = Rpc.make(WS_METHODS.engineCompactThread,
   error: WsRpcError,
 });
 
+export const WsEngineReadToolResultRpc = Rpc.make(WS_METHODS.engineReadToolResult, {
+  payload: ToolResultReadInput,
+  success: ToolResultFullReadResult,
+  error: WsRpcError,
+});
+
 export const WsEngineListCommandsRpc = Rpc.make(WS_METHODS.engineListCommands, {
   payload: EngineListCommandsInput,
   success: EngineListCommandsResult,
@@ -1469,6 +1485,7 @@ const WsOrchestrationAndProjectRpcGroup = RpcGroup.make(
   WsOrchestrationGetSnapshotRpc,
   WsOrchestrationGetShellSnapshotRpc,
   WsOrchestrationGetThreadDetailSnapshotRpc,
+  WsOrchestrationUpdatePendingUserInputDraftRpc,
   WsOrchestrationRepairStateRpc,
   WsOrchestrationGetTurnDiffRpc,
   WsOrchestrationGetFullThreadDiffRpc,
@@ -1578,6 +1595,7 @@ const WsServerAndEngineRpcGroup = RpcGroup.make(
   WsEngineGetComposerCapabilitiesRpc,
   WsEngineGetExecutionCapabilitiesRpc,
   WsEngineCompactThreadRpc,
+  WsEngineReadToolResultRpc,
   WsEngineListCommandsRpc,
   WsEngineListSkillsRpc,
   WsEngineListSkillsCatalogRpc,

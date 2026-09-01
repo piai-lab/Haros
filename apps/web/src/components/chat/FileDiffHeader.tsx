@@ -14,6 +14,7 @@ import {
   summarizeFileDiffStats,
 } from "~/lib/diffRendering";
 import { cn } from "~/lib/utils";
+import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DiffStat } from "./DiffStatLabel";
 import { FileEntryIcon } from "./FileEntryIcon";
 
@@ -24,7 +25,10 @@ function stripPatchPathPrefix(path: string): string {
 export const FileDiffHeader = function FileDiffHeader(props: {
   fileDiff: FileDiffMetadata;
   theme: "light" | "dark";
-  /** Optional trailing chrome (file-actions menu, collapse chevron, etc.). */
+  collapsed?: boolean | undefined;
+  onToggleCollapsed?: (() => void) | undefined;
+  toggleLabel?: string | undefined;
+  /** Optional actions rendered beside, never inside, the disclosure button. */
   trailing?: ReactNode;
 }) {
   const filePath = resolveFileDiffPath(props.fileDiff);
@@ -39,15 +43,8 @@ export const FileDiffHeader = function FileDiffHeader(props: {
     isRename && props.fileDiff.prevName ? stripPatchPathPrefix(props.fileDiff.prevName) : null;
   const stat = summarizeFileDiffStats([props.fileDiff]);
 
-  return (
-    <div
-      data-diff-file-header=""
-      className={cn(
-        "font-system-ui flex w-full min-w-0 items-center gap-2 px-2.5 py-1.5",
-        "text-[length:var(--app-font-size-ui,12px)] text-foreground",
-      )}
-      title={prevPath ? `${prevPath} → ${filePath}` : filePath}
-    >
+  const identity = (
+    <>
       <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground/60">
         <FileEntryIcon
           pathValue={filePath}
@@ -79,8 +76,38 @@ export const FileDiffHeader = function FileDiffHeader(props: {
         deletions={stat.deletions}
         className="shrink-0 text-[10px] tabular-nums"
       />
+    </>
+  );
+  const title = prevPath ? `${prevPath} → ${filePath}` : filePath;
+
+  return (
+    <div
+      data-diff-file-header=""
+      data-diff-file-header-interactive={props.onToggleCollapsed ? "true" : "false"}
+      className={cn(
+        "font-system-ui flex w-full min-w-0 items-center text-[length:var(--app-font-size-ui,12px)] text-foreground",
+      )}
+      title={title}
+    >
+      {props.onToggleCollapsed ? (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2.5 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/60"
+          aria-expanded={!props.collapsed}
+          aria-label={props.toggleLabel ?? title}
+          onClick={props.onToggleCollapsed}
+        >
+          {identity}
+          <DisclosureChevron
+            open={!props.collapsed}
+            className="size-3.5 shrink-0 text-muted-foreground/55"
+          />
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5">{identity}</div>
+      )}
       {props.trailing ? (
-        <span className="inline-flex shrink-0 items-center gap-0.5">{props.trailing}</span>
+        <span className="inline-flex shrink-0 items-center gap-0.5 pr-1.5">{props.trailing}</span>
       ) : null}
     </div>
   );

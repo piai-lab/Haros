@@ -672,6 +672,7 @@ describe("computeStableMessagesTimelineRows", () => {
       createdAt: userMessage.createdAt,
       turnId: TurnId.makeUnsafe("stable-turn"),
       phase: "running",
+      hasFollowingResult: false,
       items: [{ kind: "work", id: firstEntry.id, entry: firstEntry }],
       elapsedMs: 1_000,
     };

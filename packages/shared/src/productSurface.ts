@@ -1,4 +1,4 @@
-import type { ProjectKind, EngineWorkSurface } from "@harnessos/contracts";
+import type { EngineSessionAdmission, EngineWorkSurface, ProjectKind } from "@harnessos/contracts";
 
 /**
  * Product-facing workspaces are derived from the authoritative Project kind.
@@ -26,4 +26,24 @@ export function productSurfaceToEngineWorkSurface(surface: ProductSurface): Engi
 
 export function projectKindToEngineWorkSurface(kind: ProjectKind | undefined): EngineWorkSurface {
   return productSurfaceToEngineWorkSurface(projectKindToProductSurface(kind));
+}
+
+/** Derive the complete Engine admission once from authoritative Product truth. */
+export function projectKindToEngineSessionAdmission(
+  kind: ProjectKind | undefined,
+  workspaceRoot: string,
+): EngineSessionAdmission {
+  const productSurface = projectKindToProductSurface(kind);
+  if (productSurface === "agent") {
+    return {
+      productSurface,
+      workSurface: "agent",
+      projectContextRoot: workspaceRoot,
+    };
+  }
+  return {
+    productSurface,
+    workSurface: "chat",
+    projectContextRoot: null,
+  };
 }

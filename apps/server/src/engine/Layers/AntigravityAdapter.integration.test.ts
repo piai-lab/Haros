@@ -291,6 +291,11 @@ describe("Antigravity CLI integration helpers", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-turn-lease");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -730,6 +735,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-tool-events");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -887,6 +897,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-tool-dedup");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1038,6 +1053,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-subagent-events");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1215,6 +1235,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-child-failure");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1357,6 +1382,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-interrupt-hung");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1426,6 +1456,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-stop-button");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1588,6 +1623,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-transcript");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -1927,6 +1967,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-background-stop");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -2079,6 +2124,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-final-drain");
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
@@ -2202,6 +2252,11 @@ describe("Antigravity background task helpers (#752)", () => {
           const sessionInput = {
             engine: "antigravity" as const,
             threadId,
+            admission: {
+              productSurface: "agent" as const,
+              workSurface: "agent" as const,
+              projectContextRoot: root,
+            },
             runtimeMode: "full-access" as const,
             cwd: root,
             engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
@@ -2322,6 +2377,11 @@ describe("Antigravity background task helpers (#752)", () => {
           const sessionInput = {
             engine: "antigravity" as const,
             threadId,
+            admission: {
+              productSurface: "agent" as const,
+              workSurface: "agent" as const,
+              projectContextRoot: root,
+            },
             runtimeMode: "full-access" as const,
             cwd: root,
             engineOptions: { antigravity: { binaryPath: "/fake/agy" } },

@@ -232,6 +232,7 @@ validationLayer("CodexAdapterLive validation", (it) => {
       const adapter = yield* CodexAdapter;
       const result = yield* adapter
         .startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "claude",
           threadId: asThreadId("thread-1"),
           runtimeMode: "full-access",
@@ -256,6 +257,7 @@ validationLayer("CodexAdapterLive validation", (it) => {
       const adapter = yield* CodexAdapter;
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         engine: "codex",
         threadId: asThreadId("thread-1"),
         lifecycleGeneration: "generation-start-a",
@@ -288,6 +290,7 @@ validationLayer("CodexAdapterLive validation", (it) => {
       const forkSourceResumeCursor = { threadId: "external-codex-thread" };
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         engine: "codex",
         threadId: asThreadId("thread-import"),
         forkSourceResumeCursor,

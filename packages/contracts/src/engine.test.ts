@@ -12,6 +12,11 @@ describe("EngineSessionStartInput", () => {
       threadId: "thread-1",
       engine: "codex",
       cwd: "/tmp/workspace",
+      admission: {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/workspace",
+      },
       engineSelection: {
         engine: "codex",
         model: "gpt-5.3-codex",
@@ -45,13 +50,57 @@ describe("EngineSessionStartInput", () => {
       threadId: "thread-agent",
       engine: "oa",
       cwd: "/tmp/workspace/packages/app",
-      workSurface: "agent",
-      projectContextRoot: "/tmp/workspace",
+      admission: {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/workspace",
+      },
       runtimeMode: "full-access",
     });
 
-    expect(parsed.workSurface).toBe("agent");
-    expect(parsed.projectContextRoot).toBe("/tmp/workspace");
+    expect(parsed.admission).toEqual({
+      productSurface: "agent",
+      workSurface: "agent",
+      projectContextRoot: "/tmp/workspace",
+    });
+  });
+
+  it("keeps Studio identity with Chat work authority", () => {
+    const parsed = decodeEngineSessionStartInput({
+      threadId: "thread-studio",
+      engine: "oa",
+      admission: {
+        productSurface: "studio",
+        workSurface: "chat",
+        projectContextRoot: null,
+      },
+      runtimeMode: "full-access",
+    });
+
+    expect(parsed.admission.productSurface).toBe("studio");
+    expect(parsed.admission.workSurface).toBe("chat");
+  });
+
+  it("rejects mixed or missing admission facts", () => {
+    expect(() =>
+      decodeEngineSessionStartInput({
+        threadId: "thread-mixed",
+        engine: "oa",
+        admission: {
+          productSurface: "chat",
+          workSurface: "chat",
+          projectContextRoot: "/tmp/workspace",
+        },
+        runtimeMode: "full-access",
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeEngineSessionStartInput({
+        threadId: "thread-missing",
+        engine: "oa",
+        runtimeMode: "full-access",
+      }),
+    ).toThrow();
   });
 
   it("rejects payloads without runtime mode", () => {
@@ -68,6 +117,11 @@ describe("EngineSessionStartInput", () => {
       threadId: "thread-1",
       engine: "claude",
       cwd: "/tmp/workspace",
+      admission: {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/workspace",
+      },
       engineSelection: {
         engine: "claude",
         model: "claude-sonnet-4-6",

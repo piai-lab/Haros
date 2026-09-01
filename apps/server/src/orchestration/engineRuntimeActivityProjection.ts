@@ -6,6 +6,7 @@ import {
   type EngineRuntimeEvent,
   ThreadId,
   TurnId,
+  TOOL_ACTIVITY_JSON_MAX_BYTES,
 } from "@harnessos/contracts";
 import { nonEmptyTrimmed } from "@harnessos/shared/text";
 
@@ -356,7 +357,24 @@ function boundActivityData(value: unknown): unknown {
 
 // Tool payloads power the timeline, but they must stay small enough for snapshots.
 function activityDataField(data: unknown): { readonly data?: unknown } {
-  return data === undefined ? {} : { data: boundActivityData(data) };
+  if (data === undefined) return {};
+  const source = isJsonObject(data) ? data : undefined;
+  const snapshot =
+    source && isJsonObject(source.toolResultSnapshot) ? source.toolResultSnapshot : undefined;
+  if (snapshot?.version === 1) {
+    const safe = toActivityPayload(data);
+    if (Buffer.byteLength(JSON.stringify(safe), "utf8") <= TOOL_ACTIVITY_JSON_MAX_BYTES) {
+      return { data: safe };
+    }
+    const minimal = toActivityPayload({
+      kind: typeof source?.kind === "string" ? source.kind : "unknown",
+      toolResultSnapshot: snapshot,
+    });
+    if (Buffer.byteLength(JSON.stringify(minimal), "utf8") <= TOOL_ACTIVITY_JSON_MAX_BYTES) {
+      return { data: minimal };
+    }
+  }
+  return { data: boundActivityData(data) };
 }
 
 // Keep MCP progress payloads available to the web timeline so it can render the specific tool call.

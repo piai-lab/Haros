@@ -131,6 +131,7 @@ function createEngineServiceHarness() {
       }),
     rollbackConversation: () => unsupported(),
     compactThread: () => unsupported(),
+    readToolResult: () => Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
     closeRuntimeEvents: Effect.void,
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
   };

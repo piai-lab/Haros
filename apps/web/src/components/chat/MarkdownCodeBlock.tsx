@@ -3,7 +3,8 @@
 // Layer: Web chat presentation internals
 
 import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
-import type { ReactNode } from "react";
+import { cn } from "~/lib/utils";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
 import { useEffect, useRef, useState } from "react";
 import { CentralIcon } from "~/lib/central-icons";
 import { getFileIconName } from "../../file-icons";
@@ -33,6 +34,26 @@ function CodeBlockHeaderTitle({ fence }: { fence: CodeFenceInfo }) {
   return <span className="chat-markdown-codeblock__lang">{fence.language}</span>;
 }
 
+type CodeBlockDivProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
+};
+
+export interface MarkdownCodeBlockPresentationProps {
+  beforeCopyActions?: ReactNode;
+  wrapControl?: boolean;
+  wrapped?: boolean;
+  defaultWrapped?: boolean;
+  onWrappedChange?: (wrapped: boolean) => void;
+  presentationId?: string;
+  variant?: "code" | "diagram";
+  copyEnabled?: boolean;
+  copyText?: string;
+  copyLabel?: string;
+  rootProps?: CodeBlockDivProps;
+  bodyProps?: CodeBlockDivProps;
+  bodyRef?: Ref<HTMLDivElement>;
+}
+
 export function MarkdownCodeBlock({
   code,
   fence,
@@ -43,28 +64,84 @@ export function MarkdownCodeBlock({
   presentationId,
   variant = "code",
   copyEnabled = true,
+  copyText,
   copyLabel,
+  defaultWrapped,
+  onWrappedChange,
+  rootProps,
+  bodyProps,
+  bodyRef,
 }: {
   code: string;
   fence: CodeFenceInfo;
   children: ReactNode;
-  beforeCopyActions?: ReactNode;
-  wrapControl?: boolean;
-  wrapped?: boolean;
-  presentationId?: string;
-  variant?: "code" | "diagram";
-  copyEnabled?: boolean;
-  copyLabel?: string;
+} & MarkdownCodeBlockPresentationProps) {
+  return (
+    <CodeBlockSurface
+      title={variant === "code" ? <CodeBlockHeaderTitle fence={fence} /> : null}
+      copyText={copyText ?? code}
+      beforeCopyActions={beforeCopyActions}
+      wrapped={wrappedProp}
+      presentationId={presentationId}
+      variant={variant}
+      copyEnabled={copyEnabled}
+      copyLabel={copyLabel}
+      wrapControl={wrapControlProp}
+      defaultWrapped={defaultWrapped}
+      onWrappedChange={onWrappedChange}
+      rootProps={rootProps}
+      bodyProps={bodyProps}
+      bodyRef={bodyRef}
+    >
+      {children}
+    </CodeBlockSurface>
+  );
+}
+
+export function CodeBlockSurface({
+  title,
+  copyText,
+  children,
+  beforeCopyActions,
+  wrapControl: wrapControlProp,
+  defaultWrapped: defaultWrappedProp,
+  wrapped: wrappedProp,
+  onWrappedChange,
+  presentationId,
+  variant = "code",
+  copyEnabled: copyEnabledProp,
+  copyLabel,
+  rootProps,
+  bodyProps,
+  bodyRef,
+}: {
+  title: ReactNode;
+  copyText?: string | undefined;
+  children: ReactNode;
+  beforeCopyActions?: ReactNode | undefined;
+  wrapControl?: boolean | undefined;
+  defaultWrapped?: boolean | undefined;
+  wrapped?: boolean | undefined;
+  onWrappedChange?: ((wrapped: boolean) => void) | undefined;
+  presentationId?: string | undefined;
+  variant?: "code" | "diagram" | undefined;
+  copyEnabled?: boolean | undefined;
+  copyLabel?: string | undefined;
+  rootProps?: CodeBlockDivProps | undefined;
+  bodyProps?: CodeBlockDivProps | undefined;
+  bodyRef?: Ref<HTMLDivElement> | undefined;
 }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [wrap, setWrap] = useState(false);
+  const [uncontrolledWrapped, setUncontrolledWrapped] = useState(defaultWrappedProp ?? false);
   const wrapControl = wrapControlProp ?? true;
-  const wrapped = wrappedProp ?? wrap;
+  const wrapped = wrappedProp ?? uncontrolledWrapped;
+  const copyEnabled = copyEnabledProp ?? copyText !== undefined;
   const showHeader = variant === "code" || Boolean(beforeCopyActions) || wrapControl || copyEnabled;
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleCopy = () => {
-    void copyTextToClipboard(code)
+    if (copyText === undefined) return;
+    void copyTextToClipboard(copyText)
       .then(() => {
         if (copiedTimerRef.current != null) clearTimeout(copiedTimerRef.current);
         setCopied(true);
@@ -88,24 +165,29 @@ export function MarkdownCodeBlock({
 
   return (
     <div
-      className="chat-markdown-codeblock"
+      {...rootProps}
+      className={cn("chat-markdown-codeblock", rootProps?.className)}
       data-wrap={wrapped ? "true" : "false"}
       data-variant={variant}
       {...(presentationId ? { "data-mermaid-presentation": presentationId } : {})}
     >
       {showHeader ? (
         <div className="chat-markdown-codeblock__header">
-          {variant === "code" ? <CodeBlockHeaderTitle fence={fence} /> : null}
+          {variant === "code" ? title : null}
           <div className="chat-markdown-codeblock__actions">
             {beforeCopyActions}
             {wrapControl ? (
               <IconButton
                 className="chat-markdown-codeblock__action"
-                onClick={() => setWrap((previous) => !previous)}
-                title={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-                label={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-                aria-pressed={wrap}
-                data-active={wrap ? "true" : "false"}
+                onClick={() => {
+                  const next = !wrapped;
+                  if (wrappedProp === undefined) setUncontrolledWrapped(next);
+                  onWrappedChange?.(next);
+                }}
+                title={wrapped ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
+                label={wrapped ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
+                aria-pressed={wrapped}
+                data-active={wrapped ? "true" : "false"}
                 size="icon-xs"
                 variant="ghost"
               >
@@ -127,7 +209,13 @@ export function MarkdownCodeBlock({
           </div>
         </div>
       ) : null}
-      <div className="chat-markdown-codeblock__body">{children}</div>
+      <div
+        {...bodyProps}
+        ref={bodyRef}
+        className={cn("chat-markdown-codeblock__body", bodyProps?.className)}
+      >
+        {children}
+      </div>
     </div>
   );
 }

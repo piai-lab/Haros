@@ -561,6 +561,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -602,6 +603,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -613,6 +615,7 @@ describe("OpenCode host policy delivery", () => {
           engineSelection,
         });
         const resumed = yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -656,6 +659,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -670,6 +674,7 @@ describe("OpenCode host policy delivery", () => {
         );
         const [failedSession] = yield* adapter.listSessions();
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -708,6 +713,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -727,6 +733,7 @@ describe("OpenCode host policy delivery", () => {
           };
         };
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -765,6 +772,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -777,6 +785,7 @@ describe("OpenCode host policy delivery", () => {
         });
         const firstCursor = first.resumeCursor as Record<string, unknown>;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -814,6 +823,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -832,6 +842,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1060,6 +1071,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         }
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-active"),
           runtimeMode: "full-access",
@@ -1096,6 +1108,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-managed-cwd"),
           runtimeMode: "full-access",
@@ -1128,6 +1141,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId,
             runtimeMode: "full-access",
@@ -1193,6 +1211,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId,
             runtimeMode: "full-access",
@@ -1279,6 +1302,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.stopSession(threadId);
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1322,6 +1346,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1381,6 +1406,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-gateway-setup-failed");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1418,6 +1444,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* KiloAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "kilo",
           threadId,
           runtimeMode: "full-access",
@@ -1456,6 +1483,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* KiloAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "kilo",
           threadId,
           runtimeMode: "full-access",
@@ -1498,6 +1526,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* KiloAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "kilo",
             threadId,
             runtimeMode: "full-access",
@@ -1583,6 +1616,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1622,6 +1656,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         return yield* Effect.exit(
           adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId: asThreadId("thread-gateway-failed-start"),
             runtimeMode: "full-access",
@@ -1661,6 +1700,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const startFiber = yield* adapter
           .startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId: asThreadId("thread-gateway-interrupted-start"),
             runtimeMode: "full-access",
@@ -1704,6 +1748,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const startFiber = yield* adapter
           .startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId,
             runtimeMode: "full-access",
@@ -1746,6 +1795,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         return yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-resume-cwd"),
           runtimeMode: "full-access",
@@ -1781,6 +1831,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-resume-permissions");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -1830,6 +1881,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.gen(function* () {
           const adapter = yield* OpenCodeAdapter;
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId: asThreadId("thread-resume-plan-permission-failure"),
             runtimeMode: "full-access",
@@ -1946,6 +2002,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         }
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -2016,6 +2073,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-model-pin"),
           runtimeMode: "full-access",
@@ -2062,6 +2120,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-1"),
           lifecycleGeneration: "generation-opencode-a",
@@ -2156,6 +2215,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "full-access",
@@ -2222,6 +2282,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-ordered-events"),
           runtimeMode: "full-access",
@@ -2359,6 +2420,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-role-late-delta"),
           runtimeMode: "full-access",
@@ -2480,6 +2542,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-synthetic-kilo-parts"),
           runtimeMode: "full-access",
@@ -2618,6 +2681,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-plan-events"),
           runtimeMode: "full-access",
@@ -2706,6 +2770,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-default-build-agent"),
           runtimeMode: "full-access",
@@ -2745,6 +2810,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-docx-attachment"),
           runtimeMode: "full-access",
@@ -2801,6 +2867,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-plan-agent"),
           runtimeMode: "full-access",
@@ -2841,6 +2908,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-stale-plan-agent"),
           runtimeMode: "full-access",
@@ -2884,6 +2952,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-explicit-agent"),
           runtimeMode: "full-access",
@@ -2940,6 +3009,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-default-tagged-plan"),
           runtimeMode: "full-access",
@@ -3037,6 +3107,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-usage-events"),
           runtimeMode: "full-access",
@@ -3115,6 +3186,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-usage-dedup"),
           runtimeMode: "full-access",
@@ -3172,6 +3244,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-usage-unknown-limit"),
           runtimeMode: "full-access",
@@ -3240,6 +3313,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-usage-zero"),
           runtimeMode: "full-access",
@@ -3325,6 +3399,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-todo-updated"),
           runtimeMode: "full-access",
@@ -3399,6 +3474,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-next-events"),
           runtimeMode: "full-access",
@@ -3498,7 +3574,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-plan-permissions");
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "Plan the change",
@@ -3557,7 +3638,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-child-permission");
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "Delegate a read-only check",
@@ -3616,6 +3702,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-resumed-child-permission"),
           runtimeMode: "full-access",
@@ -3666,6 +3753,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-partial-reconciliation"),
           runtimeMode: "full-access",
@@ -3706,6 +3794,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-event-reconnect"),
           runtimeMode: "full-access",
@@ -3749,7 +3838,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         const threadId = asThreadId("thread-full-access-reply-failure");
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "Run a command",
@@ -3812,6 +3906,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-full-access-permission"),
           runtimeMode: "full-access",
@@ -3933,6 +4028,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-late-permission-echo"),
           runtimeMode: "full-access",
@@ -4077,6 +4173,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             Effect.forkChild,
           );
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             engine: "opencode",
             threadId: asThreadId("thread-opencode-question-cancel"),
             runtimeMode: "full-access",
@@ -4139,6 +4240,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-opencode-invalid-question"),
           runtimeMode: "full-access",
@@ -4197,6 +4299,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-approval-required-permission"),
           runtimeMode: "approval-required",
@@ -4279,6 +4382,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-ack");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
@@ -4453,6 +4557,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-race");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
@@ -4553,6 +4658,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
@@ -4638,6 +4744,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-still-pending");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
@@ -4736,6 +4843,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-list-failure");
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
@@ -4812,6 +4920,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-next-tool-call"),
           runtimeMode: "full-access",
@@ -4915,6 +5024,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-child-session-tools"),
           runtimeMode: "full-access",
@@ -5086,6 +5196,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-next-shell"),
           runtimeMode: "full-access",
@@ -5181,6 +5292,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-stalled-prompt-async"),
           runtimeMode: "full-access",
@@ -5242,6 +5354,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-rejected-prompt-async"),
           runtimeMode: "full-access",
@@ -5313,6 +5426,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           engine: "opencode",
           threadId: asThreadId("thread-session-idle"),
           runtimeMode: "full-access",
@@ -5417,7 +5531,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-early-idle-final-assistant");
 
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "hello",
@@ -5548,7 +5667,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-final-before-parts");
 
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "hello",
@@ -5642,7 +5766,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-late-multipart-plan");
 
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "plan this",
@@ -5766,7 +5895,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-mixed-final-snapshot");
 
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         yield* adapter.sendTurn({
           threadId,
           input: "plan this",
@@ -5908,7 +6042,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-stale-recovery");
 
-        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          engine: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+        });
         const firstTurn = yield* adapter.sendTurn({
           threadId,
           input: "first",

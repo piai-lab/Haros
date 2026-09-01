@@ -24,9 +24,10 @@ describe("inspectable tool details", () => {
         label: "Web_search",
         toolTitle: "Web search",
         toolName: "web_search",
+        toolActionKind: "webAccess",
       }),
     ).toEqual({
-      kind: "tool",
+      kind: "web-access",
       title: "Web search",
       toolName: "web_search",
       input: JSON.stringify({ query: "AI agent memory frameworks", engine: "auto" }, null, 2),
@@ -35,12 +36,12 @@ describe("inspectable tool details", () => {
   });
 
   it("uses the safe invocation field as the compact row preview", () => {
-    expect(deriveToolInvocationPreview({ payload, toolName: "Web_search" })).toBe(
+    expect(deriveToolInvocationPreview({ payload, toolActionKind: "webAccess" })).toBe(
       "AI agent memory frameworks",
     );
   });
 
   it("does not expose arbitrary unknown-tool inputs", () => {
-    expect(deriveToolInvocationPreview({ payload, toolName: "foreign_tool" })).toBeNull();
+    expect(deriveToolInvocationPreview({ payload, toolActionKind: "unknown" })).toBeNull();
   });
 });

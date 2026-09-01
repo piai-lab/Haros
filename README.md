@@ -74,6 +74,11 @@ local setup. A successful local build is unsigned source software, not an offici
 - See [Contributing](CONTRIBUTING.md) before proposing a change.
 - Use [Support](SUPPORT.md) for help and [Security](SECURITY.md) for private reports.
 
+On macOS, `bun run dist:desktop:local-app` builds a replaceable unsigned `.app` under
+`apps/desktop/.electron-runtime/local-app/`. This local-only path never signs, notarizes, publishes,
+or creates updater metadata. Passing an explicit output directory keeps the normal no-overwrite
+artifact rule.
+
 <details>
 <summary>Development checks and repository map</summary>
 

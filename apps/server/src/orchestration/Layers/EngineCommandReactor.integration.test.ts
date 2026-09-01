@@ -512,6 +512,8 @@ describe("EngineCommandReactor", () => {
         }),
       rollbackConversation,
       compactThread: () => unsupported(),
+      readToolResult: () =>
+        Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
       closeRuntimeEvents: Effect.void,
       streamEvents: Stream.fromPubSub(runtimeEventPubSub),
     };
@@ -6302,7 +6304,8 @@ describe("EngineCommandReactor", () => {
     await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
     const thread = await readHarnessThread(harness);
     expect(thread?.session?.activeTurnId).toBeNull();
-    expect(thread?.session?.lastError).toContain("did not respond within 25ms");
+    expect(thread?.session?.lastError).toContain("The message was not sent to the Engine.");
+    expect(thread?.session?.lastError).not.toContain("did not respond within 25ms");
     await waitFor(async () =>
       Boolean(
         (await readHarnessThread(harness))?.activities.some(
@@ -6312,6 +6315,337 @@ describe("EngineCommandReactor", () => {
         ),
       ),
     );
+    const failureActivity = (await readHarnessThread(harness))?.activities.find(
+      (activity) => activity.kind === "engine.turn.start.failed",
+    );
+    expect(failureActivity).toMatchObject({
+      summary: "Message was not sent to the Engine",
+      payload: {
+        messageId: "user-message-start-times-out",
+        engine: "codex",
+        deliverySequence: expect.any(Number),
+        runtimeGeneration: null,
+        settlementStatus: "uncertain",
+      },
+    });
+    expect((failureActivity?.payload as Record<string, unknown> | null)?.detail).toContain(
+      "did not respond within 25ms",
+    );
+  });
+
+  it("surfaces exhausted safe retries once and leaves unrelated threads runnable", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const failedThreadId = ThreadId.makeUnsafe("thread-1");
+    let projectionFailures = 0;
+    harness.interceptEngineDispatch((command) => {
+      if (
+        command.type !== "thread.session.set" ||
+        command.threadId !== failedThreadId ||
+        command.session.status !== "ready"
+      ) {
+        return undefined;
+      }
+      projectionFailures += 1;
+      return Effect.fail(
+        new PersistenceSqlError({
+          operation: "ProjectionThreadSession.set",
+          detail: "injected terminal projection failure",
+        }),
+      );
+    });
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-start-safe-retry-exhausted"),
+        threadId: failedThreadId,
+        message: {
+          messageId: asMessageId("user-message-safe-retry-exhausted"),
+          role: "user",
+          text: "hello stalled projection",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    expect(projectionFailures).toBe(3);
+    const failedThread = await readHarnessThread(harness);
+    expect(failedThread?.session).toMatchObject({
+      status: "error",
+      activeTurnId: null,
+      lastError: expect.stringContaining("The message was not sent to the Engine."),
+    });
+    const activities = failedThread?.activities.filter(
+      (activity) => activity.kind === "engine.turn.start.failed",
+    );
+    expect(activities).toHaveLength(1);
+    expect(activities?.[0]).toMatchObject({
+      id: expect.stringContaining("engine-delivery:"),
+      summary: "Message was not sent to the Engine",
+      payload: {
+        messageId: "user-message-safe-retry-exhausted",
+        engine: "codex",
+        deliverySequence: expect.any(Number),
+      },
+    });
+    expect((activities?.[0]?.payload as Record<string, unknown> | null)?.detail).toContain(
+      "injected terminal projection failure",
+    );
+
+    const healthyThreadId = ThreadId.makeUnsafe("thread-2");
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-create-unrelated-thread"),
+        threadId: healthyThreadId,
+        projectId: asProjectId("project-1"),
+        title: "Unrelated thread",
+        engineSelection: { engine: "codex", model: "gpt-5-codex" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        branch: null,
+        worktreePath: null,
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-unrelated-turn-start"),
+        threadId: healthyThreadId,
+        message: {
+          messageId: asMessageId("user-message-unrelated"),
+          role: "user",
+          text: "continue independently",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() =>
+      harness.sendTurn.mock.calls.some(([input]) => input.threadId === healthyThreadId),
+    );
+  });
+
+  it("never advances the delivery cursor when the visible terminal fact cannot persist", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    harness.sendTurn.mockImplementationOnce(() =>
+      Effect.fail(
+        new EngineAdapterRequestError({
+          engine: "codex",
+          method: "turn/start",
+          detail: "runtime acceptance is uncertain",
+        }),
+      ),
+    );
+    harness.interceptEngineDispatch((command) => {
+      if (
+        command.type !== "thread.activity.append" ||
+        !String(command.commandId).startsWith("server:engine-terminal-turn-start-activity:")
+      ) {
+        return undefined;
+      }
+      return Effect.fail(
+        new PersistenceSqlError({
+          operation: "ProjectionThreadActivity.append",
+          detail: "injected visible terminal fact failure",
+        }),
+      );
+    });
+
+    const requested = await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-terminal-fact-must-precede-cursor"),
+        threadId,
+        message: {
+          messageId: asMessageId("message-terminal-fact-must-precede-cursor"),
+          role: "user",
+          text: "do not acknowledge an invisible failure",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => {
+      const blocker = await Effect.runPromise(
+        harness.deliveryRepository.firstBlockingDeliveryForThread({
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+          threadId,
+        }),
+      );
+      return Option.isSome(blocker) && blocker.value.state === "uncertain";
+    });
+    const consumer = await Effect.runPromise(
+      harness.deliveryRepository.getConsumerState(ENGINE_COMMAND_REACTOR_CONSUMER),
+    );
+    expect(consumer.pipe(Option.getOrThrow).lastAckedSequence).toBeLessThan(requested.sequence);
+    expect(
+      (await readHarnessThread(harness))?.activities.some(
+        (activity) => activity.id === `engine-delivery:${requested.sequence}:turn-start-failed`,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not let a late terminal start failure overwrite a newer running Turn", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const newerTurnId = asTurnId("turn-newer-owner");
+    harness.sendTurn.mockImplementationOnce(() =>
+      Effect.gen(function* () {
+        yield* harness.engine
+          .dispatch({
+            type: "thread.session.set",
+            commandId: CommandId.makeUnsafe("cmd-newer-running-session"),
+            threadId,
+            session: {
+              threadId,
+              status: "running",
+              engine: "codex",
+              runtimeMode: "approval-required",
+              activeTurnId: newerTurnId,
+              lastError: null,
+              updatedAt: new Date(Date.now() + 1_000).toISOString(),
+            },
+            createdAt: new Date(Date.now() + 1_000).toISOString(),
+          })
+          .pipe(Effect.orDie);
+        return yield* Effect.fail(
+          new EngineAdapterRequestError({
+            engine: "codex",
+            method: "turn/start",
+            detail: "late failure from an older dispatch",
+          }),
+        );
+      }),
+    );
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-start-late-failure"),
+        threadId,
+        message: {
+          messageId: asMessageId("user-message-late-failure"),
+          role: "user",
+          text: "new ownership must survive",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => {
+      const blocker = await Effect.runPromise(
+        harness.deliveryRepository.firstBlockingDeliveryForThread({
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+          threadId,
+        }),
+      );
+      return Option.isSome(blocker) && blocker.value.state === "uncertain";
+    });
+    expect((await readHarnessThread(harness))?.session).toMatchObject({
+      status: "running",
+      activeTurnId: newerTurnId,
+      lastError: null,
+    });
+    expect(
+      (await readHarnessThread(harness))?.activities.filter(
+        (activity) => activity.kind === "engine.turn.start.failed",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("restores a correlated terminal turn-start fact for a startup blocker", async () => {
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const messageId = asMessageId("message-terminal-before-restart");
+    const requested = await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-terminal-before-restart"),
+        threadId,
+        message: {
+          messageId,
+          role: "user",
+          text: "restore my terminal failure",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.deliveryRepository.claim({
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+        eventSequence: requested.sequence,
+        threadId,
+        claimOwner: "crashed-terminal-owner",
+        claimedAt: now,
+        claimExpiresAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.deliveryRepository.markTerminalFailure({
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+        eventSequence: requested.sequence,
+        expectedClaimOwner: "crashed-terminal-owner",
+        state: "uncertain",
+        error: "runtime acceptance remained ambiguous across restart",
+        updatedAt: now,
+      }),
+    );
+    const events = Array.from(
+      await Effect.runPromise(Stream.runCollect(harness.engine.readEvents(0))),
+    );
+    for (const event of events) {
+      await Effect.runPromise(
+        harness.deliveryRepository.advanceCursor({
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+          eventSequence: event.sequence,
+          updatedAt: now,
+        }),
+      );
+    }
+
+    await harness.startReactor();
+    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    const thread = await readHarnessThread(harness);
+    const activities = thread?.activities.filter(
+      (activity) => activity.kind === "engine.turn.start.failed",
+    );
+    expect(activities).toHaveLength(1);
+    expect(activities?.[0]).toMatchObject({
+      id: `engine-delivery:${requested.sequence}:turn-start-failed`,
+      summary: "Message was not sent to the Engine",
+      payload: {
+        messageId,
+        engine: "codex",
+        deliverySequence: requested.sequence,
+        settlementStatus: "uncertain",
+      },
+    });
+    expect((activities?.[0]?.payload as Record<string, unknown> | null)?.detail).toContain(
+      "runtime acceptance remained ambiguous",
+    );
+    expect(harness.sendTurn).not.toHaveBeenCalled();
   });
 
   it("keeps Product work-surface fields out of non-Haros engine bindings", async () => {
@@ -6369,8 +6703,11 @@ describe("EngineCommandReactor", () => {
 
     await waitFor(() => harness.startSession.mock.calls.length === 1);
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
-      workSurface: "agent",
-      projectContextRoot: "/tmp/provider-project",
+      admission: {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/provider-project",
+      },
     });
   });
 
@@ -6439,7 +6776,11 @@ describe("EngineCommandReactor", () => {
         model: "deepseek/deepseek-chat",
       },
       runtimeMode: "full-access",
-      workSurface: "chat",
+      admission: {
+        productSurface: "chat",
+        workSurface: "chat",
+        projectContextRoot: null,
+      },
     });
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("projectContextRoot");

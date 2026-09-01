@@ -11,6 +11,8 @@ describe("routeSingleBrowserPanelOpenRequest", () => {
     const calls: string[] = [];
 
     routeSingleBrowserPanelOpenRequest({
+      presentationId: "ordinary-reveal",
+      acquireLease: false,
       currentThreadId: CURRENT_THREAD_ID,
       requestedThreadId: CURRENT_THREAD_ID,
       requestImmediateBrowserHydration: () => calls.push("hydrate"),
@@ -24,6 +26,8 @@ describe("routeSingleBrowserPanelOpenRequest", () => {
     const calls: string[] = [];
 
     routeSingleBrowserPanelOpenRequest({
+      presentationId: "ordinary-reveal",
+      acquireLease: false,
       currentThreadId: CURRENT_THREAD_ID,
       requestedThreadId: REQUESTED_THREAD_ID,
       requestImmediateBrowserHydration: () => calls.push("hydrate"),

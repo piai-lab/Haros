@@ -59,6 +59,13 @@ export const DESKTOP_IPC_CHANNELS = {
     attachWebview: "desktop:browser-attach-webview",
     detachWebview: "desktop:browser-detach-webview",
     requestOpenPanel: "desktop:browser-use-request-open-panel",
+    respondOpenPanel: "desktop:browser-use-respond-open-panel",
+    presentationRelease: "desktop:browser-engine-surface-presentation-release",
+    acknowledgePresentationRelease:
+      "desktop:browser-engine-surface-acknowledge-presentation-release",
+    suppressPresentations: "desktop:browser-engine-surface-suppress-presentations",
+    replayPresentations: "desktop:browser-engine-surface-replay-presentations",
+    closeDeletedThreadResources: "desktop:browser-close-deleted-thread-resources",
     copyLink: "desktop:browser-copy-link",
     requestCopyLink: "desktop:browser-request-copy-link",
     copyScreenshotToClipboard: "desktop:browser-copy-screenshot-to-clipboard",

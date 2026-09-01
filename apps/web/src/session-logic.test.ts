@@ -7,6 +7,7 @@ import {
   deriveActiveTaskListState,
   deriveVisibleActiveTaskListState,
   deriveActiveWorkStartedAt,
+  derivePhase,
   findLatestProposedPlan,
   findSidebarProposedPlan,
   hasActionableProposedPlan,
@@ -16,6 +17,22 @@ import {
   ENGINE_OPTIONS,
 } from "./session-logic";
 import { makeActivity } from "./storeTestFixtures";
+
+describe("derivePhase", () => {
+  it("returns a terminal Session error to an editable ready surface", () => {
+    expect(
+      derivePhase({
+        engine: "codex",
+        status: "error",
+        orchestrationStatus: "error",
+        activeTurnId: undefined,
+        createdAt: "2026-09-01T00:00:00.000Z",
+        updatedAt: "2026-09-01T00:00:01.000Z",
+        lastError: "Message was not sent",
+      }),
+    ).toBe("ready");
+  });
+});
 
 describe("deriveActiveTaskListState", () => {
   it("returns the latest plan update for the active turn", () => {

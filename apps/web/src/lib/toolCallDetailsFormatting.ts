@@ -17,20 +17,48 @@ export function formatShellCommand(command: string): string {
 export function formatShellTranscript(
   command: string,
   output: WorkLogToolOutputDetails | undefined,
+  options?: {
+    stdout?: string;
+    stderr?: string;
+    clippedNotice?: string;
+  },
 ): string {
-  const outputText = formatToolOutputText(output);
+  const outputText = formatToolOutputText(output, options);
   return outputText
     ? `${formatShellCommand(command)}\n\n${outputText}`
     : formatShellCommand(command);
 }
 
-export function formatToolOutputText(output: WorkLogToolOutputDetails | undefined): string | null {
+function outputPart(
+  value: string | undefined,
+  preview: WorkLogToolOutputDetails["preview"],
+  clippedNotice: string | undefined,
+): string | null {
+  if (typeof value === "string" && value.trim().length > 0) return value.trimEnd();
+  if (!preview) return null;
+  const gap = preview.clipped && clippedNotice ? `\n${clippedNotice}\n` : "";
+  return `${preview.head}${gap}${preview.tail ?? ""}`.trimEnd();
+}
+
+export function formatToolOutputText(
+  output: WorkLogToolOutputDetails | undefined,
+  options?: {
+    stdout?: string;
+    stderr?: string;
+    clippedNotice?: string;
+  },
+): string | null {
   if (!output) {
     return null;
   }
-  const parts = [output.output, output.stdout, output.stderr]
-    .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
-    .map((part) => part.trimEnd());
+  const productOutput = outputPart(output.output, output.preview, options?.clippedNotice);
+  const stdout = outputPart(output.stdout, output.stdoutPreview, options?.clippedNotice);
+  const stderr = outputPart(output.stderr, output.stderrPreview, options?.clippedNotice);
+  const parts = [
+    productOutput,
+    stdout ? `${options?.stdout ? `${options.stdout}\n` : ""}${stdout}` : null,
+    stderr ? `${options?.stderr ? `${options.stderr}\n` : ""}${stderr}` : null,
+  ].filter((part): part is string => part !== null && part.trim().length > 0);
   return parts.length > 0 ? parts.join("\n\n") : null;
 }
 

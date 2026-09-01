@@ -502,6 +502,11 @@ function redactValue(value: unknown, seen = new WeakSet<object>(), depth = 0): u
   return redacted;
 }
 
+/** Shared credential-blind projection for bounded Product evidence. */
+export function redactSensitiveEngineData(value: unknown): unknown {
+  return redactValue(value);
+}
+
 export function sanitizeUnmappedProviderData(value: unknown): unknown {
   const redacted = redactValue(value);
   const serialized = JSON.stringify(redacted) ?? "null";

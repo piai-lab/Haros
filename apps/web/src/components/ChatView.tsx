@@ -526,6 +526,8 @@ import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssis
 import {
   scrollTranscriptToSettledEnd,
   stopTranscriptScrollAtCurrentOffset,
+  transcriptGestureTakesViewportOwnership,
+  type TranscriptViewportGesture,
 } from "./chat/transcriptScroll";
 import {
   dispatchThreadMarkerAdd,
@@ -5299,7 +5301,7 @@ export default function ChatView({
   // fire immediately after an explicit scrollToEnd.
   const programmaticScrollUntilRef = useRef(0);
   // The arrow's smooth jump is followed by one exact settle after LegendList
-  // has measured the tail. A user gesture invalidates that pending settle.
+  // has measured the tail. A confirmed reader scroll invalidates that pending settle.
   const settledScrollRequestRef = useRef(0);
   const settledScrollInFlightRef = useRef(false);
   // Smooth only the first auto-follow after a send; live stream re-sticks stay cheap.
@@ -5315,7 +5317,7 @@ export default function ChatView({
     showScrollDebouncer.current.cancel();
     setShowScrollToBottom(false);
   }, []);
-  const clearTranscriptAutoFollow = useCallback(() => {
+  const releaseTranscriptViewportOwnership = useCallback(() => {
     const settledScrollTarget = settledScrollInFlightRef.current ? legendListRef.current : null;
     autoFollowThreadIdRef.current = null;
     animateNextAutoFollowScrollRef.current = false;
@@ -5329,6 +5331,13 @@ export default function ChatView({
       void stopTranscriptScrollAtCurrentOffset(settledScrollTarget);
     }
   }, []);
+  const handleTranscriptViewportGesture = useCallback(
+    (gesture: TranscriptViewportGesture) => {
+      if (!transcriptGestureTakesViewportOwnership(gesture)) return;
+      releaseTranscriptViewportOwnership();
+    },
+    [releaseTranscriptViewportOwnership],
+  );
   const transcriptMessageCount = useMemo(
     () => timelineEntries.filter((entry) => entry.kind === "message").length,
     [timelineEntries],
@@ -5404,23 +5413,23 @@ export default function ChatView({
     [cancelPendingInteractionAnchorAdjustment],
   );
   const onMessagesPointerCancelBase = useCallback(() => {
-    clearTranscriptAutoFollow();
-  }, [clearTranscriptAutoFollow]);
+    handleTranscriptViewportGesture("pointer-cancel");
+  }, [handleTranscriptViewportGesture]);
   const onMessagesPointerDownBase = useCallback(() => {
-    clearTranscriptAutoFollow();
-  }, [clearTranscriptAutoFollow]);
+    handleTranscriptViewportGesture("pointer-down");
+  }, [handleTranscriptViewportGesture]);
   const onMessagesPointerUpBase = useCallback(() => {}, []);
   const onMessagesScrollBase = useCallback(() => {}, []);
   const onMessagesTouchEndBase = useCallback(() => {}, []);
   const onMessagesTouchMoveBase = useCallback(() => {
-    clearTranscriptAutoFollow();
-  }, [clearTranscriptAutoFollow]);
+    handleTranscriptViewportGesture("touch-move");
+  }, [handleTranscriptViewportGesture]);
   const onMessagesTouchStartBase = useCallback(() => {
-    clearTranscriptAutoFollow();
-  }, [clearTranscriptAutoFollow]);
+    handleTranscriptViewportGesture("touch-start");
+  }, [handleTranscriptViewportGesture]);
   const onMessagesWheelBase = useCallback(
     (event: WheelEvent) => {
-      clearTranscriptAutoFollow();
+      handleTranscriptViewportGesture("wheel");
       if (event.deltaY < 0 && !showScrollToBottom) {
         // A wheel gesture away from the live edge owns the viewport immediately. Reuse the
         // existing scroll-button state to stop LegendList's already-queued maintain-at-end
@@ -5435,7 +5444,7 @@ export default function ChatView({
         flushSync(() => setShowScrollToBottom(true));
       }
     },
-    [clearTranscriptAutoFollow, showScrollToBottom],
+    [handleTranscriptViewportGesture, showScrollToBottom],
   );
   useLayoutEffect(() => {
     const shouldFollowPendingTurn =
@@ -6864,8 +6873,6 @@ export default function ChatView({
 
   const {
     addComposerAttachments,
-    addComposerFiles,
-    addComposerImages,
     removeComposerFile,
     removeComposerImage,
     onComposerPaste,
@@ -11821,6 +11828,7 @@ export default function ChatView({
                     onAdvance={onAdvanceActivePendingUserInput}
                     onPrevious={onPreviousActivePendingUserInputQuestion}
                     onCancel={onCancelActivePendingUserInput}
+                    onFlushDraft={pendingUserInputController.actions.flushDraft}
                   />
                 </div>
               ) : null}
@@ -12409,6 +12417,7 @@ export default function ChatView({
                 selectionMode="project"
                 addActionLabel={t("chatToAgent.chooseAnotherFolder")}
                 searchPlaceholder={t("chatToAgent.chooseProject")}
+                notice={t("chatToAgent.continuityBoundary")}
                 onSelectProject={handleSendToAgentProject}
                 onCreateProjectFromPath={handleCreateAgentProjectFromPickerPath}
                 renderTrigger={
@@ -12416,6 +12425,8 @@ export default function ChatView({
                     type="button"
                     tone="outline"
                     aria-label={t("composer.sendToAgent")}
+                    aria-description={t("chatToAgent.continuityBoundary")}
+                    title={t("chatToAgent.continuityBoundary")}
                   >
                     <FolderClosed className="size-3.5 shrink-0" />
                     <span className="truncate font-normal">{t("composer.sendToAgent")}</span>

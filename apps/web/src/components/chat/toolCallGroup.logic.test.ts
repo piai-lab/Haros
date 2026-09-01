@@ -38,10 +38,10 @@ describe("classifyToolCallSummaryCategory", () => {
   it("classifies structured web searches without parsing command English", () => {
     expect(classifyToolCallSummaryCategory(command("s1", 'rg -n "foo" src'))).toBe("command");
     expect(classifyToolCallSummaryCategory(workEntry({ id: "s2", itemType: "web_search" }))).toBe(
-      "search",
+      "webSearch",
     );
     expect(classifyToolCallSummaryCategory(workEntry({ id: "s3", itemType: "web_search" }))).toBe(
-      "search",
+      "webSearch",
     );
   });
 
@@ -139,7 +139,7 @@ describe("summarizeToolCallGroup", () => {
       command("c2", "bun run lint"),
       workEntry({ id: "s3", itemType: "web_search" }),
     ]);
-    expect(summary?.label).toBe("Ran 2 commands, Edited 2 files, Searched 3 files");
+    expect(summary?.label).toBe("Ran 2 commands, Edited 2 files, Performed 3 web searches");
     expect(summary?.iconKind).toBe("mixed");
   });
 
