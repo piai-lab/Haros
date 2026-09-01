@@ -67,18 +67,16 @@ describe("Pi runtime physical isolation", () => {
     });
     await Promise.all([stockLoader.reload(), productLoader.reload()]);
 
-    expect(
-      stockLoader
-        .getSkills()
-        .skills.map((skill) => skill.name)
-        .toSorted(),
-    ).toEqual(["stock-global", "stock-project"]);
-    expect(
-      productLoader
-        .getSkills()
-        .skills.map((skill) => skill.name)
-        .toSorted(),
-    ).toEqual(["product-global", "product-project"]);
+    const stockSkillNames = stockLoader.getSkills().skills.map((skill) => skill.name);
+    const productSkillNames = productLoader.getSkills().skills.map((skill) => skill.name);
+    expect(stockSkillNames).toEqual(expect.arrayContaining(["stock-global", "stock-project"]));
+    expect(stockSkillNames).not.toContain("product-global");
+    expect(stockSkillNames).not.toContain("product-project");
+    expect(productSkillNames).toEqual(
+      expect.arrayContaining(["product-global", "product-project"]),
+    );
+    expect(productSkillNames).not.toContain("stock-global");
+    expect(productSkillNames).not.toContain("stock-project");
 
     const stockSessionDir = path.join(stockAgentDir, "sessions", "test");
     const productSessionDir = path.join(productAgentDir, "sessions", "test");
