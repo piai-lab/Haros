@@ -27,6 +27,7 @@ import {
   type BrowserTypeInput,
   type BrowserUploadInput,
   type BrowserWaitInput,
+  type BrowserPanelRevealResult,
   type EngineWebSurfacePresentationContext,
   type ThreadBrowserState,
   type ThreadId,
@@ -93,7 +94,12 @@ export interface BrowserAutomationToolRequest {
 }
 
 export interface DesktopBrowserAutomationHostOptions {
-  readonly requestOpenPanel?: (threadId: ThreadId) => void | Promise<void>;
+  readonly requestOpenPanel?: (
+    threadId: ThreadId,
+    tabId: string,
+    presentationId?: string,
+    surfaceId?: string,
+  ) => BrowserPanelRevealResult | void | Promise<BrowserPanelRevealResult | void>;
 }
 
 interface SessionAffinity {
@@ -313,7 +319,14 @@ export class DesktopBrowserAutomationHost {
   private readonly lockTails = new Map<string, Promise<void>>();
   private readonly snapshotBySession = new Map<string, BrowserSnapshotHandle>();
   private readonly diagnostics = new BrowserDiagnosticsStore();
-  private readonly requestOpenPanel: ((threadId: ThreadId) => void | Promise<void>) | undefined;
+  private readonly requestOpenPanel:
+    | ((
+        threadId: ThreadId,
+        tabId: string,
+        presentationId?: string,
+        surfaceId?: string,
+      ) => BrowserPanelRevealResult | void | Promise<BrowserPanelRevealResult | void>)
+    | undefined;
 
   constructor(
     private readonly browserManager: DesktopBrowserManager,
@@ -326,27 +339,58 @@ export class DesktopBrowserAutomationHost {
     return this.browserManager.getEngineWebSurfaceContext();
   }
 
-  async presentEngineWebSurface(
-    input: EngineWebSurfacePresentationInput,
-  ): Promise<{ readonly surfaceId: string; readonly tabId: string }> {
-    const state = this.browserManager.presentEngineWebSurface(input);
-    const tabId = state.activeTabId;
-    if (!tabId) throw new Error("The temporary web surface did not create a tab.");
-    await this.browserManager.getEngineWebSurfaceRuntime({
-      threadId: input.threadId,
-      surfaceId: input.surfaceId,
-    });
-    this.requestPanelReveal(input.threadId);
-    return { surfaceId: input.surfaceId, tabId };
+  async presentEngineWebSurface(input: EngineWebSurfacePresentationInput): Promise<{
+    readonly surfaceId: string;
+    readonly tabId: string;
+    readonly visibility: "visible" | "background";
+  }> {
+    const presented = this.browserManager.presentEngineWebSurface(input);
+    try {
+      await this.browserManager.getEngineWebSurfaceRuntime({
+        threadId: input.threadId,
+        surfaceId: input.surfaceId,
+      });
+      if (
+        this.browserManager.isEngineWebSurfacePresentationSuppressed({
+          presentationId: presented.presentationId,
+          threadId: input.threadId,
+        })
+      ) {
+        return { surfaceId: input.surfaceId, tabId: presented.tabId, visibility: "background" };
+      }
+      if (!this.requestOpenPanel) {
+        throw new Error("The Browser panel is unavailable for this temporary page.");
+      }
+      const reveal = await this.requestOpenPanel(
+        input.threadId,
+        presented.tabId,
+        presented.presentationId,
+        input.surfaceId,
+      );
+      if (!reveal || reveal.status === "unavailable") {
+        throw new Error("The Browser panel is unavailable for this temporary page.");
+      }
+      return { surfaceId: input.surfaceId, tabId: presented.tabId, visibility: reveal.status };
+    } catch (error) {
+      try {
+        this.browserManager.settleEngineWebSurface({
+          threadId: input.threadId,
+          surfaceId: input.surfaceId,
+        });
+      } catch {
+        // Preserve the initiating failure; release remains best-effort here.
+      }
+      throw error;
+    }
   }
 
   reopenEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
   }): ThreadBrowserState {
-    const state = this.browserManager.reopenEngineWebSurface(input);
+    const presented = this.browserManager.reopenEngineWebSurface(input);
     this.requestPanelReveal(input.threadId);
-    return state;
+    return presented.state;
   }
 
   settleEngineWebSurface(input: {
@@ -838,7 +882,9 @@ export class DesktopBrowserAutomationHost {
     // execution. The renderer opens the panel only when this thread is already
     // active; a slow/backgrounded UI must never stall the agent runtime.
     try {
-      void Promise.resolve(this.requestOpenPanel(threadId)).catch(() => undefined);
+      const tabId = this.browserManager.getState({ threadId }).activeTabId;
+      if (!tabId) return;
+      void Promise.resolve(this.requestOpenPanel(threadId, tabId)).catch(() => undefined);
     } catch {
       // The persistent native runtime remains usable when the shell cannot reveal it.
     }

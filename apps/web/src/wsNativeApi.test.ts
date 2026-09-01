@@ -150,6 +150,35 @@ afterEach(() => {
 });
 
 describe("wsNativeApi", () => {
+  it("sends Ask drafts through the narrow non-event RPC", async () => {
+    requestMock.mockResolvedValue({
+      updated: true,
+      draftRevision: 3,
+      draftUpdatedAt: "2026-09-01T00:00:00.000Z",
+    });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const input = {
+      threadId: ThreadId.makeUnsafe("thread-draft-rpc"),
+      requestId: ApprovalRequestId.makeUnsafe("request-draft-rpc"),
+      lifecycleGeneration: "generation-draft-rpc",
+      draft: {
+        version: 1 as const,
+        activeQuestionIndex: 0,
+        answers: { q1: { selectedOptionLabels: [], customText: "  raw  " } },
+      },
+    };
+
+    await expect(api.orchestration.updatePendingUserInputDraft(input)).resolves.toMatchObject({
+      updated: true,
+      draftRevision: 3,
+    });
+    expect(requestMock).toHaveBeenCalledWith(
+      ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft,
+      input,
+    );
+  });
+
   it("publishes the transport's current state as soon as the NativeApi is created", async () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const { readLatestWsTransportState } = await import("./wsTransportEvents");

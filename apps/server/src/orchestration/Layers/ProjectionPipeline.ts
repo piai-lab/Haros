@@ -873,6 +873,12 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
 
         case "thread.deleted": {
           attachmentSideEffects.deletedThreadIds.add(event.payload.threadId);
+          // A deleted Product Thread cannot retain an answer draft or accept a
+          // replayed response. The pending-interaction table is the sole Ask
+          // lifecycle owner, so clear it in the same projection transaction.
+          yield* projectionPendingInteractionRepository.deleteByThreadId({
+            threadId: event.payload.threadId,
+          });
           return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
             ...thread,
             deletedAt: event.payload.deletedAt,

@@ -189,9 +189,7 @@ function GitFileSection(props: {
 function SelectedFileDiff(props: { fileDiff: FileDiffMetadata; theme: "light" | "dark" }) {
   return (
     <FileDiffSurface className="h-full min-h-0 overflow-auto px-2 py-2">
-      <div className="diff-render-file rounded-md">
-        <FileDiffCard fileDiff={props.fileDiff} theme={props.theme} />
-      </div>
+      <FileDiffCard className="rounded-md" fileDiff={props.fileDiff} theme={props.theme} />
     </FileDiffSurface>
   );
 }

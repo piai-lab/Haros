@@ -22,8 +22,10 @@
     "@effect/language-service": "catalog:",
     "@effect/vitest": "catalog:",
     "@electron/asar": "3.4.1",
+    "@electron/get": "5.0.0",
     "@types/bun": "catalog:",
     "electron-builder": "26.15.3",
+    "proper-lockfile": "4.1.2",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

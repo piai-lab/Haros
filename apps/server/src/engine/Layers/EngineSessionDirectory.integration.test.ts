@@ -181,6 +181,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         status: "running",
         lifecycleGeneration: "legacy-test-claude",
         lastSeenAt: new Date().toISOString(),
+        admission: null,
         resumeCursor: null,
         runtimePayload: null,
       });
@@ -283,6 +284,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         status: "running",
         lifecycleGeneration: "legacy-test-kilo",
         lastSeenAt: new Date().toISOString(),
+        admission: null,
         resumeCursor: null,
         runtimePayload: null,
       });

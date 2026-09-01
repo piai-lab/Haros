@@ -127,6 +127,7 @@ function createEngineServiceHarness(
     getCapabilities: () => Effect.succeed({ sessionModelSwitch: "in-session" }),
     rollbackConversation,
     compactThread: () => unsupported(),
+    readToolResult: () => Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
     closeRuntimeEvents: Effect.void,
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
   };

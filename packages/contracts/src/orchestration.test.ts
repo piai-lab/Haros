@@ -4,6 +4,7 @@ import { Effect, Schema } from "effect";
 
 import {
   CanonicalUserInputAnswer,
+  CanonicalUserInputDraftV1,
   CanonicalUserInputResponse,
   CanonicalUserInputSettlement,
   ClientOrchestrationCommand,
@@ -1369,6 +1370,38 @@ it.effect("enforces the canonical response UTF-8 boundary without rewriting raw 
       },
     };
     assert.equal(canonicalUserInputUtf8Bytes(tooLarge), CANONICAL_USER_INPUT_MAX_UTF8_BYTES + 2);
+    assert.equal((yield* Effect.exit(decode(tooLarge)))._tag, "Failure");
+  }),
+);
+
+it.effect("bounds the short-lived Ask draft at 1 MiB and preserves raw bytes", () =>
+  Effect.gen(function* () {
+    const decode = Schema.decodeUnknownEffect(CanonicalUserInputDraftV1);
+    const base = {
+      version: 1 as const,
+      activeQuestionIndex: 0,
+      answers: {
+        q1: {
+          selectedOptionLabels: ["  exact  "],
+          customSelected: true,
+          customText: "",
+        },
+      },
+    };
+    const exactText = "x".repeat(
+      CANONICAL_USER_INPUT_MAX_UTF8_BYTES - canonicalUserInputUtf8Bytes(base),
+    );
+    const exact = {
+      ...base,
+      answers: { q1: { ...base.answers.q1, customText: exactText } },
+    };
+    assert.equal(canonicalUserInputUtf8Bytes(exact), CANONICAL_USER_INPUT_MAX_UTF8_BYTES);
+    assert.deepStrictEqual(yield* decode(exact), exact);
+
+    const tooLarge = {
+      ...exact,
+      answers: { q1: { ...exact.answers.q1, customText: `${exactText}é` } },
+    };
     assert.equal((yield* Effect.exit(decode(tooLarge)))._tag, "Failure");
   }),
 );

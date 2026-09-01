@@ -71,6 +71,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
                   lifecycleGeneration: value.lifecycleGeneration,
                   lastSeenAt: value.lastSeenAt,
                   resumeCursor: value.resumeCursor,
+                  admission: value.admission,
                   runtimePayload: value.runtimePayload,
                 }),
               ),
@@ -113,6 +114,10 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
           binding.resumeCursor !== undefined
             ? binding.resumeCursor
             : (compatibleRuntime?.resumeCursor ?? null),
+        admission:
+          binding.admission !== undefined
+            ? binding.admission
+            : (compatibleRuntime?.admission ?? null),
         runtimePayload: mergeRuntimePayload(
           compatibleRuntime?.runtimePayload ?? null,
           binding.runtimePayload,
@@ -132,6 +137,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
         lifecycleGeneration: binding.lifecycleGeneration ?? "legacy",
         lastSeenAt: new Date().toISOString(),
         resumeCursor: binding.resumeCursor ?? null,
+        admission: binding.admission ?? null,
         runtimePayload: binding.runtimePayload ?? null,
       })
       .pipe(Effect.mapError(toPersistenceError("EngineSessionDirectory.replace:upsert")));
@@ -179,6 +185,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
                 lifecycleGeneration: row.lifecycleGeneration,
                 lastSeenAt: row.lastSeenAt,
                 resumeCursor: row.resumeCursor,
+                admission: row.admission,
                 runtimePayload: row.runtimePayload,
               }),
             ),

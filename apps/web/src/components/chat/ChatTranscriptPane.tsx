@@ -3,12 +3,7 @@
 // Layer: Chat transcript shell
 // Depends on: MessagesTimeline and ChatView's list-owned scroll contract.
 
-import {
-  type MessageId,
-  type ThreadId,
-  type ThreadMarker,
-  type TurnId,
-} from "@harnessos/contracts";
+import { type MessageId, ThreadId, type ThreadMarker, type TurnId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   useEffect,
@@ -245,6 +240,7 @@ export function ChatTranscriptPane({
         ) : (
           <MessagesTimeline
             key={activeThreadId}
+            threadId={ThreadId.makeUnsafe(activeThreadId)}
             hasMessages={hasMessages}
             isWorking={isWorking}
             worktreeSetup={worktreeSetup}

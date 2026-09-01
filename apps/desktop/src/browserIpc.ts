@@ -172,7 +172,7 @@ export function registerBrowserIpcHandlers(
     BROWSER_IPC_CHANNELS.reopenEngineWebSurface,
     async (event, input: BrowserReopenEngineWebSurfaceInput) => {
       requireTrustedRenderer(event.sender.id);
-      return browserManager.reopenEngineWebSurface(input);
+      return browserManager.reopenEngineWebSurface(input).state;
     },
   );
 

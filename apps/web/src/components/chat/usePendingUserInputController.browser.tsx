@@ -114,6 +114,8 @@ function pendingInteraction(input: {
   readonly generation: string;
   readonly status?: OrchestrationPendingInteraction["status"];
   readonly responseRequestedAt?: string | null;
+  readonly draft?: OrchestrationPendingInteraction["draft"];
+  readonly draftRevision?: number;
 }): OrchestrationPendingInteraction {
   return {
     interactionKind: "userInput",
@@ -127,6 +129,9 @@ function pendingInteraction(input: {
     responseRequestedAt: input.responseRequestedAt ?? null,
     createdAt: "2026-08-25T00:00:00.000Z",
     resolvedAt: null,
+    draft: input.draft ?? null,
+    draftRevision: input.draftRevision ?? 0,
+    draftUpdatedAt: input.draft ? "2026-08-25T00:00:01.000Z" : null,
   };
 }
 
@@ -164,12 +169,19 @@ function controllerInput(
   };
 }
 
-function installNativeApi(dispatchCommand: (command: unknown) => Promise<unknown>): () => void {
+function installNativeApi(
+  dispatchCommand: (command: unknown) => Promise<unknown>,
+  updatePendingUserInputDraft: (input: unknown) => Promise<unknown> = async () => ({
+    updated: true,
+    draftRevision: 1,
+    draftUpdatedAt: "2026-08-25T00:00:01.000Z",
+  }),
+): () => void {
   const previous = window.nativeApi;
   Object.defineProperty(window, "nativeApi", {
     configurable: true,
     value: {
-      orchestration: { dispatchCommand },
+      orchestration: { dispatchCommand, updatePendingUserInputDraft },
     } as unknown as NativeApi,
   });
   return () => {
@@ -195,6 +207,150 @@ describe("usePendingUserInputController", () => {
   afterEach(() => {
     Reflect.deleteProperty(window, "nativeApi");
     vi.restoreAllMocks();
+  });
+
+  it("restores the durable raw draft and active question after remount", async () => {
+    const draft = {
+      version: 1 as const,
+      activeQuestionIndex: 1,
+      answers: {
+        q1: { selectedOptionLabels: [], customSelected: true, customText: "  raw one  " },
+        q2: { selectedOptionLabels: [], customSelected: true, customText: "line\ntwo  " },
+      },
+    };
+    const hook = await renderHook(() =>
+      usePendingUserInputController(
+        controllerInput({
+          questions: [textQuestion("q1"), textQuestion("q2")],
+          pendingInteractions: [
+            pendingInteraction({
+              threadId: THREAD_A,
+              turnId: TURN_A,
+              requestId: REQUEST_A,
+              generation: GENERATION_A,
+              draft,
+              draftRevision: 7,
+            }),
+          ],
+        }),
+      ),
+    );
+
+    await expect.poll(() => hook.result.current.active?.progress.questionIndex).toBe(1);
+    expect(hook.result.current.active?.answers).toEqual({
+      q1: { selectedOptionLabels: [], customSelected: true, customText: "  raw one  " },
+      q2: { selectedOptionLabels: [], customSelected: true, customText: "line\ntwo  " },
+    });
+    await hook.unmount();
+  });
+
+  it("debounces focused draft writes and never writes from an unfocused pane", async () => {
+    const updateDraft = vi.fn<(input: unknown) => Promise<unknown>>(async () => ({
+      updated: true,
+      draftRevision: 1,
+      draftUpdatedAt: "2026-08-25T00:00:01.000Z",
+    }));
+    const restore = installNativeApi(
+      vi.fn(async () => undefined),
+      updateDraft,
+    );
+    const focused = controllerInput({ questions: [textQuestion("q1")] });
+    const hook = await renderHook(
+      (props?: PendingUserInputControllerInput) => usePendingUserInputController(props ?? focused),
+      { initialProps: focused },
+    );
+
+    await hook.act(() => {
+      hook.result.current.actions.changeAnswer("q1", {
+        customSelected: true,
+        customText: "a",
+      });
+      hook.result.current.actions.changeAnswer("q1", {
+        customSelected: true,
+        customText: "  latest\nraw  ",
+      });
+    });
+    await expect.poll(() => updateDraft.mock.calls.length).toBe(1);
+    expect(updateDraft.mock.calls[0]?.[0]).toMatchObject({
+      draft: {
+        version: 1,
+        activeQuestionIndex: 0,
+        answers: {
+          q1: { selectedOptionLabels: [], customSelected: true, customText: "  latest\nraw  " },
+        },
+      },
+    });
+
+    await hook.rerender({ ...focused, isFocusedPane: false });
+    await hook.act(() =>
+      hook.result.current.actions.changeAnswer("q1", {
+        customSelected: true,
+        customText: "background local edit",
+      }),
+    );
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    expect(updateDraft).toHaveBeenCalledTimes(1);
+    await hook.unmount();
+    restore();
+  });
+
+  it("flushes before submit and ignores a late acknowledgement for older local state", async () => {
+    const order: string[] = [];
+    let resolveFirstWrite: ((value: unknown) => void) | undefined;
+    const updateDraft = vi
+      .fn<(input: unknown) => Promise<unknown>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirstWrite = resolve;
+          }),
+      )
+      .mockImplementation(async () => {
+        order.push("draft");
+        return {
+          updated: true,
+          draftRevision: 2,
+          draftUpdatedAt: "2026-08-25T00:00:02.000Z",
+        };
+      });
+    const dispatchCommand = vi.fn(async () => {
+      order.push("response");
+    });
+    const restore = installNativeApi(dispatchCommand, updateDraft);
+    const hook = await renderHook(() =>
+      usePendingUserInputController(controllerInput({ questions: [textQuestion("q1")] })),
+    );
+
+    await hook.act(() =>
+      hook.result.current.actions.changeAnswer("q1", {
+        customSelected: true,
+        customText: "older",
+      }),
+    );
+    await hook.act(() => hook.result.current.actions.flushDraft());
+    await expect.poll(() => updateDraft.mock.calls.length).toBe(1);
+    await hook.act(() =>
+      hook.result.current.actions.changeAnswer("q1", {
+        customSelected: true,
+        customText: "newer  ",
+      }),
+    );
+    resolveFirstWrite?.({
+      updated: true,
+      draftRevision: 1,
+      draftUpdatedAt: "2026-08-25T00:00:01.000Z",
+    });
+    await hook.act(() => hook.result.current.actions.advance());
+
+    await expect.poll(() => dispatchCommand.mock.calls.length).toBe(1);
+    expect(order).toEqual(["draft", "response"]);
+    expect(hook.result.current.active?.answers.q1?.customText).toBe("newer  ");
+    expect(dispatchedResponse(dispatchCommand).response).toEqual({
+      status: "answered",
+      answers: { q1: { selectedOptionLabels: [], customText: "newer  " } },
+    });
+    await hook.unmount();
+    restore();
   });
 
   it("submits an exact single preset once with the newly selected answer", async () => {

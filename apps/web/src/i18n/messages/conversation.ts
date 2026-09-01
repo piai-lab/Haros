@@ -131,6 +131,21 @@ const EN_MESSAGES = {
   "conversation.implementationActions": "Implementation actions",
   "conversation.implementInNewTask": "Implement in a new task",
   "conversation.connecting": "Connecting",
+  "conversation.engineDeliveryFailed": "Message was not sent to the Engine.",
+  "conversation.unblockTask": "Unblock task",
+  "conversation.unblockingTask": "Unblocking…",
+  "conversation.unblockTaskFailed": "Could not unblock task",
+  "conversation.unblockTaskFailedDescription":
+    "The Engine delivery failure could not be cleared. Try again.",
+  "conversation.unblockTaskSucceeded": "Task unblocked",
+  "conversation.unblockTaskSucceededDescription":
+    "Later messages skipped while this task was blocked were retried. The failed message itself was not; send it again if needed.",
+  "conversation.unblockTaskResolvedElsewhere": "Blocker already cleared",
+  "conversation.unblockTaskResolvedElsewhereDescription":
+    "Another session cleared the failure. Send the failed message again to continue.",
+  "conversation.unblockTaskAlreadyClear": "Task is already unblocked",
+  "conversation.unblockTaskAlreadyClearDescription":
+    "No Engine delivery is blocking this task. Send the failed message again to continue.",
   "conversation.optimizingImageStatus": "Optimizing image",
   "conversation.preparingWorktree": "Preparing worktree",
   "conversation.sendingStatus": "Sending",
@@ -307,6 +322,20 @@ const ZH_CN_MESSAGES = {
   "conversation.implementationActions": "实施操作",
   "conversation.implementInNewTask": "在新任务中实施",
   "conversation.connecting": "正在连接",
+  "conversation.engineDeliveryFailed": "消息未发送到引擎。",
+  "conversation.unblockTask": "解除任务阻塞",
+  "conversation.unblockingTask": "正在解除阻塞…",
+  "conversation.unblockTaskFailed": "无法解除任务阻塞",
+  "conversation.unblockTaskFailedDescription": "无法清除引擎投递故障，请重试。",
+  "conversation.unblockTaskSucceeded": "任务阻塞已解除",
+  "conversation.unblockTaskSucceededDescription":
+    "阻塞期间被跳过的后续消息已重试；失败消息本身没有自动重发，如有需要请手动再次发送。",
+  "conversation.unblockTaskResolvedElsewhere": "阻塞已由其他会话清除",
+  "conversation.unblockTaskResolvedElsewhereDescription":
+    "其他会话已清除该故障。请重新发送失败消息以继续。",
+  "conversation.unblockTaskAlreadyClear": "任务当前没有阻塞",
+  "conversation.unblockTaskAlreadyClearDescription":
+    "当前没有引擎投递阻塞此任务。请重新发送失败消息以继续。",
   "conversation.optimizingImageStatus": "正在优化图片",
   "conversation.preparingWorktree": "正在准备工作树",
   "conversation.sendingStatus": "正在发送",

@@ -7,6 +7,7 @@
  */
 import {
   IsoDateTime,
+  EngineSessionAdmission,
   EngineSessionRuntimeStatus,
   RuntimeMode,
   ThreadId,
@@ -25,6 +26,7 @@ export const EngineSessionRuntime = Schema.Struct({
   lifecycleGeneration: Schema.String,
   lastSeenAt: IsoDateTime,
   resumeCursor: Schema.NullOr(Schema.Unknown),
+  admission: Schema.NullOr(EngineSessionAdmission),
   runtimePayload: Schema.NullOr(Schema.Unknown),
 });
 export type EngineSessionRuntime = typeof EngineSessionRuntime.Type;

@@ -41,6 +41,8 @@ vi.mock("~/lib/sidechatCreatorRegistry", () => ({
 }));
 vi.mock("~/hooks/useBrowserPanelDesktopBridge", () => ({
   useBrowserPanelDesktopBridge: () => undefined,
+  commitRightDockMutationAfterEngineWebSurfaceSuppression: <T,>(input: { commit: () => T }) =>
+    Promise.resolve({ committed: true, value: input.commit() }),
 }));
 vi.mock("~/hooks/useDeviceEventBridge", () => ({
   useDeviceEventBridge: () => undefined,

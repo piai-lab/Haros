@@ -23,7 +23,6 @@ import {
   ApprovalRequestId,
   type BuiltInToolGroupId,
   type ChatAttachment,
-  type CanonicalUserInputResponse,
   type EngineListCommandsResult,
   type EngineListModelsResult,
   type EngineListSkillsResult,
@@ -34,9 +33,9 @@ import {
   type EngineSession,
   type EngineWorkSurface,
   RuntimeItemId,
-  RuntimeRequestId,
   ThreadId,
   type ThreadTokenUsageSnapshot,
+  type ToolResultFullReadResult,
   type TurnTasksUpdatedPayload,
   TurnId,
 } from "@harnessos/contracts";
@@ -122,7 +121,6 @@ import {
 import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
 import { BrowserHostRpcError } from "../../browserAutomation/browserHostRpcClient.ts";
 import {
-  engineWebSurfacePresentationMetadata,
   extractPiCuratorWebSurfaceUrl,
   extractTypedEngineWebSurface,
   registerEngineWebSurfaceIntent,
@@ -155,7 +153,6 @@ import {
   piRuntimeErrorDetail,
   piToolItemType,
   piToolLifecycleData,
-  piToolTimelineDetail,
   piToolTitle,
   type PiTrackedToolCall,
 } from "../piFamilyNativeEventProjection.ts";
@@ -1548,7 +1545,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             type: "tool_call",
             status: "started",
             toolName: event.toolName,
-            args: event.args,
+            data: piToolLifecycleData({
+              toolCallId: event.toolCallId,
+              toolName: event.toolName,
+              args: event.args,
+            }),
           });
           if (!isBundledProductAsk) {
             offerRuntimeEvent({
@@ -1571,7 +1572,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               raw: {
                 source: "pi.sdk.event",
                 messageType: event.type,
-                payload: event,
+                payload: {
+                  type: event.type,
+                  toolCallId: event.toolCallId,
+                  toolName: event.toolName,
+                },
               },
             } satisfies EngineRuntimeEvent);
           }
@@ -1603,13 +1608,16 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             event.partialResult,
             surfaceUrl,
           );
-          const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
-          const detail = piToolTimelineDetail(safePartialResult);
           recordItem(context, {
             type: "tool_call",
             status: "updated",
             toolName: event.toolName,
-            output: detail,
+            data: piToolLifecycleData({
+              toolCallId: event.toolCallId,
+              toolName: event.toolName,
+              args: tracked.args,
+              partialResult: safePartialResult,
+            }),
           });
           if (tracked.canonicalUserInputLifecycle !== undefined) return;
           offerRuntimeEvent({
@@ -1623,7 +1631,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               itemType: tracked.itemType,
               status: "inProgress",
               title: piToolTitle(event.toolName, tracked.args),
-              ...(detail ? { detail } : {}),
               data: piToolLifecycleData({
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
@@ -1641,7 +1648,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             raw: {
               source: "pi.sdk.event",
               messageType: event.type,
-              payload: safeEvent,
+              payload: {
+                type: event.type,
+                toolCallId: event.toolCallId,
+                toolName: event.toolName,
+              },
             },
           } satisfies EngineRuntimeEvent);
           return;
@@ -1658,19 +1669,22 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             tracked.engineWebSurface?.url ??
             extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
-          const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
           if (isPiBarrierSiblingBlocked(event.result)) {
             askUserMetrics.increment("barrier_sibling_blocked");
           }
           context.activeToolItems.delete(event.toolCallId);
           tracked.engineWebSurface?.unregister?.();
-          const detail = piToolTimelineDetail(safeResult);
           recordItem(context, {
             type: "tool_call",
             status: event.isError ? "failed" : "completed",
             toolName: event.toolName,
-            output: detail,
-            result: safeResult,
+            data: piToolLifecycleData({
+              toolCallId: event.toolCallId,
+              toolName: event.toolName,
+              args: tracked.args,
+              result: safeResult,
+              isError: event.isError,
+            }),
           });
           if (tracked.canonicalUserInputLifecycle === "projected") return;
           offerRuntimeEvent({
@@ -1684,7 +1698,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               itemType: tracked.itemType,
               status: event.isError ? "failed" : "completed",
               title: piToolTitle(event.toolName, tracked.args),
-              ...(detail ? { detail } : {}),
               data: piToolLifecycleData({
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
@@ -1704,7 +1717,12 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             raw: {
               source: "pi.sdk.event",
               messageType: event.type,
-              payload: safeEvent,
+              payload: {
+                type: event.type,
+                toolCallId: event.toolCallId,
+                toolName: event.toolName,
+                isError: event.isError,
+              },
             },
           } satisfies EngineRuntimeEvent);
           return;
@@ -2153,16 +2171,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     const startSession: PiAdapterShape["startSession"] = (input) =>
       Effect.gen(function* () {
         const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
-        const workSurface = input.workSurface;
-        const productSurface = input.productSurface ?? (workSurface === "agent" ? "agent" : "chat");
-        const projectContextRoot = trimToUndefined(input.projectContextRoot);
-        if (engine === "oa" && workSurface === undefined) {
-          return yield* new EngineAdapterValidationError({
-            engine,
-            operation: "session/start",
-            issue: "Haros work surface is missing from Product session admission.",
-          });
-        }
+        const { productSurface, workSurface } = input.admission;
+        const projectContextRoot =
+          input.admission.projectContextRoot === null
+            ? undefined
+            : trimToUndefined(input.admission.projectContextRoot);
         if (workSurface === "agent" && !projectContextRoot) {
           return yield* new EngineAdapterValidationError({
             engine,
@@ -2368,10 +2381,10 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                         : { hostGatewayFetch: options.hostGatewayFetch }),
                     }
                   : {}),
-                ...(workSurface === undefined ? {} : { workSurface }),
+                workSurface,
                 ...(engine === "oa" ? { productSurface } : {}),
                 ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                ...(engine === "oa" && workSurface !== undefined
+                ...(engine === "oa"
                   ? {
                       onTaskListUpdate: ({ toolCallId, payload }) => {
                         const current = taskProjectionContext;
@@ -2451,14 +2464,12 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           agentDir,
           appliedModelRuntimeMutationRevision:
             engine === "oa" ? getOAModelRuntimeMutationRevision(agentDir) : 0,
-          ...(workSurface === undefined ? {} : { workSurface }),
+          workSurface,
           ...(engine === "oa" ? { productSurface } : {}),
           resourceScopeIdentity: piResourceScopeIdentity(
             workSurface === "chat"
               ? { kind: "global-only" }
-              : workSurface === "agent"
-                ? { kind: "project", authoritativeRoot: projectContextRoot ?? cwd }
-                : { kind: "project", authoritativeRoot: cwd },
+              : { kind: "project", authoritativeRoot: projectContextRoot ?? cwd },
           ),
           ...(hostProjection === undefined ? {} : { hostProjection }),
           ...(planModeController === undefined ? {} : { planModeController }),
@@ -3269,6 +3280,33 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     const readThread: PiAdapterShape["readThread"] = (threadId) =>
       requireSession(threadId).pipe(Effect.map(snapshotThread));
 
+    const readToolResult: NonNullable<PiAdapterShape["readToolResult"]> = (input) =>
+      Effect.sync((): ToolResultFullReadResult => {
+        const context = sessions.get(input.threadId);
+        if (!context || context.stopped) {
+          return { status: "unavailable", reason: "session_unavailable" };
+        }
+        for (
+          let index = context.runtime.session.agent.state.messages.length - 1;
+          index >= 0;
+          index -= 1
+        ) {
+          const message = context.runtime.session.agent.state.messages[index];
+          if (message?.role !== "toolResult" || message.toolCallId !== input.toolCallId) continue;
+          return {
+            status: "found",
+            toolName: message.toolName,
+            isError: message.isError,
+            content: message.content.map((block) =>
+              block.type === "text"
+                ? { type: "text" as const, text: block.text }
+                : { type: "image" as const, data: block.data, mimeType: block.mimeType },
+            ),
+          };
+        }
+        return { status: "unavailable", reason: "not_found" };
+      });
+
     const rollbackThread: PiAdapterShape["rollbackThread"] = (threadId, numTurns) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
@@ -3535,6 +3573,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       listSessions,
       hasSession,
       readThread,
+      readToolResult,
       rollbackThread,
       compactThread,
       stopAll,

@@ -5,7 +5,6 @@
 
 import {
   type MessageId,
-  type EngineSelection,
   type OrchestrationTurnProvenance,
   type EngineMentionReference,
   ThreadId,
@@ -36,6 +35,7 @@ import {
   deriveTimelineEntries,
   formatClockDuration,
   formatClockElapsed,
+  isFileChangeWorkLogEntry,
   type WorkLogEntry,
 } from "../../session-logic";
 import {
@@ -49,7 +49,6 @@ import { InlineLinkChip } from "../InlineLinkChip";
 import {
   BotIcon,
   BrainIcon,
-  ChangesIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   ClockIcon,
@@ -73,8 +72,6 @@ import { HarosThreadCreationCard } from "./HarosThreadCreationCard";
 import { ForkSourceDivider, type ForkSourceReference } from "./ForkSourceDivider";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
-import { DiffStatLabel } from "./DiffStatLabel";
-import { ReviewChangesButton } from "./ReviewChangesButton";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { InlineMentionChip } from "./InlineMentionChip";
 import { InlineSkillChip } from "./InlineSkillChip";
@@ -112,6 +109,7 @@ import {
 } from "./MessagesTimeline.logic";
 import { summarizeToolCallGroup } from "./toolCallGroup.logic";
 import { ToolCallGroupSummaryRow } from "./ToolCallGroupSummaryRow";
+import { TurnChangedFilesEvidence } from "./TurnChangedFilesEvidence";
 import { ThinkingStatus } from "./ThinkingStatus";
 import { useTailAnchorScroll } from "./useTailAnchorScroll";
 import { useTimelineRowOverlapGuard } from "./useTimelineRowOverlapGuard";
@@ -167,9 +165,6 @@ import {
   type MessageTrailAnchor,
 } from "./messageTrail.logic";
 
-// Changed-files list in the per-turn card is capped so large turns stay compact;
-// the rest are revealed via an inline "Show more" row.
-const MAX_VISIBLE_CHANGED_FILES = 5;
 // The composer overlaps the transcript by design, so the list needs extra tail
 // space beyond the overlap to keep final cards from sitting flush against it.
 const BOTTOM_CONTENT_INSET_PX = 64;
@@ -519,6 +514,7 @@ function AssistantTurnRowFrame({
 }
 
 interface MessagesTimelineProps {
+  threadId?: ThreadId;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -632,6 +628,7 @@ interface MessagesTimelineProps {
 }
 
 export const MessagesTimeline = memo(function MessagesTimeline({
+  threadId,
   hasMessages,
   isWorking,
   activeTurnInProgress,
@@ -837,13 +834,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       current[entryId] === open ? current : { ...current, [entryId]: open },
     );
   }, []);
-  const [expandedFileChangesByTurnId, setExpandedFileChangesByTurnId] = useState<
-    Record<string, boolean>
-  >({});
-  // Tracks which turns have their changed-files list expanded past MAX_VISIBLE_CHANGED_FILES.
-  const [expandedFileListByTurnId, setExpandedFileListByTurnId] = useState<Record<string, boolean>>(
-    {},
-  );
   const [expandedUserMessagesById, setExpandedUserMessagesById] = useState<Record<string, boolean>>(
     {},
   );
@@ -1080,8 +1070,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       editingUserMessageId,
       enteringMessageRowIds,
       turnProcessOpenState,
-      expandedFileChangesByTurnId,
-      expandedFileListByTurnId,
       expandedUserMessagesById,
       expandedWorkGroupsState,
       firstUserMessageId,
@@ -1097,8 +1085,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       editingUserMessageId,
       enteringMessageRowIds,
       turnProcessOpenState,
-      expandedFileChangesByTurnId,
-      expandedFileListByTurnId,
       expandedUserMessagesById,
       expandedWorkGroupsState,
       firstUserMessageId,
@@ -1434,18 +1420,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       window.cancelAnimationFrame(frameId);
     };
   }, [emitTrailHighlightsForViewport, onTrailHighlightsChange, resolvedListRef, rows.length]);
-  const toggleFileChangesExpanded = useCallback((turnId: TurnId) => {
-    setExpandedFileChangesByTurnId((current) => ({
-      ...current,
-      [turnId]: !(current[turnId] ?? true),
-    }));
-  }, []);
-  const toggleFileListExpanded = useCallback((turnId: TurnId) => {
-    setExpandedFileListByTurnId((current) => ({
-      ...current,
-      [turnId]: !(current[turnId] ?? false),
-    }));
-  }, []);
   const cancelUserMessageEdit = useCallback(() => {
     setEditingUserMessageId(null);
   }, []);
@@ -1523,11 +1497,26 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               savedState?.phase === row.phase ? savedState.open : row.phase === "running";
             const processPanelId = `turn-process-panel-${row.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
             const fileDiffStatByPath = turnDiffFileStats(row.turnDiffSummary);
+            const settledFileChangeEntries =
+              row.phase === "settled" && row.turnDiffSummary?.files.length
+                ? row.items.flatMap((item) =>
+                    item.kind === "work" && isFileChangeWorkLogEntry(item.entry)
+                      ? [item.entry]
+                      : [],
+                  )
+                : [];
+            const visibleProcessItems =
+              settledFileChangeEntries.length > 0
+                ? row.items.filter(
+                    (item) => item.kind !== "work" || !isFileChangeWorkLogEntry(item.entry),
+                  )
+                : row.items;
             const renderProcessItem = (item: TurnProcessItem, keyPrefix: string) =>
               item.kind === "work" ? (
                 <TimelineWorkEntryRow
                   key={`${keyPrefix}:work:${row.id}:${item.id}`}
                   workEntry={item.entry}
+                  {...(threadId ? { threadId } : {})}
                   chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                   textFontSizePx={appTypographyScale.activityPx}
                   density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
@@ -1646,7 +1635,22 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     inert={!isOpen ? true : undefined}
                   >
                     <div className={disclosureContentClassName(isOpen, "mb-2.5 space-y-1.5")}>
-                      {chunkTurnProcessItems(row.items).map(renderProcessChunk)}
+                      {chunkTurnProcessItems(visibleProcessItems).map(renderProcessChunk)}
+                      {row.phase === "settled" &&
+                      row.turnDiffSummary &&
+                      row.turnDiffSummary.files.length > 0 ? (
+                        <TurnChangedFilesEvidence
+                          summary={row.turnDiffSummary}
+                          {...(threadId ? { threadId } : {})}
+                          turnId={row.turnDiffSummary.turnId}
+                          resolvedTheme={resolvedTheme}
+                          fontSizePx={appTypographyScale.activityPx}
+                          onOpenTurnDiff={onOpenTurnDiff}
+                          {...(onUndoTurnFiles ? { onUndoTurnFiles } : {})}
+                          technicalEntries={settledFileChangeEntries}
+                          timestampFormat={timestampFormat}
+                        />
+                      ) : null}
                       {row.phase === "running" ? (
                         <ThinkingStatus
                           accessibleLabel={t("timeline.workingStatus")}
@@ -1658,7 +1662,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   </CollapsiblePanel>
                 </Collapsible>
-                <div className="h-px w-full bg-border" />
+                {row.hasFollowingResult ? (
+                  <div
+                    aria-hidden="true"
+                    className="h-px w-full bg-border"
+                    data-turn-process-divider="true"
+                  />
+                ) : null}
               </div>
             );
           })()}
@@ -1677,6 +1687,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <TimelineWorkEntryRow
                 key={`work-row:${workEntry.id}`}
                 workEntry={workEntry}
+                {...(threadId ? { threadId } : {})}
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                 textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
@@ -2035,7 +2046,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               assistantCopyState.visible &&
               Boolean(onForkMessage) &&
               (canForkMessage?.(row.message.id) ?? false);
-            const turnSummary = row.assistantTurnDiffSummary;
             // `showAssistantCopyButton` is exactly the terminal-message signal
             // (see deriveTerminalAssistantMessageIds). Time now belongs to the
             // response-level identity header rather than this action footer.
@@ -2055,7 +2065,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ),
               ).values(),
             ];
-            const isTailContentRow = row.id === tailContentRowId;
             return (
               <>
                 <div className="group min-w-0 py-0.5">
@@ -2087,202 +2096,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         </div>
                       ))
                     : null}
-                  {(() => {
-                    // Hold the end-of-turn changes card (Undo / Review) until the
-                    // turn settles. While the turn is live the composer's own
-                    // live-changes strip owns this surface; showing the card too
-                    // would duplicate it and pre-empt the strip mid-turn.
-                    if (!turnSummary || row.assistantTurnInProgress) return null;
-                    const checkpointFiles = turnSummary.files;
-                    if (checkpointFiles.length === 0) return null;
-                    const fileChangesExpanded =
-                      expandedFileChangesByTurnId[turnSummary.turnId] ?? true;
-                    const fileListExpanded = expandedFileListByTurnId[turnSummary.turnId] ?? false;
-                    const checkpointTurnCount = turnSummary.checkpointTurnCount;
-                    const checkpointTurnCounts =
-                      turnSummary.checkpointTurnCounts ??
-                      (checkpointTurnCount === undefined ? [] : [checkpointTurnCount]);
-                    const canUndo =
-                      turnSummary.status !== "missing" &&
-                      turnSummary.status !== "error" &&
-                      turnSummary.checkpointRef !== undefined &&
-                      !turnSummary.checkpointRef.startsWith("engine-diff:") &&
-                      checkpointTurnCounts.length > 0 &&
-                      onUndoTurnFiles !== undefined;
-                    const totalAdditions = checkpointFiles.reduce(
-                      (sum, file) => sum + (file.additions ?? 0),
-                      0,
-                    );
-                    const totalDeletions = checkpointFiles.reduce(
-                      (sum, file) => sum + (file.deletions ?? 0),
-                      0,
-                    );
-                    const editedFilesLabel = t(
-                      checkpointFiles.length === 1 ? "toolGroup.editSingle" : "toolGroup.edit",
-                      { count: checkpointFiles.length },
-                    );
-                    const firstCheckpointFiles = checkpointFiles.slice(
-                      0,
-                      MAX_VISIBLE_CHANGED_FILES,
-                    );
-                    const overflowCheckpointFiles =
-                      checkpointFiles.slice(MAX_VISIBLE_CHANGED_FILES);
-                    const renderCheckpointFileRow = (
-                      file: (typeof checkpointFiles)[number],
-                      withFirstReset: boolean,
-                    ) => {
-                      // Hoisted out of JSX: a `??` inside an `&&` test makes React Compiler
-                      // bail out ("Unexpected terminal kind `logical` for logical test block").
-                      const additions = file.additions ?? 0;
-                      const deletions = file.deletions ?? 0;
-                      const hasDiffStat = additions + deletions > 0;
-                      return (
-                        <button
-                          key={file.path}
-                          type="button"
-                          className={cn(
-                            "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)]",
-                            withFirstReset && "first:border-t-0",
-                          )}
-                          onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
-                        >
-                          <FileEntryIcon
-                            pathValue={file.path}
-                            kind="file"
-                            theme={resolvedTheme}
-                            colorMode="inherit"
-                            className="size-4 shrink-0 text-[var(--color-icon-secondary)]"
-                          />
-                          <span
-                            className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
-                            style={{ fontSize: chatTypographyStyle.fontSize }}
-                          >
-                            {file.path}
-                          </span>
-                          {hasDiffStat && (
-                            <span
-                              className="font-system-ui ml-auto shrink-0 tabular-nums"
-                              style={{ fontSize: chatTypographyStyle.fontSize }}
-                            >
-                              <DiffStatLabel additions={additions} deletions={deletions} />
-                            </span>
-                          )}
-                        </button>
-                      );
-                    };
-                    return (
-                      <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)]">
-                        <div
-                          className={cn(
-                            "flex items-center justify-between gap-3 bg-[color:color-mix(in_srgb,var(--app-user-message-background)_40%,transparent)] px-3 py-1.5",
-                            fileChangesExpanded &&
-                              "border-b border-[color:var(--color-border-light)]",
-                          )}
-                        >
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <ChangesIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
-                            <div className="min-w-0">
-                              <div
-                                className="truncate font-normal text-foreground/92"
-                                style={{
-                                  fontSize: chatTypographyStyle.fontSize,
-                                }}
-                              >
-                                {editedFilesLabel}
-                              </div>
-                              {totalAdditions + totalDeletions > 0 ? (
-                                <div
-                                  className="font-system-ui tabular-nums"
-                                  style={{
-                                    fontSize: chatTypographyStyle.fontSize,
-                                  }}
-                                >
-                                  <DiffStatLabel
-                                    additions={totalAdditions}
-                                    deletions={totalDeletions}
-                                  />
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {canUndo && (
-                              <button
-                                type="button"
-                                className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
-                                style={{
-                                  fontSize: chatTypographyStyle.fontSize,
-                                }}
-                                onClick={() => onUndoTurnFiles(checkpointTurnCounts)}
-                              >
-                                Undo
-                                <Undo2Icon className="size-3" />
-                              </button>
-                            )}
-                            <ReviewChangesButton
-                              style={{ fontSize: chatTypographyStyle.fontSize }}
-                              onClick={() => onOpenTurnDiff(turnSummary.turnId)}
-                            />
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground/80"
-                              aria-expanded={fileChangesExpanded}
-                              aria-label={
-                                fileChangesExpanded
-                                  ? "Collapse changed files list"
-                                  : "Expand changed files list"
-                              }
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                if (!fileChangesExpanded && isTailContentRow) {
-                                  scrollTailExpansionToEnd();
-                                }
-                                toggleFileChangesExpanded(turnSummary.turnId);
-                              }}
-                              data-scroll-anchor-ignore={isTailContentRow ? true : undefined}
-                            >
-                              <DisclosureChevron
-                                open={fileChangesExpanded}
-                                className="text-[var(--color-text-foreground-tertiary)]"
-                              />
-                            </button>
-                          </div>
-                        </div>
-                        <DisclosureRegion open={fileChangesExpanded}>
-                          {firstCheckpointFiles.map((file) => renderCheckpointFileRow(file, true))}
-                          {overflowCheckpointFiles.length > 0 ? (
-                            <DisclosureRegion open={fileListExpanded}>
-                              {overflowCheckpointFiles.map((file) =>
-                                renderCheckpointFileRow(file, false),
-                              )}
-                            </DisclosureRegion>
-                          ) : null}
-                          {overflowCheckpointFiles.length > 0 ? (
-                            <button
-                              type="button"
-                              className="flex w-full items-center justify-start gap-1.5 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2 font-system-ui font-normal text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
-                              style={{ fontSize: chatTypographyStyle.fontSize }}
-                              aria-expanded={fileListExpanded}
-                              onClick={() => toggleFileListExpanded(turnSummary.turnId)}
-                            >
-                              <DisclosureChevron open={fileListExpanded} />
-                              <span>
-                                {fileListExpanded
-                                  ? t("common.showLess")
-                                  : t(
-                                      overflowCheckpointFiles.length === 1
-                                        ? "timeline.showMoreFile"
-                                        : "timeline.showMoreFiles",
-                                      { count: overflowCheckpointFiles.length },
-                                    )}
-                              </span>
-                            </button>
-                          ) : null}
-                        </DisclosureRegion>
-                      </div>
-                    );
-                  })()}
                   {(showPinToggle ||
                     showForkAction ||
                     assistantCopyState.visible ||

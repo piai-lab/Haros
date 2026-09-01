@@ -103,6 +103,8 @@ import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { EngineCommandReactor } from "./orchestration/Services/EngineCommandReactor";
 import { ProjectionStateIncompleteError } from "./persistence/Errors";
+import { ProjectionPendingInteractionRepositoryLive } from "./persistence/Layers/ProjectionPendingInteractions";
+import { ProjectionPendingInteractionRepository } from "./persistence/Services/ProjectionPendingInteractions";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { EngineDiscoveryService } from "./engine/Services/EngineDiscoveryService";
@@ -379,6 +381,7 @@ const makeWsRpcHandlersLayer = () =>
       const profileStatsQuery = yield* ProfileStatsQuery;
       const usageHistory = yield* UsageHistory;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
+      const pendingInteractions = yield* ProjectionPendingInteractionRepository;
       const engineAdapterRegistry = yield* EngineAdapterRegistry;
       const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
       const engineDiscoveryService = yield* EngineDiscoveryService;
@@ -1010,6 +1013,14 @@ const makeWsRpcHandlersLayer = () =>
               .getThreadDetailSnapshotById(input.threadId)
               .pipe(Effect.map(Option.getOrNull)),
             "Failed to load orchestration thread detail snapshot",
+          ),
+        [ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft]: (input) =>
+          rpcEffect(
+            pendingInteractions.updateUserInputDraft({
+              ...input,
+              updatedAt: new Date().toISOString(),
+            }),
+            "Failed to save Ask User draft",
           ),
         [ORCHESTRATION_WS_METHODS.repairState]: () =>
           rpcEffect(orchestrationEngine.repairState(), "Failed to repair orchestration state"),
@@ -2072,6 +2083,8 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.engineCompactThread]: (input) =>
           rpcEffect(engineService.compactThread(input), "Failed to compact thread"),
+        [WS_METHODS.engineReadToolResult]: (input) =>
+          rpcEffect(engineService.readToolResult(input), "Failed to read tool result"),
         [WS_METHODS.engineListCommands]: (input) =>
           rpcEffect(engineDiscoveryService.listCommands(input), "Failed to list commands"),
         [WS_METHODS.engineListSkills]: (input) =>
@@ -2350,7 +2363,10 @@ const makeWsRpcHandlersLayer = () =>
   );
 
 export const makeWsRpcLayer = () =>
-  Layer.merge(makeWsRpcHandlersLayer(), wsRequestAdmissionMiddlewareLayer);
+  Layer.merge(
+    makeWsRpcHandlersLayer().pipe(Layer.provideMerge(ProjectionPendingInteractionRepositoryLive)),
+    wsRequestAdmissionMiddlewareLayer,
+  );
 
 const makeRpcWebSocketHttpEffect = RpcServer.toHttpEffectWebsocket(AdmittedWsFeatureRpcGroup, {
   spanPrefix: "ws.rpc",

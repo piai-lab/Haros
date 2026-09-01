@@ -79,6 +79,10 @@ bun run dev
 Haros 当前版本为 `0.1.0-alpha.0`。本机构建成功仍然只是 unsigned source build，不代表
 已经正式发行。
 
+在 macOS 上，`bun run dist:desktop:local-app` 会把可替换的 unsigned `.app` 构建到
+`apps/desktop/.electron-runtime/local-app/`。该本地路径不会签名、公证、发布或生成更新元数据；
+一旦显式指定输出目录，仍遵守正式产物不可覆盖规则。
+
 <details>
 <summary>开发检查与仓库结构</summary>
 

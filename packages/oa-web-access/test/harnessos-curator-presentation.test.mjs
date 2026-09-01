@@ -85,8 +85,14 @@ test("Curator freezes Haros locale/theme and ships executable self-contained bil
   const english = page({ locale: "en", theme: "dark" });
   const chinese = page({ locale: "zh-CN", theme: "light" });
 
-  assert.match(english, /<html lang="en" data-theme="dark" data-surface-mode="review">/);
-  assert.match(chinese, /<html lang="zh-CN" data-theme="light" data-surface-mode="review">/);
+  assert.match(
+    english,
+    /<html lang="en" data-theme="dark" data-surface-mode="review" data-idle-timeout="enabled">/,
+  );
+  assert.match(
+    chinese,
+    /<html lang="zh-CN" data-theme="light" data-surface-mode="review" data-idle-timeout="enabled">/,
+  );
   assert.match(chinese, /Haros 网络访问/);
   assert.match(chinese, /直接发送所选结果，不生成摘要/);
   assert.match(chinese, />全部<\/button>/);
@@ -118,6 +124,47 @@ test("Curator freezes Haros locale/theme and ships executable self-contained bil
     assert.match(html, /class="provider-icon"/);
     assert.match(html, /class="source-link"[^>]+target="_blank"/);
   }
+});
+
+test("Haros review can require explicit approval and hides idle settlement controls", () => {
+  const html = generateCuratorPage(
+    ["Haros explicit approval"],
+    "opaque-test-token",
+    20,
+    availability(),
+    "exa",
+    "auto",
+    [],
+    null,
+    { locale: "en", theme: "light" },
+    "review",
+    false,
+  );
+
+  assert.match(html, /data-idle-timeout="disabled"/);
+  assert.match(html, /html\[data-idle-timeout="disabled"\] \.timer-badge/);
+  assert.match(inlineScript(html), /var idleTimeoutEnabled = DATA\.idleTimeoutEnabled !== false/);
+  assert.match(inlineScript(html), /if \(observerMode \|\| !idleTimeoutEnabled\) return/);
+  assert.doesNotThrow(() => new Function(inlineScript(html)));
+});
+
+test("Curator source links preserve valid web URLs and reject malformed or non-web URLs", () => {
+  const script = inlineScript(page({ locale: "en", theme: "light" }));
+  const start = script.indexOf("function sanitizeHref");
+  const end = script.indexOf("function sanitizeMarkdownHtml", start);
+  assert.ok(start >= 0 && end > start);
+  const sanitizeHref = new Function(`${script.slice(start, end)}; return sanitizeHref;`)();
+
+  assert.equal(sanitizeHref("https://example.com/source"), "https://example.com/source");
+  assert.equal(sanitizeHref("http://127.0.0.1:43123/source"), "http://127.0.0.1:43123/source");
+  assert.equal(
+    sanitizeHref("https://example.com/source?q=a%2Fb#section"),
+    "https://example.com/source?q=a%2Fb#section",
+  );
+  assert.equal(sanitizeHref("https://"), "#");
+  assert.equal(sanitizeHref("https://["), "#");
+  assert.equal(sanitizeHref("http://"), "#");
+  assert.equal(sanitizeHref("javascript:alert(1)"), "#");
 });
 
 test("Haros presentation projects one resolved custom palette instead of re-owning theme presets", () => {

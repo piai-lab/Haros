@@ -7,6 +7,7 @@ import type { ThreadId } from "@harnessos/contracts";
 import { isEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { useEffect, useRef, type RefObject } from "react";
 
+import { useI18n } from "../../i18n";
 import { toastManager } from "../ui/toast";
 
 type ThreadErrorToastOptions = Parameters<typeof toastManager.add>[0];
@@ -23,20 +24,26 @@ export function buildThreadErrorToastOptions(input: {
   onUnblock: () => void;
   threadId: ThreadId;
   unblocking: boolean;
+  copy: {
+    readonly deliveryFailed: string;
+    readonly unblock: string;
+    readonly unblocking: string;
+  };
 }): ThreadErrorToastOptions {
   const canUnblock = isEngineDeliveryBlockDetail(input.error);
+  const title = canUnblock ? input.copy.deliveryFailed : input.error;
   return {
     id: threadErrorToastId(input.threadId),
     type: "error",
-    title: input.error,
+    title,
     timeout: 0,
     priority: "high",
     onClose: input.onClose,
-    data: { copyText: input.error, threadId: input.threadId },
+    data: { copyText: title, threadId: input.threadId },
     ...(canUnblock
       ? {
           actionProps: {
-            children: input.unblocking ? "Unblocking…" : "Unblock thread",
+            children: input.unblocking ? input.copy.unblocking : input.copy.unblock,
             disabled: input.unblocking,
             onClick: input.onUnblock,
           },
@@ -66,6 +73,7 @@ export function useThreadErrorToast(input: {
   unblocking: boolean;
 }): void {
   const { error, onDismiss, onUnblock, threadId, unblocking } = input;
+  const { t } = useI18n();
   const callbacksRef = useRef({ onDismiss, onUnblock });
   const closingSilentlyRef = useRef(false);
 
@@ -84,6 +92,11 @@ export function useThreadErrorToast(input: {
         error,
         threadId,
         unblocking,
+        copy: {
+          deliveryFailed: t("conversation.engineDeliveryFailed"),
+          unblock: t("conversation.unblockTask"),
+          unblocking: t("conversation.unblockingTask"),
+        },
         onClose: () => {
           if (closingSilentlyRef.current) return;
           callbacksRef.current.onDismiss();
@@ -93,7 +106,7 @@ export function useThreadErrorToast(input: {
         },
       }),
     );
-  }, [error, threadId, unblocking]);
+  }, [error, t, threadId, unblocking]);
 
   // Kept separate from the content effect so an error update refreshes the card in
   // place instead of tearing it down and replaying the entrance animation.

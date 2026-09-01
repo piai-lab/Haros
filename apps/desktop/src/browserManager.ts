@@ -24,6 +24,9 @@ import type {
   BrowserCaptureScreenshotResult,
   BrowserCopyLinkEvent,
   BrowserDetachWebviewInput,
+  EngineWebSurfacePresentationRelease,
+  EngineWebSurfacePresentationReleaseAck,
+  EngineWebSurfacePresentationSuppression,
   BrowserNavigateInput,
   BrowserNewTabInput,
   BrowserOpenInput,
@@ -75,6 +78,9 @@ const BROWSER_ERROR_ABORTED = -3;
 
 type BrowserStateListener = (state: ThreadBrowserState) => void;
 type BrowserCopyLinkListener = (event: BrowserCopyLinkEvent) => void;
+type EngineWebSurfacePresentationReleaseListener = (
+  release: EngineWebSurfacePresentationRelease,
+) => void;
 type BrowserHumanControlListener = () => void;
 type BrowserAutomationWindowOpenListener = (event: BrowserAutomationWindowOpenEvent) => void;
 type BrowserAutomationDownloadListener = (event: BrowserAutomationDownloadEvent) => void;
@@ -89,6 +95,21 @@ export interface EngineWebSurfacePresentationInput {
 
 interface EngineWebSurfacePresentationRecord extends EngineWebSurfacePresentationInput {
   tabId: string | null;
+}
+
+interface EngineWebSurfacePresentationLease {
+  readonly presentationId: string;
+  readonly previousOpen: boolean;
+  readonly previousActiveTabId: string | null;
+  readonly humanControlEpoch: number;
+  readonly surfaceIds: Set<string>;
+  suppressedByUser: boolean;
+}
+
+export interface EngineWebSurfacePresentationResult extends ThreadBrowserState {
+  readonly state: ThreadBrowserState;
+  readonly presentationId: string;
+  readonly tabId: string;
 }
 
 export type BrowserAutomationExpectedInput =
@@ -436,6 +457,15 @@ export class DesktopBrowserManager {
   private attachedBoundsSignature: string | null = null;
   private readonly states = new Map<ThreadId, ThreadBrowserState>();
   private readonly engineWebSurfaces = new Map<string, EngineWebSurfacePresentationRecord>();
+  private readonly engineWebSurfacePresentationLeases = new Map<
+    ThreadId,
+    EngineWebSurfacePresentationLease
+  >();
+  private readonly pendingEngineWebSurfacePresentationReleases = new Map<
+    ThreadId,
+    EngineWebSurfacePresentationRelease
+  >();
+  private readonly deletedThreadPresentationFences = new Set<ThreadId>();
   private engineWebSurfaceContext: EngineWebSurfacePresentationContext = {
     locale: "en",
     theme: "light",
@@ -482,6 +512,8 @@ export class DesktopBrowserManager {
   private readonly pendingRuntimeSyncs = new Map<string, PendingRuntimeSync>();
   private readonly listeners = new Set<BrowserStateListener>();
   private readonly copyLinkListeners = new Set<BrowserCopyLinkListener>();
+  private readonly engineWebSurfacePresentationReleaseListeners =
+    new Set<EngineWebSurfacePresentationReleaseListener>();
   private readonly annotations: BrowserAnnotationCoordinator;
   // OAuth/sign-in popups opened by pages via `window.open`. Tracked so they can be sized over
   // the panel and torn down cleanly without leaking native windows.
@@ -558,6 +590,15 @@ export class DesktopBrowserManager {
     this.copyLinkListeners.add(listener);
     return () => {
       this.copyLinkListeners.delete(listener);
+    };
+  }
+
+  subscribeEngineWebSurfacePresentationRelease(
+    listener: EngineWebSurfacePresentationReleaseListener,
+  ): () => void {
+    this.engineWebSurfacePresentationReleaseListeners.add(listener);
+    return () => {
+      this.engineWebSurfacePresentationReleaseListeners.delete(listener);
     };
   }
 
@@ -1193,8 +1234,12 @@ export class DesktopBrowserManager {
     this.automationRuntimeProtectedUntilByKey.clear();
     this.listeners.clear();
     this.copyLinkListeners.clear();
+    this.engineWebSurfacePresentationReleaseListeners.clear();
     this.states.clear();
     this.engineWebSurfaces.clear();
+    this.engineWebSurfacePresentationLeases.clear();
+    this.pendingEngineWebSurfacePresentationReleases.clear();
+    this.deletedThreadPresentationFences.clear();
     this.threadVersionById.clear();
     this.snapshotCacheByThreadId.clear();
     this.lastEmittedVersionByThreadId.clear();
@@ -1627,8 +1672,17 @@ export class DesktopBrowserManager {
     return cloneEngineWebSurfaceContext(this.engineWebSurfaceContext);
   }
 
-  /** Creates or focuses one dedicated, memory-only tab for an exact pending call. */
-  presentEngineWebSurface(input: EngineWebSurfacePresentationInput): ThreadBrowserState {
+  /**
+   * Creates or focuses one dedicated, memory-only tab for an exact pending call.
+   * Desktop Browser owns the one live presentation generation for the Thread;
+   * concurrent surfaces join that generation instead of racing restore state.
+   */
+  presentEngineWebSurface(
+    input: EngineWebSurfacePresentationInput,
+  ): EngineWebSurfacePresentationResult {
+    if (this.deletedThreadPresentationFences.has(input.threadId)) {
+      throw new Error("The temporary web surface belongs to a deleted thread.");
+    }
     const existing = this.engineWebSurfaces.get(input.surfaceId);
     if (existing && existing.threadId !== input.threadId) {
       throw new Error("The temporary web surface belongs to another thread.");
@@ -1638,6 +1692,18 @@ export class DesktopBrowserManager {
     }
 
     const state = this.getOrCreateState(input.threadId);
+    let lease = this.engineWebSurfacePresentationLeases.get(input.threadId);
+    if (!lease) {
+      lease = {
+        presentationId: Crypto.randomUUID(),
+        previousOpen: state.open,
+        previousActiveTabId: state.activeTabId,
+        humanControlEpoch: this.getAutomationHumanControlEpoch(input.threadId),
+        surfaceIds: new Set(),
+        suppressedByUser: false,
+      };
+      this.engineWebSurfacePresentationLeases.set(input.threadId, lease);
+    }
     const existingTab = existing?.tabId ? this.getTab(state, existing.tabId) : null;
     const tab =
       existingTab ??
@@ -1656,16 +1722,23 @@ export class DesktopBrowserManager {
     state.open = true;
     state.activeTabId = tab.id;
     this.engineWebSurfaces.set(input.surfaceId, { ...input, tabId: tab.id });
+    lease.surfaceIds.add(input.surfaceId);
     syncThreadLastError(state);
     this.markThreadStateChanged(input.threadId);
     this.emitState(input.threadId);
-    return this.snapshotThreadState(input.threadId, state);
+    const snapshot = this.snapshotThreadState(input.threadId, state);
+    return {
+      ...snapshot,
+      state: snapshot,
+      presentationId: lease.presentationId,
+      tabId: tab.id,
+    };
   }
 
   reopenEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
-  }): ThreadBrowserState {
+  }): EngineWebSurfacePresentationResult {
     const surface = this.engineWebSurfaces.get(input.surfaceId);
     if (!surface || surface.threadId !== input.threadId || surface.expiresAt <= Date.now()) {
       if (surface?.expiresAt !== undefined && surface.expiresAt <= Date.now()) {
@@ -1686,22 +1759,169 @@ export class DesktopBrowserManager {
       return this.snapshotThreadState(input.threadId);
     }
     this.engineWebSurfaces.delete(input.surfaceId);
+    const lease = this.engineWebSurfacePresentationLeases.get(input.threadId);
+    lease?.surfaceIds.delete(input.surfaceId);
     const state = this.states.get(input.threadId);
     const tab = state && surface.tabId ? this.getTab(state, surface.tabId) : null;
     if (state && tab && input.preserveTab) {
       this.markThreadStateChanged(input.threadId);
       this.emitState(input.threadId);
-      return this.snapshotThreadState(input.threadId, state);
-    }
-    if (state && tab) {
+    } else if (state && tab) {
       this.destroyRuntime(input.threadId, tab.id);
       state.tabs = state.tabs.filter((candidate) => candidate.id !== tab.id);
-      if (state.activeTabId === tab.id) state.activeTabId = state.tabs.at(-1)?.id ?? null;
+    }
+
+    const remainingSurfaceTabIds = lease
+      ? [...lease.surfaceIds]
+          .map((surfaceId) => this.engineWebSurfaces.get(surfaceId)?.tabId ?? null)
+          .filter((tabId): tabId is string => tabId !== null)
+          .filter((tabId) => Boolean(state && this.getTab(state, tabId)))
+      : [];
+    if (state && remainingSurfaceTabIds.length > 0) {
+      state.open = true;
+      if (!state.activeTabId || state.activeTabId === tab?.id) {
+        state.activeTabId = remainingSurfaceTabIds.at(-1) ?? null;
+      }
+    } else if (lease) {
+      this.engineWebSurfacePresentationLeases.delete(input.threadId);
+      const humanTookControl =
+        lease.suppressedByUser ||
+        lease.humanControlEpoch !== this.getAutomationHumanControlEpoch(input.threadId);
+      if (state && !humanTookControl && !input.preserveTab) {
+        state.open = lease.previousOpen;
+        state.activeTabId =
+          state.tabs.find((candidate) => candidate.id === lease.previousActiveTabId)?.id ??
+          state.tabs.at(-1)?.id ??
+          null;
+      } else if (state && (!state.activeTabId || state.activeTabId === tab?.id)) {
+        state.activeTabId = state.tabs.at(-1)?.id ?? null;
+      }
+      this.queueEngineWebSurfacePresentationRelease({
+        presentationId: lease.presentationId,
+        threadId: input.threadId,
+        disposition: humanTookControl || input.preserveTab ? "preserve" : "restore",
+        suppressedByUser: lease.suppressedByUser,
+      });
+    }
+    if (state) {
       syncThreadLastError(state);
       this.markThreadStateChanged(input.threadId);
+      const bounds = this.getVisibleBoundsForThread(input.threadId);
+      if (this.activeThreadId === input.threadId && bounds) {
+        this.attachActiveTab(input.threadId, bounds);
+      }
       this.emitState(input.threadId);
     }
     return this.snapshotThreadState(input.threadId);
+  }
+
+  getEngineWebSurfacePresentationStatus(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+    readonly tabId: string;
+  }): "visible" | "background" | "unavailable" {
+    if (this.deletedThreadPresentationFences.has(input.threadId)) return "unavailable";
+    const surface = this.engineWebSurfaces.get(input.surfaceId);
+    const state = this.states.get(input.threadId);
+    const tab = state ? this.getTab(state, input.tabId) : null;
+    const runtimeKey = buildRuntimeKey(input.threadId, input.tabId);
+    if (
+      surface?.threadId !== input.threadId ||
+      surface.tabId !== input.tabId ||
+      !state?.open ||
+      tab?.presentation?.kind !== "engine-web-surface" ||
+      tab.presentation.surfaceId !== input.surfaceId ||
+      !this.runtimes.has(runtimeKey)
+    ) {
+      return "unavailable";
+    }
+    if (
+      state.activeTabId === input.tabId &&
+      this.activeThreadId === input.threadId &&
+      this.getVisibleBoundsForThread(input.threadId) !== null &&
+      this.attachedRuntimeKey === runtimeKey
+    ) {
+      return "visible";
+    }
+    return "background";
+  }
+
+  suppressEngineWebSurfacePresentationsForThreads(
+    threadIds: ReadonlyArray<ThreadId>,
+  ): ReadonlyArray<EngineWebSurfacePresentationSuppression> {
+    const suppressed: EngineWebSurfacePresentationSuppression[] = [];
+    for (const threadId of new Set(threadIds)) {
+      const lease = this.engineWebSurfacePresentationLeases.get(threadId);
+      if (!lease) continue;
+      lease.suppressedByUser = true;
+      suppressed.push({ presentationId: lease.presentationId, threadId });
+    }
+    return suppressed;
+  }
+
+  isEngineWebSurfacePresentationSuppressed(
+    input: EngineWebSurfacePresentationSuppression,
+  ): boolean {
+    const lease = this.engineWebSurfacePresentationLeases.get(input.threadId);
+    return lease?.presentationId === input.presentationId && lease.suppressedByUser;
+  }
+
+  listEngineWebSurfacePresentations(): ReadonlyArray<{
+    readonly presentationId: string;
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+    readonly tabId: string;
+  }> {
+    const presentations: Array<{
+      presentationId: string;
+      threadId: ThreadId;
+      surfaceId: string;
+      tabId: string;
+    }> = [];
+    for (const [threadId, lease] of this.engineWebSurfacePresentationLeases) {
+      if (lease.suppressedByUser || this.deletedThreadPresentationFences.has(threadId)) continue;
+      for (const surfaceId of lease.surfaceIds) {
+        const surface = this.engineWebSurfaces.get(surfaceId);
+        if (surface?.threadId === threadId && surface.tabId) {
+          presentations.push({
+            presentationId: lease.presentationId,
+            threadId,
+            surfaceId,
+            tabId: surface.tabId,
+          });
+        }
+      }
+    }
+    return presentations;
+  }
+
+  listPendingEngineWebSurfacePresentationReleases(): ReadonlyArray<EngineWebSurfacePresentationRelease> {
+    return [...this.pendingEngineWebSurfacePresentationReleases.values()];
+  }
+
+  acknowledgeEngineWebSurfacePresentationRelease(
+    input: EngineWebSurfacePresentationReleaseAck,
+  ): void {
+    const pending = this.pendingEngineWebSurfacePresentationReleases.get(input.threadId);
+    if (pending?.presentationId === input.presentationId) {
+      this.pendingEngineWebSurfacePresentationReleases.delete(input.threadId);
+    }
+  }
+
+  closeDeletedThreadResources(input: BrowserThreadInput): void {
+    // Seal replay before touching any projection or native runtime. Every old
+    // reveal/reopen is terminal after this point, even if Renderer cleanup races.
+    this.deletedThreadPresentationFences.add(input.threadId);
+    this.pendingEngineWebSurfacePresentationReleases.delete(input.threadId);
+    this.engineWebSurfacePresentationLeases.delete(input.threadId);
+    for (const [surfaceId, surface] of this.engineWebSurfaces) {
+      if (surface.threadId === input.threadId) this.engineWebSurfaces.delete(surfaceId);
+    }
+    this.close(input);
+    this.states.delete(input.threadId);
+    this.threadVersionById.delete(input.threadId);
+    this.snapshotCacheByThreadId.delete(input.threadId);
+    this.lastEmittedVersionByThreadId.delete(input.threadId);
   }
 
   setPanelBounds(input: BrowserSetPanelBoundsInput): void {
@@ -3410,6 +3630,30 @@ export class DesktopBrowserManager {
     for (const listener of this.listeners) {
       listener(snapshot);
     }
+  }
+
+  private emitEngineWebSurfacePresentationRelease(
+    release: EngineWebSurfacePresentationRelease,
+  ): void {
+    for (const listener of this.engineWebSurfacePresentationReleaseListeners) {
+      listener(release);
+    }
+  }
+
+  private queueEngineWebSurfacePresentationRelease(
+    release: EngineWebSurfacePresentationRelease,
+  ): void {
+    if (this.deletedThreadPresentationFences.has(release.threadId)) return;
+    const pending = this.pendingEngineWebSurfacePresentationReleases.get(release.threadId);
+    const effectiveRelease: EngineWebSurfacePresentationRelease = {
+      ...release,
+      disposition:
+        pending?.disposition === "preserve" || release.disposition === "preserve"
+          ? "preserve"
+          : "restore",
+    };
+    this.pendingEngineWebSurfacePresentationReleases.set(release.threadId, effectiveRelease);
+    this.emitEngineWebSurfacePresentationRelease(effectiveRelease);
   }
 }
 

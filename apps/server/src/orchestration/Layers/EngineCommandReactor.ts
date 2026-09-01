@@ -54,17 +54,14 @@ import {
 } from "@harnessos/shared/conversationEdit";
 import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
 import { claudeSelectionRequiresRestart } from "@harnessos/shared/model";
-import {
-  formatEngineDeliveryBlockDetail,
-  ENGINE_DELIVERY_BLOCK_SUMMARY,
-} from "@harnessos/shared/engineDeliveryBlock";
+import { formatEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import { turnStartBindingMatchesCommitted } from "../turnStartSession.ts";
 import { resolveThreadWorkspaceState } from "@harnessos/shared/threadEnvironment";
 import { configuredHostGroupEnabled } from "@harnessos/shared/hostToolSurfacePolicy";
 import {
+  projectKindToEngineSessionAdmission,
   projectKindToProductSurface,
-  productSurfaceToEngineWorkSurface,
 } from "@harnessos/shared/productSurface";
 
 import {
@@ -902,13 +899,18 @@ const make = Effect.gen(function* () {
     readonly responseCommandId?: CommandId;
     readonly settlementStatus?: "retryable" | "uncertain";
     readonly failureReason?: EngineTurnStartFailureReason;
+    readonly deliverySequence?: number;
+    readonly engine?: EngineKind;
+    readonly runtimeGeneration?: string | null;
+    readonly commandId?: CommandId;
+    readonly activityId?: EventId;
   }) =>
     orchestrationEngine.dispatch({
       type: "thread.activity.append",
-      commandId: serverCommandId("engine-failure-activity"),
+      commandId: input.commandId ?? serverCommandId("engine-failure-activity"),
       threadId: input.threadId,
       activity: {
-        id: EventId.makeUnsafe(crypto.randomUUID()),
+        id: input.activityId ?? EventId.makeUnsafe(crypto.randomUUID()),
         tone: "error",
         kind: input.kind,
         summary: input.summary,
@@ -920,6 +922,13 @@ const make = Effect.gen(function* () {
           ...(input.responseCommandId ? { responseCommandId: input.responseCommandId } : {}),
           ...(input.settlementStatus ? { settlementStatus: input.settlementStatus } : {}),
           ...(input.failureReason ? { failureReason: input.failureReason } : {}),
+          ...(input.deliverySequence === undefined
+            ? {}
+            : { deliverySequence: input.deliverySequence }),
+          ...(input.engine === undefined ? {} : { engine: input.engine }),
+          ...(input.runtimeGeneration === undefined
+            ? {}
+            : { runtimeGeneration: input.runtimeGeneration }),
         },
         turnId: input.turnId,
         createdAt: input.createdAt,
@@ -991,13 +1000,16 @@ const make = Effect.gen(function* () {
       readonly interactionMode: EngineInteractionMode;
     };
     readonly expectedSession?: Pick<OrchestrationSession, "status" | "updatedAt">;
+    readonly commandId?: CommandId;
     readonly createdAt: string;
   }) =>
     orchestrationEngine.dispatch({
       type: "thread.session.set",
-      commandId: serverCommandId(
-        input.binding === undefined ? "engine-session-set" : "engine-session-binding-commit",
-      ),
+      commandId:
+        input.commandId ??
+        serverCommandId(
+          input.binding === undefined ? "engine-session-set" : "engine-session-binding-commit",
+        ),
       threadId: input.threadId,
       session: input.session,
       ...(input.binding !== undefined ? { binding: input.binding } : {}),
@@ -1015,6 +1027,7 @@ const make = Effect.gen(function* () {
     readonly runtimeMode?: RuntimeMode;
     readonly detail: string;
     readonly expectedSession?: Pick<OrchestrationSession, "status" | "updatedAt">;
+    readonly commandId?: CommandId;
     readonly createdAt: string;
   }) {
     const thread = yield* resolveThread(input.threadId);
@@ -1033,6 +1046,7 @@ const make = Effect.gen(function* () {
         updatedAt: input.createdAt,
       },
       ...(input.expectedSession !== undefined ? { expectedSession: input.expectedSession } : {}),
+      ...(input.commandId !== undefined ? { commandId: input.commandId } : {}),
       createdAt: input.createdAt,
     });
   });
@@ -1047,6 +1061,7 @@ const make = Effect.gen(function* () {
       readonly interactionMode: EngineInteractionMode;
     };
     readonly activeTurnId?: TurnId | null;
+    readonly expectedSession?: Pick<OrchestrationSession, "status" | "updatedAt">;
     readonly createdAt: string;
   }) =>
     setThreadSession({
@@ -1069,6 +1084,7 @@ const make = Effect.gen(function* () {
         updatedAt: input.session.updatedAt,
       },
       ...(input.binding !== undefined ? { binding: input.binding } : {}),
+      ...(input.expectedSession !== undefined ? { expectedSession: input.expectedSession } : {}),
       createdAt: input.createdAt,
     });
 
@@ -1534,23 +1550,16 @@ const make = Effect.gen(function* () {
         issue: `Thread '${threadId}' targets a worktree that has not been created yet.`,
       });
     }
-    const productSurface = projectKindToProductSurface(project.kind);
+    const admission = projectKindToEngineSessionAdmission(
+      project.kind,
+      workspaceState === "worktree-ready" && thread.worktreePath
+        ? thread.worktreePath
+        : project.workspaceRoot,
+    );
     const engineSessionOptions = {
       threadId,
       ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
-      ...(targetEngine === "oa"
-        ? {
-            workSurface: productSurfaceToEngineWorkSurface(productSurface),
-            ...(project.kind === "project"
-              ? {
-                  projectContextRoot:
-                    workspaceState === "worktree-ready" && thread.worktreePath
-                      ? thread.worktreePath
-                      : project.workspaceRoot,
-                }
-              : {}),
-          }
-        : {}),
+      admission,
       engineSelection: desiredEngineSelection,
       engineOptions: resolvedEngineOptions,
       runtimeMode: desiredRuntimeMode,
@@ -1562,15 +1571,11 @@ const make = Effect.gen(function* () {
         .pipe(Effect.map((sessions) => sessions.find((session) => session.threadId === threadId)));
 
     const startEngineSession = (resumeCursor?: unknown) =>
-      engineService.startSession(
-        threadId,
-        {
-          ...engineSessionOptions,
-          engine: targetEngine,
-          ...(resumeCursor !== undefined ? { resumeCursor } : {}),
-        },
-        { productSurface },
-      );
+      engineService.startSession(threadId, {
+        ...engineSessionOptions,
+        engine: targetEngine,
+        ...(resumeCursor !== undefined ? { resumeCursor } : {}),
+      });
 
     const bindSessionToThread = (session: EngineSession) =>
       setThreadSessionFromEngineSession({
@@ -3170,53 +3175,59 @@ const make = Effect.gen(function* () {
                 // committed, a later provider/send failure must surface as an
                 // error instead of being hidden by a merely-live session.
                 const currentThread = yield* resolveThread(event.payload.threadId);
+                const currentSession = currentThread?.session;
                 if (
-                  authoritativeSession &&
-                  currentThread !== undefined &&
-                  (!Equal.equals(currentThread.engineSelection, admittedEngineSelection) ||
-                    currentThread.runtimeMode !== event.payload.runtimeMode ||
-                    currentThread.interactionMode !== event.payload.interactionMode)
+                  !(currentSession?.status === "running" && currentSession.activeTurnId !== null)
                 ) {
-                  const currentSession = currentThread?.session;
-                  if (
-                    !(
-                      currentSession?.engine === authoritativeSession.engine &&
-                      currentSession.status === "running" &&
-                      currentSession.activeTurnId !== null
-                    )
-                  ) {
-                    yield* setThreadSessionFromEngineSession({
-                      threadId: event.payload.threadId,
-                      session: authoritativeSession,
-                      activeTurnId:
-                        currentSession?.engine === authoritativeSession.engine
-                          ? currentSession.activeTurnId
-                          : null,
-                      createdAt: event.payload.createdAt,
-                    });
-                  }
-                } else {
-                  yield* setThreadSessionError({
+                  const expectedSession = currentSession
+                    ? { status: currentSession.status, updatedAt: currentSession.updatedAt }
+                    : undefined;
+                  yield* (
+                    authoritativeSession &&
+                    currentThread !== undefined &&
+                    (!Equal.equals(currentThread.engineSelection, admittedEngineSelection) ||
+                      currentThread.runtimeMode !== event.payload.runtimeMode ||
+                      currentThread.interactionMode !== event.payload.interactionMode)
+                      ? setThreadSessionFromEngineSession({
+                          threadId: event.payload.threadId,
+                          session: authoritativeSession,
+                          activeTurnId:
+                            currentSession?.engine === authoritativeSession.engine
+                              ? currentSession.activeTurnId
+                              : null,
+                          ...(expectedSession === undefined ? {} : { expectedSession }),
+                          createdAt: event.payload.createdAt,
+                        })
+                      : setThreadSessionError({
+                          threadId: event.payload.threadId,
+                          runtimeMode: event.payload.runtimeMode,
+                          detail,
+                          ...(expectedSession === undefined ? {} : { expectedSession }),
+                          createdAt: event.payload.createdAt,
+                        })
+                  ).pipe(
+                    Effect.catchCause((projectionCause) =>
+                      Effect.logWarning(
+                        "Engine turn failure did not replace a newer Session projection",
+                        {
+                          threadId: event.payload.threadId,
+                          cause: Cause.pretty(projectionCause),
+                        },
+                      ),
+                    ),
+                  );
+                }
+                if (outcome._tag === "rejected") {
+                  yield* appendProviderFailureActivity({
                     threadId: event.payload.threadId,
-                    runtimeMode: event.payload.runtimeMode,
+                    kind: "engine.turn.start.failed",
+                    summary: "Engine turn start failed",
                     detail,
+                    turnId: null,
+                    messageId: event.payload.messageId,
                     createdAt: event.payload.createdAt,
                   });
                 }
-                // This exact-message activity is the renderer's recovery
-                // barrier. Publish it only after the authoritative restored
-                // Session (or terminal error) has been projected; otherwise a
-                // stale old-ready snapshot could be mistaken for completed
-                // rollback while EngineService is still failing to restore.
-                yield* appendProviderFailureActivity({
-                  threadId: event.payload.threadId,
-                  kind: "engine.turn.start.failed",
-                  summary: "Engine turn start failed",
-                  detail,
-                  turnId: null,
-                  messageId: event.payload.messageId,
-                  createdAt: event.payload.createdAt,
-                });
                 // A direct start has no engine turn and therefore cannot emit a
                 // terminal runtime event. Recover every queue sharing this
                 // engine session now; otherwise follow-ups queued before the
@@ -4647,63 +4658,96 @@ const make = Effect.gen(function* () {
       createdAt: event.payload.createdAt,
     });
 
-  const surfaceTimedOutTurnStart = Effect.fnUntraced(function* (
-    event: Extract<EngineIntentEvent, { type: "thread.turn-start-requested" }>,
-    detail: string,
+  const surfaceTerminalTurnStartFailure = Effect.fnUntraced(function* (
+    event: Extract<
+      EngineIntentEvent,
+      { type: "thread.turn-start-requested" | "thread.message-edit-resend-requested" }
+    >,
+    input: {
+      readonly state: "dead" | "uncertain";
+      readonly detail: string;
+      readonly restoreExisting?: boolean;
+    },
   ) {
-    const session = (yield* resolveThread(event.payload.threadId))?.session;
-    if (session?.status !== "starting" || session.activeTurnId !== null) {
-      return;
+    const thread = yield* resolveThread(event.payload.threadId);
+    if (!thread) return;
+
+    const session = thread.session;
+    if (
+      session &&
+      session.status !== "running" &&
+      session.status !== "error" &&
+      session.activeTurnId === null &&
+      (input.restoreExisting || session.status === "starting")
+    ) {
+      yield* setThreadSessionError({
+        threadId: event.payload.threadId,
+        runtimeMode: event.payload.runtimeMode,
+        detail: formatEngineDeliveryBlockDetail("The message was not sent to the Engine."),
+        expectedSession: {
+          status: session.status,
+          updatedAt: session.updatedAt,
+        },
+        commandId: CommandId.makeUnsafe(`server:engine-terminal-session-error:${event.sequence}`),
+        createdAt: event.payload.createdAt,
+      });
     }
 
-    const createdAt = new Date().toISOString();
-    yield* setThreadSessionError({
-      threadId: event.payload.threadId,
-      runtimeMode: event.payload.runtimeMode,
-      detail,
-      expectedSession: {
-        status: session.status,
-        updatedAt: session.updatedAt,
-      },
-      createdAt,
-    });
     yield* appendProviderFailureActivity({
       threadId: event.payload.threadId,
       kind: "engine.turn.start.failed",
-      summary: "Engine turn start timed out",
-      detail,
+      summary: "Message was not sent to the Engine",
+      detail: input.detail,
       turnId: null,
-      createdAt,
-      settlementStatus: "uncertain",
+      messageId: event.payload.messageId,
+      deliverySequence: event.sequence,
+      engine: event.payload.engineSelection?.engine ?? thread.engineSelection.engine,
+      runtimeGeneration: null,
+      commandId: CommandId.makeUnsafe(
+        `server:engine-terminal-turn-start-activity:${event.sequence}`,
+      ),
+      activityId: EventId.makeUnsafe(`engine-delivery:${event.sequence}:turn-start-failed`),
+      createdAt: event.payload.createdAt,
+      ...(input.state === "uncertain" ? { settlementStatus: "uncertain" as const } : {}),
     });
   });
 
-  const surfaceTimedOutGoalContinuation = Effect.fnUntraced(function* (
+  const surfaceTerminalGoalContinuation = Effect.fnUntraced(function* (
     event: Extract<EngineIntentEvent, { type: "thread.goal-continuation-requested" }>,
-    detail: string,
+    input: { readonly state: "dead" | "uncertain"; readonly detail: string },
   ) {
-    const createdAt = new Date().toISOString();
+    const createdAt = event.payload.createdAt;
     const thread = yield* resolveThread(event.payload.threadId);
     if (thread?.session?.status === "starting" && thread.session.activeTurnId === null) {
       yield* setThreadSessionError({
         threadId: event.payload.threadId,
         runtimeMode: thread.runtimeMode,
-        detail,
+        detail: formatEngineDeliveryBlockDetail(
+          "The requested Goal continuation was not sent to the Engine.",
+        ),
         expectedSession: {
           status: thread.session.status,
           updatedAt: thread.session.updatedAt,
         },
+        commandId: CommandId.makeUnsafe(
+          `server:engine-terminal-goal-session-error:${event.sequence}`,
+        ),
         createdAt,
       });
     }
     yield* appendProviderFailureActivity({
       threadId: event.payload.threadId,
       kind: "engine.turn.start.failed",
-      summary: "Goal continuation timed out",
-      detail,
+      summary: "Goal continuation was not sent to the Engine",
+      detail: input.detail,
       turnId: null,
+      deliverySequence: event.sequence,
+      ...(thread === undefined ? {} : { engine: thread.engineSelection.engine }),
+      runtimeGeneration: null,
+      commandId: CommandId.makeUnsafe(`server:engine-terminal-goal-activity:${event.sequence}`),
+      activityId: EventId.makeUnsafe(`engine-delivery:${event.sequence}:goal-start-failed`),
       createdAt,
-      settlementStatus: "uncertain",
+      ...(input.state === "uncertain" ? { settlementStatus: "uncertain" as const } : {}),
     });
     yield* pauseActiveThreadGoal({
       threadId: event.payload.threadId,
@@ -5018,6 +5062,20 @@ const make = Effect.gen(function* () {
         );
       }
       quarantinedThreads.add(input.event.payload.threadId);
+      if (
+        input.event.type === "thread.turn-start-requested" ||
+        input.event.type === "thread.message-edit-resend-requested"
+      ) {
+        yield* surfaceTerminalTurnStartFailure(input.event, {
+          state: input.state,
+          detail: input.detail,
+        });
+      } else if (input.event.type === "thread.goal-continuation-requested") {
+        yield* surfaceTerminalGoalContinuation(input.event, {
+          state: input.state,
+          detail: input.detail,
+        });
+      }
       yield* requireCursorAdvance(input.event);
     });
 
@@ -5043,37 +5101,18 @@ const make = Effect.gen(function* () {
         event.type === "thread.turn-start-requested" ||
         event.type === "thread.message-edit-resend-requested"
       ) {
-        yield* Effect.gen(function* () {
-          const blocker = yield* deliveryRepository.firstBlockingDeliveryForThread({
-            consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
-            threadId: event.payload.threadId,
-          });
-          const blockerDetail =
-            Option.isSome(blocker) && blocker.value.lastError !== null
-              ? blocker.value.lastError
-              : "an earlier engine command failed";
-          const createdAt = new Date().toISOString();
-          yield* appendProviderFailureActivity({
-            threadId: event.payload.threadId,
-            kind: "engine.turn.start.failed",
-            summary: ENGINE_DELIVERY_BLOCK_SUMMARY,
-            detail: `The message was not sent to the engine. Blocking failure: ${blockerDetail}`,
-            turnId: null,
-            createdAt,
-          });
-          yield* setThreadSessionError({
-            threadId: event.payload.threadId,
-            detail: formatEngineDeliveryBlockDetail(blockerDetail),
-            createdAt,
-          });
-        }).pipe(
-          Effect.catchCause((cause) =>
-            Effect.logWarning("failed to surface quarantined-thread skip", {
-              threadId: event.payload.threadId,
-              cause: Cause.pretty(cause),
-            }),
-          ),
-        );
+        const blocker = yield* deliveryRepository.firstBlockingDeliveryForThread({
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+          threadId: event.payload.threadId,
+        });
+        const blockerDetail =
+          Option.isSome(blocker) && blocker.value.lastError !== null
+            ? blocker.value.lastError
+            : "an earlier Engine command failed";
+        yield* surfaceTerminalTurnStartFailure(event, {
+          state: Option.isSome(blocker) && blocker.value.state === "dead" ? "dead" : "uncertain",
+          detail: `The message was not sent to the Engine. Blocking failure: ${blockerDetail}`,
+        });
       }
       yield* requireCursorAdvance(event);
       return true;
@@ -5094,6 +5133,25 @@ const make = Effect.gen(function* () {
         }
         if (existing.value.state === "dead" || existing.value.state === "uncertain") {
           quarantinedThreads.add(threadId);
+          if (
+            event.type === "thread.turn-start-requested" ||
+            event.type === "thread.message-edit-resend-requested"
+          ) {
+            yield* surfaceTerminalTurnStartFailure(event, {
+              state: existing.value.state,
+              restoreExisting: true,
+              detail:
+                existing.value.lastError ??
+                "The Engine turn start previously entered a terminal failure.",
+            });
+          } else if (event.type === "thread.goal-continuation-requested") {
+            yield* surfaceTerminalGoalContinuation(event, {
+              state: existing.value.state,
+              detail:
+                existing.value.lastError ??
+                "The Goal continuation previously entered a terminal Engine failure.",
+            });
+          }
           yield* requireCursorAdvance(event);
           return;
         }
@@ -5156,27 +5214,6 @@ const make = Effect.gen(function* () {
           // The delivery lock is single-permit and process-wide, so an attempt
           // that never returns is a total outage. Settle it as uncertain and
           // let the thread quarantine rather than block every other thread.
-          if (event.type === "thread.turn-start-requested") {
-            yield* surfaceTimedOutTurnStart(event, workerResult.detail).pipe(
-              Effect.catchCause((cause) =>
-                Effect.logError("failed to surface timed-out engine turn start", {
-                  eventSequence: event.sequence,
-                  threadId: event.payload.threadId,
-                  cause: Cause.pretty(cause),
-                }),
-              ),
-            );
-          } else if (event.type === "thread.goal-continuation-requested") {
-            yield* surfaceTimedOutGoalContinuation(event, workerResult.detail).pipe(
-              Effect.catchCause((cause) =>
-                Effect.logError("failed to surface timed-out goal continuation", {
-                  eventSequence: event.sequence,
-                  threadId: event.payload.threadId,
-                  cause: Cause.pretty(cause),
-                }),
-              ),
-            );
-          }
           yield* settleTerminalFailure({
             event,
             claimOwner,
@@ -5408,6 +5445,56 @@ const make = Effect.gen(function* () {
         ),
       );
     };
+
+    const restoreTerminalFailureProjections = Effect.gen(function* () {
+      const pageSize = 100;
+      let afterEventSequence: number | undefined;
+      while (true) {
+        const blockers = yield* deliveryRepository.listBlockingDeliveries({
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
+          ...(afterEventSequence === undefined ? {} : { afterEventSequence }),
+          limit: pageSize,
+        });
+        for (const blocker of blockers) {
+          quarantinedThreads.add(blocker.threadId);
+          yield* Effect.gen(function* () {
+            const event = yield* readProviderIntentEvent(blocker.eventSequence);
+            if (
+              event.type === "thread.turn-start-requested" ||
+              event.type === "thread.message-edit-resend-requested"
+            ) {
+              yield* surfaceTerminalTurnStartFailure(event, {
+                state: blocker.state,
+                restoreExisting: true,
+                detail:
+                  blocker.lastError ??
+                  "The Engine turn start previously entered a terminal failure.",
+              });
+            } else if (event.type === "thread.goal-continuation-requested") {
+              yield* surfaceTerminalGoalContinuation(event, {
+                state: blocker.state,
+                detail:
+                  blocker.lastError ??
+                  "The Goal continuation previously entered a terminal Engine failure.",
+              });
+            }
+          }).pipe(
+            Effect.catchCause((cause) =>
+              Effect.logError("failed to restore terminal Engine delivery projection", {
+                eventSequence: blocker.eventSequence,
+                threadId: blocker.threadId,
+                cause: Cause.pretty(cause),
+              }),
+            ),
+          );
+        }
+        if (blockers.length < pageSize) break;
+        afterEventSequence = blockers.at(-1)?.eventSequence;
+        if (afterEventSequence === undefined) break;
+      }
+    });
+
+    yield* restoreTerminalFailureProjections;
 
     // Self-heal only legacy quarantines whose recorded details prove the
     // command frame was never written. Exit-unproven process failures remain

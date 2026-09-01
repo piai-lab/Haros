@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type {
   BrowserAnnotationEvent,
+  EngineWebSurfacePresentationRelease,
   BrowserUseOpenPanelRequest,
   DesktopBridge,
 } from "@harnessos/contracts";
@@ -30,11 +31,39 @@ function parseBrowserOpenPanelRequest(payload: unknown): BrowserUseOpenPanelRequ
   if (!payload || typeof payload !== "object") {
     return null;
   }
-  const threadId = (payload as { readonly threadId?: unknown }).threadId;
-  if (typeof threadId !== "string" || threadId.trim().length === 0) {
+  const request = payload as Record<string, unknown>;
+  if (
+    typeof request.requestId !== "string" ||
+    request.requestId.trim().length === 0 ||
+    typeof request.presentationId !== "string" ||
+    request.presentationId.trim().length === 0 ||
+    typeof request.threadId !== "string" ||
+    request.threadId.trim().length === 0 ||
+    (request.surfaceId !== null && typeof request.surfaceId !== "string") ||
+    typeof request.tabId !== "string" ||
+    request.tabId.trim().length === 0
+  ) {
     return null;
   }
-  return { threadId: threadId as BrowserUseOpenPanelRequest["threadId"] };
+  return request as unknown as BrowserUseOpenPanelRequest;
+}
+
+function parseEngineWebSurfacePresentationRelease(
+  payload: unknown,
+): EngineWebSurfacePresentationRelease | null {
+  if (!payload || typeof payload !== "object") return null;
+  const release = payload as Record<string, unknown>;
+  if (
+    typeof release.presentationId !== "string" ||
+    release.presentationId.trim().length === 0 ||
+    typeof release.threadId !== "string" ||
+    release.threadId.trim().length === 0 ||
+    (release.disposition !== "restore" && release.disposition !== "preserve") ||
+    typeof release.suppressedByUser !== "boolean"
+  ) {
+    return null;
+  }
+  return release as unknown as EngineWebSurfacePresentationRelease;
 }
 
 function parseBrowserAnnotationEvent(payload: unknown): BrowserAnnotationEvent | null {
@@ -232,6 +261,15 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     newTab: (input) => ipcRenderer.invoke(IPC.browser.newTab, input),
     closeTab: (input) => ipcRenderer.invoke(IPC.browser.closeTab, input),
     selectTab: (input) => ipcRenderer.invoke(IPC.browser.selectTab, input),
+    respondToEngineWebSurfacePresentationReveal: (input) =>
+      ipcRenderer.invoke(IPC.browser.respondOpenPanel, input),
+    acknowledgeEngineWebSurfacePresentationRelease: (input) =>
+      ipcRenderer.invoke(IPC.browser.acknowledgePresentationRelease, input),
+    suppressEngineWebSurfacePresentations: (input) =>
+      ipcRenderer.invoke(IPC.browser.suppressPresentations, input),
+    replayEngineWebSurfacePresentations: () => ipcRenderer.invoke(IPC.browser.replayPresentations),
+    closeDeletedThreadResources: (input) =>
+      ipcRenderer.invoke(IPC.browser.closeDeletedThreadResources, input),
     setEngineWebSurfaceContext: (input) =>
       ipcRenderer.invoke(IPC.browser.setEngineWebSurfaceContext, input),
     reopenEngineWebSurface: (input) =>
@@ -272,6 +310,14 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       return () => {
         ipcRenderer.removeListener(IPC.browser.requestOpenPanel, wrappedListener);
       };
+    },
+    onEngineWebSurfacePresentationRelease: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        const release = parseEngineWebSurfacePresentationRelease(payload);
+        if (release) listener(release);
+      };
+      ipcRenderer.on(IPC.browser.presentationRelease, wrappedListener);
+      return () => ipcRenderer.removeListener(IPC.browser.presentationRelease, wrappedListener);
     },
     onBrowserCopyLink: (listener) => {
       const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {

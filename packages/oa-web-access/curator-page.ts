@@ -78,6 +78,7 @@ export function generateCuratorPage(
   defaultSummaryModel: string | null,
   presentation?: CuratorPresentationSnapshot,
   mode: CuratorSurfaceMode = "review",
+  idleTimeoutEnabled = true,
 ): string {
   const lang = presentation?.locale ?? "en";
   const theme = presentation?.theme ?? "dark";
@@ -117,6 +118,7 @@ export function generateCuratorPage(
     presentation,
     copy,
     mode,
+    idleTimeoutEnabled,
   });
   const legacyResizeBridge = presentation
     ? ""
@@ -136,7 +138,7 @@ export function generateCuratorPage(
     .replace("__LEGACY_RESIZE_BRIDGE__", () => legacyResizeBridge);
 
   const html = `<!DOCTYPE html>
-<html lang="${lang}" data-theme="${theme}" data-surface-mode="${mode}">
+<html lang="${lang}" data-theme="${theme}" data-surface-mode="${mode}" data-idle-timeout="${idleTimeoutEnabled ? "enabled" : "disabled"}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1305,6 +1307,8 @@ main {
 }
 .action-buttons { display: flex; gap: 8px; }
 
+html[data-idle-timeout="disabled"] .timer-badge,
+html[data-idle-timeout="disabled"] .timer-adjust,
 html[data-surface-mode="observer"] .timer-badge,
 html[data-surface-mode="observer"] .timer-adjust,
 html[data-surface-mode="observer"] .provider-buttons,
@@ -1831,6 +1835,7 @@ const SCRIPT = `(function() {
   }
   var token = DATA.sessionToken;
   var timeoutSec = DATA.timeout;
+  var idleTimeoutEnabled = DATA.idleTimeoutEnabled !== false;
   var queries = Array.isArray(DATA.queries) ? DATA.queries : [];
   var providers = __PROVIDER_IDS__;
   var availProviders = DATA.availableProviders && typeof DATA.availableProviders === "object" ? DATA.availableProviders : {};
@@ -1950,7 +1955,14 @@ const SCRIPT = `(function() {
 
   function sanitizeHref(url) {
     var value = typeof url === "string" ? url.trim() : "";
-    return /^https?:\/\//i.test(value) ? value : "#";
+    try {
+      var parsed = new URL(value);
+      return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.hostname
+        ? value
+        : "#";
+    } catch (_) {
+      return "#";
+    }
   }
 
   function sanitizeMarkdownHtml(html) {
@@ -2770,7 +2782,7 @@ __PROVIDER_LABEL_RESOLVER__
   function resetTimer() { lastInteraction = Date.now(); }
 
   function updateTimer() {
-    if (observerMode) return;
+    if (observerMode || !idleTimeoutEnabled) return;
     var idleSec = searchesDone ? Math.floor((Date.now() - lastInteraction) / 1000) : 0;
     var remaining = Math.max(0, timeoutSec - idleSec);
     timerEl.textContent = formatTime(remaining);
@@ -2785,8 +2797,10 @@ __PROVIDER_LABEL_RESOLVER__
     if (remaining <= 0 && !submitted && !timerExpired) onTimeout();
   }
 
-  setInterval(updateTimer, 1000);
-  updateTimer();
+  if (idleTimeoutEnabled) {
+    setInterval(updateTimer, 1000);
+    updateTimer();
+  }
 
   ["click", "keydown", "input", "change"].forEach(function(evt) {
     document.addEventListener(evt, resetTimer, { passive: true });
@@ -3213,7 +3227,7 @@ __PROVIDER_LABEL_RESOLVER__
   }
 
   function onTimeout() {
-    if (observerMode || submitted || timerExpired) return;
+    if (observerMode || !idleTimeoutEnabled || submitted || timerExpired) return;
     var timeoutSelected = getTimeoutSelectedIndices();
     var payload = { selected: timeoutSelected };
     var draft = getSummaryDraftText();

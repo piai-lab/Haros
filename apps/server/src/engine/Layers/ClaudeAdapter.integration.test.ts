@@ -439,7 +439,12 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const result = yield* adapter
-        .startSession({ threadId: THREAD_ID, engine: "codex", runtimeMode: "full-access" })
+        .startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          threadId: THREAD_ID,
+          engine: "codex",
+          runtimeMode: "full-access",
+        })
         .pipe(Effect.result);
 
       assert.equal(result._tag, "Failure");
@@ -465,6 +470,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -486,6 +492,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -527,6 +534,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "auto",
@@ -562,6 +570,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "auto",
@@ -587,6 +596,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -624,6 +634,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -648,6 +659,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -673,6 +685,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -700,6 +713,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -726,6 +740,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -757,6 +772,11 @@ describe("ClaudeAdapterLive", () => {
         yield* Effect.gen(function* () {
           const adapter = yield* ClaudeAdapter;
           yield* adapter.startSession({
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp",
+            },
             threadId: THREAD_ID,
             engine: "claude",
             engineSelection: {
@@ -788,6 +808,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -820,6 +841,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -845,6 +867,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -870,6 +893,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -898,6 +922,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -926,6 +951,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -955,6 +981,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -983,6 +1010,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -1023,6 +1051,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1049,6 +1078,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1091,6 +1121,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1154,6 +1185,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1182,6 +1214,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1231,6 +1264,7 @@ describe("ClaudeAdapterLive", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: RESUME_THREAD_ID,
         engine: "claude",
         resumeCursor: {
@@ -1287,6 +1321,7 @@ describe("ClaudeAdapterLive", () => {
       writeFileSync(attachmentPath, Uint8Array.from([1, 2, 3, 4]));
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1352,6 +1387,7 @@ describe("ClaudeAdapterLive", () => {
       writeFileSync(attachmentPath, "<svg></svg>");
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1398,6 +1434,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         engineSelection: {
@@ -1577,6 +1614,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1758,6 +1796,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1903,6 +1942,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -1982,6 +2022,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2162,6 +2203,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2271,6 +2313,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2440,6 +2483,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2512,6 +2556,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2563,6 +2608,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2617,6 +2663,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2681,6 +2728,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "auto",
@@ -2729,6 +2777,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -2940,6 +2989,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3007,6 +3057,7 @@ describe("ClaudeAdapterLive", () => {
       return Effect.gen(function* () {
         const adapter = yield* ClaudeAdapter;
         const session = yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -3072,6 +3123,7 @@ describe("ClaudeAdapterLive", () => {
         Effect.forkChild,
       );
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3125,6 +3177,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3225,6 +3278,7 @@ describe("ClaudeAdapterLive", () => {
       writeFileSync(attachmentPath, Uint8Array.from([1, 2, 3, 4]));
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3291,6 +3345,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3316,6 +3371,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3343,6 +3399,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3397,6 +3454,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3465,6 +3523,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3671,6 +3730,7 @@ describe("ClaudeAdapterLive", () => {
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3771,6 +3831,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -3978,6 +4039,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4144,6 +4206,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4274,6 +4337,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4322,6 +4386,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4375,6 +4440,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4435,6 +4501,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4499,6 +4566,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       assert.equal(firstQuery.closeCalls, 1);
 
       const resumedSession = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4565,6 +4633,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4642,6 +4711,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         lifecycleGeneration: "generation-claude-a",
@@ -4712,6 +4782,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4771,6 +4842,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         resumeCursor: {
@@ -4854,6 +4926,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4910,6 +4983,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -4977,6 +5051,11 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const input = {
         threadId: THREAD_ID,
         engine: "claude" as const,
+        admission: {
+          productSurface: "agent" as const,
+          workSurface: "agent" as const,
+          projectContextRoot: "/tmp",
+        },
         runtimeMode: "full-access" as const,
       };
 
@@ -5251,6 +5330,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5288,6 +5368,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5338,6 +5419,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -5429,6 +5511,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5500,6 +5583,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5570,6 +5654,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5697,6 +5782,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5834,6 +5920,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5909,6 +5996,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -5991,6 +6079,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6046,6 +6135,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6121,6 +6211,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6186,6 +6277,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         );
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -6265,6 +6357,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6343,6 +6436,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6423,6 +6517,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         );
 
         const session = yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -6514,6 +6609,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6680,6 +6776,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6749,6 +6846,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -6971,6 +7069,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7044,6 +7143,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "auto",
@@ -7199,6 +7299,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7244,6 +7345,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         const adapter = yield* ClaudeAdapter;
 
         yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -7276,6 +7378,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -7355,6 +7458,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: RESUME_THREAD_ID,
         engine: "claude",
         resumeCursor: {
@@ -7397,6 +7501,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: RESUME_THREAD_ID,
         engine: "claude",
         resumeCursor: {
@@ -7481,6 +7586,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7513,6 +7619,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7591,6 +7698,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7645,6 +7753,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "auto",
@@ -7691,6 +7800,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7726,6 +7836,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.take(3), Stream.runCollect, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7777,6 +7888,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7826,6 +7938,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7901,6 +8014,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       );
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7960,6 +8074,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -7995,6 +8110,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8026,6 +8142,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8058,6 +8175,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8140,6 +8258,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       const firstSession = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8169,6 +8288,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       assert.ok(activeAfterFallback?.resumeCursor);
 
       const resumedSession = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8209,6 +8329,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8219,6 +8340,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const replacement = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -8249,6 +8371,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8256,6 +8379,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const replacement = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -8282,6 +8406,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8319,6 +8444,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -8362,6 +8488,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "auto",
@@ -8411,6 +8538,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "auto",
@@ -8451,6 +8579,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "auto",
@@ -8484,6 +8613,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const result = yield* Effect.exit(
         adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "auto",
@@ -8510,6 +8640,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.take(1), Stream.runCollect, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8577,6 +8708,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.take(1), Stream.runCollect, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8634,6 +8766,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.take(1), Stream.runCollect, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8692,6 +8825,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.take(2), Stream.runCollect, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8795,6 +8929,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8837,6 +8972,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       ).pipe(Stream.runHead, Effect.forkChild);
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8870,6 +9006,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8900,6 +9037,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8952,6 +9090,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -8977,6 +9116,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -9000,6 +9140,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -9046,6 +9187,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9092,6 +9234,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9159,6 +9302,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9230,6 +9374,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9295,6 +9440,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       // Start session in approval-required mode so canUseTool fires.
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -9428,6 +9574,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -9527,6 +9674,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9585,6 +9733,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       // In full-access mode, regular tools are auto-approved.
       // AskUserQuestion should still go through the user-input flow.
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9657,6 +9806,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -9726,6 +9876,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -9841,6 +9992,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         const adapter = yield* ClaudeAdapter;
 
         const session = yield* adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
           threadId: THREAD_ID,
           engine: "claude",
           runtimeMode: "full-access",
@@ -9950,6 +10102,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -10028,6 +10181,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "approval-required",
@@ -10106,6 +10260,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
 
       const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -10259,6 +10414,7 @@ describe("ClaudeAdapterLive forkThread", () => {
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",
@@ -10309,6 +10465,7 @@ describe("ClaudeAdapterLive forkThread", () => {
       // A live context restarts its turn log at [] on resume; the persisted
       // cumulative count must win.
       yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
         threadId: THREAD_ID,
         engine: "claude",
         runtimeMode: "full-access",

@@ -1,5 +1,6 @@
 import type {
   EngineKind,
+  EngineSessionAdmission,
   EngineSessionRuntimeStatus,
   RuntimeMode,
   ThreadId,
@@ -17,6 +18,7 @@ export interface EngineRuntimeBinding {
   readonly lifecycleGeneration?: string;
   readonly lastSeenAt?: string;
   readonly resumeCursor?: unknown | null;
+  readonly admission?: EngineSessionAdmission | null;
   readonly runtimePayload?: unknown | null;
   readonly runtimeMode?: RuntimeMode;
 }

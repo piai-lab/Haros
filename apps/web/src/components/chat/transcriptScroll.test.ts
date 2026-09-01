@@ -5,9 +5,20 @@ import {
   anchorSlideOffsetPx,
   scrollTranscriptToSettledEnd,
   stopTranscriptScrollAtCurrentOffset,
+  transcriptGestureTakesViewportOwnership,
   type TranscriptScrollCancellationTarget,
   type TranscriptScrollTarget,
 } from "./transcriptScroll";
+
+describe("transcriptGestureTakesViewportOwnership", () => {
+  it("keeps auto-follow for passive presses and releases it only for scrolling gestures", () => {
+    expect(transcriptGestureTakesViewportOwnership("pointer-down")).toBe(false);
+    expect(transcriptGestureTakesViewportOwnership("pointer-cancel")).toBe(false);
+    expect(transcriptGestureTakesViewportOwnership("touch-start")).toBe(false);
+    expect(transcriptGestureTakesViewportOwnership("touch-move")).toBe(true);
+    expect(transcriptGestureTakesViewportOwnership("wheel")).toBe(true);
+  });
+});
 
 describe("anchorSlideOffsetPx", () => {
   const glide = (elapsedMs: number) => anchorSlideOffsetPx({ fromPx: 900, toPx: 20, elapsedMs });

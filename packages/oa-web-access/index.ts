@@ -636,7 +636,7 @@ interface PendingCurate {
   signal: AbortSignal | undefined;
   abortSearches: () => void;
   finish: (value: AgentToolResult<Record<string, unknown>>) => void;
-  cancel: (reason?: "user" | "stale") => void;
+  cancel: (reason?: "user" | "stale" | "aborted") => void;
   browserPromise?: Promise<void>;
   browserOpenError?: string;
   surfaceId?: string;
@@ -909,7 +909,7 @@ function closeSearchObserver(
     .catch(() => undefined);
 }
 
-function closeCurator(callId?: string): void {
+function closeCurator(callId?: string, reason: "stale" | "aborted" = "stale"): void {
   if (callId !== undefined) {
     closeSearchObserver(callId);
     const win = glimpseWins.get(callId);
@@ -919,7 +919,7 @@ function closeCurator(callId?: string): void {
     } catch {}
     const pending = pendingCurates.get(callId);
     settleCuratorPresentation(callId, pending);
-    pending?.cancel("stale");
+    pending?.cancel(reason);
     pendingCurates.delete(callId);
     const curator = activeCurators.get(callId);
     activeCurators.delete(callId);
@@ -1350,7 +1350,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
   }
 
   function buildCurationCancelledReturn(
-    reason: "user" | "stale",
+    reason: "user" | "timeout" | "stale" | "aborted",
     partial?: {
       queries?: QueryResultData[];
       queryCount?: number;
@@ -1841,6 +1841,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           summaryModels: pc.summaryModels,
           defaultSummaryModel: pc.defaultSummaryModel,
           ...(presentation === undefined ? {} : { presentation }),
+          ...(harnessosProfile ? { idleTimeoutEnabled: false } : {}),
         },
         {
           async onSummarize(selectedQueryIndices, summarizeSignal, model, feedback) {
@@ -1910,7 +1911,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
           onCancel(reason) {
             if (pendingCurates.get(callId) !== pc) return;
             searchAbort.abort();
-            if (reason === "timeout") {
+            if (reason === "timeout" && !harnessosProfile) {
               const resolvedSummary = resolveSummaryForSubmit(
                 { selectedQueryIndices: [], summary: undefined, summaryMeta: undefined },
                 pc.searchResults,
@@ -2383,7 +2384,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
                 resolvePromise(value);
               };
 
-              const cancel = (reason: "user" | "stale" = "stale") => {
+              const cancel = (reason: "user" | "stale" | "aborted" = "stale") => {
                 if (cancelled) return;
                 const conn = activeCurators.get(callId)?.getConnectionState();
                 finish(
@@ -2401,7 +2402,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
               pc.finish = finish;
               pc.cancel = cancel;
 
-              const onAbort = bindToCurrentWebAccessContext(() => closeCurator(callId));
+              const onAbort = bindToCurrentWebAccessContext(() =>
+                closeCurator(callId, "aborted"),
+              );
               pendingCurates.set(callId, pc);
               signal?.addEventListener("abort", onAbort, { once: true });
               pc.browserPromise = openCuratorBrowser(callId, pc, ctx, false);
@@ -2486,7 +2489,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
               );
 
               if (signal?.aborted || cancelled || searchAbort.signal.aborted) {
-                cancel();
+                cancel(signal?.aborted ? "aborted" : "stale");
                 return promise;
               }
 

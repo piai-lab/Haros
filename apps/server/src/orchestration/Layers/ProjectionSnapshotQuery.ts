@@ -1,5 +1,6 @@
 import {
   CheckpointRef,
+  CanonicalUserInputDraftV1,
   IsoDateTime,
   MessageId,
   NonNegativeInt,
@@ -157,6 +158,11 @@ const ProjectionThreadActivityDbRowSchema = ProjectionThreadActivity.mapFields(
   }),
 );
 type PendingInteractionRow = typeof OrchestrationPendingInteraction.Type;
+const OrchestrationPendingInteractionDbRow = OrchestrationPendingInteraction.mapFields(
+  Struct.assign({
+    draft: Schema.NullOr(Schema.fromJsonString(CanonicalUserInputDraftV1)),
+  }),
+);
 const ProjectionThreadSessionDbRowSchema = ProjectionThreadSession;
 const ProjectionCheckpointDbRowSchema = ProjectionCheckpoint.mapFields(
   Struct.assign({
@@ -1318,7 +1324,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
 
   const listPendingInteractionRows = SqlSchema.findAll({
     Request: Schema.Void,
-    Result: OrchestrationPendingInteraction,
+    Result: OrchestrationPendingInteractionDbRow,
     execute: () => sql`
       SELECT
         interaction_kind AS "interactionKind",
@@ -1331,7 +1337,10 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         response_command_id AS "responseCommandId",
         response_requested_at AS "responseRequestedAt",
         created_at AS "createdAt",
-        resolved_at AS "resolvedAt"
+        resolved_at AS "resolvedAt",
+        draft_json AS draft,
+        draft_revision AS "draftRevision",
+        draft_updated_at AS "draftUpdatedAt"
       FROM projection_pending_interactions
       WHERE status <> 'confirmed'
       ORDER BY thread_id ASC, created_at ASC, interaction_kind ASC, request_id ASC
@@ -1913,7 +1922,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
 
   const listPendingInteractionRowsByThread = SqlSchema.findAll({
     Request: ThreadIdLookupInput,
-    Result: OrchestrationPendingInteraction,
+    Result: OrchestrationPendingInteractionDbRow,
     execute: ({ threadId }) => sql`
       SELECT
         interaction_kind AS "interactionKind",
@@ -1926,7 +1935,10 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         response_command_id AS "responseCommandId",
         response_requested_at AS "responseRequestedAt",
         created_at AS "createdAt",
-        resolved_at AS "resolvedAt"
+        resolved_at AS "resolvedAt",
+        draft_json AS draft,
+        draft_revision AS "draftRevision",
+        draft_updated_at AS "draftUpdatedAt"
       FROM projection_pending_interactions
       WHERE thread_id = ${threadId}
         AND status <> 'confirmed'

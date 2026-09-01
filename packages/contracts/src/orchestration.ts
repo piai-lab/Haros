@@ -40,6 +40,7 @@ export const ORCHESTRATION_WS_METHODS = {
   getSnapshot: "orchestration.getSnapshot",
   getShellSnapshot: "orchestration.getShellSnapshot",
   getThreadDetailSnapshot: "orchestration.getThreadDetailSnapshot",
+  updatePendingUserInputDraft: "orchestration.updatePendingUserInputDraft",
   dispatchCommand: "orchestration.dispatchCommand",
   importThread: "orchestration.importThread",
   repairState: "orchestration.repairState",
@@ -325,6 +326,30 @@ export const CanonicalUserInputAnswer = Schema.Struct({
 export type CanonicalUserInputAnswer = typeof CanonicalUserInputAnswer.Type;
 export const CanonicalUserInputAnswers = Schema.Record(Schema.String, CanonicalUserInputAnswer);
 export type CanonicalUserInputAnswers = typeof CanonicalUserInputAnswers.Type;
+/**
+ * Short-lived Product draft for one exact Ask User lifecycle.
+ *
+ * Strings are deliberately raw. The UI may trim only to decide whether an
+ * answer is complete; persistence must round-trip the user's bytes unchanged.
+ */
+export const CanonicalUserInputDraftAnswerV1 = Schema.Struct({
+  selectedOptionLabels: Schema.Array(Schema.String),
+  customText: Schema.optional(Schema.String),
+  customSelected: Schema.optional(Schema.Boolean),
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
+export type CanonicalUserInputDraftAnswerV1 = typeof CanonicalUserInputDraftAnswerV1.Type;
+export const CanonicalUserInputDraftV1 = Schema.Struct({
+  version: Schema.Literal(1),
+  answers: Schema.Record(Schema.String, CanonicalUserInputDraftAnswerV1),
+  activeQuestionIndex: NonNegativeInt,
+})
+  .annotate({ parseOptions: { onExcessProperty: "error" } })
+  .check(
+    Schema.makeFilter(canonicalUserInputPayloadFits, {
+      expected: "a canonical user-input draft no larger than 1 MiB",
+    }),
+  );
+export type CanonicalUserInputDraftV1 = typeof CanonicalUserInputDraftV1.Type;
 export const CanonicalUserInputResponse = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("answered"),
@@ -869,6 +894,13 @@ export const OrchestrationPendingInteraction = Schema.Struct({
   responseRequestedAt: Schema.NullOr(IsoDateTime),
   createdAt: IsoDateTime,
   resolvedAt: Schema.NullOr(IsoDateTime),
+  draft: Schema.optional(Schema.NullOr(CanonicalUserInputDraftV1)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  draftRevision: Schema.optional(NonNegativeInt).pipe(Schema.withDecodingDefault(() => 0)),
+  draftUpdatedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
 });
 export type OrchestrationPendingInteraction = typeof OrchestrationPendingInteraction.Type;
 
@@ -2728,6 +2760,23 @@ export const OrchestrationGetThreadDetailSnapshotResult = Schema.NullOr(
 export type OrchestrationGetThreadDetailSnapshotResult =
   typeof OrchestrationGetThreadDetailSnapshotResult.Type;
 
+export const OrchestrationUpdatePendingUserInputDraftInput = Schema.Struct({
+  threadId: ThreadId,
+  requestId: ApprovalRequestId,
+  lifecycleGeneration: Schema.NullOr(TrimmedNonEmptyString),
+  draft: CanonicalUserInputDraftV1,
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
+export type OrchestrationUpdatePendingUserInputDraftInput =
+  typeof OrchestrationUpdatePendingUserInputDraftInput.Type;
+
+export const OrchestrationUpdatePendingUserInputDraftResult = Schema.Struct({
+  updated: Schema.Boolean,
+  draftRevision: NonNegativeInt,
+  draftUpdatedAt: Schema.NullOr(IsoDateTime),
+});
+export type OrchestrationUpdatePendingUserInputDraftResult =
+  typeof OrchestrationUpdatePendingUserInputDraftResult.Type;
+
 export const OrchestrationImportThreadInput = Schema.Struct({
   threadId: ThreadId,
   externalId: TrimmedNonEmptyString,
@@ -2756,6 +2805,10 @@ export const OrchestrationRpcSchemas = {
   getThreadDetailSnapshot: {
     input: OrchestrationGetThreadDetailSnapshotInput,
     output: OrchestrationGetThreadDetailSnapshotResult,
+  },
+  updatePendingUserInputDraft: {
+    input: OrchestrationUpdatePendingUserInputDraftInput,
+    output: OrchestrationUpdatePendingUserInputDraftResult,
   },
   repairState: {
     input: OrchestrationRepairStateInput,

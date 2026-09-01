@@ -9,7 +9,11 @@
 import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
 import { type ReactNode } from "react";
 
-import { buildDiffPanelUnsafeCSS, resolveDiffThemeName } from "~/lib/diffRendering";
+import {
+  buildDiffPanelUnsafeCSS,
+  resolveDiffThemeName,
+  resolveFileDiffPath,
+} from "~/lib/diffRendering";
 import { cn } from "~/lib/utils";
 import { FileDiffHeader } from "./FileDiffHeader";
 
@@ -20,8 +24,8 @@ const DIFF_VIRTUALIZER_CONFIG = {
 };
 
 // Virtualized scroll container shared by single-file (GitPanel) and multi-file
-// (DiffPanel) diff lists. Callers own the inner per-file wrapper markup because
-// it differs (collapse click capture, data-diff-file-path scroll anchors, etc.).
+// (DiffPanel/Timeline) diff lists. This is the only vertical scroll owner for a
+// collection of rendered files.
 export function FileDiffSurface(props: { className?: string; children: ReactNode }) {
   return (
     <Virtualizer
@@ -42,28 +46,41 @@ export function FileDiffCard(props: {
   diffStyle?: "unified" | "split";
   overflow?: "scroll" | "wrap";
   collapsed?: boolean;
-  /** Trailing header chrome (actions menu, collapse chevron). */
-  renderHeaderTrailing?: () => ReactNode;
+  className?: string;
+  children?: ReactNode;
+  /** Header actions remain independent from the disclosure button. */
+  headerActions?: ReactNode;
+  onToggleCollapsed?: (() => void) | undefined;
+  toggleLabel?: string | undefined;
 }) {
   return (
-    <FileDiff
-      fileDiff={props.fileDiff}
-      options={{
-        diffStyle: props.diffStyle ?? "unified",
-        lineDiffType: "none",
-        overflow: props.overflow ?? "scroll",
-        theme: resolveDiffThemeName(props.theme),
-        themeType: props.theme,
-        unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
-        ...(props.collapsed !== undefined ? { collapsed: props.collapsed } : {}),
-      }}
-      renderCustomHeader={(fileDiff) => (
-        <FileDiffHeader
-          fileDiff={fileDiff}
-          theme={props.theme}
-          trailing={props.renderHeaderTrailing?.()}
-        />
-      )}
-    />
+    <div
+      className={cn("diff-render-file", props.className)}
+      data-diff-file-path={resolveFileDiffPath(props.fileDiff)}
+    >
+      <FileDiff
+        fileDiff={props.fileDiff}
+        options={{
+          diffStyle: props.diffStyle ?? "unified",
+          lineDiffType: "none",
+          overflow: props.overflow ?? "scroll",
+          theme: resolveDiffThemeName(props.theme),
+          themeType: props.theme,
+          unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
+          ...(props.collapsed !== undefined ? { collapsed: props.collapsed } : {}),
+        }}
+        renderCustomHeader={(fileDiff) => (
+          <FileDiffHeader
+            fileDiff={fileDiff}
+            theme={props.theme}
+            collapsed={props.collapsed}
+            onToggleCollapsed={props.onToggleCollapsed}
+            toggleLabel={props.toggleLabel}
+            trailing={props.headerActions}
+          />
+        )}
+      />
+      {props.children}
+    </div>
   );
 }

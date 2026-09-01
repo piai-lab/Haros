@@ -95,6 +95,11 @@ it.effect("replays typed runtime fixture events", () =>
         threadId: ThreadId.makeUnsafe("thread-integration-typed"),
         engine: "codex",
         cwd: fixture.cwd,
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: fixture.cwd,
+        },
         runtimeMode: "full-access",
       });
       assert.equal((session.threadId ?? "").length > 0, true);
@@ -134,6 +139,11 @@ it.effect("replays file-changing fixture turn events", () =>
         threadId: ThreadId.makeUnsafe("thread-integration-tools"),
         engine: "codex",
         cwd: fixture.cwd,
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: fixture.cwd,
+        },
         runtimeMode: "full-access",
       });
       assert.equal((session.threadId ?? "").length > 0, true);
@@ -177,6 +187,11 @@ it.effect("runs multi-turn tool/approval flow", () =>
         threadId: ThreadId.makeUnsafe("thread-integration-multi"),
         engine: "codex",
         cwd: fixture.cwd,
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: fixture.cwd,
+        },
         runtimeMode: "full-access",
       });
       assert.equal((session.threadId ?? "").length > 0, true);
@@ -244,6 +259,11 @@ it.effect("rolls back engine conversation state only", () =>
           threadId: ThreadId.makeUnsafe("thread-integration-rollback"),
           engine: "codex",
           cwd: fixture.cwd,
+          admission: {
+            productSurface: "agent",
+            workSurface: "agent",
+            projectContextRoot: fixture.cwd,
+          },
           runtimeMode: "full-access",
         },
       );

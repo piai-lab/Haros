@@ -220,6 +220,8 @@ import type {
   OrchestrationGetFullThreadDiffResult,
   OrchestrationGetThreadDetailSnapshotInput,
   OrchestrationGetThreadDetailSnapshotResult,
+  OrchestrationUpdatePendingUserInputDraftInput,
+  OrchestrationUpdatePendingUserInputDraftResult,
   OrchestrationImportThreadInput,
   OrchestrationImportThreadResult,
   OrchestrationListEngineDeliveryBlockersInput,
@@ -261,6 +263,7 @@ import type {
   EngineExecutionCapabilitiesInput,
 } from "./engineExecution";
 import type { EngineCompactThreadInput } from "./engine";
+import type { ToolResultFullReadResult, ToolResultReadInput } from "./toolResults";
 import type {
   HarosCustomModelServiceRemoveInput,
   HarosCustomModelServiceRemoveResult,
@@ -567,8 +570,47 @@ export interface BrowserCopyLinkEvent {
 // the requested thread in the event prevents whichever chat happens to be
 // visible from stealing the browser session.
 export interface BrowserUseOpenPanelRequest {
+  requestId: string;
+  presentationId: string;
+  threadId: ThreadId;
+  surfaceId: string | null;
+  tabId: string;
+}
+
+export interface EngineWebSurfacePresentationRelease {
+  presentationId: string;
+  threadId: ThreadId;
+  disposition: "restore" | "preserve";
+  suppressedByUser: boolean;
+}
+
+export interface EngineWebSurfacePresentationSuppression {
+  presentationId: string;
   threadId: ThreadId;
 }
+
+export interface EngineWebSurfacePresentationSuppressionRequest {
+  threadIds: ReadonlyArray<ThreadId>;
+}
+
+export interface EngineWebSurfacePresentationSuppressionAck {
+  status: "acknowledged";
+  presentations: ReadonlyArray<EngineWebSurfacePresentationSuppression>;
+}
+
+export type EngineWebSurfacePresentationReleaseAck = Pick<
+  EngineWebSurfacePresentationRelease,
+  "presentationId" | "threadId"
+>;
+
+export type BrowserPanelRevealResult =
+  | { readonly status: "visible" }
+  | { readonly status: "background" }
+  | { readonly status: "unavailable" };
+
+export type BrowserUseOpenPanelResponse = BrowserPanelRevealResult & {
+  readonly requestId: string;
+};
 
 interface BrowserControlMethods {
   open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;
@@ -588,6 +630,17 @@ interface BrowserControlMethods {
   newTab: (input: BrowserNewTabInput) => Promise<ThreadBrowserState>;
   closeTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
   selectTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
+  respondToEngineWebSurfacePresentationReveal: (
+    input: BrowserUseOpenPanelResponse,
+  ) => Promise<void>;
+  acknowledgeEngineWebSurfacePresentationRelease: (
+    input: EngineWebSurfacePresentationReleaseAck,
+  ) => Promise<void>;
+  suppressEngineWebSurfacePresentations: (
+    input: EngineWebSurfacePresentationSuppressionRequest,
+  ) => Promise<EngineWebSurfacePresentationSuppressionAck>;
+  replayEngineWebSurfacePresentations: () => Promise<void>;
+  closeDeletedThreadResources: (input: BrowserThreadInput) => Promise<void>;
   setEngineWebSurfaceContext: (input: BrowserSetEngineWebSurfaceContextInput) => Promise<void>;
   reopenEngineWebSurface: (
     input: BrowserReopenEngineWebSurfaceInput,
@@ -741,6 +794,9 @@ export interface DesktopBridge {
     annotations: BrowserAnnotationMethods;
     onBrowserUseOpenPanelRequest: (
       listener: (request: BrowserUseOpenPanelRequest) => void,
+    ) => () => void;
+    onEngineWebSurfacePresentationRelease: (
+      listener: (release: EngineWebSurfacePresentationRelease) => void,
     ) => () => void;
     onBrowserCopyLink: (listener: (event: BrowserCopyLinkEvent) => void) => () => void;
   };
@@ -946,6 +1002,10 @@ export interface NativeApi {
       input: EngineExecutionCapabilitiesInput,
     ) => Promise<EngineExecutionCapabilities>;
     compactThread: (input: EngineCompactThreadInput) => Promise<void>;
+    readToolResult: (
+      input: ToolResultReadInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<ToolResultFullReadResult>;
     listCommands: (input: EngineListCommandsInput) => Promise<EngineListCommandsResult>;
     listSkills: (input: EngineListSkillsInput) => Promise<EngineListSkillsResult>;
     listSkillsCatalog: (input: EngineSkillsCatalogInput) => Promise<EngineSkillsCatalogResult>;
@@ -1047,14 +1107,21 @@ export interface NativeApi {
     getThreadDetailSnapshot: (
       input: OrchestrationGetThreadDetailSnapshotInput,
     ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
+    updatePendingUserInputDraft: (
+      input: OrchestrationUpdatePendingUserInputDraftInput,
+    ) => Promise<OrchestrationUpdatePendingUserInputDraftResult>;
     dispatchCommand: (command: ClientOrchestrationCommand) => Promise<DispatchResult>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;
     repairState: () => Promise<OrchestrationReadModel>;
-    getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
+    getTurnDiff: (
+      input: OrchestrationGetTurnDiffInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OrchestrationGetTurnDiffResult>;
     getFullThreadDiff: (
       input: OrchestrationGetFullThreadDiffInput,
+      options?: { readonly signal?: AbortSignal },
     ) => Promise<OrchestrationGetFullThreadDiffResult>;
     replayEvents: (
       fromSequenceExclusive: number,

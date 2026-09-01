@@ -4,8 +4,9 @@
 
 import "../../index.css";
 
-import { MessageId, TurnId } from "@harnessos/contracts";
-import { afterEach, describe, expect, it } from "vitest";
+import { CheckpointRef, MessageId, type NativeApi, ThreadId, TurnId } from "@harnessos/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
@@ -116,6 +117,7 @@ function processTrigger(): HTMLButtonElement | null {
 describe("MessagesTimeline turn process approval cases", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    Reflect.deleteProperty(window, "nativeApi");
   });
 
   it("1. settles closed with the final answer outside", async () => {
@@ -134,6 +136,7 @@ describe("MessagesTimeline turn process approval cases", () => {
         document.getElementById(processTrigger()!.getAttribute("aria-controls")!),
       ).not.toBeNull();
       expect(processTrigger()?.textContent).toContain("Worked for");
+      expect(processRow()?.querySelector("[data-turn-process-divider='true']")).not.toBeNull();
       const answer = document.querySelector(
         "[data-assistant-message-id='assistant-process-browser']",
       );
@@ -158,6 +161,7 @@ describe("MessagesTimeline turn process approval cases", () => {
       processTrigger()!.click();
       await expect.poll(() => processTrigger()?.getAttribute("aria-expanded")).toBe("true");
       expect(processTrigger()?.getAttribute("aria-expanded")).toBe("true");
+      expect(processRow()?.querySelector("[data-turn-process-divider='true']")).not.toBeNull();
       expect(processRow()?.textContent).toContain("Searched sources");
     } finally {
       await screen.unmount();
@@ -188,6 +192,7 @@ describe("MessagesTimeline turn process approval cases", () => {
     );
     try {
       expect(processTrigger()?.getAttribute("aria-expanded")).toBe("true");
+      expect(processRow()?.querySelector("[data-turn-process-divider='true']")).toBeNull();
       processTrigger()!.click();
       await expect.poll(() => processTrigger()?.getAttribute("aria-expanded")).toBe("false");
       expect(processTrigger()?.getAttribute("aria-expanded")).toBe("false");
@@ -449,6 +454,99 @@ describe("MessagesTimeline turn process approval cases", () => {
       );
       expect(document.querySelector("[data-assistant-turn-avatar='model']")).not.toBeNull();
     } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("10. loads exact checkpoint evidence only after both disclosures open", async () => {
+    const host = createHost();
+    const threadId = ThreadId.makeUnsafe("thread-turn-diff-browser");
+    const assistantMessageId = MessageId.makeUnsafe("assistant-process-browser");
+    const patch = [
+      "diff --git a/src/evidence.ts b/src/evidence.ts",
+      "index 1111111..2222222 100644",
+      "--- a/src/evidence.ts",
+      "+++ b/src/evidence.ts",
+      "@@ -1 +1 @@",
+      "-export const evidence = false;",
+      "+export const evidence = true;",
+      "",
+    ].join("\n");
+    const getTurnDiff = vi.fn().mockResolvedValue({ diff: patch });
+    window.nativeApi = {
+      orchestration: { getTurnDiff },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <MessagesTimeline
+          {...baseProps}
+          threadId={threadId}
+          timelineEntries={[
+            userEntry(),
+            workEntry("file-change", "Edited evidence", {
+              tone: "tool",
+              requestKind: "file-change",
+              changedFiles: ["src/evidence.ts"],
+              toolDetails: {
+                kind: "file-change",
+                title: "Edited evidence",
+                files: ["src/evidence.ts"],
+              },
+            }),
+            assistantEntry(),
+          ]}
+          turnDiffSummaryByAssistantMessageId={
+            new Map([
+              [
+                assistantMessageId,
+                {
+                  turnId: TURN_ID,
+                  completedAt: "2026-08-27T01:00:08.000Z",
+                  assistantMessageId,
+                  checkpointRef: CheckpointRef.makeUnsafe(
+                    "refs/harnessos/checkpoints/thread/turn/evidence",
+                  ),
+                  checkpointTurnCount: 1,
+                  checkpointTurnCounts: [1],
+                  status: "ready",
+                  files: [{ path: "src/evidence.ts", additions: 1, deletions: 1 }],
+                },
+              ],
+            ])
+          }
+        />
+      </QueryClientProvider>,
+      { container: host },
+    );
+    try {
+      expect(getTurnDiff).not.toHaveBeenCalled();
+      processTrigger()!.click();
+      await expect.poll(() => processTrigger()?.getAttribute("aria-expanded")).toBe("true");
+      await expect
+        .poll(() => document.querySelector("[data-turn-changed-files-evidence='true'] button"))
+        .not.toBeNull();
+      const evidenceTrigger = document.querySelector<HTMLButtonElement>(
+        "[data-turn-changed-files-evidence='true'] button",
+      )!;
+      expect(getTurnDiff).not.toHaveBeenCalled();
+      evidenceTrigger.click();
+      await expect.poll(() => getTurnDiff.mock.calls.length).toBe(1);
+      expect(getTurnDiff).toHaveBeenCalledWith(
+        {
+          threadId,
+          fromTurnCount: 0,
+          toTurnCount: 1,
+          ignoreWhitespace: false,
+        },
+        { signal: expect.any(AbortSignal) },
+      );
+      await expect.poll(() => document.body.textContent ?? "").toContain("evidence.ts");
+      expect(document.querySelector("[data-turn-diff-scroll-root='true']")).not.toBeNull();
+      expect(document.querySelector("[data-timeline-file-copy='src/evidence.ts']")).not.toBeNull();
+    } finally {
+      queryClient.clear();
       await screen.unmount();
       host.remove();
     }

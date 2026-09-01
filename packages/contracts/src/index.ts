@@ -18,6 +18,7 @@ export * from "./engine";
 export * from "./engineDiscovery";
 export * from "./engineExecution";
 export * from "./engineRuntime";
+export * from "./toolResults";
 export * from "./oaModelServices";
 export * from "./oaEcosystem";
 export * from "./oaAgentPrompts";

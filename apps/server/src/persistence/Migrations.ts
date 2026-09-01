@@ -12,10 +12,16 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { MigrationLineageError, MigrationSchemaTooNewError } from "./Errors.ts";
 import InitialSchema from "./Migrations/001_HarnessOSInitialSchema.ts";
+import EngineSessionAdmission from "./Migrations/002_EngineSessionAdmission.ts";
+import PendingUserInputDraft from "./Migrations/003_PendingUserInputDraft.ts";
 
 // The recorded migration name is a persisted machine contract from the repository split. Keep it
 // stable even though the current product name is Haros.
-export const migrationEntries = [[1, "HarnessOSInitialSchema", InitialSchema]] as const;
+export const migrationEntries = [
+  [1, "HarnessOSInitialSchema", InitialSchema],
+  [2, "EngineSessionAdmission", EngineSessionAdmission],
+  [3, "PendingUserInputDraft", PendingUserInputDraft],
+] as const;
 
 const LATEST_MIGRATION_ID = migrationEntries.at(-1)![0];
 const CANONICAL_MIGRATION_NAMES: ReadonlyMap<number, string> = new Map(

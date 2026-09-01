@@ -7,12 +7,16 @@ export interface StateStorage<R = unknown> {
   removeItem: (name: string) => R;
 }
 
+export interface SyncStateStorage<R = unknown> extends StateStorage<R> {
+  getItem: (name: string) => string | null;
+}
+
 export interface DeferredPersistStorage<S> extends PersistStorage<S> {
   /** Serialize the latest captured state and write it through synchronously. */
   flush: () => void;
 }
 
-export function createMemoryStorage(): StateStorage {
+export function createMemoryStorage(): SyncStateStorage {
   const store = new Map<string, string>();
   return {
     getItem: (name) => store.get(name) ?? null,
@@ -23,6 +27,28 @@ export function createMemoryStorage(): StateStorage {
       store.delete(name);
     },
   };
+}
+
+/**
+ * Resolve the browser's durable storage without assuming that a DOM-like global
+ * provides a complete Storage implementation. Some SSR and Node environments
+ * expose a partial `localStorage` object; treating it as usable makes otherwise
+ * unrelated store mutations throw during cleanup paths.
+ */
+export function resolveLocalStateStorage(
+  fallback: SyncStateStorage = createMemoryStorage(),
+): SyncStateStorage {
+  if (typeof localStorage === "undefined") {
+    return fallback;
+  }
+  if (
+    typeof localStorage.getItem !== "function" ||
+    typeof localStorage.setItem !== "function" ||
+    typeof localStorage.removeItem !== "function"
+  ) {
+    return fallback;
+  }
+  return localStorage;
 }
 
 /**

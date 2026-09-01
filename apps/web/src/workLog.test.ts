@@ -2697,7 +2697,11 @@ describe("deriveWorkLogEntries", () => {
       "apps/web/src/components/ChatView.tsx",
       "apps/web/src/session-logic.ts",
     ]);
-    expect(entry?.toolDetails).toBeUndefined();
+    expect(entry?.toolDetails).toEqual({
+      kind: "file-change",
+      title: "Edited",
+      files: ["apps/web/src/components/ChatView.tsx", "apps/web/src/session-logic.ts"],
+    });
   });
 
   it("does not create tool details from a path-only file-change input", () => {
@@ -2722,10 +2726,14 @@ describe("deriveWorkLogEntries", () => {
 
     const [entry] = deriveWorkLogEntries(activities, undefined);
     expect(entry?.changedFiles).toEqual(["apps/web/src/session-logic.ts"]);
-    expect(entry?.toolDetails).toBeUndefined();
+    expect(entry?.toolDetails).toEqual({
+      kind: "file-change",
+      title: "Edited",
+      files: ["apps/web/src/session-logic.ts"],
+    });
   });
 
-  it("keeps edit diff details for file-change tool activities", () => {
+  it("does not promote tool-result patches or edits above checkpoint evidence", () => {
     const unifiedDiff = [
       "diff --git a/apps/web/src/session-logic.ts b/apps/web/src/session-logic.ts",
       "--- a/apps/web/src/session-logic.ts",
@@ -2766,14 +2774,6 @@ describe("deriveWorkLogEntries", () => {
     expect(entry?.toolDetails).toEqual({
       kind: "file-change",
       title: "Edited",
-      diff: unifiedDiff,
-      edits: [
-        {
-          path: "apps/web/src/session-logic.ts",
-          oldText: "old line",
-          newText: "new line",
-        },
-      ],
       files: ["apps/web/src/session-logic.ts"],
     });
   });

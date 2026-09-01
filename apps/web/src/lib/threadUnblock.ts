@@ -5,6 +5,8 @@
 
 import type { NativeApi, ThreadId } from "@harnessos/contracts";
 
+import type { MessageKey } from "../i18n";
+
 /** Code the server returns when a blocker no longer matches the requested state. */
 export const ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE =
   "ENGINE_DELIVERY_RECONCILIATION_CONFLICT";
@@ -84,26 +86,30 @@ export type ThreadUnblockNotice = {
 
 /** Copy for each outcome. Every branch tells the user what to do next, because
  *  the command that failed is deliberately never re-sent on their behalf. */
-export function describeThreadUnblockResult(result: ThreadUnblockResult): ThreadUnblockNotice {
+type TranslateThreadUnblockMessage = (key: MessageKey) => string;
+
+export function describeThreadUnblockResult(
+  result: ThreadUnblockResult,
+  t: TranslateThreadUnblockMessage,
+): ThreadUnblockNotice {
   switch (result.kind) {
     case "unblocked":
       return {
         type: "success",
-        title: "Thread unblocked",
-        description:
-          "Messages skipped while it was blocked were retried. Resend your last message if the thread stays idle.",
+        title: t("conversation.unblockTaskSucceeded"),
+        description: t("conversation.unblockTaskSucceededDescription"),
       };
     case "resolved-elsewhere":
       return {
         type: "info",
-        title: "Blocker already cleared",
-        description: "Another session settled the failure. Resend your last message to continue.",
+        title: t("conversation.unblockTaskResolvedElsewhere"),
+        description: t("conversation.unblockTaskResolvedElsewhereDescription"),
       };
     case "already-clear":
       return {
         type: "info",
-        title: "Thread is already unblocked",
-        description: "No engine failure is holding it back. Resend your last message to continue.",
+        title: t("conversation.unblockTaskAlreadyClear"),
+        description: t("conversation.unblockTaskAlreadyClearDescription"),
       };
   }
 }

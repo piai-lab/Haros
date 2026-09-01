@@ -11,7 +11,6 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -66,7 +65,6 @@ import { ToolCallDetailsContent } from "./ToolCallDetailsDialog";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { fileDiffStatsByPath, resolveFileDiffStatByChangedPath } from "~/lib/diffRendering";
 import {
   extractToolArgumentField,
   isPrefixedToolArgumentSummary,
@@ -95,9 +93,6 @@ const WORK_ROW_MUTED_HOVER_TONE: Record<"tool-row" | "file-row", string> = {
   "tool-row": `${MUTED_LABEL_TEXT_CLASS_NAME} transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground`,
   "file-row": `${MUTED_LABEL_TEXT_CLASS_NAME} transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground`,
 };
-const EMPTY_FILE_DIFF_STATS: ReadonlyMap<string, { additions: number; deletions: number }> =
-  new Map();
-
 type TimelineWorkEntry = WorkLogEntry;
 
 const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
@@ -158,10 +153,7 @@ function workEntryPreview(workEntry: TimelineWorkEntry): string | null {
   if (isReasoningUpdateWorkEntry(workEntry)) {
     return formatAgentActivityEntryPreview(workEntry);
   }
-  const isFileRelated =
-    workEntry.requestKind === "file-read" ||
-    workEntry.requestKind === "file-change" ||
-    workEntry.itemType === "file_change";
+  const isFileRelated = isFileReadToolEntry(workEntry) || workEntry.itemType === "file_change";
 
   if (workEntry.itemType === "command_execution" || workEntry.command || workEntry.rawCommand) {
     const command = workEntry.command ?? workEntry.rawCommand;
@@ -213,12 +205,14 @@ function workEntryPreview(workEntry: TimelineWorkEntry): string | null {
   return null;
 }
 
-// Engine read tools (e.g. Claude's `Read`) arrive as generic dynamic tool calls
-// without a `file-read` requestKind, so match their tool name to surface the search icon
-// instead of the generic tool/wrench fallback.
+// Action identity is structural. Legacy rows may fall back only to the canonical
+// item/request kind; tool names and English labels never classify behavior.
 function isFileReadToolEntry(workEntry: TimelineWorkEntry): boolean {
-  const name = (workEntry.toolName ?? "").toLowerCase().replace(/[^a-z]/g, "");
-  return name === "read" || name === "readfile" || name === "viewfile";
+  return (
+    workEntry.toolActionKind === "read" ||
+    workEntry.toolActionKind === "listFiles" ||
+    workEntry.requestKind === "file-read"
+  );
 }
 
 // Command rows reuse toolCallLabel's wrapper-aware classifier so wrapped git/gh
@@ -249,17 +243,15 @@ function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   // "Moved to background" notices read as a tray drop, not a warning check.
   if (workEntry.nativeEventType === "background_tasks_changed") return BackgroundTrayIcon;
 
-  if (workEntry.requestKind === "command") return commandWorkEntryIcon(workEntry);
-  if (workEntry.requestKind === "file-read") return SearchIcon;
-  if (workEntry.requestKind === "file-change") return PencilIcon;
-
   if (workEntry.itemType === "command_execution" || workEntry.command) {
     return commandWorkEntryIcon(workEntry);
   }
   if (workEntry.itemType === "file_change") {
     return PencilIcon;
   }
-  if (workEntry.itemType === "web_search") return WebSearchIcon;
+  if (workEntry.toolActionKind === "search") return SearchIcon;
+  if (workEntry.toolActionKind === "webAccess" || workEntry.itemType === "web_search")
+    return WebSearchIcon;
   if (workEntry.itemType === "image_generation") return ZapIcon;
   if (workEntry.itemType === "image_view") return EyeIcon;
   if (isFileReadToolEntry(workEntry)) return SearchIcon;
@@ -317,6 +309,12 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
 // pairs that the label humanizer renders as "Haros: ...".
 function toolWorkEntryStatus(workEntry: TimelineWorkEntry): HarosMcpToolStatus {
   if (workEntry.toolStatus) return workEntry.toolStatus;
+  if (workEntry.liveActivity) {
+    if (workEntry.liveActivity.state === "failed") return "failed";
+    if (workEntry.liveActivity.state === "cancelled") return "cancelled";
+    if (workEntry.liveActivity.state === "completed") return "completed";
+    return "running";
+  }
   return workEntry.activityKind !== undefined && workEntry.activityKind !== "tool.completed"
     ? "running"
     : "completed";
@@ -385,16 +383,6 @@ function capitalizePhrase(value: string): string {
     return value;
   }
   return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
-}
-
-function normalizeBundledWebAccessToolName(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return normalized.length > 0 ? normalized : null;
 }
 
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
@@ -543,6 +531,7 @@ function AttachmentTransferFailuresRow(props: {
 }
 
 export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
+  threadId?: import("@harnessos/contracts").ThreadId;
   workEntry: TimelineWorkEntry;
   chatMetaFontSizePx: number;
   textFontSizePx?: number;
@@ -566,6 +555,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // component, silently dropping memoization for every tool-call row.
   const {
     workEntry,
+    threadId,
     chatMetaFontSizePx,
     textFontSizePx: textFontSizePxProp,
     density: densityProp,
@@ -617,23 +607,26 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           : isMcpToolRow
             ? "mcp"
             : undefined;
-  const bundledWebAccessHeading = (() => {
-    switch (
-      normalizeBundledWebAccessToolName(
-        workEntry.toolName ?? workEntry.toolTitle ?? workEntry.label,
-      )
+  const toolStatus = toolWorkEntryStatus(workEntry);
+  const webAccessHeading =
+    workEntry.toolActionKind === "webAccess" || workEntry.itemType === "web_search"
+      ? t(`tool.webAccess.generic.${toolStatus}` as Parameters<typeof t>[0])
+      : null;
+  const structuralActionHeading = (() => {
+    if (
+      workEntry.itemType === "command_execution" ||
+      workEntry.toolActionKind === "execute" ||
+      Boolean(workEntry.command ?? workEntry.rawCommand)
     ) {
-      case "web_search":
-        return t("settings.webSearch.tool.webSearch");
-      case "source_check":
-        return t("settings.webSearch.tool.sourceCheck");
-      case "fetch_content":
-        return t("settings.webSearch.tool.fetchContent");
-      case "get_search_content":
-        return t("settings.webSearch.tool.getSearchContent");
-      default:
-        return null;
+      return t(`tool.command.${toolStatus}` as Parameters<typeof t>[0]);
     }
+    if (workEntry.toolActionKind === "read" || workEntry.toolActionKind === "listFiles") {
+      return t(`tool.read.${toolStatus}` as Parameters<typeof t>[0]);
+    }
+    if (workEntry.toolActionKind === "search") {
+      return t(`tool.search.${toolStatus}` as Parameters<typeof t>[0]);
+    }
+    return null;
   })();
   // Task progress is product copy, not a tool lifecycle suffix. Rendering the
   // structured count through the shared catalog both localizes it and keeps a
@@ -651,13 +644,11 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 : "skill.instructionsLoaded",
               { skillName: workEntry.skillDelivery.skillName },
             )
-          : workEntry.itemType === "command_execution" ||
-              workEntry.requestKind === "command" ||
-              Boolean(workEntry.command ?? workEntry.rawCommand)
-            ? t("tool.command.single")
+          : structuralActionHeading
+            ? structuralActionHeading
             : workEntry.taskListProgress
               ? t("taskList.progress", workEntry.taskListProgress)
-              : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
+              : (webAccessHeading ?? toolWorkEntryHeading(workEntry));
   const rawPreview = workEntry.askUserProvenanceUnavailable
     ? ""
     : workEntry.userInputSettlementStatus
@@ -720,16 +711,6 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // File-read rows open the referenced file in the in-app viewer when the
   // hosting surface provides an opener (right-dock file pane / editor pane).
   const opener = useWorkspaceFileOpener();
-  // Per-file +N/-M parsed from this tool call's own patch, used as a fallback when
-  // the turn-diff summary isn't in scope (e.g. standalone work rows) so every
-  // "Edited <file>" row can still show diff stats.
-  const toolDiffStatsByPath = useMemo(
-    () =>
-      isFileChangeWorkEntry(workEntry)
-        ? fileDiffStatsByPath(workEntry.toolDetails?.diff)
-        : EMPTY_FILE_DIFF_STATS,
-    [workEntry],
-  );
   const liveActivityNowMs = useLiveActivityNow(workEntry.liveActivity);
   const liveActivityMetaText = workEntry.liveActivity
     ? formatLiveActivityMeta(workEntry.liveActivity, liveActivityNowMs)
@@ -801,40 +782,31 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   }
 
   const readFilePath =
-    opener !== null &&
-    !canOpenAgentActivity &&
-    workEntry.detail &&
-    (workEntry.requestKind === "file-read" || isFileReadToolEntry(workEntry))
-      ? extractFilePathFromDetail(workEntry.detail)
+    opener !== null && !canOpenAgentActivity && isFileReadToolEntry(workEntry)
+      ? (workEntry.changedFiles?.[0] ??
+        workEntry.toolDetails?.files?.[0] ??
+        (workEntry.detail ? extractFilePathFromDetail(workEntry.detail) : null))
       : null;
   const canOpenReadFile = readFilePath !== null;
-  const canOpenToolDetails =
-    !canOpenAgentActivity &&
-    !canOpenViewedImage &&
-    Boolean(workEntry.toolDetails || (workEntry.liveActivity && !canOpenReadFile));
   const openReadFile = readFilePath
     ? () => openWorkspaceFileReference(opener, readFilePath)
     : undefined;
   const prefetchReadFile =
     readFilePath && opener?.prefetchFile ? () => opener.prefetchFile?.(readFilePath) : undefined;
+  const toolPrimaryAction = canOpenEngineWebSurface
+    ? () => onOpenEngineWebSurface?.(engineWebSurfaceId!)
+    : (openViewedImage ?? openReadFile);
+  const canOpenToolDetails =
+    !canOpenAgentActivity &&
+    Boolean(workEntry.toolDetails || (workEntry.liveActivity && !toolPrimaryAction));
 
   return (
     <div className={cn(compact ? "py-0.5" : "rounded-lg py-1")}>
       {showEditedRows ? (
         <div className="space-y-0.5">
           {changedFiles.map((changedFilePath) => {
-            // Prefer the turn-diff summary's per-file stat; fall back to the stat
-            // parsed from this tool call's own patch so the +N/-M shows even when
-            // no summary is in scope (standalone work rows) or it lacks the file.
-            const summaryStat = fileDiffStatByPath?.get(changedFilePath);
-            const changedFileStat =
-              summaryStat && summaryStat.additions + summaryStat.deletions > 0
-                ? summaryStat
-                : (resolveFileDiffStatByChangedPath(
-                    toolDiffStatsByPath,
-                    changedFilePath,
-                    changedFiles.length,
-                  ) ?? summaryStat);
+            // Checkpoint cumulative diff is the only file-change evidence owner.
+            const changedFileStat = fileDiffStatByPath?.get(changedFilePath);
             const canOpenEditedDiff = Boolean(turnId && onOpenTurnDiff);
             const canOpenEditedRow = canOpenToolDetails || canOpenEditedDiff;
             const editedRowClassName = cn(
@@ -856,11 +828,18 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 <ToolDetailsDisclosure
                   key={`${workEntry.id}:${changedFilePath}`}
                   details={workEntry.toolDetails}
+                  threadId={threadId}
                   activity={workEntry.liveActivity}
                   compact={compact}
                   tooltip={<span className="whitespace-pre-wrap">{changedFilePath}</span>}
                   summaryClassName={editedRowClassName}
                   dataFileChangeRow
+                  {...(canOpenEditedDiff
+                    ? {
+                        primaryAction: () => onOpenTurnDiff?.(turnId!, changedFilePath),
+                        detailsLabel: t("timeline.toolTechnicalDetails"),
+                      }
+                    : {})}
                   timestampFormat={timestampFormat}
                 >
                   {editedRowChildren}
@@ -970,13 +949,17 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
               ) : null}
             </>
           );
-          if (canOpenToolDetails && !canOpenEngineWebSurface) {
+          if (canOpenToolDetails) {
             return (
               <ToolDetailsDisclosure
                 details={workEntry.toolDetails}
+                threadId={threadId}
                 activity={workEntry.liveActivity}
                 compact={compact}
                 timestampFormat={timestampFormat}
+                primaryAction={toolPrimaryAction}
+                primaryHover={canOpenReadFile ? prefetchReadFile : undefined}
+                detailsLabel={t("timeline.toolTechnicalDetails")}
                 tooltip={toolRowTooltipContent(rawCommand, displayText, displayText, {
                   summary: t("toolDetails.summary"),
                   rawCall: t("toolDetails.rawCall"),
@@ -1558,7 +1541,11 @@ function ToolDetailsDisclosure(props: {
   compact: boolean;
   dataFileChangeRow?: boolean | undefined;
   details?: TimelineWorkEntry["toolDetails"] | undefined;
+  threadId?: import("@harnessos/contracts").ThreadId | undefined;
   activity?: TimelineWorkEntry["liveActivity"] | undefined;
+  detailsLabel?: string | undefined;
+  primaryAction?: (() => void) | undefined;
+  primaryHover?: (() => void) | undefined;
   summaryClassName?: string | undefined;
   timestampFormat: TimestampFormat;
   tooltip?: ReactNode;
@@ -1566,7 +1553,8 @@ function ToolDetailsDisclosure(props: {
   const summaryClassName =
     props.summaryClassName ??
     cn(
-      "group/tool-row flex w-full items-center text-left transition-[opacity,translate] duration-200",
+      "group/tool-row flex min-w-0 items-center text-left transition-[opacity,translate] duration-200",
+      props.primaryAction ? "flex-1" : "w-full",
       props.compact ? "gap-1.5" : "gap-2",
       "cursor-pointer focus-visible:outline-none",
     );
@@ -1613,7 +1601,7 @@ function ToolDetailsDisclosure(props: {
 
   useEffect(() => () => clearMotionTimers(), [clearMotionTimers]);
 
-  const summaryButton = (
+  const disclosureButton = (
     <button
       type="button"
       className={summaryClassName}
@@ -1632,9 +1620,39 @@ function ToolDetailsDisclosure(props: {
     </button>
   );
 
+  const summaryButton = props.primaryAction ? (
+    <div className="flex w-full min-w-0 items-center">
+      <ToolRowTooltip content={props.tooltip}>
+        <button
+          type="button"
+          className={summaryClassName}
+          onClick={props.primaryAction}
+          {...(props.primaryHover
+            ? { onPointerEnter: props.primaryHover, onFocus: props.primaryHover }
+            : {})}
+          data-tool-primary-action="true"
+        >
+          {props.children}
+        </button>
+      </ToolRowTooltip>
+      <button
+        type="button"
+        className="group/tool-row flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        aria-label={props.detailsLabel}
+        aria-expanded={open}
+        data-tool-detail-trigger="true"
+        onClick={() => setDetailsOpen(!open)}
+      >
+        <DisclosureChevron open={open} />
+      </button>
+    </div>
+  ) : (
+    <ToolRowTooltip content={props.tooltip}>{disclosureButton}</ToolRowTooltip>
+  );
+
   return (
     <div className="group/tool-details min-w-0">
-      <ToolRowTooltip content={props.tooltip}>{summaryButton}</ToolRowTooltip>
+      {summaryButton}
       {renderDetails ? (
         <DisclosureRegion
           open={motionOpen}
@@ -1644,6 +1662,8 @@ function ToolDetailsDisclosure(props: {
             <ToolCallDetailsContent
               details={props.details}
               activity={props.activity}
+              expanded={open}
+              threadId={props.threadId}
               timestampFormat={props.timestampFormat}
             />
           </div>

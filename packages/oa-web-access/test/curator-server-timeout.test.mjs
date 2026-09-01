@@ -220,6 +220,43 @@ test("curator heartbeat timeout finalizes connected idle browser sessions", asyn
 	}
 });
 
+test("Haros review can disable idle auto-settlement until explicit user action", async () => {
+	const { startCuratorServer } = await loadServer();
+	let resolveCancel;
+	const cancelPromise = new Promise((resolve) => { resolveCancel = resolve; });
+	const handle = await startCuratorServer(
+		{ ...baseOptions(1), idleTimeoutEnabled: false },
+		baseCallbacks(resolveCancel),
+	);
+
+	try {
+		await fetch(handle.url);
+		handle.pushResult(0, { answer: "answer", results: [], provider: "exa" });
+		handle.searchesDone();
+		const heartbeat = await fetch(new URL("/heartbeat", handle.url), {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token: "test-token", idleMs: 60_000, timeoutSec: 1 }),
+		});
+		assert.equal(heartbeat.status, 200);
+		const premature = await Promise.race([
+			cancelPromise.then((reason) => ({ status: "cancelled", reason })),
+			new Promise((resolve) => setTimeout(() => resolve({ status: "pending" }), 75)),
+		]);
+		assert.deepEqual(premature, { status: "pending" });
+
+		const cancel = await fetch(new URL("/cancel", handle.url), {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token: "test-token", reason: "user" }),
+		});
+		assert.equal(cancel.status, 200);
+		assert.equal(await withTimeout(cancelPromise, "explicit review cancel"), "user");
+	} finally {
+		handle.close();
+	}
+});
+
 test("curator state replay keeps current results and compacts superseded history", async () => {
 	const { startCuratorServer } = await loadServer();
 	const handle = await startCuratorServer(baseOptions(20), baseCallbacks(() => {}));

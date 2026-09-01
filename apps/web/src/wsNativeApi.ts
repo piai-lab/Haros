@@ -751,6 +751,11 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.engineCompactThread, input, {
           timeoutMs: null,
         }),
+      readToolResult: (input, options) =>
+        transport.request(WS_METHODS.engineReadToolResult, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
       listCommands: (input) => transport.request(WS_METHODS.engineListCommands, input),
       listSkills: (input) => transport.request(WS_METHODS.engineListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.engineListSkillsCatalog, input),
@@ -890,6 +895,8 @@ export function createWsNativeApi(): NativeApi {
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),
       getThreadDetailSnapshot: (input) =>
         transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
+      updatePendingUserInputDraft: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft, input),
       dispatchCommand: (command) => {
         return transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
           command,
@@ -897,9 +904,18 @@ export function createWsNativeApi(): NativeApi {
       },
       importThread: (input) => transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
       repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
-      getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
-      getFullThreadDiff: (input) =>
-        transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
+      getTurnDiff: (input, options) =>
+        options?.signal
+          ? transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input, {
+              signal: options.signal,
+            })
+          : transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
+      getFullThreadDiff: (input, options) =>
+        options?.signal
+          ? transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input, {
+              signal: options.signal,
+            })
+          : transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
       replayEvents: (fromSequenceExclusive, threadId) =>
         transport.request(ORCHESTRATION_WS_METHODS.replayEvents, {
           fromSequenceExclusive,
@@ -1136,6 +1152,28 @@ export function createWsNativeApi(): NativeApi {
         state.activeTabId = tab.id;
         markFallbackBrowserStateChanged(state);
         return emitFallbackBrowserState(input.threadId);
+      },
+      respondToEngineWebSurfacePresentationReveal: async (input) => {
+        await window.desktopBridge?.browser.respondToEngineWebSurfacePresentationReveal(input);
+      },
+      acknowledgeEngineWebSurfacePresentationRelease: async (input) => {
+        await window.desktopBridge?.browser.acknowledgeEngineWebSurfacePresentationRelease(input);
+      },
+      suppressEngineWebSurfacePresentations: async (input) => {
+        if (window.desktopBridge) {
+          return window.desktopBridge.browser.suppressEngineWebSurfacePresentations(input);
+        }
+        return { status: "acknowledged", presentations: [] };
+      },
+      replayEngineWebSurfacePresentations: async () => {
+        await window.desktopBridge?.browser.replayEngineWebSurfacePresentations();
+      },
+      closeDeletedThreadResources: async (input) => {
+        if (window.desktopBridge) {
+          await window.desktopBridge.browser.closeDeletedThreadResources(input);
+          return;
+        }
+        fallbackBrowserStates.delete(input.threadId);
       },
       setEngineWebSurfaceContext: async (input) => {
         if (window.desktopBridge) {

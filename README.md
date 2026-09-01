@@ -79,6 +79,11 @@ bun run dev
 Haros is currently version `0.1.0-alpha.0`. A successful local build is still an unsigned source
 build, not an official release.
 
+On macOS, `bun run dist:desktop:local-app` builds a replaceable unsigned `.app` under
+`apps/desktop/.electron-runtime/local-app/`. This local-only path never signs, notarizes, publishes,
+or creates updater metadata. Passing an explicit output directory keeps the normal no-overwrite
+artifact rule.
+
 <details>
 <summary>Development checks and repository map</summary>
 

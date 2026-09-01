@@ -174,6 +174,11 @@ describe("engineStartOptionsFromServerSettings", () => {
       decodeEngineSessionStartInput({
         threadId: "thread-1",
         engine: "codex",
+        admission: {
+          productSurface: "chat",
+          workSurface: "chat",
+          projectContextRoot: null,
+        },
         engineOptions,
         runtimeMode: "full-access",
       }),

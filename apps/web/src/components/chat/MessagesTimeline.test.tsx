@@ -2097,7 +2097,7 @@ describe("MessagesTimeline", () => {
   it.each([
     {
       engine: "Anti-Gravity",
-      expectedText: "Ran 1 command",
+      expectedText: "Running command",
       activity: makeActivity({
         id: "antigravity-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
@@ -2117,7 +2117,7 @@ describe("MessagesTimeline", () => {
     },
     {
       engine: "Codex",
-      expectedText: "Ran 1 command git status",
+      expectedText: "Running command git status",
       activity: makeActivity({
         id: "codex-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
@@ -2428,7 +2428,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("Tool 5");
   });
 
-  it("renders inline file-change tool calls as edited rows with diff stats", async () => {
+  it("replaces settled file-change rows with one checkpoint-owned evidence header", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const assistantMessageId = MessageId.makeUnsafe("message-assistant-inline-edit");
     const markup = renderToStaticMarkup(
@@ -2452,11 +2452,6 @@ describe("MessagesTimeline", () => {
               toolDetails: {
                 kind: "file-change",
                 title: "Edited",
-                diff: [
-                  "diff --git a/apps/web/src/components/chat/MessagesTimeline.test.tsx b/apps/web/src/components/chat/MessagesTimeline.test.tsx",
-                  "-old",
-                  "+new",
-                ].join("\n"),
                 files: ["apps/web/src/components/chat/MessagesTimeline.test.tsx"],
               },
             },
@@ -2509,10 +2504,11 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Edited");
-    expect(markup).toContain("MessagesTimeline.test.tsx");
+    expect(markup).toContain('data-turn-changed-files-evidence="true"');
+    expect(markup).toContain("Edited files");
     expect(markup).toContain("+1");
     expect(markup).toContain("-1");
+    expect(markup).not.toContain("MessagesTimeline.test.tsx");
     expect(markup).not.toContain(
       "File Change - apps/web/src/components/chat/MessagesTimeline.test.tsx",
     );
@@ -2541,7 +2537,6 @@ describe("MessagesTimeline", () => {
               toolDetails: {
                 kind: "file-change",
                 title: "Edited",
-                diff: "-old\n+new",
                 files: ["apps/web/src/components/chat/MessagesTimeline.test.tsx"],
               },
             },
@@ -2611,7 +2606,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Ran 1 command");
+    expect(markup).toContain("Ran command");
     expect(markup).toContain("for ProjectionSnapshotQuery in server/src");
     expect(markup).not.toContain("data-work-entry-action-word");
     expect(markup).toContain(TOOLTIP_TRIGGER_MARKER);
@@ -2737,7 +2732,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("$ rg -n &quot;toolDetails&quot; apps/web/src");
     expect(markup).not.toContain("apps/web/src/session-logic.ts:55: toolDetails");
     expect(markup).not.toContain("Stdout");
-    expect(markup).toContain("Ran 1 command");
+    expect(markup).toContain("Ran command");
   });
 
   it("renders command text even when commandActions provide a short preview", async () => {
@@ -2782,7 +2777,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Ran 1 command");
+    expect(markup).toContain("Ran command");
     expect(markup).not.toContain("data-work-entry-action-word");
     expect(markup).toContain("web/src");
     expect(markup).toContain(TOOLTIP_TRIGGER_MARKER);
@@ -2919,7 +2914,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Searched the web");
+    expect(markup).toContain("Accessed the web");
     expect(markup).toContain("48 files found");
     expect(markup).toContain("/central-icons-reversed/globe.svg");
     expect(markup).not.toContain("tabler-icon-world");
@@ -3370,12 +3365,8 @@ describe("MessagesTimeline", () => {
     expect(markup.indexOf("Both threads are running.")).toBeLessThan(
       markup.indexOf('data-harnessos-thread-creation-card="true"'),
     );
-    expect(markup.indexOf('data-harnessos-thread-creation-card="true"')).toBeLessThan(
-      markup.indexOf("Edited 1 file"),
-    );
-    expect(markup.indexOf("Edited 1 file")).toBeLessThan(
-      markup.indexOf('aria-label="Copy message"'),
-    );
+    expect(markup).toContain('data-turn-changed-files-evidence="true"');
+    expect(markup).toContain("Edited files");
     expect(markup.match(/aria-label="Copy message"/g)).toHaveLength(1);
   });
 
@@ -3468,21 +3459,16 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    // The tool work collapses, but the changed-files summary stays anchored at
-    // the end of the turn with every file from the turn diff.
+    // The settled process exposes one lazy checkpoint evidence owner. File paths
+    // are not projected from tool payloads before the evidence disclosure opens.
     expect(markup).toContain("Worked for");
-    expect(markup).toContain("Edited 6 files");
-    expect(markup).toContain("Show 1 more file");
-    expect(markup).not.toContain("Show 1 more files");
-    expect(markup).toContain("apps/web/src/components/chat/MessagesTimeline.test.tsx");
-    expect(markup).toContain("apps/web/src/components/chat/MessagesTimeline.tsx");
-    expect(markup).toContain("+1");
+    expect(markup).toContain("Edited files");
+    expect(markup).toContain("+3");
     expect(markup).toContain("-1");
-    expect(markup).toContain("+2");
-    expect(markup).not.toContain(">apps/web/src/components/chat<");
+    expect(markup).not.toContain("MessagesTimeline.test.tsx");
   });
 
-  it("renders inline edited rows from the turn summary when the file-change tool call has no filenames", async () => {
+  it("keeps summary-only file paths behind the lazy checkpoint evidence disclosure", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const assistantMessageId = MessageId.makeUnsafe("message-assistant-inline-summary-fallback");
     const markup = renderToStaticMarkup(
@@ -3557,17 +3543,15 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Edited");
-    expect(markup).toContain("EngineHealth.ts");
-    expect(markup).toContain("ChatView.tsx");
-    expect(markup).toContain("+63");
-    expect(markup).toContain("-4");
-    expect(markup).toContain("+41");
-    expect(markup).toContain("-5");
+    expect(markup).toContain("Edited files");
+    expect(markup).toContain("+104");
+    expect(markup).toContain("-9");
+    expect(markup).not.toContain("EngineHealth.ts");
+    expect(markup).not.toContain("ChatView.tsx");
     expect(markup).toContain('aria-hidden="true" inert=""');
   });
 
-  it("renders a collapsible changed files header with ui-font filenames", async () => {
+  it("renders a lazy checkpoint changed-files disclosure for a summary-only turn", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const assistantMessageId = MessageId.makeUnsafe("message-assistant-diff");
     const markup = renderToStaticMarkup(
@@ -3630,14 +3614,11 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Edited 1 file");
-    expect(markup).toContain("Undo");
-    expect(markup).toContain("Review");
-    expect(markup).toContain('aria-expanded="true"');
-    expect(markup).toContain("font-system-ui truncate font-normal");
-    expect(markup).toContain("apps/web/src/components/Sidebar.tsx");
-    expect(markup.indexOf("Edited 1 file")).toBeLessThan(
-      markup.indexOf('aria-label="Copy message"'),
-    );
+    expect(markup).toContain('data-turn-changed-files-evidence="true"');
+    expect(markup).toContain("Edited files");
+    expect(markup).toContain("+6");
+    expect(markup).toContain("-5");
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).not.toContain("apps/web/src/components/Sidebar.tsx");
   });
 });

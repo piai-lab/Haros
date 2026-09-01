@@ -35,6 +35,8 @@ import {
   deriveToolInvocationPreview,
   deriveWorkLogToolDetails,
   mergeWorkLogToolDetails,
+  readCanonicalToolResultSnapshot,
+  type ToolActionKind,
   type WorkLogToolDetails,
 } from "./lib/toolCallDetails";
 import { stripProposedPlanBlocksFromText } from "./proposedPlan";
@@ -68,6 +70,8 @@ export interface WorkLogEntry {
   toolDetails?: WorkLogToolDetails;
   itemType?: ToolLifecycleItemType;
   requestKind?: WorkLogRequestKind;
+  /** Engine-owned structural action; never inferred from a tool name or localized label. */
+  toolActionKind?: ToolActionKind;
   subagents?: ReadonlyArray<WorkLogSubagent>;
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
@@ -707,6 +711,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   };
   const itemType = extractWorkLogItemType(payload);
   const requestKind = extractWorkLogRequestKind(payload);
+  const toolActionKind = extractToolActionKind(payload, itemType, requestKind);
   if (
     (activity.kind === "skill.instructions.delivered" ||
       activity.kind === "skill.instructions.failed") &&
@@ -833,6 +838,9 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   if (requestKind) {
     entry.requestKind = requestKind;
   }
+  if (toolActionKind) {
+    entry.toolActionKind = toolActionKind;
+  }
   if (
     activity.kind === "tool.started" &&
     itemType === "command_execution" &&
@@ -904,13 +912,14 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     label: entry.label,
     toolTitle: entry.toolTitle,
     toolName: toolName ?? undefined,
+    toolActionKind,
   });
   if (toolDetails) {
     entry.toolDetails = toolDetails;
   }
   const invocationPreview = deriveToolInvocationPreview({
     payload,
-    toolName: toolName ?? undefined,
+    toolActionKind,
   });
   if (!entry.preview && invocationPreview) {
     entry.preview = invocationPreview;
@@ -1458,6 +1467,7 @@ function mergeDerivedWorkLogEntries(
   const requestKind = preservePreviousToolSemantics
     ? previous.requestKind
     : (next.requestKind ?? previous.requestKind);
+  const toolActionKind = next.toolActionKind ?? previous.toolActionKind;
   const subagents = next.subagents ?? previous.subagents;
   const subagentAction = next.subagentAction ?? previous.subagentAction;
   const harosThreadCreation = next.harosThreadCreation ?? previous.harosThreadCreation;
@@ -1487,6 +1497,7 @@ function mergeDerivedWorkLogEntries(
     ...(toolTitle ? { toolTitle } : {}),
     ...(itemType ? { itemType } : {}),
     ...(requestKind ? { requestKind } : {}),
+    ...(toolActionKind ? { toolActionKind } : {}),
     ...(subagents ? { subagents } : {}),
     ...(subagentAction ? { subagentAction } : {}),
     ...(harosThreadCreation ? { harosThreadCreation } : {}),
@@ -2293,6 +2304,8 @@ function compactWorkLogPath(value: string | undefined): string | null {
 }
 
 function extractToolName(payload: Record<string, unknown> | null): string | null {
+  const canonical = readCanonicalToolResultSnapshot(payload);
+  if (canonical) return canonical.toolName;
   const data = asRecord(payload?.data);
   const item = asRecord(data?.item);
   const itemInput = asRecord(item?.input);
@@ -2307,6 +2320,8 @@ function extractToolName(payload: Record<string, unknown> | null): string | null
 }
 
 function extractToolCallId(payload: Record<string, unknown> | null): string | null {
+  const canonical = readCanonicalToolResultSnapshot(payload);
+  if (canonical) return canonical.toolCallId;
   const data = asRecord(payload?.data);
   const item = asRecord(data?.item);
   return asTrimmedString(
@@ -2379,6 +2394,33 @@ function extractWorkLogRequestKind(
     return payload.requestKind;
   }
   return approvalRequestKindFromRequestType(payload?.requestType) ?? undefined;
+}
+
+function extractToolActionKind(
+  payload: Record<string, unknown> | null,
+  itemType: WorkLogEntry["itemType"] | undefined,
+  requestKind: WorkLogEntry["requestKind"] | undefined,
+): ToolActionKind | undefined {
+  const canonical = readCanonicalToolResultSnapshot(payload);
+  if (canonical) return canonical.actionKind;
+  const kind = asRecord(payload?.data)?.kind;
+  if (
+    kind === "execute" ||
+    kind === "read" ||
+    kind === "edit" ||
+    kind === "write" ||
+    kind === "search" ||
+    kind === "listFiles" ||
+    kind === "webAccess" ||
+    kind === "unknown"
+  ) {
+    return kind;
+  }
+  if (requestKind === "command" || itemType === "command_execution") return "execute";
+  if (requestKind === "file-read") return "read";
+  if (requestKind === "file-change" || itemType === "file_change") return "edit";
+  if (itemType === "web_search") return "webAccess";
+  return isToolLifecycleItemType(itemType ?? "") ? "unknown" : undefined;
 }
 
 function pushChangedFile(target: string[], seen: Set<string>, value: unknown) {

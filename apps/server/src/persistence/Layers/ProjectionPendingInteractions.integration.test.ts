@@ -245,4 +245,136 @@ layer("ProjectionPendingInteractionRepository", (it) => {
       );
     }),
   );
+
+  it.effect("persists only the exact pending Ask draft with monotonic revisions", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProjectionPendingInteractionRepository;
+      const threadId = ThreadId.makeUnsafe("thread-draft-cas");
+      const requestId = ApprovalRequestId.makeUnsafe("request-draft-cas");
+      yield* repository.upsert({
+        interactionKind: "userInput",
+        requestId,
+        threadId,
+        turnId: null,
+        lifecycleGeneration: "generation-draft",
+        status: "pending",
+        decision: null,
+        responseCommandId: null,
+        responseRequestedAt: null,
+        createdAt: "2026-09-01T01:00:00.000Z",
+        resolvedAt: null,
+      });
+
+      const first = yield* repository.updateUserInputDraft({
+        threadId,
+        requestId,
+        lifecycleGeneration: "generation-draft",
+        updatedAt: "2026-09-01T01:00:01.000Z",
+        draft: {
+          version: 1,
+          activeQuestionIndex: 0,
+          answers: {
+            q1: {
+              selectedOptionLabels: ["  exact option  "],
+              customSelected: true,
+              customText: "  raw\nanswer  ",
+            },
+          },
+        },
+      });
+      assert.deepStrictEqual(first, {
+        updated: true,
+        draftRevision: 1,
+        draftUpdatedAt: "2026-09-01T01:00:01.000Z",
+      });
+
+      const staleGeneration = yield* repository.updateUserInputDraft({
+        threadId,
+        requestId,
+        lifecycleGeneration: "generation-stale",
+        updatedAt: "2026-09-01T01:00:02.000Z",
+        draft: { version: 1, activeQuestionIndex: 1, answers: {} },
+      });
+      assert.deepStrictEqual(staleGeneration, {
+        updated: false,
+        draftRevision: 0,
+        draftUpdatedAt: null,
+      });
+
+      const second = yield* repository.updateUserInputDraft({
+        threadId,
+        requestId,
+        lifecycleGeneration: "generation-draft",
+        updatedAt: "2026-09-01T01:00:03.000Z",
+        draft: { version: 1, activeQuestionIndex: 1, answers: {} },
+      });
+      assert.strictEqual(second.draftRevision, 2);
+
+      const row = yield* repository.getByIdentity({
+        threadId,
+        interactionKind: "userInput",
+        requestId,
+      });
+      assert.strictEqual(row._tag, "Some");
+      if (row._tag === "Some") {
+        assert.deepStrictEqual(row.value.draft, {
+          version: 1,
+          activeQuestionIndex: 1,
+          answers: {},
+        });
+      }
+    }),
+  );
+
+  it.effect("clears drafts on response claim and thread deletion", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProjectionPendingInteractionRepository;
+      const threadId = ThreadId.makeUnsafe("thread-draft-clear");
+      const requestId = ApprovalRequestId.makeUnsafe("request-draft-clear");
+      const row = {
+        interactionKind: "userInput" as const,
+        requestId,
+        threadId,
+        turnId: null,
+        lifecycleGeneration: "generation-clear",
+        status: "pending" as const,
+        decision: null,
+        responseCommandId: null,
+        responseRequestedAt: null,
+        createdAt: "2026-09-01T02:00:00.000Z",
+        resolvedAt: null,
+      };
+      yield* repository.upsert(row);
+      yield* repository.updateUserInputDraft({
+        threadId,
+        requestId,
+        lifecycleGeneration: "generation-clear",
+        updatedAt: "2026-09-01T02:00:01.000Z",
+        draft: { version: 1, activeQuestionIndex: 0, answers: {} },
+      });
+      yield* repository.claimResponse({
+        threadId,
+        interactionKind: "userInput",
+        requestId,
+        lifecycleGeneration: "generation-clear",
+        responseCommandId: "command-clear" as never,
+        decision: null,
+        requestedAt: "2026-09-01T02:00:02.000Z",
+      });
+      const claimed = yield* repository.getByIdentity({
+        threadId,
+        interactionKind: "userInput",
+        requestId,
+      });
+      assert.strictEqual(claimed._tag, "Some");
+      if (claimed._tag === "Some") {
+        assert.isNull(claimed.value.draft);
+        assert.strictEqual(claimed.value.draftRevision, 0);
+      }
+
+      yield* repository.upsert({ ...row, requestId: ApprovalRequestId.makeUnsafe("request-2") });
+      yield* repository.deleteByThreadId({ threadId });
+      assert.deepStrictEqual(yield* repository.listByThreadId({ threadId }), []);
+    }),
+  );
 });

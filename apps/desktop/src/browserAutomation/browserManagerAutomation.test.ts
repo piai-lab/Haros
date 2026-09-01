@@ -225,6 +225,91 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     expect(afterPaneClose.tabs[0]?.presentation?.surfaceId).toBe("surface-b");
   });
 
+  it("owns concurrent Engine Web surfaces through one acknowledged Thread generation", () => {
+    const manager = new DesktopBrowserManager();
+    manager.open({ threadId: THREAD_ID });
+    const expiresAt = Date.now() + 60_000;
+    const first = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-concurrent-a",
+      url: "http://127.0.0.1:43123/?session=private-token-a",
+      title: "Haros Web Access A",
+      expiresAt,
+    });
+    const second = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-concurrent-b",
+      url: "http://127.0.0.1:43124/?session=private-token-b",
+      title: "Haros Web Access B",
+      expiresAt,
+    });
+    expect(second.presentationId).toBe(first.presentationId);
+    expect(manager.listEngineWebSurfacePresentations()).toHaveLength(2);
+
+    expect(manager.suppressEngineWebSurfacePresentationsForThreads([THREAD_ID])).toEqual([
+      { presentationId: first.presentationId, threadId: THREAD_ID },
+    ]);
+    expect(manager.listEngineWebSurfacePresentations()).toEqual([]);
+    manager.settleEngineWebSurface({ threadId: THREAD_ID, surfaceId: "surface-concurrent-a" });
+    expect(manager.listPendingEngineWebSurfacePresentationReleases()).toEqual([]);
+    manager.settleEngineWebSurface({ threadId: THREAD_ID, surfaceId: "surface-concurrent-b" });
+    expect(manager.listPendingEngineWebSurfacePresentationReleases()).toEqual([
+      {
+        presentationId: first.presentationId,
+        threadId: THREAD_ID,
+        disposition: "preserve",
+        suppressedByUser: true,
+      },
+    ]);
+
+    manager.acknowledgeEngineWebSurfacePresentationRelease({
+      presentationId: "stale-generation",
+      threadId: THREAD_ID,
+    });
+    expect(manager.listPendingEngineWebSurfacePresentationReleases()).toHaveLength(1);
+    manager.acknowledgeEngineWebSurfacePresentationRelease({
+      presentationId: first.presentationId,
+      threadId: THREAD_ID,
+    });
+    expect(manager.listPendingEngineWebSurfacePresentationReleases()).toEqual([]);
+  });
+
+  it("fences every stale reveal and replay after Product Thread deletion", () => {
+    const manager = new DesktopBrowserManager();
+    manager.open({ threadId: THREAD_ID });
+    const presented = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-deleted",
+      url: "http://127.0.0.1:43123/?session=private-delete-token",
+      title: "Haros Web Access",
+      expiresAt: Date.now() + 60_000,
+    });
+    expect(manager.listEngineWebSurfacePresentations()).toHaveLength(1);
+
+    manager.closeDeletedThreadResources({ threadId: THREAD_ID });
+    expect(manager.listEngineWebSurfacePresentations()).toEqual([]);
+    expect(manager.listPendingEngineWebSurfacePresentationReleases()).toEqual([]);
+    expect(
+      manager.getEngineWebSurfacePresentationStatus({
+        threadId: THREAD_ID,
+        surfaceId: "surface-deleted",
+        tabId: presented.tabId,
+      }),
+    ).toBe("unavailable");
+    expect(() =>
+      manager.reopenEngineWebSurface({ threadId: THREAD_ID, surfaceId: "surface-deleted" }),
+    ).toThrow(/no longer pending/i);
+    expect(() =>
+      manager.presentEngineWebSurface({
+        threadId: THREAD_ID,
+        surfaceId: "surface-resurrected",
+        url: "http://127.0.0.1:43124/?session=private-resurrection-token",
+        title: "Haros Web Access",
+        expiresAt: Date.now() + 60_000,
+      }),
+    ).toThrow(/deleted thread/i);
+  });
+
   it("opens a Curator source link as an ordinary Haros Browser tab", async () => {
     const manager = new DesktopBrowserManager();
     const presented = manager.presentEngineWebSurface({

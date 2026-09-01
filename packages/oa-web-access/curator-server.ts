@@ -62,6 +62,8 @@ export interface CuratorServerOptions {
 	summaryModels: Array<{ value: string; label: string }>;
 	defaultSummaryModel: string | null;
 	presentation?: CuratorPresentationSnapshot;
+	/** Upstream may auto-submit after idle. Haros review requires explicit approval. */
+	idleTimeoutEnabled?: boolean;
 }
 
 export interface CuratorSearchEntry {
@@ -261,6 +263,7 @@ export function startCuratorServer(
 		summaryModels,
 		defaultSummaryModel,
 		presentation,
+		idleTimeoutEnabled = true,
 	} = options;
 	const observerMode = mode === "observer";
 	const invalidSessionText = presentation?.locale === "zh-CN"
@@ -318,6 +321,7 @@ export function startCuratorServer(
 	const getEffectiveTimeoutMs = (): number => Math.max(1000, Math.floor(clientTimeoutSeconds) * 1000);
 
 	const shouldTimeoutFromClientIdle = (): boolean => (
+		idleTimeoutEnabled &&
 		!observerMode &&
 		state === "RESULT_SELECTION" &&
 		clientIdleMs !== null &&
@@ -384,6 +388,7 @@ export function startCuratorServer(
 		defaultSummaryModel,
 		presentation,
 		mode,
+		idleTimeoutEnabled,
 	);
 
 	const server = http.createServer(async (req, res) => {
@@ -802,7 +807,7 @@ export function startCuratorServer(
 					return;
 				}
 				if (Date.now() - lastHeartbeatAt <= STALE_THRESHOLD_MS) return;
-				const staleReason = state === "RESULT_SELECTION" ? "timeout" : "stale";
+				const staleReason = state === "RESULT_SELECTION" && idleTimeoutEnabled ? "timeout" : "stale";
 				if (!markCompleted()) return;
 				setImmediate(() => callbacks.onCancel(staleReason));
 			}, WATCHDOG_INTERVAL_MS);

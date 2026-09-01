@@ -13,6 +13,7 @@ import type {
   EngineRuntimeEvent,
   EngineSendTurnInput,
   EngineSession,
+  EngineSessionAdmission,
   EngineStartReviewInput,
   EngineSteerTurnInput,
   EngineTurnStartResult,
@@ -53,7 +54,7 @@ import {
 } from "../Errors.ts";
 import type { EngineAdapterShape } from "../Services/EngineAdapter.ts";
 import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
-import { EngineService } from "../Services/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../Services/EngineService.ts";
 import { EngineSessionDirectory } from "../Services/EngineSessionDirectory.ts";
 import {
   makeEngineServiceLive,
@@ -78,6 +79,23 @@ const asRequestId = (value: string): ApprovalRequestId => ApprovalRequestId.make
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
+const TEST_AGENT_ADMISSION = {
+  productSurface: "agent",
+  workSurface: "agent",
+  projectContextRoot: "/test/project",
+} as const;
+type TestEngineSessionStartInput = Omit<EngineSessionStartInput, "admission"> & {
+  readonly admission?: EngineSessionAdmission;
+};
+const startTestEngineSession = (
+  engine: EngineServiceShape,
+  threadId: ThreadId,
+  input: TestEngineSessionStartInput,
+) =>
+  engine.startSession(threadId, {
+    ...input,
+    admission: input.admission ?? TEST_AGENT_ADMISSION,
+  });
 
 type LegacyEngineRuntimeEvent = {
   readonly type: string;
@@ -456,11 +474,12 @@ function makeEngineServiceLayer(
   );
   const directoryLayer = EngineSessionDirectoryLive.pipe(Layer.provide(runtimeRepositoryLayer));
 
+  const engineServiceLayer = makeEngineServiceLive(options).pipe(
+    Layer.provide(engineAdapterLayer),
+    Layer.provide(directoryLayer),
+  );
   const rawLayer = Layer.mergeAll(
-    makeEngineServiceLive(options).pipe(
-      Layer.provide(engineAdapterLayer),
-      Layer.provide(directoryLayer),
-    ),
+    engineServiceLayer,
     directoryLayer,
     runtimeRepositoryLayer,
     NodeServices.layer,
@@ -583,7 +602,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const threadId = asThreadId("thread-interrupt-terminal-before-retirement");
       staleSettlementPersistedEvents.clear();
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -620,7 +639,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-current-delta-fast-path");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -668,13 +687,11 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
           ),
         );
 
-        const startFiber = yield* engine
-          .startSession(threadId, {
-            engine: "codex",
-            threadId,
-            runtimeMode: "full-access",
-          })
-          .pipe(Effect.forkChild);
+        const startFiber = yield* startTestEngineSession(engine, threadId, {
+          engine: "codex",
+          threadId,
+          runtimeMode: "full-access",
+        }).pipe(Effect.forkChild);
         yield* Deferred.await(startEntered);
         yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
         staleSettlementRouting.codex.emit({
@@ -709,7 +726,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-generation-flips-before-binding-read");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -752,13 +769,11 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
           Effect.andThen(defaultStop(stoppedThreadId)),
         ),
       );
-      const replacementFiber = yield* engine
-        .startSession(threadId, {
-          engine: "codex",
-          threadId,
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const replacementFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* Deferred.await(replacementStopEntered);
 
       yield* Deferred.succeed(releaseBindingRead, undefined);
@@ -778,7 +793,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const directory = yield* EngineSessionDirectory;
       const sourceThreadId = asThreadId("thread-fork-order-source");
       const targetThreadId = asThreadId("thread-fork-order-target");
-      yield* engine.startSession(sourceThreadId, {
+      yield* startTestEngineSession(engine, sourceThreadId, {
         engine: "codex",
         threadId: sourceThreadId,
         runtimeMode: "full-access",
@@ -843,7 +858,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const threadId = asThreadId("thread-retired-exact-turn-terminal");
       const turnId = asTurnId("turn-retired-exact");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -910,7 +925,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const threadId = asThreadId("thread-retired-runtime-error");
       const turnId = asTurnId("turn-retired-runtime-error");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -960,7 +975,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const threadId = asThreadId("thread-stale-terminal-negative-matrix");
       const activeTurnId = asTurnId("turn-stale-terminal-active");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1051,7 +1066,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
         .mockImplementationOnce((input) =>
           Effect.succeed({ threadId: input.threadId, turnId: newTurnId }),
         );
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1059,7 +1074,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       yield* engine.sendTurn({ threadId, input: "old", attachments: [] });
       const oldBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
       const oldGeneration = oldBinding?.lifecycleGeneration;
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1095,7 +1110,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const threadId = asThreadId("thread-generation-mismatch-live-send");
       const oldGeneration = "zombie-generation";
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1112,6 +1127,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
         runtimePayload: { activeTurnId: null },
       });
       yield* staleSettlementRouting.codex.startSession({
+        admission: TEST_AGENT_ADMISSION,
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1146,7 +1162,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-generation-mismatch-stop");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1162,6 +1178,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
         runtimePayload: { activeTurnId: asTurnId("turn-zombie-stop") },
       });
       yield* staleSettlementRouting.codex.startSession({
+        admission: TEST_AGENT_ADMISSION,
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1183,7 +1200,7 @@ staleSettlementRouting.layer("EngineServiceLive exact stale-terminal settlement"
       const firstTurnId = asTurnId("turn-current-cleanup-first");
       const secondTurnId = asTurnId("turn-current-cleanup-second");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1240,7 +1257,7 @@ lockCorrectionRouting.layer("EngineServiceLive binding-event lock correction", (
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-bounded-terminal-stop");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1316,7 +1333,7 @@ cursorClearRaceRouting.layer("EngineServiceLive cursor-clear terminal drain race
       cursorClearRaceRouting.codex.sendTurn.mockImplementationOnce((input) =>
         Effect.succeed({ threadId: input.threadId, turnId }),
       );
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1428,7 +1445,7 @@ bindingRetryRouting.layer("EngineServiceLive binding settlement retry", (it) => 
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-binding-update-retry");
       const eventId = "binding-update-retry-event";
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -1521,7 +1538,7 @@ ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-reload");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "oa",
         threadId,
         engineSelection: { engine: "oa", model: "gateway/model-one" },
@@ -1555,7 +1572,7 @@ ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) =>
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-codex");
       const reloadCount = ecosystemReloadRouting.codex.reloadSessionResources.mock.calls.length;
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         engineSelection: { engine: "codex", model: "gpt-5" },
@@ -1669,9 +1686,10 @@ it.effect("EngineServiceLive persists active sessions as stopped before adapter 
 
     yield* Effect.gen(function* () {
       const engine = yield* EngineService;
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         cwd: "/tmp/project",
+        admission: TEST_AGENT_ADMISSION,
         runtimeMode: "full-access",
         threadId,
       });
@@ -1738,9 +1756,10 @@ it.effect(
       const startedSession = yield* Effect.gen(function* () {
         const engine = yield* EngineService;
         const threadId = asThreadId("thread-1");
-        const session = yield* engine.startSession(threadId, {
+        const session = yield* startTestEngineSession(engine, threadId, {
           engine: "codex",
           cwd: "/tmp/project",
+          admission: TEST_AGENT_ADMISSION,
           runtimeMode: "full-access",
           threadId,
         });
@@ -1829,14 +1848,12 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       );
 
       const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
-      const startFiber = yield* engine
-        .startSession(threadId, {
-          engine: "oa",
-          threadId,
-          engineSelection: { engine: "oa", model: "gateway/model-one" },
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const startFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "oa",
+        threadId,
+        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* waitUntil(
         () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
         500,
@@ -1876,14 +1893,12 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* Deferred.await(mutationEntered);
 
       const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
-      const startFiber = yield* engine
-        .startSession(threadId, {
-          engine: "oa",
-          threadId,
-          engineSelection: { engine: "oa", model: "gateway/model-one" },
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const startFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "oa",
+        threadId,
+        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* sleep(25);
       assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
 
@@ -1899,7 +1914,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-recovery-first");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "oa",
         threadId,
         engineSelection: { engine: "oa", model: "gateway/model-one" },
@@ -1945,7 +1960,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       Effect.gen(function* () {
         const engine = yield* EngineService;
         const threadId = asThreadId("thread-model-service-replacement-restore");
-        yield* engine.startSession(threadId, {
+        yield* startTestEngineSession(engine, threadId, {
           engine: "oa",
           threadId,
           engineSelection: { engine: "oa", model: "gateway-a/model-one" },
@@ -1969,14 +1984,12 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
             ),
           );
 
-        const replacementFiber = yield* engine
-          .startSession(threadId, {
-            engine: "oa",
-            threadId,
-            engineSelection: { engine: "oa", model: "gateway-b/model-two" },
-            runtimeMode: "full-access",
-          })
-          .pipe(Effect.result, Effect.forkChild);
+        const replacementFiber = yield* startTestEngineSession(engine, threadId, {
+          engine: "oa",
+          threadId,
+          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+          runtimeMode: "full-access",
+        }).pipe(Effect.result, Effect.forkChild);
         yield* Deferred.await(restoreEntered);
 
         const mutationEntered = yield* Deferred.make<void>();
@@ -1999,7 +2012,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-turn-persistence-fence");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "oa",
         threadId,
         engineSelection: { engine: "oa", model: "gateway-a/model-one" },
@@ -2033,14 +2046,12 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       modelServiceAdmission.oa.startSession
         .mockImplementationOnce(() => Effect.fail(replacementFailure))
         .mockImplementationOnce(defaultStart);
-      const replacementFiber = yield* engine
-        .startSession(threadId, {
-          engine: "oa",
-          threadId,
-          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.result, Effect.forkChild);
+      const replacementFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "oa",
+        threadId,
+        engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+        runtimeMode: "full-access",
+      }).pipe(Effect.result, Effect.forkChild);
       yield* sleep(25);
 
       const startOwnsOldFence = yield* Deferred.make<void>();
@@ -2087,7 +2098,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-recovery-current-binding");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "oa",
         threadId,
         engineSelection: { engine: "oa", model: "gateway-a/model-one" },
@@ -2153,13 +2164,13 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const aThreadId = asThreadId("thread-model-service-a-to-b");
       const bThreadId = asThreadId("thread-model-service-b-to-a");
-      yield* engine.startSession(aThreadId, {
+      yield* startTestEngineSession(engine, aThreadId, {
         engine: "oa",
         threadId: aThreadId,
         engineSelection: { engine: "oa", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
-      yield* engine.startSession(bThreadId, {
+      yield* startTestEngineSession(engine, bThreadId, {
         engine: "oa",
         threadId: bThreadId,
         engineSelection: { engine: "oa", model: "gateway-b/model-two" },
@@ -2168,13 +2179,13 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
 
       const replacements = yield* Effect.all(
         [
-          engine.startSession(aThreadId, {
+          startTestEngineSession(engine, aThreadId, {
             engine: "oa",
             threadId: aThreadId,
             engineSelection: { engine: "oa", model: "gateway-b/model-two" },
             runtimeMode: "full-access",
           }),
-          engine.startSession(bThreadId, {
+          startTestEngineSession(engine, bThreadId, {
             engine: "oa",
             threadId: bThreadId,
             engineSelection: { engine: "oa", model: "gateway-a/model-one" },
@@ -2201,17 +2212,17 @@ routing.layer("EngineServiceLive routing", (it) => {
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
-      yield* engine.startSession(piThreadId, {
+      yield* startTestEngineSession(engine, piThreadId, {
         engine: "pi",
         threadId: piThreadId,
         runtimeMode: "full-access",
       });
-      yield* engine.startSession(antigravityThreadId, {
+      yield* startTestEngineSession(engine, antigravityThreadId, {
         engine: "antigravity",
         threadId: antigravityThreadId,
         runtimeMode: "full-access",
       });
-      yield* engine.startSession(oaThreadId, {
+      yield* startTestEngineSession(engine, oaThreadId, {
         engine: "oa",
         threadId: oaThreadId,
         runtimeMode: "full-access",
@@ -2285,7 +2296,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const sourceThreadId = asThreadId("thread-native-fork-source");
       const targetThreadId = asThreadId("thread-native-fork-target");
 
-      yield* engine.startSession(sourceThreadId, {
+      yield* startTestEngineSession(engine, sourceThreadId, {
         engine: "codex",
         threadId: sourceThreadId,
         cwd: "/tmp/native-fork-source",
@@ -2327,26 +2338,29 @@ routing.layer("EngineServiceLive routing", (it) => {
     }),
   );
 
-  it.effect("strips Haros-only work-surface fields from other Engine admission", () =>
+  it.effect("persists the same Product admission across non-Pi Engines", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-codex-work-surface-strip");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project/packages/app",
-        workSurface: "agent",
-        projectContextRoot: "/tmp/project",
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/project",
+        },
         runtimeMode: "full-access",
       });
       const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, undefined);
-      assert.equal(
-        asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot,
-        undefined,
-      );
+      assert.deepEqual(startedBinding?.admission, {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+      });
 
       yield* engine.stopRuntimeSession!({ threadId });
       routing.codex.startSession.mockClear();
@@ -2354,8 +2368,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const recoveredInput = routing.codex.startSession.mock.calls[0]?.[0];
       assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
-      assert.equal(recoveredInput?.workSurface, undefined);
-      assert.equal(recoveredInput?.projectContextRoot, undefined);
+      assert.deepEqual(recoveredInput?.admission, {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+      });
       yield* engine.stopSession({ threadId });
     }),
   );
@@ -2366,20 +2383,23 @@ routing.layer("EngineServiceLive routing", (it) => {
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-harnessos-work-surface-recovery");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "oa",
         threadId,
         cwd: "/tmp/project/packages/app",
-        workSurface: "agent",
-        projectContextRoot: "/tmp/project",
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/project",
+        },
         runtimeMode: "full-access",
       });
       const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, "agent");
-      assert.equal(
-        asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot,
-        "/tmp/project",
-      );
+      assert.deepEqual(startedBinding?.admission, {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+      });
 
       yield* engine.stopRuntimeSession!({ threadId });
       routing.oa.startSession.mockClear();
@@ -2387,9 +2407,45 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const recoveredInput = routing.oa.startSession.mock.calls[0]?.[0];
       assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
-      assert.equal(recoveredInput?.workSurface, "agent");
-      assert.equal(recoveredInput?.projectContextRoot, "/tmp/project");
+      assert.deepEqual(recoveredInput?.admission, {
+        productSurface: "agent",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+      });
       yield* engine.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("refuses to fabricate recovery for a legacy binding without admission", () =>
+    Effect.gen(function* () {
+      const engine = yield* EngineService;
+      const directory = yield* EngineSessionDirectory;
+      const threadId = asThreadId("thread-legacy-binding-without-admission");
+      const startCalls = routing.codex.startSession.mock.calls.length;
+
+      yield* directory.upsert({
+        engine: "codex",
+        threadId,
+        status: "running",
+        lifecycleGeneration: "legacy-without-admission",
+        resumeCursor: { threadId: "native-legacy-thread" },
+        admission: null,
+        runtimePayload: { cwd: "/tmp/legacy-project" },
+        runtimeMode: "full-access",
+      });
+
+      const result = yield* Effect.result(
+        engine.sendTurn({ threadId, input: "do not fabricate continuity", attachments: [] }),
+      );
+
+      assert.equal(result._tag, "Failure");
+      if (result._tag === "Failure") {
+        assert.equal(result.failure._tag, "EngineValidationError");
+        if (result.failure._tag === "EngineValidationError") {
+          assert.match(result.failure.issue, /immutable Product admission is missing or invalid/);
+        }
+      }
+      assert.equal(routing.codex.startSession.mock.calls.length, startCalls);
     }),
   );
 
@@ -2398,7 +2454,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-external-fork");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         resumeCursor: { threadId: "persisted-thread" },
@@ -2407,7 +2463,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       routing.codex.startSession.mockClear();
 
       const forkSourceResumeCursor = { threadId: "external-thread" };
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         forkSourceResumeCursor,
@@ -2429,7 +2485,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-explicit-stop-inactive");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -2450,21 +2506,21 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-lifecycle-generation");
-      const startInput: EngineSessionStartInput = {
+      const startInput: TestEngineSessionStartInput = {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
         runtimeMode: "full-access",
       };
 
-      yield* engine.startSession(threadId, startInput);
+      yield* startTestEngineSession(engine, threadId, startInput);
       const firstBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
       const firstGeneration = firstBinding?.lifecycleGeneration;
       assert.equal(typeof firstGeneration, "string");
 
       yield* engine.stopSession({ threadId });
       yield* engine.stopSession({ threadId });
-      yield* engine.startSession(threadId, startInput);
+      yield* startTestEngineSession(engine, threadId, startInput);
       const secondBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
       const secondGeneration = secondBinding?.lifecycleGeneration;
       assert.equal(typeof secondGeneration, "string");
@@ -2535,7 +2591,9 @@ routing.layer("EngineServiceLive routing", (it) => {
       );
       const startCallCount = routing.codex.startSession.mock.calls.length;
       const stopCallCount = routing.codex.stopSession.mock.calls.length;
-      const startFiber = yield* engine.startSession(threadId, startInput).pipe(Effect.forkChild);
+      const startFiber = yield* startTestEngineSession(engine, threadId, startInput).pipe(
+        Effect.forkChild,
+      );
       yield* waitUntil(
         () => routing.codex.startSession.mock.calls.length > startCallCount,
         500,
@@ -2574,14 +2632,12 @@ routing.layer("EngineServiceLive routing", (it) => {
       yield* Deferred.await(projectionEntered);
 
       const startCallCount = routing.codex.startSession.mock.calls.length;
-      const startFiber = yield* engine
-        .startSession(threadId, {
-          engine: "codex",
-          threadId,
-          cwd: "/tmp/project",
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const startFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "codex",
+        threadId,
+        cwd: "/tmp/project",
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* sleep(25);
       assert.equal(routing.codex.startSession.mock.calls.length, startCallCount);
 
@@ -2598,14 +2654,14 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-overlapping-engine-starts");
-      const codexInput: EngineSessionStartInput = {
+      const codexInput: TestEngineSessionStartInput = {
         engine: "codex",
         threadId,
         cwd: "/tmp/provider-starts",
         runtimeMode: "full-access",
       };
 
-      yield* engine.startSession(threadId, codexInput);
+      yield* startTestEngineSession(engine, threadId, codexInput);
       const defaultCodexStart = routing.codex.startSession.getMockImplementation();
       if (!defaultCodexStart) assert.fail("Expected the fake Codex start implementation");
 
@@ -2621,23 +2677,21 @@ routing.layer("EngineServiceLive routing", (it) => {
       const codexStartCount = routing.codex.startSession.mock.calls.length;
       const claudeStartCount = routing.claude.startSession.mock.calls.length;
 
-      const sameProviderFiber = yield* engine
-        .startSession(threadId, codexInput)
-        .pipe(Effect.forkChild);
+      const sameProviderFiber = yield* startTestEngineSession(engine, threadId, codexInput).pipe(
+        Effect.forkChild,
+      );
       yield* waitUntil(
         () => routing.codex.startSession.mock.calls.length > codexStartCount,
         500,
         10,
         "same-engine start",
       );
-      const crossProviderFiber = yield* engine
-        .startSession(threadId, {
-          engine: "claude",
-          threadId,
-          cwd: "/tmp/provider-starts",
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const crossProviderFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "claude",
+        threadId,
+        cwd: "/tmp/provider-starts",
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* sleep(25);
       assert.equal(routing.claude.startSession.mock.calls.length, claudeStartCount);
 
@@ -2674,7 +2728,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const previousEngineOptions = {
         codex: { binaryPath: "/tmp/codex-old" },
       };
-      const initial = yield* engine.startSession(threadId, {
+      const initial = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/failed-engine-replacement",
@@ -2699,7 +2753,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       });
 
       const replacement = yield* Effect.result(
-        engine.startSession(threadId, {
+        startTestEngineSession(engine, threadId, {
           engine: "claude",
           threadId,
           cwd: "/tmp/failed-engine-replacement",
@@ -2742,7 +2796,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-cross-engine-restore-owner");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/cross-engine-restore-owner",
@@ -2765,14 +2819,12 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      const replacementFiber = yield* engine
-        .startSession(threadId, {
-          engine: "claude",
-          threadId,
-          runtimeMode: "approval-required",
-          engineSelection: { engine: "claude", model: "claude-opus-4-6" },
-        })
-        .pipe(Effect.result, Effect.forkChild);
+      const replacementFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "claude",
+        threadId,
+        runtimeMode: "approval-required",
+        engineSelection: { engine: "claude", model: "claude-opus-4-6" },
+      }).pipe(Effect.result, Effect.forkChild);
       const restoreInput = yield* Deferred.await(restoreEntered);
       const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
       assert.equal(starting?.engine, "codex");
@@ -2807,7 +2859,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-same-engine-restore-owner");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/same-engine-restore-owner",
@@ -2841,15 +2893,13 @@ routing.layer("EngineServiceLive routing", (it) => {
           ),
         );
 
-      const replacementFiber = yield* engine
-        .startSession(threadId, {
-          engine: "codex",
-          threadId,
-          cwd: "/tmp/same-engine-restore-owner-new",
-          runtimeMode: "full-access",
-          engineSelection: { engine: "codex", model: "gpt-5.1-codex" },
-        })
-        .pipe(Effect.result, Effect.forkChild);
+      const replacementFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "codex",
+        threadId,
+        cwd: "/tmp/same-engine-restore-owner-new",
+        runtimeMode: "full-access",
+        engineSelection: { engine: "codex", model: "gpt-5.1-codex" },
+      }).pipe(Effect.result, Effect.forkChild);
       const restoreInput = yield* Deferred.await(restoreEntered);
       const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
       assert.equal(starting?.engine, "codex");
@@ -2897,7 +2947,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-replacement-target-retire-failure");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/replacement-target-retire-failure",
@@ -2925,7 +2975,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       routing.claude.stopSession.mockImplementationOnce(() => Effect.fail(targetStopFailure));
 
       const replacement = yield* Effect.exit(
-        engine.startSession(threadId, {
+        startTestEngineSession(engine, threadId, {
           engine: "claude",
           threadId,
           cwd: "/tmp/replacement-target-retire-failure",
@@ -2985,7 +3035,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       );
 
       const result = yield* Effect.result(
-        engine.startSession(threadId, {
+        startTestEngineSession(engine, threadId, {
           engine: "codex",
           threadId,
           runtimeMode: "full-access",
@@ -3015,14 +3065,12 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      const startFiber = yield* engine
-        .startSession(threadId, {
-          engine: "codex",
-          threadId,
-          cwd: "/tmp/initial-start-owner",
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const startFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "codex",
+        threadId,
+        cwd: "/tmp/initial-start-owner",
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* Deferred.await(entered);
 
       const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
@@ -3051,12 +3099,15 @@ routing.layer("EngineServiceLive routing", (it) => {
           engine: "oa" as const,
           model: "local/stable-model",
         };
-        yield* engine.startSession(threadId, {
+        yield* startTestEngineSession(engine, threadId, {
           engine: "oa",
           threadId,
           cwd: "/tmp/same-engine-persistence-failure",
-          workSurface: "agent",
-          projectContextRoot: "/tmp/same-engine-persistence-failure",
+          admission: {
+            productSurface: "agent",
+            workSurface: "agent",
+            projectContextRoot: "/tmp/same-engine-persistence-failure",
+          },
           runtimeMode: "full-access",
           engineSelection: previousEngineSelection,
         });
@@ -3074,11 +3125,15 @@ routing.layer("EngineServiceLive routing", (it) => {
         const stopCount = routing.oa.stopSession.mock.calls.length;
 
         const result = yield* Effect.result(
-          engine.startSession(threadId, {
+          startTestEngineSession(engine, threadId, {
             engine: "oa",
             threadId,
             cwd: "/tmp/same-engine-persistence-failure-new",
-            workSurface: "chat",
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: "/tmp/same-engine-persistence-failure",
+            },
             runtimeMode: "full-access",
             engineSelection: {
               engine: "oa",
@@ -3102,17 +3157,17 @@ routing.layer("EngineServiceLive routing", (it) => {
           asRuntimePayloadRecord(restoredBinding?.runtimePayload).engineSelection,
           previousEngineSelection,
         );
-        assert.equal(asRuntimePayloadRecord(restoredBinding?.runtimePayload).workSurface, "agent");
-        assert.equal(
-          asRuntimePayloadRecord(restoredBinding?.runtimePayload).projectContextRoot,
-          "/tmp/same-engine-persistence-failure",
-        );
+        assert.deepEqual(restoredBinding?.admission, {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/same-engine-persistence-failure",
+        });
         const restoredStartInput = routing.oa.startSession.mock.calls.at(-1)?.[0];
-        assert.equal(restoredStartInput?.workSurface, "agent");
-        assert.equal(
-          restoredStartInput?.projectContextRoot,
-          "/tmp/same-engine-persistence-failure",
-        );
+        assert.deepEqual(restoredStartInput?.admission, {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/same-engine-persistence-failure",
+        });
 
         yield* engine.stopSession({ threadId });
       }),
@@ -3125,11 +3180,13 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-restore-failed-explicit-cleanup");
       yield* Effect.all([
         routing.codex.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "codex",
           threadId,
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "claude",
           threadId,
           runtimeMode: "full-access",
@@ -3171,7 +3228,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const targetStarts = routing.antigravity.startSession.mock.calls.length;
 
       const blockedStart = yield* Effect.exit(
-        engine.startSession(threadId, {
+        startTestEngineSession(engine, threadId, {
           engine: "antigravity",
           threadId,
           runtimeMode: "full-access",
@@ -3210,7 +3267,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-recovery-start-race");
-      const initial = yield* engine.startSession(threadId, {
+      const initial = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/recovery-start-race",
@@ -3241,14 +3298,12 @@ routing.layer("EngineServiceLive routing", (it) => {
         10,
         "engine recovery start",
       );
-      const competingStartFiber = yield* engine
-        .startSession(threadId, {
-          engine: "claude",
-          threadId,
-          cwd: "/tmp/recovery-start-race",
-          runtimeMode: "full-access",
-        })
-        .pipe(Effect.forkChild);
+      const competingStartFiber = yield* startTestEngineSession(engine, threadId, {
+        engine: "claude",
+        threadId,
+        cwd: "/tmp/recovery-start-race",
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
       yield* sleep(25);
       assert.equal(routing.claude.startSession.mock.calls.length, claudeStartCount);
 
@@ -3282,7 +3337,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-claude-interaction-generation");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "claude",
         threadId,
         cwd: "/tmp/project",
@@ -3362,7 +3417,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-antigravity-interaction-generation");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "antigravity",
         threadId,
         cwd: "/tmp/project",
@@ -3411,23 +3466,26 @@ routing.layer("EngineServiceLive routing", (it) => {
       const boundThreadId = asThreadId("thread-authoritative-session-list");
       const orphanThreadId = asThreadId("thread-ambiguous-session-list");
 
-      yield* engine.startSession(boundThreadId, {
+      yield* startTestEngineSession(engine, boundThreadId, {
         engine: "claude",
         threadId: boundThreadId,
         runtimeMode: "full-access",
       });
       yield* routing.codex.startSession({
+        admission: TEST_AGENT_ADMISSION,
         engine: "codex",
         threadId: boundThreadId,
         runtimeMode: "full-access",
       });
       yield* Effect.all([
         routing.codex.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "codex",
           threadId: orphanThreadId,
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "claude",
           threadId: orphanThreadId,
           runtimeMode: "full-access",
@@ -3462,11 +3520,13 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-ambiguous-unbound-owners");
       yield* Effect.all([
         routing.codex.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "codex",
           threadId,
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "claude",
           threadId,
           runtimeMode: "full-access",
@@ -3490,7 +3550,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         assert.match(failure.issue, /multiple engines report a live session/);
       }
       const startResult = yield* Effect.exit(
-        engine.startSession(threadId, {
+        startTestEngineSession(engine, threadId, {
           engine: "antigravity",
           threadId,
           runtimeMode: "full-access",
@@ -3519,6 +3579,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-single-unbound-owner");
       yield* routing.claude.startSession({
+        admission: TEST_AGENT_ADMISSION,
         engine: "claude",
         threadId,
         runtimeMode: "full-access",
@@ -3550,7 +3611,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       routing.codex.respondToRequest.mockClear();
       routing.codex.respondToUserInput.mockClear();
 
-      const session = yield* engine.startSession(asThreadId("thread-1"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         cwd: "/tmp/project",
@@ -3661,7 +3722,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-exact-interrupt");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -3686,7 +3747,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-child-interrupt-credential-rotation");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -3768,7 +3829,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         const threadId = asThreadId("thread-terminal-gateway-credential-rotation");
         const turnA = asTurnId(`turn-${threadId}`);
 
-        yield* engine.startSession(threadId, {
+        yield* startTestEngineSession(engine, threadId, {
           engine: "codex",
           threadId,
           cwd: "/tmp/project",
@@ -3875,7 +3936,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-proactive-terminal-gateway-rotation");
       const turnA = asTurnId(`turn-${threadId}`);
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -3961,7 +4022,7 @@ routing.layer("EngineServiceLive routing", (it) => {
           ),
         );
 
-        yield* engine.startSession(threadId, {
+        yield* startTestEngineSession(engine, threadId, {
           engine: "codex",
           threadId,
           cwd: "/tmp/project",
@@ -4022,7 +4083,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -4092,7 +4153,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -4143,7 +4204,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         cwd: "/tmp/project",
         runtimeMode: "full-access" as const,
       };
-      yield* engine.startSession(threadId, startInput);
+      yield* startTestEngineSession(engine, threadId, startInput);
       yield* engine.sendTurn({
         threadId,
         input: "turn A",
@@ -4153,7 +4214,9 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const interrupted = yield* engine.interruptTurn({ threadId }).pipe(Effect.forkChild);
       yield* Deferred.await(stopStarted);
-      const replacement = yield* engine.startSession(threadId, startInput).pipe(Effect.forkChild);
+      const replacement = yield* startTestEngineSession(engine, threadId, startInput).pipe(
+        Effect.forkChild,
+      );
       yield* Effect.yieldNow;
       assert.equal(routing.codex.startSession.mock.calls.length, startsBeforeReplacement);
 
@@ -4181,7 +4244,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -4225,7 +4288,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         ),
       );
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -4260,7 +4323,7 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       // An explicit session replacement is the recovery authority after a
       // failed teardown and clears the fail-closed fence.
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         cwd: "/tmp/project",
@@ -4281,6 +4344,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         routing.codex.respondToRequest.mockClear();
         routing.codex.respondToUserInput.mockClear();
         yield* routing.codex.adapter.startSession({
+          admission: TEST_AGENT_ADMISSION,
           engine: "codex",
           threadId,
           runtimeMode: "approval-required",
@@ -4327,7 +4391,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      const initial = yield* engine.startSession(asThreadId("thread-1"), {
+      const initial = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         cwd: "/tmp/project",
@@ -4368,7 +4432,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       routing.claude.startSession.mockClear();
 
-      const session = yield* engine.startSession(asThreadId("thread-claude"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-claude"), {
         engine: "claude",
         threadId: asThreadId("thread-claude"),
         cwd: "/tmp/project-claude",
@@ -4394,7 +4458,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      const initial = yield* engine.startSession(asThreadId("thread-1"), {
+      const initial = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         cwd: "/tmp/project-send-turn",
@@ -4434,7 +4498,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      const initial = yield* engine.startSession(asThreadId("thread-claude-send-turn"), {
+      const initial = yield* startTestEngineSession(engine, asThreadId("thread-claude-send-turn"), {
         engine: "claude",
         threadId: asThreadId("thread-claude-send-turn"),
         cwd: "/tmp/project-claude-send-turn",
@@ -4489,12 +4553,12 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      yield* engine.startSession(asThreadId("thread-1"), {
+      yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         runtimeMode: "full-access",
       });
-      yield* engine.startSession(asThreadId("thread-2"), {
+      yield* startTestEngineSession(engine, asThreadId("thread-2"), {
         engine: "codex",
         threadId: asThreadId("thread-2"),
         runtimeMode: "full-access",
@@ -4513,7 +4577,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-1"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         runtimeMode: "full-access",
@@ -4556,7 +4620,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-runtime-complete"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-runtime-complete"), {
         engine: "codex",
         threadId: asThreadId("thread-runtime-complete"),
         runtimeMode: "full-access",
@@ -4628,7 +4692,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       let olderDispatchStarted = false;
       let releaseOlderDispatch: ((result: EngineTurnStartResult) => void) | undefined;
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -4709,7 +4773,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const newerTurnId = asTurnId("turn-return-order-newer");
       let releaseOlder: ((result: EngineTurnStartResult) => void) | undefined;
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -4768,7 +4832,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       let releaseOlder: ((result: EngineTurnStartResult) => void) | undefined;
       let failNewer: (() => void) | undefined;
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -4842,7 +4906,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         detail: "injected started-turn persistence failure",
       });
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -4899,7 +4963,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-subagent-scoped-events");
       const turnId = asTurnId("turn-parent-live");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -4961,7 +5025,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         model: "opencode/minimax-m2.5-free",
       };
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -5007,7 +5071,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       let steerStarted = false;
       let releaseSteer: ((result: EngineTurnStartResult) => void) | undefined;
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -5071,11 +5135,15 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-runtime-resume-refresh"), {
-        engine: "claude",
-        threadId: asThreadId("thread-runtime-resume-refresh"),
-        runtimeMode: "full-access",
-      });
+      const session = yield* startTestEngineSession(
+        engine,
+        asThreadId("thread-runtime-resume-refresh"),
+        {
+          engine: "claude",
+          threadId: asThreadId("thread-runtime-resume-refresh"),
+          runtimeMode: "full-access",
+        },
+      );
       const updatedResumeCursor = {
         threadId: session.threadId,
         resume: "550e8400-e29b-41d4-a716-446655440000",
@@ -5118,11 +5186,15 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-task-resume-refresh"), {
-        engine: "claude",
-        threadId: asThreadId("thread-task-resume-refresh"),
-        runtimeMode: "full-access",
-      });
+      const session = yield* startTestEngineSession(
+        engine,
+        asThreadId("thread-task-resume-refresh"),
+        {
+          engine: "claude",
+          threadId: asThreadId("thread-task-resume-refresh"),
+          runtimeMode: "full-access",
+        },
+      );
       const turn = yield* engine.sendTurn({
         threadId: session.threadId,
         input: "continue the work",
@@ -5189,7 +5261,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-runtime-error"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-runtime-error"), {
         engine: "codex",
         threadId: asThreadId("thread-runtime-error"),
         runtimeMode: "full-access",
@@ -5238,11 +5310,15 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-runtime-state-error"), {
-        engine: "codex",
-        threadId: asThreadId("thread-runtime-state-error"),
-        runtimeMode: "full-access",
-      });
+      const session = yield* startTestEngineSession(
+        engine,
+        asThreadId("thread-runtime-state-error"),
+        {
+          engine: "codex",
+          threadId: asThreadId("thread-runtime-state-error"),
+          runtimeMode: "full-access",
+        },
+      );
 
       routing.codex.emit({
         type: "thread.state.changed",
@@ -5278,11 +5354,15 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const session = yield* engine.startSession(asThreadId("thread-runtime-compact-boundary"), {
-        engine: "codex",
-        threadId: asThreadId("thread-runtime-compact-boundary"),
-        runtimeMode: "full-access",
-      });
+      const session = yield* startTestEngineSession(
+        engine,
+        asThreadId("thread-runtime-compact-boundary"),
+        {
+          engine: "codex",
+          threadId: asThreadId("thread-runtime-compact-boundary"),
+          runtimeMode: "full-access",
+        },
+      );
       const turn = yield* engine.sendTurn({
         threadId: session.threadId,
         input: "hello",
@@ -5345,10 +5425,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const initial = yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        return yield* engine.startSession(asThreadId("thread-claude-start"), {
+        return yield* startTestEngineSession(engine, asThreadId("thread-claude-start"), {
           engine: "claude",
           threadId: asThreadId("thread-claude-start"),
           cwd: "/tmp/project-claude-start",
+          admission: TEST_AGENT_ADMISSION,
           runtimeMode: "full-access",
         });
       }).pipe(Effect.provide(firstEngineLayer));
@@ -5378,10 +5459,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        yield* engine.startSession(initial.threadId, {
+        yield* startTestEngineSession(engine, initial.threadId, {
           engine: "claude",
           threadId: initial.threadId,
           cwd: "/tmp/project-claude-start",
+          admission: TEST_AGENT_ADMISSION,
           runtimeMode: "full-access",
         });
       }).pipe(Effect.provide(secondEngineLayer));
@@ -5439,10 +5521,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const initial = yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        const session = yield* engine.startSession(asThreadId("thread-clear-resume"), {
+        const session = yield* startTestEngineSession(engine, asThreadId("thread-clear-resume"), {
           engine: "codex",
           threadId: asThreadId("thread-clear-resume"),
           cwd: "/tmp/project-clear-resume",
+          admission: TEST_AGENT_ADMISSION,
           engineOptions,
           runtimeMode: "full-access",
         });
@@ -5473,10 +5556,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        yield* engine.startSession(initial.threadId, {
+        yield* startTestEngineSession(engine, initial.threadId, {
           engine: "codex",
           threadId: initial.threadId,
           cwd: "/tmp/project-clear-resume",
+          admission: TEST_AGENT_ADMISSION,
           runtimeMode: "full-access",
         });
       }).pipe(Effect.provide(secondEngineLayer));
@@ -5532,10 +5616,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       const initial = yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        const session = yield* engine.startSession(asThreadId("thread-stop-runtime"), {
+        const session = yield* startTestEngineSession(engine, asThreadId("thread-stop-runtime"), {
           engine: "claude",
           threadId: asThreadId("thread-stop-runtime"),
           cwd: "/tmp/project-stop-runtime",
+          admission: TEST_AGENT_ADMISSION,
           engineOptions,
           runtimeMode: "full-access",
         });
@@ -5566,10 +5651,11 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* Effect.gen(function* () {
         const engine = yield* EngineService;
-        yield* engine.startSession(initial.threadId, {
+        yield* startTestEngineSession(engine, initial.threadId, {
           engine: "claude",
           threadId: initial.threadId,
           cwd: "/tmp/project-stop-runtime",
+          admission: TEST_AGENT_ADMISSION,
           runtimeMode: "full-access",
         });
       }).pipe(Effect.provide(secondEngineLayer));
@@ -5601,7 +5687,7 @@ rotationRetry.layer("EngineServiceLive credential rotation event durability", (i
       const settlementEventId = asEventId(ROTATION_RETRY_FAILURE_EVENT_ID);
       rotationRetryPersistAttempts.clear();
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -5751,7 +5837,7 @@ restartRollbackRouting.layer("EngineServiceLive restart-based rollback", (it) =>
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-droid-interaction-generation");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "droid",
         threadId,
         cwd: "/tmp/project",
@@ -5805,7 +5891,7 @@ restartRollbackRouting.layer("EngineServiceLive restart-based rollback", (it) =>
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-droid-restart-rollback");
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "droid",
         threadId,
         cwd: "/tmp/project",
@@ -5833,16 +5919,23 @@ piInteractionRouting.layer("EngineServiceLive Pi interaction generation", (it) =
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-stock-pi-work-surface-recovery");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "pi",
         threadId,
         cwd: "/tmp/managed-chat",
-        workSurface: "chat",
+        admission: {
+          productSurface: "chat",
+          workSurface: "chat",
+          projectContextRoot: null,
+        },
         runtimeMode: "full-access",
       });
       const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, "chat");
-      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot, null);
+      assert.deepEqual(startedBinding?.admission, {
+        productSurface: "chat",
+        workSurface: "chat",
+        projectContextRoot: null,
+      });
 
       yield* engine.stopRuntimeSession!({ threadId });
       piInteractionRouting.pi.startSession.mockClear();
@@ -5853,8 +5946,11 @@ piInteractionRouting.layer("EngineServiceLive Pi interaction generation", (it) =
       });
 
       const recoveredInput = piInteractionRouting.pi.startSession.mock.calls[0]?.[0];
-      assert.equal(recoveredInput?.workSurface, "chat");
-      assert.equal(recoveredInput?.projectContextRoot, undefined);
+      assert.deepEqual(recoveredInput?.admission, {
+        productSurface: "chat",
+        workSurface: "chat",
+        projectContextRoot: null,
+      });
       yield* engine.stopSession({ threadId });
       piInteractionRouting.pi.startSession.mockClear();
     }),
@@ -5866,7 +5962,7 @@ piInteractionRouting.layer("EngineServiceLive Pi interaction generation", (it) =
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-pi-interaction-generation");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "pi",
         threadId,
         cwd: "/tmp/project",
@@ -5929,7 +6025,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const olderTurnId = asTurnId("turn-idle-stale-older");
       const newerTurnId = asTurnId("turn-idle-stale-newer");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6004,7 +6100,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const firstTurnId = asTurnId("turn-ambiguous-first");
       const secondTurnId = asTurnId("turn-ambiguous-second");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6050,11 +6146,15 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
         const engine = yield* EngineService;
         const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-        const session = yield* engine.startSession(asThreadId("thread-idle-persisted-cursor"), {
-          engine: "codex",
-          threadId: asThreadId("thread-idle-persisted-cursor"),
-          runtimeMode: "full-access",
-        });
+        const session = yield* startTestEngineSession(
+          engine,
+          asThreadId("thread-idle-persisted-cursor"),
+          {
+            engine: "codex",
+            threadId: asThreadId("thread-idle-persisted-cursor"),
+            runtimeMode: "full-access",
+          },
+        );
 
         const persistedBefore = yield* runtimeRepository.getByThreadId({
           threadId: session.threadId,
@@ -6103,7 +6203,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-idle-new-turn");
 
       idleCleanup.codex.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6158,7 +6258,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-idle-runtime-turn-start");
 
       idleCleanup.codex.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6216,7 +6316,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-idle-background-task");
 
       idleCleanup.claude.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "claude",
         threadId,
         runtimeMode: "full-access",
@@ -6269,7 +6369,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-idle-superseded-generation");
 
       idleCleanup.codex.stopSession.mockClear();
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6372,7 +6472,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-clear-resume-live-task");
 
       idleCleanup.claude.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "claude",
         threadId,
         runtimeMode: "full-access",
@@ -6426,7 +6526,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const firstTurnId = asTurnId("turn-conflicting-start-first");
       const secondTurnId = asTurnId("turn-conflicting-start-second");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6483,7 +6583,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       let releaseListSessions: ReleaseListSessions | undefined;
 
       idleCleanup.codex.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6573,7 +6673,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const threadId = asThreadId("thread-idle-interrupted-dispatch");
 
       idleCleanup.codex.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6635,7 +6735,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
       const threadId = asThreadId("thread-idle-rollback-success");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6697,7 +6797,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       let listSessionsStarted = false;
       let releaseListSessions: ReleaseListSessions | undefined;
 
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6764,7 +6864,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       let listSessionsStarted = false;
       let releaseListSessions: ReleaseListSessions | undefined;
 
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6834,7 +6934,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
       const threadId = asThreadId("thread-idle-compact-success");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6898,7 +6998,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-idle-closed-state");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6929,7 +7029,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-idle-compact-running");
 
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -6971,7 +7071,7 @@ idleCleanup.layer("EngineServiceLive idle cleanup", (it) => {
       });
 
       idleCleanup.codex.stopSession.mockClear();
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -7034,7 +7134,7 @@ fanout.layer("EngineServiceLive fanout", (it) => {
   it.effect("fans out adapter turn completion events", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
-      const session = yield* engine.startSession(asThreadId("thread-1"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         runtimeMode: "full-access",
@@ -7072,7 +7172,7 @@ fanout.layer("EngineServiceLive fanout", (it) => {
   it.effect("fans out canonical runtime events in emission order", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
-      const session = yield* engine.startSession(asThreadId("thread-seq"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-seq"), {
         engine: "codex",
         threadId: asThreadId("thread-seq"),
         runtimeMode: "full-access",
@@ -7127,7 +7227,7 @@ fanout.layer("EngineServiceLive fanout", (it) => {
   it.effect("keeps subscriber delivery ordered and isolates failing subscribers", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
-      const session = yield* engine.startSession(asThreadId("thread-1"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-1"), {
         engine: "codex",
         threadId: asThreadId("thread-1"),
         runtimeMode: "full-access",
@@ -7200,7 +7300,7 @@ fanout.layer("EngineServiceLive fanout", (it) => {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-ready");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -7240,7 +7340,7 @@ persistedFanout.layer("EngineServiceLive durable fanout", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-persisted-fanout");
-      const session = yield* engine.startSession(threadId, {
+      const session = yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",
@@ -7297,7 +7397,7 @@ validation.layer("EngineServiceLive validation", (it) => {
       const engine = yield* EngineService;
 
       const failure = yield* Effect.result(
-        engine.startSession(asThreadId("thread-validation"), {
+        startTestEngineSession(engine, asThreadId("thread-validation"), {
           threadId: asThreadId("thread-validation"),
           engine: "invalid-engine",
           runtimeMode: "full-access",
@@ -7321,7 +7421,7 @@ validation.layer("EngineServiceLive validation", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      yield* engine.startSession(asThreadId("thread-task-stop-unsupported"), {
+      yield* startTestEngineSession(engine, asThreadId("thread-task-stop-unsupported"), {
         engine: "codex",
         threadId: asThreadId("thread-task-stop-unsupported"),
         cwd: "/tmp/project",
@@ -7352,7 +7452,7 @@ validation.layer("EngineServiceLive validation", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
 
-      yield* engine.startSession(asThreadId("thread-task-bg-unsupported"), {
+      yield* startTestEngineSession(engine, asThreadId("thread-task-bg-unsupported"), {
         engine: "codex",
         threadId: asThreadId("thread-task-bg-unsupported"),
         cwd: "/tmp/project",
@@ -7399,7 +7499,7 @@ validation.layer("EngineServiceLive validation", (it) => {
         }),
       );
 
-      const session = yield* engine.startSession(asThreadId("thread-missing"), {
+      const session = yield* startTestEngineSession(engine, asThreadId("thread-missing"), {
         engine: "codex",
         threadId: asThreadId("thread-missing"),
         cwd: "/tmp/project",
@@ -7430,7 +7530,7 @@ it.effect("EngineServiceLive backpressures slow subscribers and completes fanout
       const services = yield* Layer.buildWithScope(boundedFanout.rawLayer, scope);
       const engine = yield* Effect.service(EngineService).pipe(Effect.provide(services));
       const threadId = asThreadId("thread-bounded-fanout");
-      yield* engine.startSession(threadId, {
+      yield* startTestEngineSession(engine, threadId, {
         engine: "codex",
         threadId,
         runtimeMode: "full-access",

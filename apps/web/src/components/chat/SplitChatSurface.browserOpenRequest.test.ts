@@ -54,6 +54,8 @@ describe("routeSplitBrowserPanelOpenRequest", () => {
     const calls: string[] = [];
 
     routeSplitBrowserPanelOpenRequest({
+      presentationId: "ordinary-reveal",
+      acquireLease: false,
       splitView: createSplitView(),
       requestedThreadId: THREAD_B,
       openBrowserPanel: (paneId) => calls.push(`open:${paneId}`),
@@ -66,6 +68,8 @@ describe("routeSplitBrowserPanelOpenRequest", () => {
     const calls: string[] = [];
 
     routeSplitBrowserPanelOpenRequest({
+      presentationId: "ordinary-reveal",
+      acquireLease: false,
       splitView: createSplitView(),
       requestedThreadId: THREAD_A,
       openBrowserPanel: (paneId) => calls.push(`open:${paneId}`),
@@ -78,6 +82,8 @@ describe("routeSplitBrowserPanelOpenRequest", () => {
     const calls: string[] = [];
 
     routeSplitBrowserPanelOpenRequest({
+      presentationId: "ordinary-reveal",
+      acquireLease: false,
       splitView: createSplitView(),
       requestedThreadId: THREAD_C,
       openBrowserPanel: (paneId) => calls.push(`open:${paneId}`),

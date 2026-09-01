@@ -6,6 +6,20 @@ export type TranscriptScrollCancellationTarget = Pick<
   "getScrollableNode" | "scrollToOffset"
 >;
 
+export type TranscriptViewportGesture =
+  | "pointer-cancel"
+  | "pointer-down"
+  | "touch-move"
+  | "touch-start"
+  | "wheel";
+
+/** A press may become a click, text selection, or tap; only movement owns the viewport. */
+export function transcriptGestureTakesViewportOwnership(
+  gesture: TranscriptViewportGesture,
+): boolean {
+  return gesture === "wheel" || gesture === "touch-move";
+}
+
 /** Stop an in-flight native smooth scroll without changing the visible offset. */
 export function stopTranscriptScrollAtCurrentOffset(
   target: TranscriptScrollCancellationTarget,

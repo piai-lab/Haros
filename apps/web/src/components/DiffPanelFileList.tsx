@@ -4,8 +4,7 @@
 
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { isSupportedLocalImagePath } from "@harnessos/shared/localPreviewFiles";
-import { type MouseEvent as ReactMouseEvent } from "react";
-import { ChevronDownIcon, CopyIcon, EllipsisIcon, MessageCircleIcon } from "~/lib/icons";
+import { CopyIcon, EllipsisIcon, MessageCircleIcon } from "~/lib/icons";
 
 import { useCopyPathToClipboard } from "~/hooks/useCopyToClipboard";
 import { useI18n } from "~/i18n";
@@ -26,9 +25,7 @@ export interface DiffFileChatActions {
 
 const DIFF_FILE_ACTIONS_MENU_ICON_CLASS_NAME = "size-3.5 shrink-0 text-muted-foreground";
 
-// Per-file actions menu rendered in the custom header's trailing slot, left of
-// the collapse chevron. Marked with data-diff-header-menu so header clicks on
-// it do not toggle the file collapse state.
+// Per-file actions menu rendered independently from the header disclosure.
 function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffFileChatActions }) {
   const { t } = useI18n();
   const copyPath = useCopyPathToClipboard();
@@ -77,29 +74,6 @@ function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffF
   );
 }
 
-function DiffFileCollapseChevron(props: { collapsed: boolean }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "2px",
-        color: "inherit",
-      }}
-    >
-      <ChevronDownIcon
-        style={{
-          width: "14px",
-          height: "14px",
-          transition: "transform 150ms ease",
-          transform: props.collapsed ? "rotate(-90deg)" : "rotate(0deg)",
-          opacity: 0.5,
-        }}
-      />
-    </span>
-  );
-}
-
 const DiffPanelFileRow = function DiffPanelFileRow(props: {
   fileDiff: FileDiffMetadata;
   resolvedTheme: "light" | "dark";
@@ -116,51 +90,25 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
   const { chatActions, isCollapsed } = props;
   const shouldPreviewImage =
     !isCollapsed && props.workspaceRoot !== null && isSupportedLocalImagePath(filePath);
-  const renderHeaderTrailing = () => (
-    <>
-      {chatActions ? (
-        <span data-diff-header-menu="true" className="inline-flex">
-          <DiffFileHeaderActionsMenu filePath={filePath} chatActions={chatActions} />
-        </span>
-      ) : null}
-      <DiffFileCollapseChevron collapsed={isCollapsed} />
-    </>
-  );
-  const handleClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const nativeEvent = event.nativeEvent;
-    const composedPath = nativeEvent.composedPath?.() ?? [];
-    // Clicks on the per-file actions menu must not toggle collapse.
-    const clickedHeaderMenu = composedPath.some(
-      (node: EventTarget) => node instanceof Element && node.hasAttribute("data-diff-header-menu"),
-    );
-    if (clickedHeaderMenu) return;
-    const clickedHeader = composedPath.some((node: EventTarget) => {
-      if (!(node instanceof Element)) return false;
-      return (
-        node.hasAttribute("data-diff-file-header") ||
-        node.hasAttribute("data-diffs-header") ||
-        node.hasAttribute("data-file-info")
-      );
-    });
-    if (!clickedHeader) return;
-    event.stopPropagation();
-    props.onToggleFileCollapsed(fileKey);
-  };
 
   return (
-    <div
-      data-diff-file-path={filePath}
-      className="diff-render-file mb-2 rounded-md first:mt-2 last:mb-0"
-      onClickCapture={handleClickCapture}
+    <FileDiffCard
+      className="mb-2 rounded-md first:mt-2 last:mb-0"
+      fileDiff={props.fileDiff}
+      theme={props.resolvedTheme}
+      diffStyle={props.diffRenderMode === "split" ? "split" : "unified"}
+      overflow={props.diffWordWrap ? "wrap" : "scroll"}
+      collapsed={props.isCollapsed}
+      onToggleCollapsed={() => props.onToggleFileCollapsed(fileKey)}
+      toggleLabel={t(props.isCollapsed ? "diff.expandFile" : "diff.collapseFile", {
+        path: filePath,
+      })}
+      headerActions={
+        chatActions ? (
+          <DiffFileHeaderActionsMenu filePath={filePath} chatActions={chatActions} />
+        ) : null
+      }
     >
-      <FileDiffCard
-        fileDiff={props.fileDiff}
-        theme={props.resolvedTheme}
-        diffStyle={props.diffRenderMode === "split" ? "split" : "unified"}
-        overflow={props.diffWordWrap ? "wrap" : "scroll"}
-        collapsed={props.isCollapsed}
-        renderHeaderTrailing={renderHeaderTrailing}
-      />
       {shouldPreviewImage ? (
         <LocalImagePreview
           src={filePath}
@@ -170,7 +118,7 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
           imageClassName="max-h-[320px]"
         />
       ) : null}
-    </div>
+    </FileDiffCard>
   );
 };
 

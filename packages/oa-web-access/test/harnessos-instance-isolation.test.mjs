@@ -304,6 +304,92 @@ test("auto-summary and none can observe live results without becoming pending re
   );
 });
 
+test("Haros summary-review never manufactures approval from idle timeout", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async (url, init) => {
+    if (String(url).startsWith("https://api.exa.ai/answer")) {
+      return new Response(
+        JSON.stringify({
+          answer: "Curator answer",
+          citations: [
+            {
+              title: "Curator source",
+              url: "https://example.test/curator",
+              text: "Curator evidence",
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+    return originalFetch(url, init);
+  };
+
+  const root = await mkdtemp(join(tmpdir(), "harnessos-web-explicit-approval-"));
+  const configService = createWebSearchConfigService(join(root, "agent"));
+  const initial = configService.ensureDefault();
+  configService.mutate({
+    expectedRevision: initial.revision,
+    patch: {
+      exaApiKey: "test-only-key",
+      workflow: "summary-review",
+      curatorTimeoutSeconds: 1,
+    },
+  });
+  let browserInteraction = Promise.resolve();
+  const presenter = makePresenter();
+  presenter.present = async (request) => {
+    presenter.requests.push(request);
+    browserInteraction = (async () => {
+      const url = new URL(request.url);
+      const token = url.searchParams.get("session");
+      assert.ok(token);
+      await originalFetch(url);
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const state = await originalFetch(
+          new URL(`/state?session=${encodeURIComponent(token)}`, url),
+        );
+        if ((await state.json()).done === true) break;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      const heartbeat = await originalFetch(new URL("/heartbeat", url), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, idleMs: 60_000, timeoutSec: 1 }),
+      });
+      assert.equal(heartbeat.status, 200);
+      await new Promise((resolve) => setTimeout(resolve, 75));
+      const cancel = await originalFetch(new URL("/cancel", url), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, reason: "user" }),
+      });
+      assert.equal(cancel.status, 200);
+    })();
+    return { kind: "presented", tabId: "review-timeout-tab" };
+  };
+  const harness = makeHarness(configService, presenter);
+  const result = await harness
+    .tool("web_search")
+    .execute(
+      "review-timeout-call",
+      { query: "curator review timeout", provider: "exa", workflow: "summary-review" },
+      undefined,
+      undefined,
+      extensionContext(root),
+    );
+  await browserInteraction;
+
+  assert.equal(result.details?.cancelled, true);
+  assert.equal(result.details?.cancelReason, "user");
+  assert.notEqual(result.details?.curated, true);
+  assert.doesNotMatch(JSON.stringify(result), /approvedSummary|curatorUrl|session=/);
+  await harness.handlers.get("session_shutdown")?.();
+});
+
 test("Session instances isolate stored results and shutdown cleanup", async (t) => {
   const originalFetch = globalThis.fetch;
   t.after(() => {
@@ -451,7 +537,13 @@ test(
       );
     await waitFor(() => presenter.requests.length === 5, "Run-scoped Curators were not presented");
     runAbort.abort();
-    await Promise.all([runOne, runTwo]);
+    const [runOneResult, runTwoResult] = await Promise.all([runOne, runTwo]);
+    for (const result of [runOneResult, runTwoResult]) {
+      assert.equal(result.details?.cancelled, true);
+      assert.equal(result.details?.cancelReason, "aborted");
+      assert.notEqual(result.details?.curated, true);
+      assert.doesNotMatch(JSON.stringify(result), /approvedSummary|curatorUrl|session=/);
+    }
     await waitFor(
       () =>
         ["run-call-one", "run-call-two"].every((callId) =>

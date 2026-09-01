@@ -38,10 +38,13 @@ import type {
 } from "electron";
 import * as Effect from "effect/Effect";
 import type {
+  BrowserPanelRevealResult,
   DesktopAppIcon,
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
+  EngineWebSurfacePresentationRelease,
+  ThreadId,
 } from "@harnessos/contracts";
 import {
   autoUpdater,
@@ -413,12 +416,43 @@ const browserManager = new DesktopBrowserManager({
     return target ? handleDesktopPhysicalZoomShortcut(event, input, target) : false;
   },
 });
+const BROWSER_PANEL_REVEAL_ACK_TIMEOUT_MS = 2_000;
+const BROWSER_PANEL_VISIBLE_CONFIRM_TIMEOUT_MS = 1_500;
+const BROWSER_PANEL_VISIBLE_CONFIRM_INTERVAL_MS = 25;
+const pendingBrowserPanelRevealRequests = new Map<
+  string,
+  {
+    readonly presentationId: string;
+    readonly threadId: ThreadId;
+    readonly surfaceId: string | null;
+    readonly tabId: string;
+    readonly resolve: (result: BrowserPanelRevealResult) => void;
+    readonly timeout: ReturnType<typeof setTimeout>;
+  }
+>();
 let browserHostPipeServer: BrowserHostPipeServer | null = null;
 let appSnapManager: DesktopAppSnapManager | null = null;
 let configuredUpdaterCacheDirName: string | null = null;
 
 browserManager.subscribe((state) => {
   sendBrowserState(mainWindow?.webContents, state);
+});
+
+function sendEngineWebSurfacePresentationRelease(
+  release: EngineWebSurfacePresentationRelease,
+): void {
+  const target = mainWindow?.webContents;
+  if (!target || target.isDestroyed()) return;
+  target.send(IPC.browser.presentationRelease, release);
+}
+
+browserManager.subscribeEngineWebSurfacePresentationRelease((release) => {
+  for (const [requestId, pending] of pendingBrowserPanelRevealRequests) {
+    if (pending.presentationId === release.presentationId) {
+      settleBrowserPanelRevealRequest(requestId, { status: "unavailable" });
+    }
+  }
+  sendEngineWebSurfacePresentationRelease(release);
 });
 
 browserManager.subscribeCopyLink((event) => {
@@ -428,6 +462,189 @@ browserManager.subscribeCopyLink((event) => {
 browserManager.subscribeAnnotationEvents((event) => {
   sendBrowserAnnotationEvent(mainWindow?.webContents, event);
 });
+
+function settleBrowserPanelRevealRequest(
+  requestId: string,
+  result: BrowserPanelRevealResult,
+): void {
+  const pending = pendingBrowserPanelRevealRequests.get(requestId);
+  if (!pending) return;
+  pendingBrowserPanelRevealRequests.delete(requestId);
+  clearTimeout(pending.timeout);
+  pending.resolve(result);
+}
+
+function clearBrowserPanelRevealRequests(): void {
+  for (const [requestId] of pendingBrowserPanelRevealRequests) {
+    settleBrowserPanelRevealRequest(requestId, { status: "unavailable" });
+  }
+}
+
+async function confirmEngineWebSurfacePresentation(
+  threadId: ThreadId,
+  surfaceId: string,
+  tabId: string,
+): Promise<BrowserPanelRevealResult> {
+  const deadline = Date.now() + BROWSER_PANEL_VISIBLE_CONFIRM_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const status = browserManager.getEngineWebSurfacePresentationStatus({
+      threadId,
+      surfaceId,
+      tabId,
+    });
+    if (status === "visible" || status === "background") return { status };
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, BROWSER_PANEL_VISIBLE_CONFIRM_INTERVAL_MS).unref();
+    });
+  }
+  return {
+    status: browserManager.getEngineWebSurfacePresentationStatus({
+      threadId,
+      surfaceId,
+      tabId,
+    }),
+  };
+}
+
+async function requestBrowserPanelReveal(
+  threadId: ThreadId,
+  tabId: string,
+  presentationId?: string,
+  surfaceId?: string,
+): Promise<BrowserPanelRevealResult> {
+  if (
+    presentationId &&
+    browserManager.isEngineWebSurfacePresentationSuppressed({ presentationId, threadId })
+  ) {
+    return { status: "background" };
+  }
+  const target = mainWindow?.webContents;
+  if (!target || target.isDestroyed()) return { status: "unavailable" };
+  const requestId = Crypto.randomUUID();
+  const effectivePresentationId = presentationId ?? `browser-reveal:${requestId}`;
+  const effectiveSurfaceId = surfaceId ?? null;
+  const rendererResult = await new Promise<BrowserPanelRevealResult>((resolve) => {
+    const timeout = setTimeout(() => {
+      settleBrowserPanelRevealRequest(requestId, { status: "unavailable" });
+    }, BROWSER_PANEL_REVEAL_ACK_TIMEOUT_MS);
+    timeout.unref();
+    pendingBrowserPanelRevealRequests.set(requestId, {
+      presentationId: effectivePresentationId,
+      threadId,
+      surfaceId: effectiveSurfaceId,
+      tabId,
+      resolve,
+      timeout,
+    });
+    target.send(IPC.browser.requestOpenPanel, {
+      requestId,
+      presentationId: effectivePresentationId,
+      threadId,
+      surfaceId: effectiveSurfaceId,
+      tabId,
+    });
+  });
+  return rendererResult.status === "visible" && effectiveSurfaceId !== null
+    ? confirmEngineWebSurfacePresentation(threadId, effectiveSurfaceId, tabId)
+    : rendererResult;
+}
+
+async function replayEngineWebSurfacePresentations(): Promise<void> {
+  for (const release of browserManager.listPendingEngineWebSurfacePresentationReleases()) {
+    sendEngineWebSurfacePresentationRelease(release);
+  }
+  await Promise.all(
+    browserManager
+      .listEngineWebSurfacePresentations()
+      .map((presentation) =>
+        requestBrowserPanelReveal(
+          presentation.threadId,
+          presentation.tabId,
+          presentation.presentationId,
+          presentation.surfaceId,
+        ).catch(() => undefined),
+      ),
+  );
+}
+
+function registerEngineWebSurfacePresentationIpc(): void {
+  ipcMain.removeHandler(IPC.browser.respondOpenPanel);
+  ipcMain.handle(IPC.browser.respondOpenPanel, async (event, response) => {
+    if (!browserManager.isTrustedRenderer(event.sender.id)) return;
+    if (
+      !response ||
+      typeof response.requestId !== "string" ||
+      (response.status !== "visible" &&
+        response.status !== "background" &&
+        response.status !== "unavailable")
+    ) {
+      return;
+    }
+    settleBrowserPanelRevealRequest(response.requestId, { status: response.status });
+  });
+
+  ipcMain.removeHandler(IPC.browser.replayPresentations);
+  ipcMain.handle(IPC.browser.replayPresentations, async (event) => {
+    if (!browserManager.isTrustedRenderer(event.sender.id)) return;
+    await replayEngineWebSurfacePresentations();
+  });
+
+  ipcMain.removeHandler(IPC.browser.suppressPresentations);
+  ipcMain.handle(IPC.browser.suppressPresentations, async (event, input) => {
+    if (!browserManager.isTrustedRenderer(event.sender.id)) {
+      throw new Error("Engine Web Surface suppression requires the trusted Renderer.");
+    }
+    if (!input || !Array.isArray(input.threadIds) || input.threadIds.length === 0) {
+      throw new Error("Engine Web Surface suppression requires at least one Thread.");
+    }
+    const threadIds: ThreadId[] = [];
+    for (const candidate of input.threadIds) {
+      if (typeof candidate !== "string" || candidate.trim().length === 0) {
+        throw new Error("Engine Web Surface suppression contains an invalid Thread.");
+      }
+      threadIds.push(candidate as ThreadId);
+    }
+    const presentations = browserManager.suppressEngineWebSurfacePresentationsForThreads(threadIds);
+    for (const [requestId, pending] of pendingBrowserPanelRevealRequests) {
+      if (
+        presentations.some(
+          (item) =>
+            item.presentationId === pending.presentationId && item.threadId === pending.threadId,
+        )
+      ) {
+        settleBrowserPanelRevealRequest(requestId, { status: "background" });
+      }
+    }
+    return { status: "acknowledged" as const, presentations };
+  });
+
+  ipcMain.removeHandler(IPC.browser.acknowledgePresentationRelease);
+  ipcMain.handle(IPC.browser.acknowledgePresentationRelease, async (event, input) => {
+    if (!browserManager.isTrustedRenderer(event.sender.id)) return;
+    if (
+      !input ||
+      typeof input.presentationId !== "string" ||
+      input.presentationId.trim().length === 0 ||
+      typeof input.threadId !== "string" ||
+      input.threadId.trim().length === 0
+    ) {
+      return;
+    }
+    browserManager.acknowledgeEngineWebSurfacePresentationRelease(input);
+  });
+
+  ipcMain.removeHandler(IPC.browser.closeDeletedThreadResources);
+  ipcMain.handle(IPC.browser.closeDeletedThreadResources, async (event, input) => {
+    if (!browserManager.isTrustedRenderer(event.sender.id)) return;
+    if (!input || typeof input.threadId !== "string" || input.threadId.trim().length === 0) return;
+    for (const [requestId, pending] of pendingBrowserPanelRevealRequests) {
+      if (pending.threadId === input.threadId) {
+        settleBrowserPanelRevealRequest(requestId, { status: "unavailable" });
+      }
+    }
+    browserManager.closeDeletedThreadResources(input);
+  });
+}
 
 function startBrowserPerformanceLogging(): void {
   if (browserPerfInterval || !browserPerfLoggingEnabled) {
@@ -463,10 +680,7 @@ async function ensureBrowserHostPipeServer(): Promise<void> {
   }
   const server = new BrowserHostPipeServer(browserManager, {
     capability: DESKTOP_BROWSER_HOST_CAPABILITY,
-    requestOpenPanel: (threadId) => {
-      if (!threadId) return;
-      mainWindow?.webContents.send(IPC.browser.requestOpenPanel, { threadId });
-    },
+    requestOpenPanel: requestBrowserPanelReveal,
   });
   await server.start();
   browserHostPipeServer = server;
@@ -4398,6 +4612,7 @@ function registerIpcHandlers(): void {
   registerDesktopVoiceTranscriptionHandler();
   startBrowserPerformanceLogging();
   registerBrowserIpcHandlers(ipcMain, browserManager);
+  registerEngineWebSurfacePresentationIpc();
 }
 
 function getIconOption(): { icon: string } | Record<string, never> {
@@ -4649,6 +4864,7 @@ function createWindow(): BrowserWindow {
 
   window.on("closed", () => {
     runningTasksQuitGuard.failOpenPending();
+    clearBrowserPanelRevealRequests();
     if (mainWindow === window) {
       mainWindow = null;
     }
@@ -4710,6 +4926,7 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
 
   window.webContents.on("did-start-loading", () => {
     runningTasksQuitGuard.failOpenPending();
+    clearBrowserPanelRevealRequests();
   });
 
   // A hung renderer is not a crash — Chromium keeps the process alive — so it never

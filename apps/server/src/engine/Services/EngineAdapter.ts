@@ -40,6 +40,8 @@ import type {
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
   ThreadId,
+  ToolResultReadInput,
+  ToolResultFullReadResult,
   EngineTurnStartResult,
   TurnId,
 } from "@harnessos/contracts";
@@ -83,10 +85,8 @@ export type EngineResourceDiscoveryScope =
   | { readonly kind: "global-only" }
   | { readonly kind: "project"; readonly authoritativeRoot: string };
 
-/** Server-internal adapter admission. Public Engine RPC remains two-surface. */
-export type EngineAdapterSessionStartInput = EngineSessionStartInput & {
-  readonly productSurface?: ProductSurface;
-};
+/** Adapters consume the same complete immutable admission as EngineService. */
+export type EngineAdapterSessionStartInput = EngineSessionStartInput;
 
 export interface EngineAdapterCapabilities {
   /**
@@ -236,6 +236,11 @@ export interface EngineAdapterShape<TError> {
    * Read a engine thread snapshot.
    */
   readonly readThread: (threadId: ThreadId) => Effect.Effect<EngineThreadSnapshot, TError>;
+
+  /** Read one existing native result without creating, resuming, or extending a Session. */
+  readonly readToolResult?: (
+    input: ToolResultReadInput,
+  ) => Effect.Effect<ToolResultFullReadResult, TError>;
 
   /**
    * Read a persisted engine thread snapshot without requiring a local app thread binding.
