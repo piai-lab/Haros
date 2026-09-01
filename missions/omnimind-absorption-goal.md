@@ -28,7 +28,7 @@ Canonical Executor 只更新 `missions/omnimind-absorption.md` 这一份状态�
 
 Active Claim: C-008, with C-007 final path audit.
 
-当前实现 cut：吸收已无冲突合并进本地 `main`，最终产品候选为 `ff1762fe14315117aa15b1c076f287d27ff96eaf`，合并后终验与 macOS unsigned local-app 结果见 E-010。C-001–C-005、C-007、C-008 已到 merged candidate；C-006 只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失。下一执行者不得重做已通过工作，也不得用生产补偿逻辑消除外部证据边界；本次收尾只需删除已完全合并的 feature worktree/branch。
+当前实现 cut：吸收已无冲突合并进本地 `main`，最终产品候选为 `ff1762fe14315117aa15b1c076f287d27ff96eaf`，合并后终验与 macOS unsigned local-app 结果见 E-010；已完全合并的 feature worktree/branch 也已安全删除。C-001–C-005、C-007、C-008 已到 merged candidate；C-006 只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失。下一执行者不得重做已通过工作，也不得用生产补偿逻辑消除外部证据边界。
 
 UI 复用规则：直接 import Haros 现有 CodeBlock、FileDiff、Dock/Split、Timeline primitives；仅对精确 donor 机制做 copied-adapted 或 mechanism-only，并记录实际 source/target paths。所有新用户文案同时交付英文与简体中文，键盘、focus、响应式、light/dark、reduced-motion、失败与恢复不得退化。
 

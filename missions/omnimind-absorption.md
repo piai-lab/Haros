@@ -9,7 +9,7 @@
 - Last reconciled revision: merged product candidate `ff1762fe14315117aa15b1c076f287d27ff96eaf`; this spec and E-010 are the only post-candidate control-state change.
 - Worktree state: clean product state before this spec/E-010 update. The OmniMind cut is merged into local `main`; the protected original-worktree `.gitignore` and Guidebook evidence were never touched.
 - Last reconciled at: `2026-09-01T22:46:00+08:00`.
-- Active branch/worktree: `main` at `/private/tmp/haros-main-logo-production`; `codex/omnimind-absorption` is merged and scheduled for deletion with its isolated worktree after this receipt is committed.
+- Active branch/worktree: `main` at `/private/tmp/haros-main-logo-production`; the fully merged `codex/omnimind-absorption` branch and `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption` worktree were deleted with safe Git worktree/branch commands. Other worktrees remain untouched.
 - Applicable instructions: repository `AGENTS.md`; `README.md`; `docs/architecture.md`; for adopted source, `docs/source-intake.md` and `source-adoptions.json`; `zq-dev-rules`, `zq-ui`, and `zq-goal` Skills.
 - Superseded state sources: no competing state for this Campaign. `missions/haros-guidebook{,-goal}.md` and `missions/haros-owner-lifecycle-cut{,-goal}.md` are independent Campaigns with distinct worktrees and scopes; they are intentionally not superseded.
 
@@ -84,9 +84,9 @@
 
 - Current checkpoint: the absorption is conflict-free on local `main` at product SHA `ff1762fe14315117aa15b1c076f287d27ff96eaf`. C-001–C-005, C-007 and C-008 are merged candidates with all local gates green. C-006 is implemented and proven on macOS but remains open because this host cannot produce native Linux/Windows artifacts.
 - Active Claim: C-008; C-006 remains open for platform evidence.
-- Next safe action: delete the fully merged `codex/omnimind-absorption` worktree/branch, then obtain native Linux/Windows unsigned artifact receipts and a fresh independent verdict if the maintainer wants the Campaign promoted from candidate/open to verified.
+- Next safe action: obtain native Linux/Windows unsigned artifact receipts and a fresh independent verdict if the maintainer wants the Campaign promoted from candidate/open to verified. No local absorption or branch-cleanup work remains.
 - Blockers to verified Campaign closure, not to the completed local merge: unavailable native Linux/Windows artifact evidence and no authorized fresh evaluator.
-- Last material change: E-010 records the conflict-free merge, repaired main gate debt, exact source path audit, fully green local final gates, unsigned macOS local app and the two remaining external evidence boundaries.
+- Last material change: E-010 records the conflict-free merge, repaired main gate debt, exact source path audit, fully green local final gates and unsigned macOS local app; the fully merged feature worktree/branch was then deleted without touching other worktrees or protected user changes.
 
 ## 已知问题与方向
 
