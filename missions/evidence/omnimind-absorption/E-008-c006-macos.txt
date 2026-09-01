@@ -1,0 +1,16 @@
+C-006 dirty-tree macOS build proof
+Observed: 2026-09-01T21:42:00+08:00
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption
+Revision base: cef48170705e40424ffa1d8f4d541c4e7d32a67c (dirty working tree)
+
+PASS: 19 focused tests across Electron acquisition/proxy/checksum/staging, primary artifact identity, candidate/local output authority, mac build config, AppSnap fingerprint and cross-process cache locking.
+PASS: scripts `tsc --noEmit`; changed-path oxlint found zero warnings/errors; source adoption and diff checks passed.
+PASS: unsigned packaged-proof control-plane smoke retained read-only, no-signing, no-publication and no-updater authority.
+PASS: `bun run build:desktop` produced current Desktop/Web/Server bytes.
+PASS: two `node scripts/build-desktop-artifact.ts --local-app --skip-build` runs. The second replaced only the default local output, reused the checksum-verified Electron distribution and restored the AppSnap helper from the shared cache.
+PASS: exactly one local primary app at `apps/desktop/.electron-runtime/local-app/arm64/mac-arm64/Haros.app`; packaged legal closure verified 537 disclosed dependency identities.
+PASS: packaged AppSnap helper is ad-hoc signed with no TeamIdentifier and exact arm64 architecture; Electron main executable is arm64.
+PASS: existing packaged verifier launched the local app from a temporary ZIP twice, proving bundled backend/window startup, fixture persistence, macOS window-close isolation, and state restoration after isolated relaunch.
+PASS (negative): explicit non-empty local output was refused; default local output is the only replaceable path.
+
+Boundary: the whole local app has no Developer ID/resource-envelope signature and is not called a release. No signing, notarization, publication or updater feed was attempted. Linux AppImage and Windows NSIS primary bytes require their native CI runners and are not claimed by this macOS receipt.
