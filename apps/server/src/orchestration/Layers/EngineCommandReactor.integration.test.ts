@@ -6380,7 +6380,14 @@ describe("EngineCommandReactor", () => {
       activeTurnId: null,
       lastError: expect.stringContaining("The message was not sent to the Engine."),
     });
-    const activities = failedThread?.activities.filter(
+    await waitFor(async () =>
+      Boolean(
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) => activity.kind === "engine.turn.start.failed",
+        ),
+      ),
+    );
+    const activities = (await readHarnessThread(harness))?.activities.filter(
       (activity) => activity.kind === "engine.turn.start.failed",
     );
     expect(activities).toHaveLength(1);
