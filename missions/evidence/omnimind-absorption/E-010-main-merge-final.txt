@@ -1,0 +1,34 @@
+E-010: OmniMind absorption merged-main verification
+Observed: 2026-09-01 Asia/Shanghai
+Product candidate: ff1762fe14315117aa15b1c076f287d27ff96eaf
+Merge commit: b53775fc (parents 6d9d19a2 and 8f3423c7)
+
+Local main merge and maintenance cuts:
+- b53775fc merged codex/omnimind-absorption without conflicts; newer main README/Guidebook/brand content remained present.
+- b9d613a1 mechanically restored five repository format paths and corrected three pre-existing Guidebook/debug test type errors.
+- 56f7ec8e made Pi physical-isolation assertions prove fixture presence and cross-runtime exclusion without rejecting legitimate ambient global Skills.
+- ff1762fe made the terminal-delivery test wait for the separately projected visible failure fact; the production order remains terminal delivery -> Session error command -> failure Activity command -> cursor.
+
+Final product-SHA gates:
+- bun run fmt:check: PASS, 2929 files.
+- bun run lint: PASS, 648 warnings and 0 errors.
+- bun run typecheck: PASS, 9/9 Turbo tasks.
+- bun run test:unit: PASS, 9/9 Turbo tasks.
+- bun run test:integration: PASS on the third full run, 2/2 Turbo tasks; the immediately preceding run had 2769 pass, 16 skip and one projection-observation race that was fixed and then passed five consecutive focused reruns.
+- bun run test:browser:stable: PASS on the second full run, 1/1 Turbo task; the preceding run had 727 pass, 3 todo and two unchanged aggregate-resource flakes that passed 26/26 in isolation.
+- bun run test:desktop-smoke: PASS, 7/7 Turbo tasks and Electron launch.
+- bun run source-adoptions:check: PASS, 13 records; OmniMind record has exactly 153 changed target paths and 105 donor paths, without duplicates or missing paths.
+- git diff --check and final tracked status: PASS/clean before this receipt.
+
+Unsigned local app proof after bun install --frozen-lockfile synchronized the merged scripts workspace:
+- bun run dist:desktop:local-app: PASS.
+- Exactly one primary app: apps/desktop/.electron-runtime/local-app/arm64/mac-arm64/Haros.app.
+- Packaged legal closure: 537 disclosed dependency identities verified.
+- Main executable: arm64.
+- Contents/Helpers/harnessos-appsnap-helper: codesign --verify --strict PASS, Signature=adhoc, TeamIdentifier=not set, arm64.
+- The enclosing app is intentionally unsigned; no release, signing, notarization, publication or updater authority was used.
+- Electron acquisition used a verified official archive and logged only proxy source macos-system, not its address.
+
+Remaining external evidence boundary:
+- Native Linux AppImage and Windows NSIS bytes were not produced on this macOS host.
+- No fresh independent evaluator was authorized; Claims remain candidate/open as recorded in the canonical Campaign spec.
