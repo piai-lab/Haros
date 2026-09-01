@@ -7,7 +7,6 @@ import "../index.css";
 import {
   ApprovalRequestId,
   type EngineKind,
-  type EngineModelDescriptor,
   type ModelSlug,
   type ServerEngineStatus,
 } from "@harnessos/contracts";
@@ -26,6 +25,7 @@ vi.mock("../localPreferences", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "../i18n";
+import type { EngineModelOption } from "../engineModelOptions";
 import type { PendingApproval } from "../session-logic";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
@@ -80,7 +80,7 @@ const ENGINE_STATES: ReadonlyArray<ServerEngineStatus> = [
   engineStatus("grok", { status: "warning" }),
 ];
 
-const MODEL_OPTIONS: Partial<Record<EngineKind, ReadonlyArray<EngineModelDescriptor>>> = {
+const MODEL_OPTIONS: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>> = {
   codex: [
     { slug: "gpt-5.4" as ModelSlug, name: "GPT-5.4" },
     { slug: "gpt-5.4-mini" as ModelSlug, name: "GPT-5.4 mini" },

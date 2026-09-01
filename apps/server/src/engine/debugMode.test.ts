@@ -17,8 +17,15 @@ function retiredPlatformDonorRepositoryName(): string {
       entry.paths.includes("apps/server"),
   );
   expect(platformAdoptions).toHaveLength(1);
-  const pathname = new URL(platformAdoptions[0].url).pathname;
-  return pathname.replace(/\.git$/u, "").split("/").at(-1) ?? "";
+  const platformAdoption = platformAdoptions[0];
+  if (!platformAdoption) throw new Error("Expected one platform source adoption.");
+  const pathname = new URL(platformAdoption.url).pathname;
+  return (
+    pathname
+      .replace(/\.git$/u, "")
+      .split("/")
+      .at(-1) ?? ""
+  );
 }
 
 describe("engine Debug mode prompt", () => {

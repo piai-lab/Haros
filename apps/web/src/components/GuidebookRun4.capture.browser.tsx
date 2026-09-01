@@ -255,7 +255,7 @@ const CONNECTIONS: ReadonlyArray<ExternalMcpIntegration> = [
     audience: EXTERNAL_MCP_AUDIENCE,
     capabilities: ["projects:read", "tasks:create", "tasks:wait", "tasks:read"],
     projectScope: "selected",
-    allowedProjects: [PROJECTS[0]],
+    allowedProjects: [{ projectId: PROJECTS[0].id, title: PROJECTS[0].title }],
     createdAt: "2026-08-01T08:00:00.000Z",
     expiresAt: "2099-08-30T08:00:00.000Z",
     lastUsedAt: null,
