@@ -16,6 +16,7 @@ layer("Haros initial schema", (it) => {
         [1, "HarnessOSInitialSchema"],
         [2, "EngineSessionAdmission"],
         [3, "PendingUserInputDraft"],
+        [4, "ProfileCacheWriteTelemetry"],
       ]);
       assert.deepStrictEqual(yield* runMigrations(), []);
 
@@ -54,6 +55,14 @@ layer("Haros initial schema", (it) => {
       assert.includeMembers(
         pendingInteractionColumns.map(({ name }) => name),
         ["draft_json", "draft_revision", "draft_updated_at"],
+      );
+
+      const deletedTokenColumns = yield* sql<{ readonly name: string }>`
+        SELECT name FROM pragma_table_info('profile_stats_deleted_tokens')
+      `;
+      assert.include(
+        deletedTokenColumns.map(({ name }) => name),
+        "cache_write_input_tokens",
       );
 
       const schemaSql = yield* sql<{ readonly sql: string | null }>`
@@ -105,6 +114,7 @@ describe("Haros migration registry", () => {
         [1, "HarnessOSInitialSchema"],
         [2, "EngineSessionAdmission"],
         [3, "PendingUserInputDraft"],
+        [4, "ProfileCacheWriteTelemetry"],
       ],
     );
   });
@@ -160,6 +170,7 @@ admissionBackfillLayer("Engine Session admission migration", (it) => {
       assert.deepStrictEqual(yield* runMigrations(), [
         [2, "EngineSessionAdmission"],
         [3, "PendingUserInputDraft"],
+        [4, "ProfileCacheWriteTelemetry"],
       ]);
 
       const rows = yield* sql<{
@@ -230,7 +241,7 @@ foreignTrackerLayer("foreign migration tracker", (it) => {
       `;
       yield* sql`
         INSERT INTO effect_sql_migrations (migration_id, name)
-        VALUES (4, 'ForeignSchema')
+        VALUES (5, 'ForeignSchema')
       `;
 
       const exit = yield* Effect.exit(runMigrations());

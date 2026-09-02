@@ -103,7 +103,8 @@ describe("normalizePiTokenUsage", () => {
     const first = normalizePiTokenUsage(stats(100, 60, 20, 30, 210), undefined, undefined, true);
     expect(first?.totalTokenBreakdown).toEqual({
       cachedInputTokens: 60,
-      uncachedInputTokens: 120,
+      uncachedInputTokens: 100,
+      cacheWriteInputTokens: 20,
       outputTokens: 30,
     });
     expect(first?.lastTokenBreakdown).toEqual(first?.totalTokenBreakdown);
@@ -111,7 +112,8 @@ describe("normalizePiTokenUsage", () => {
     const second = normalizePiTokenUsage(stats(150, 90, 25, 45, 310), undefined, first, true);
     expect(second?.lastTokenBreakdown).toEqual({
       cachedInputTokens: 30,
-      uncachedInputTokens: 55,
+      uncachedInputTokens: 50,
+      cacheWriteInputTokens: 5,
       outputTokens: 15,
     });
     expect(
@@ -120,7 +122,12 @@ describe("normalizePiTokenUsage", () => {
     ).toBeUndefined();
     expect(
       normalizePiTokenUsage(stats(10, 5, 2, 3, 20), undefined, second, true)?.lastTokenBreakdown,
-    ).toEqual({ cachedInputTokens: 5, uncachedInputTokens: 12, outputTokens: 3 });
+    ).toEqual({
+      cachedInputTokens: 5,
+      uncachedInputTokens: 10,
+      cacheWriteInputTokens: 2,
+      outputTokens: 3,
+    });
   });
 
   it("omits an invalid breakdown without inventing uncached input", () => {
@@ -275,7 +282,7 @@ describe("Pi credential gate", () => {
 });
 
 describe("Haros Agent Plan lifecycle", () => {
-  it("wraps slash input and emits one proposed plan before terminal settlement", async () => {
+  it("keeps user input raw and emits one proposed plan before terminal settlement", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-plan-lifecycle-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -338,7 +345,7 @@ describe("Haros Agent Plan lifecycle", () => {
             });
             const planTurn = yield* adapter.sendTurn({
               threadId,
-              input: "/reload and inspect the workspace",
+              input: "inspect the workspace",
               attachments: [],
               engineSelection: { engine: "oa", model: "local/safe-model" },
               interactionMode: "plan",
@@ -385,13 +392,10 @@ describe("Haros Agent Plan lifecycle", () => {
             .map((block: any) => block.text)
             .join("\n")
         : String(firstUserContent ?? "");
-      expect(firstUserMessage).toContain("Haros plan mode is active.");
-      expect(firstUserMessage).toContain("/reload and inspect the workspace");
-      expect(firstUserMessage.startsWith("/reload")).toBe(false);
-      expect(firstUserMessage.match(/Haros plan mode is active\./g)).toHaveLength(1);
-      expect(firstUserMessage.indexOf("/reload and inspect the workspace")).toBeLessThan(
-        firstUserMessage.indexOf("Haros plan mode is active."),
-      );
+      expect(firstUserMessage).toBe("inspect the workspace");
+      const firstSystemPrompt = piRequestSystemPrompt(requestBodies[0]);
+      expect(firstSystemPrompt).toContain("Haros plan mode is active.");
+      expect(firstSystemPrompt.match(/Haros plan mode is active\./g)).toHaveLength(1);
       const secondUserContent = requestBodies[1]?.messages
         ?.filter((message: any) => message.role === "user")
         .at(-1)?.content;
@@ -2520,9 +2524,12 @@ describe("getPiDiscoverableModels", () => {
         const prompt = systemPrompt(body);
         expect(prompt).toContain("project extension replacement");
         expect(prompt).not.toContain("<harnessos_agent_task_policy>");
-        expect(prompt.split(identity)).toHaveLength(2);
-        expect(prompt.split(officialChineseIdentity)).toHaveLength(2);
-        expect(prompt.split("<harnessos_engine_contract>")).toHaveLength(2);
+        // The immutable Product prefix is always first. A Project extension's
+        // later, byte-identical mutable content is not Haros-owned data and
+        // must not be deleted merely because it happens to match that prefix.
+        expect(prompt.split(identity)).toHaveLength(3);
+        expect(prompt.split(officialChineseIdentity)).toHaveLength(3);
+        expect(prompt.split("<harnessos_engine_contract>")).toHaveLength(3);
         expect(prompt).not.toContain("<harnessos_host_context>");
         expect(toolNames(body)).toContain("harnessos_update_tasks");
         const taskTool = (body.tools ?? []).find(
@@ -2549,7 +2556,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("applies the global default when a Chat Session starts without hot-changing it", async () => {
+  it("keeps retired settings default prompts outside native Personal Strategy sessions", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-chat-default-prompt-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -2595,17 +2602,10 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OAAgentAdapter;
-            const serverSettings = yield* ServerSettingsService;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
-            expect(
-              yield* serverSettings.mutateHarosDefaultPrompt(
-                null,
-                "customized-chat-default-marker",
-              ),
-            ).toMatchObject({ state: "changed" });
             const start = () =>
               adapter.startSession({
                 engine: "oa",
@@ -2639,12 +2639,6 @@ describe("getPiDiscoverableModels", () => {
                 );
               });
             yield* send("capture Chat native default");
-            expect(
-              yield* serverSettings.mutateHarosDefaultPrompt(
-                "customized-chat-default-marker",
-                "customized-chat-default-v2",
-              ),
-            ).toMatchObject({ state: "changed" });
             yield* send("same active Chat Session");
             yield* adapter.stopSession(threadId);
             yield* start();
@@ -2657,16 +2651,14 @@ describe("getPiDiscoverableModels", () => {
 
       expect(requestBodies).toHaveLength(3);
       const initialPrompt = piRequestSystemPrompt(requestBodies[0]);
-      expect(initialPrompt).toContain("customized-chat-default-marker");
-      expect(initialPrompt).not.toContain(
+      expect(initialPrompt).not.toContain("customized-chat-default-marker");
+      expect(initialPrompt).toContain(
         "Help users by reading files, executing commands, editing code, and writing new files.",
       );
       expect(initialPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
       expect(piRequestSystemPrompt(requestBodies[1])).toBe(initialPrompt);
-      expect(piRequestSystemPrompt(requestBodies[2])).toContain("customized-chat-default-v2");
-      expect(piRequestSystemPrompt(requestBodies[2])).not.toContain(
-        "customized-chat-default-marker",
-      );
+      expect(piRequestSystemPrompt(requestBodies[2])).not.toContain("customized-chat-default-v2");
+      expect(piRequestSystemPrompt(requestBodies[2])).toBe(initialPrompt);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -2730,7 +2722,6 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OAAgentAdapter;
-            const serverSettings = yield* ServerSettingsService;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -2759,9 +2750,6 @@ describe("getPiDiscoverableModels", () => {
               });
 
             yield* send("initial resources");
-            expect(
-              yield* serverSettings.mutateHarosDefaultPrompt(null, "customized-default-v1"),
-            ).toMatchObject({ state: "changed" });
             yield* Effect.sync(() => {
               writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v2");
               writeFileSync(path.join(projectAgentDir, "APPEND_SYSTEM.md"), "project-append-v2");
@@ -2777,9 +2765,6 @@ describe("getPiDiscoverableModels", () => {
             yield* send("replacement base");
 
             yield* Effect.sync(() => unlinkSync(path.join(agentDir, "SYSTEM.md")));
-            expect(
-              yield* serverSettings.mutateHarosDefaultPrompt("customized-default-v1", null),
-            ).toMatchObject({ state: "changed" });
             expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
             yield* send("restored factory default");
 
@@ -2812,8 +2797,8 @@ describe("getPiDiscoverableModels", () => {
       expect(prompt(requestBodies[1])).toBe(prompt(requestBodies[0]));
       expect(prompt(requestBodies[2])).toContain("global-context-v2");
       expect(prompt(requestBodies[2])).toContain("project-append-v2");
-      expect(prompt(requestBodies[2])).toContain("customized-default-v1");
-      expect(prompt(requestBodies[2])).not.toContain(
+      expect(prompt(requestBodies[2])).not.toContain("customized-default-v1");
+      expect(prompt(requestBodies[2])).toContain(
         "Help users by reading files, executing commands, editing code, and writing new files.",
       );
       expect(prompt(requestBodies[3])).toContain("replacement-base-v1");

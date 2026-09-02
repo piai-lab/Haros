@@ -1,5 +1,5 @@
 // FILE: piBarrierPatch.test.ts
-// Purpose: Locks Haros's exact Pi 0.84.3 interactive barrier semantics.
+// Purpose: Locks Haros's exact Pi 0.84.4 interactive barrier semantics.
 // Layer: Pinned agent-core patch conformance tests.
 
 import { runAgentLoop, type AgentTool } from "@earendil-works/pi-agent-core";

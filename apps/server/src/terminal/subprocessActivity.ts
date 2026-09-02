@@ -10,8 +10,11 @@ import {
 } from "@harnessos/shared/terminalThreads";
 
 import { runProcess } from "../processRunner";
-import { parseProcessChildrenMap, type ProcessChildrenMap } from "./processTreeKiller";
-import { captureWindowsProcessChildrenMap } from "./windowsProcessSnapshot";
+import {
+  parseProcessChildrenMap,
+  type ProcessChildrenMap,
+} from "../platform/processTreeController";
+import { captureWindowsProcessChildrenMap } from "../platform/windowsProcessSnapshot";
 
 const POSIX_SUBPROCESS_TREE_WALK_MAX_VISITED = 256;
 

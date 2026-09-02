@@ -182,7 +182,10 @@ export default defineConfig({
       "@pierre/diffs",
       "@pierre/diffs/react",
       "@pierre/diffs/worker/worker.js",
+      "mdast-util-to-string",
       "react-icons/gr",
+      "remark-parse",
+      "unified",
     ],
   },
   define: {

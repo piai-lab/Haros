@@ -58,6 +58,8 @@ import { isKeyboardShortcutsHelpChord } from "@harnessos/shared/browserShortcuts
 import { getMacTrafficLightPosition } from "@harnessos/shared/desktopChrome";
 import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@harnessos/shared/deviceHelperCache";
 import {
+  HARNESSOS_DESKTOP_SMOKE_USER_DATA_ENV,
+  HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER,
   resolveHarosDesktopFlavor,
   harnessOSDesktopIdentity,
 } from "@harnessos/shared/desktopIdentity";
@@ -172,6 +174,7 @@ import {
   shouldCheckForUpdatesOnForeground,
 } from "./updateState";
 import { registerDesktopVoiceTranscriptionHandler } from "./voiceTranscription";
+import { terminateDesktopOwnedChild } from "./ownedChildProcess";
 import {
   applyDesktopPhysicalZoomAction,
   resolveDesktopMenuAccelerator,
@@ -257,6 +260,14 @@ import {
   sendAppSnapState,
 } from "./appSnapIpc";
 
+const requestedSourceBuildMarker = process.env.HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER;
+if (
+  requestedSourceBuildMarker !== undefined &&
+  requestedSourceBuildMarker !== HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER
+) {
+  throw new Error("The source desktop launcher and built main are incompatible. Rebuild Haros.");
+}
+
 // Capture the real archive identity before any explicit app.asar lookup. Static
 // snapshotting and the runtime watcher both use this same generation as their
 // baseline, so a replacement during startup cannot silently become "normal."
@@ -282,6 +293,7 @@ const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const desktopFlavor = resolveHarosDesktopFlavor({
   isDevelopment,
   requestedFlavor: process.env.HARNESSOS_DESKTOP_FLAVOR,
+  allowDevelopmentOverride: requestedSourceBuildMarker === HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER,
 });
 const desktopIdentity = harnessOSDesktopIdentity(desktopFlavor);
 const BASE_DIR =
@@ -2174,6 +2186,10 @@ function resolveUserDataPath(): string {
     appDataBase,
     userDataDirectoryName: desktopIdentity.userDataDirectoryName,
     ...(process.env.HARNESSOS_HOME ? { productHome: process.env.HARNESSOS_HOME } : {}),
+    testOverridePath:
+      requestedSourceBuildMarker === HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER
+        ? process.env[HARNESSOS_DESKTOP_SMOKE_USER_DATA_ENV]
+        : undefined,
   });
 }
 
@@ -3970,7 +3986,7 @@ function startBackend(): void {
     });
     capabilityPipe.end(DESKTOP_BROWSER_HOST_CAPABILITY);
   } else {
-    child.kill();
+    terminateDesktopOwnedChild(child);
     scheduleBackendRestart("browser host capability pipe was unavailable");
     return;
   }
@@ -4075,10 +4091,10 @@ function stopBackend(): void {
   if (!child) return;
 
   if (child.exitCode === null && child.signalCode === null) {
-    child.kill("SIGTERM");
+    terminateDesktopOwnedChild(child, "SIGTERM");
     setTimeout(() => {
       if (child.exitCode === null && child.signalCode === null) {
-        child.kill("SIGKILL");
+        terminateDesktopOwnedChild(child, "SIGKILL");
       }
     }, BACKEND_FORCE_KILL_DELAY_MS).unref();
   }
@@ -4249,6 +4265,11 @@ function requestGracefulAppQuit(reason: string, shutdownBody?: unknown): void {
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.removeAllListeners(IPC.browser.webMcpCompatibilityPolicy);
+  ipcMain.on(IPC.browser.webMcpCompatibilityPolicy, (event: IpcMainEvent) => {
+    event.returnValue = browserManager.isWebMcpCompatibilityAllowed(event.sender.id);
+  });
+
   ipcMain.removeAllListeners(IPC.quitConfirmationResponse);
   ipcMain.on(IPC.quitConfirmationResponse, (_event, payload: unknown) => {
     runningTasksQuitGuard.receiveResponse(payload);

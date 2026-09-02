@@ -6182,12 +6182,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
             lastUsedTokens: 24542,
             totalTokenBreakdown: {
               cachedInputTokens: 21144,
-              uncachedInputTokens: 2719,
+              uncachedInputTokens: 4,
+              cacheWriteInputTokens: 2715,
               outputTokens: 679,
             },
             lastTokenBreakdown: {
               cachedInputTokens: 21144,
-              uncachedInputTokens: 2719,
+              uncachedInputTokens: 4,
+              cacheWriteInputTokens: 2715,
               outputTokens: 679,
             },
             maxTokens: 200000,

@@ -4,24 +4,17 @@ const EN_MESSAGES = {
   "settings.skills": "Agent skills",
   "settings.prompts": "Prompts",
   "settings.builtInTools": "Built-in tools",
-  "settings.promptsDescription": "Customize Haros Agent's default instructions and personal rules.",
-  "settings.defaultPrompt": "Default prompt",
-  "settings.defaultPromptDescription":
-    "Sets the basic way Haros Agent works. Dynamic tools, skills, and project context remain automatic.",
-  "settings.defaultPromptSourceNotice":
-    "Haros built-in default. Saved changes apply to tasks and conversations started afterward.",
-  "settings.defaultPromptCustomizedNotice":
-    "Customized for Haros Agent. Saved changes apply to tasks and conversations started afterward.",
-  "settings.promptRestoreFailed": "Could not restore the default prompt",
-  "settings.customRules": "Custom rules",
-  "settings.customRulesDescription":
-    "Personal preferences that Haros Agent applies across all of your projects.",
-  "settings.customRulesCreateNotice": "AGENTS.md will be created on the first non-empty save.",
-  "settings.customRulesTooLarge":
-    "These custom rules are too large to edit here. Use the location below to make changes.",
-  "settings.customRulesUnavailable":
-    "These custom rules cannot be edited here. Use the location below to make changes.",
-  "settings.promptOpenFailed": "Could not open the custom rules location",
+  "settings.promptsDescription":
+    "Customize your tone, collaboration preferences, and working style.",
+  "settings.personalStrategy": "Personal strategy",
+  "settings.personalStrategyDescription":
+    "Adjust Haros's tone, collaboration preferences, and way of working. This does not change its identity, Chat, Agent or Studio boundaries, current mode, runtime permissions, or available tools.",
+  "settings.personalStrategyTooLarge":
+    "This strategy is too large to edit here. Use the location below to make changes.",
+  "settings.personalStrategyUnavailable":
+    "This strategy cannot be edited here. Use the location below to make changes.",
+  "settings.promptRestoreFailed": "Could not restore the default Personal Strategy",
+  "settings.promptOpenFailed": "Could not open the Personal Strategy location",
   "settings.promptByteCount": "{current} of {max} bytes",
   "settings.promptInvalidText":
     "Use valid text without unsupported control characters. Tabs and line breaks are allowed.",
@@ -29,18 +22,12 @@ const EN_MESSAGES = {
   "settings.promptAlreadyCurrent": "Already up to date",
   "settings.promptSaveFailed": "Could not save instructions",
   "settings.promptSaveFailedDescription": "Your draft is still here. Check it and try again.",
-  "settings.promptRemoveFailed": "Could not delete custom rules",
-  "settings.promptRemoveFailedDescription":
-    "Nothing was removed. Reload the current rules and try again.",
   "settings.promptConflictTitle": "This setting changed elsewhere",
   "settings.promptContentChanged": "Your draft was not overwritten or saved over the newer value.",
   "settings.promptSourceChanged":
-    "The source of your custom rules changed. Reload before making another change.",
+    "The Personal Strategy source changed. Reload before making another change.",
   "settings.reloadPromptValue": "Reload current value",
   "settings.keepPromptDraft": "Keep my draft",
-  "settings.removeCustomRulesTitle": "Delete your custom rules?",
-  "settings.removeCustomRulesDescription":
-    "If another personal rule already exists, Haros may use it next.",
   "settings.promptsUnavailable":
     "Prompt settings are unavailable right now. Nothing was changed; try again.",
   "settings.skillsDescription":
@@ -129,35 +116,25 @@ const ZH_CN_MESSAGES = {
   "settings.skills": "Agent 技能",
   "settings.prompts": "提示词",
   "settings.builtInTools": "内置工具",
-  "settings.promptsDescription": "自定义 Haros Agent 的默认指令与个人规则。",
-  "settings.defaultPrompt": "默认提示词",
-  "settings.defaultPromptDescription":
-    "决定 Haros Agent 的基础工作方式；工具、技能与项目上下文仍会自动组合。",
-  "settings.defaultPromptSourceNotice": "Haros 内置默认；保存的修改会用于之后启动的任务和对话。",
-  "settings.defaultPromptCustomizedNotice":
-    "已为 Haros Agent 自定义；保存的修改会用于之后启动的任务和对话。",
-  "settings.promptRestoreFailed": "无法恢复默认提示词",
-  "settings.customRules": "自定义规则",
-  "settings.customRulesDescription": "Haros Agent 在所有项目中使用的个人偏好与规则。",
-  "settings.customRulesCreateNotice": "首次保存非空内容后会创建 AGENTS.md。",
-  "settings.customRulesTooLarge": "自定义规则过大，无法在此编辑。请使用下方位置进行修改。",
-  "settings.customRulesUnavailable": "自定义规则无法在此编辑。请使用下方位置进行修改。",
-  "settings.promptOpenFailed": "无法打开自定义规则所在位置",
+  "settings.promptsDescription": "调整 Haros 的语气、协作偏好和工作方式。",
+  "settings.personalStrategy": "个人策略",
+  "settings.personalStrategyDescription":
+    "调整 Haros 的语气、协作偏好和工作方式。不会改变 Haros 的身份、Chat / Agent / Studio 边界、当前模式、运行时权限或真实可用工具。",
+  "settings.personalStrategyTooLarge": "个人策略过大，无法在此编辑。请使用下方位置进行修改。",
+  "settings.personalStrategyUnavailable": "个人策略无法在此编辑。请使用下方位置进行修改。",
+  "settings.promptRestoreFailed": "无法恢复默认个人策略",
+  "settings.promptOpenFailed": "无法打开个人策略所在位置",
   "settings.promptByteCount": "{current} / {max} 字节",
   "settings.promptInvalidText": "请输入有效文本并移除不支持的控制字符；制表符和换行符可以保留。",
   "settings.promptSaved": "全局指令已保存",
   "settings.promptAlreadyCurrent": "当前内容已是最新",
   "settings.promptSaveFailed": "无法保存指令",
   "settings.promptSaveFailedDescription": "草稿仍然保留。请检查后重试。",
-  "settings.promptRemoveFailed": "无法删除自定义规则",
-  "settings.promptRemoveFailedDescription": "没有删除任何内容。请重新载入当前规则后重试。",
   "settings.promptConflictTitle": "这项设置已在其他位置发生变化",
   "settings.promptContentChanged": "没有覆盖较新的内容，你的草稿也仍然保留。",
-  "settings.promptSourceChanged": "自定义规则的来源已经改变，请先重新载入再继续修改。",
+  "settings.promptSourceChanged": "个人策略的来源已经改变，请先重新载入再继续修改。",
   "settings.reloadPromptValue": "重新载入当前内容",
   "settings.keepPromptDraft": "保留我的草稿",
-  "settings.removeCustomRulesTitle": "要删除自定义规则吗？",
-  "settings.removeCustomRulesDescription": "如果已有另一份个人规则，Haros 接下来可能会采用它。",
   "settings.promptsUnavailable": "暂时无法读取提示词设置。没有修改任何内容，请重试。",
   "settings.skillsDescription": "查看从所有已配置引擎中发现的可复用工作流。",
   "settings.builtInToolsDescription": "选择 Haros 内置工具可在哪些工作面使用。",

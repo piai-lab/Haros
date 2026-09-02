@@ -3,6 +3,13 @@ import { defineMessageSlice } from "../messageCatalog";
 const EN_MESSAGES = {
   "hydration.loading": "Loading conversation",
   "hydration.failed": "This conversation didn’t load.",
+  "conversation.find.placeholder": "Search conversation…",
+  "conversation.find.label": "Find in conversation",
+  "conversation.find.close": "Close find (Esc)",
+  "conversation.find.previous": "Previous match (Shift+Enter)",
+  "conversation.find.next": "Next match (Enter)",
+  "conversation.find.noResults": "No results",
+  "conversation.find.results": "{current} / {count} results",
   "chatToAgent.attachmentsPartial": "{count} files could not be carried into Agent",
   "chatToAgent.attachmentsPartialToast": "Some files could not be carried into Agent",
   "chatToAgent.attachmentsPartialToastDescription":
@@ -202,6 +209,13 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
+  "conversation.find.placeholder": "搜索对话…",
+  "conversation.find.label": "在对话中查找",
+  "conversation.find.close": "关闭查找（Esc）",
+  "conversation.find.previous": "上一个匹配项（Shift+Enter）",
+  "conversation.find.next": "下一个匹配项（Enter）",
+  "conversation.find.noResults": "没有结果",
+  "conversation.find.results": "第 {current} / {count} 项",
   "hydration.loading": "正在加载对话",
   "hydration.failed": "无法加载此对话。",
   "chatToAgent.attachmentsPartial": "{count} 个文件未能带入 Agent",

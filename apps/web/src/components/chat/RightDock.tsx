@@ -88,6 +88,8 @@ interface RightDockProps {
   /** Width the primary surface must retain while this dock is split beside it. */
   minimumPrimaryWidth?: number;
   presentation?: "split" | "exclusive";
+  /** Host identity used to land cross-surface geometry before the first paint. */
+  motionScopeKey?: string;
   activePaneRuntimeMode?: DockPaneRuntimeMode;
   renderPane: (
     pane: RightDockPane,
@@ -317,12 +319,19 @@ export function RightDock(props: RightDockProps) {
   // paint; they are not drawer open/close animations. Fold the presentation
   // tier into the existing one-frame motion gate so no second motion owner is
   // introduced.
-  const chromeMotionKey = props.presentation ?? "split";
+  const chromeMotionKey = `${props.motionScopeKey ?? "static"}:${props.presentation ?? "split"}`;
   const [motionState, setMotionState] = useState<{
     key: string;
     allow: boolean;
   }>(() => ({ key: chromeMotionKey, allow: !props.state.open }));
-  const shouldSuppressChromeMotion = !(motionState.key === chromeMotionKey && motionState.allow);
+  const lastCommittedMotionKeyRef = useRef(chromeMotionKey);
+  const hostChangedSinceLastCommit = lastCommittedMotionKeyRef.current !== chromeMotionKey;
+  const shouldSuppressChromeMotion =
+    hostChangedSinceLastCommit || !(motionState.key === chromeMotionKey && motionState.allow);
+
+  useLayoutEffect(() => {
+    lastCommittedMotionKeyRef.current = chromeMotionKey;
+  }, [chromeMotionKey]);
 
   useEffect(() => {
     if (!shouldSuppressChromeMotion) {

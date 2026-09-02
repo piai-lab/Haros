@@ -24,6 +24,7 @@ import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
+import { toastManager } from "../ui/toast";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { FileDiffCard, FileDiffSurface } from "./FileDiffView";
 import { CodeBlockSurface } from "./MarkdownCodeBlock";
@@ -243,7 +244,9 @@ function TimelineFileDiffCard(props: {
   onToggle: () => void;
 }) {
   const { t } = useI18n();
-  const { copyToClipboard, isCopied } = useCopyToClipboard();
+  const { copyToClipboard, isCopied } = useCopyToClipboard({
+    onError: () => toastManager.add({ type: "error", title: t("timeline.copyFailed") }),
+  });
   const copyLabel = isCopied
     ? t("common.copied")
     : t("timeline.copyFileDiff", { path: props.path });

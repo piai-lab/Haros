@@ -19,9 +19,9 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const desktopFlavor = resolveHarosDesktopFlavor({
-  isDevelopment,
+  // Packaged apps launch their bundled main directly; this launcher is source-only.
+  isDevelopment: true,
   requestedFlavor: process.env.HARNESSOS_DESKTOP_FLAVOR,
 });
 const desktopIdentity = harnessOSDesktopIdentity(desktopFlavor);

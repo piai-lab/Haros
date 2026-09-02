@@ -13,6 +13,7 @@ const electronMocks = vi.hoisted(() => ({
   fromPartition: vi.fn(),
   partitionSetUserAgent: vi.fn(),
   onBeforeSendHeaders: vi.fn(),
+  onHeadersReceived: vi.fn(),
   protocolHandle: vi.fn(),
   protocolUnhandle: vi.fn(),
   netFetch: vi.fn(),
@@ -50,7 +51,10 @@ describe("BrowserSessionPolicy", () => {
     });
     electronMocks.fromPartition.mockReturnValue({
       setUserAgent: electronMocks.partitionSetUserAgent,
-      webRequest: { onBeforeSendHeaders: electronMocks.onBeforeSendHeaders },
+      webRequest: {
+        onBeforeSendHeaders: electronMocks.onBeforeSendHeaders,
+        onHeadersReceived: electronMocks.onHeadersReceived,
+      },
       protocol: {
         handle: electronMocks.protocolHandle,
         unhandle: electronMocks.protocolUnhandle,

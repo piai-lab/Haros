@@ -1558,25 +1558,25 @@ describe("ProfileStatsQuery", () => {
             (
               'activity-recent-usage-1', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"engine":"codex","totalProcessedTokens":175,"totalTokenBreakdown":{"cachedInputTokens":100,"uncachedInputTokens":50,"outputTokens":25}}',
+              '{"engine":"codex","totalProcessedTokens":175,"totalTokenBreakdown":{"cachedInputTokens":100,"uncachedInputTokens":50,"cacheWriteInputTokens":0,"outputTokens":25}}',
               1, ${now}
             ),
             (
               'activity-recent-usage-2', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"cacheWriteInputTokens":0,"outputTokens":35}}',
               2, ${now}
             ),
             (
               'activity-recent-usage-duplicate', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"cacheWriteInputTokens":0,"outputTokens":35}}',
               3, ${now}
             ),
             (
               'activity-recent-usage-reset', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"engine":"codex","totalProcessedTokens":17,"totalTokenBreakdown":{"cachedInputTokens":10,"uncachedInputTokens":5,"outputTokens":2}}',
+              '{"engine":"codex","totalProcessedTokens":17,"totalTokenBreakdown":{"cachedInputTokens":10,"uncachedInputTokens":5,"cacheWriteInputTokens":0,"outputTokens":2}}',
               4, ${now}
             )
         `;
@@ -1609,6 +1609,7 @@ describe("ProfileStatsQuery", () => {
         expect(tokenStats.recentTokenUsage).toMatchObject({
           cachedInputTokens: 160,
           uncachedInputTokens: 75,
+          cacheWriteInputTokens: 0,
           outputTokens: 37,
           cacheHitPercent: 68.1,
           coverage: "complete",

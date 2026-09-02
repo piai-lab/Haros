@@ -26,6 +26,17 @@ describe("desktopUserDataProfile", () => {
     ).toBe("/tmp/xdg");
   });
 
+  it("uses an explicit smoke profile instead of a persistent profile", () => {
+    expect(
+      resolveDesktopUserDataPath({
+        appDataBase: "/Users/tester/Library/Application Support",
+        userDataDirectoryName: "harnessos-dev",
+        productHome: "/tmp/product/.harnessos-dev",
+        testOverridePath: "/tmp/harnessos-desktop-smoke/electron-user-data",
+      }),
+    ).toBe("/tmp/harnessos-desktop-smoke/electron-user-data");
+  });
+
   it("keeps Electron profile state under an explicit Haros home", () => {
     expect(
       resolveDesktopUserDataPath({

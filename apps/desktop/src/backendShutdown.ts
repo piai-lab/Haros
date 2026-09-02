@@ -1,11 +1,12 @@
 import * as Http from "node:http";
 import type { ChildProcess } from "node:child_process";
+import { terminateDesktopOwnedChild } from "./ownedChildProcess";
 
 export const DESKTOP_BACKEND_SHUTDOWN_PATH = "/api/desktop/shutdown";
 
 export type BackendShutdownProcess = Pick<
   ChildProcess,
-  "exitCode" | "signalCode" | "once" | "off" | "kill"
+  "pid" | "exitCode" | "signalCode" | "once" | "off" | "kill"
 >;
 
 export type DesktopBackendShutdownRequestOutcome =
@@ -381,7 +382,7 @@ export function stopWindowsBackendAndWait(input: {
   const operation = runRequestFirstBackendShutdown({
     ...input,
     startRequest: input.startRequest ?? startDesktopBackendShutdownRequest,
-    forceTerminate: input.forceTerminate ?? ((child) => void child.kill("SIGTERM")),
+    forceTerminate: input.forceTerminate ?? ((child) => terminateDesktopOwnedChild(child)),
   });
   shutdownsByProcess.set(input.child, operation);
   void operation.then((result) => {

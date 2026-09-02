@@ -1,13 +1,13 @@
 // FILE: windowsProcessSnapshot.ts
-// Purpose: Maintains one bounded Windows process-table observer shared by all terminals.
-// Layer: Terminal infrastructure
+// Purpose: Maintains one bounded Windows process-table observer shared by runtime owners.
+// Layer: Server Windows platform runtime
 
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 
 import { resolveWindowsSystemRoot } from "@harnessos/shared/windowsProcess";
 
-import type { ProcessChildrenMap } from "./processTreeKiller";
+import type { ProcessChildrenMap } from "./processTreeController";
 
 const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
 const DEFAULT_RETRY_BACKOFF_BASE_MS = 2_000;
@@ -18,9 +18,9 @@ const SNAPSHOT_START_MARKER = "@snapshot";
 const SNAPSHOT_END_MARKER = "@end";
 const SNAPSHOT_ERROR_MARKER = "@error";
 
-// EncodedCommand leaves stdin available for the request loop. A single
-// PowerShell interpreter can therefore serve every process-table snapshot
-// instead of paying interpreter startup once per terminal and poll cycle.
+// EncodedCommand leaves stdin available for the request loop. CreationDate is
+// included so delayed teardown never mistakes a reused Windows PID for the
+// provider child that was originally captured.
 const WINDOWS_PROCESS_SNAPSHOT_SCRIPT = `
 $ErrorActionPreference = 'Stop'
 while (($request = [Console]::In.ReadLine()) -ne $null) {
@@ -29,7 +29,7 @@ while (($request = [Console]::In.ReadLine()) -ne $null) {
     Get-CimInstance Win32_Process -ErrorAction Stop | ForEach-Object {
       $command = if ($_.CommandLine) { [string]$_.CommandLine } else { [string]$_.Name }
       $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($command))
-      [Console]::Out.WriteLine(("{0}\t{1}\t{2}" -f $_.ProcessId, $_.ParentProcessId, $encoded))
+      [Console]::Out.WriteLine(("{0}\t{1}\t{2}\t{3}" -f $_.ProcessId, $_.ParentProcessId, ([string]$_.CreationDate), $encoded))
     }
     [Console]::Out.WriteLine('${SNAPSHOT_END_MARKER}')
     [Console]::Out.Flush()
@@ -97,6 +97,7 @@ function spawnPowerShellSnapshotProcess(): ChildProcessWithoutNullStreams {
     ],
     {
       stdio: ["pipe", "pipe", "pipe"],
+      shell: false,
       windowsHide: true,
     },
   );
@@ -117,14 +118,25 @@ function decodeSnapshotCommand(encodedCommand: string): string | null {
 /** Parses one base64-delimited worker row without trusting command-line contents as separators. */
 export function parseWindowsProcessSnapshotLine(
   line: string,
-): { pid: number; ppid: number; command: string } | null {
-  const [pidRaw, ppidRaw, encodedCommand, ...extra] = line.split("\t");
-  if (extra.length > 0 || !encodedCommand) return null;
+): { pid: number; ppid: number; command: string; startedAt?: string } | null {
+  const fields = line.split("\t");
+  if (fields.length !== 3 && fields.length !== 4) return null;
+  const [pidRaw, ppidRaw] = fields;
+  const startedAtRaw = fields.length === 4 ? fields[2] : undefined;
+  const encodedCommand = fields.at(-1);
+  if (!encodedCommand) return null;
   const pid = Number(pidRaw);
   const ppid = Number(ppidRaw);
   if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(ppid) || ppid < 0) return null;
   const command = decodeSnapshotCommand(encodedCommand);
-  return command === null ? null : { pid, ppid, command };
+  if (command === null) return null;
+  const startedAt = startedAtRaw?.trim();
+  return {
+    pid,
+    ppid,
+    command,
+    ...(startedAt ? { startedAt } : {}),
+  };
 }
 
 class PowerShellProcessSnapshotWorker implements ProcessChildrenSnapshotWorker {
@@ -140,7 +152,6 @@ class PowerShellProcessSnapshotWorker implements ProcessChildrenSnapshotWorker {
     this.child.stdout.on("data", (chunk: string) => {
       this.consumeStdout(chunk);
     });
-    // Drain diagnostics so a noisy PowerShell host cannot block on a full pipe.
     this.child.stderr.resume();
     this.child.once("error", (error) => {
       this.fail(new Error(`Windows process snapshot worker failed: ${error.message}`));
@@ -230,7 +241,11 @@ class PowerShellProcessSnapshotWorker implements ProcessChildrenSnapshotWorker {
       return;
     }
     const siblings = pending.childrenByParentPid.get(process.ppid) ?? [];
-    siblings.push({ pid: process.pid, command: process.command });
+    siblings.push({
+      pid: process.pid,
+      command: process.command,
+      ...(process.startedAt ? { startedAt: process.startedAt } : {}),
+    });
     pending.childrenByParentPid.set(process.ppid, siblings);
   }
 
@@ -256,11 +271,6 @@ function retryBackoffMs(failureCount: number, baseMs: number, maxMs: number): nu
   return Math.min(maxMs, baseMs * 2 ** Math.max(0, failureCount - 1));
 }
 
-/**
- * Owns the persistent worker, coalesces callers, and rate-limits restarts after
- * timeout/failure. Returning null means the previous terminal activity state is
- * unproven and should be preserved until a later successful snapshot.
- */
 export function createWindowsProcessSnapshotObserver(
   options: WindowsProcessSnapshotObserverOptions = {},
 ): ProcessChildrenSnapshotObserver {
@@ -337,12 +347,24 @@ export function createWindowsProcessSnapshotObserver(
   };
 }
 
-/** One-shot fallback for direct checker calls; the manager uses the shared observer. */
 export async function captureWindowsProcessChildrenMap(): Promise<ProcessChildrenMap | null> {
-  const observer = createWindowsProcessSnapshotObserver();
-  try {
-    return await observer.capture();
-  } finally {
-    observer.dispose();
+  return sharedWindowsProcessSnapshotObserver().capture();
+}
+
+let sharedObserver: ProcessChildrenSnapshotObserver | null = null;
+let sharedObserverExitHookInstalled = false;
+
+/** The Server owns one CIM worker for activity observation and teardown identity proof. */
+export function sharedWindowsProcessSnapshotObserver(): ProcessChildrenSnapshotObserver {
+  sharedObserver ??= createWindowsProcessSnapshotObserver();
+  if (!sharedObserverExitHookInstalled) {
+    sharedObserverExitHookInstalled = true;
+    process.once("exit", disposeSharedWindowsProcessSnapshotObserver);
   }
+  return sharedObserver;
+}
+
+export function disposeSharedWindowsProcessSnapshotObserver(): void {
+  sharedObserver?.dispose();
+  sharedObserver = null;
 }

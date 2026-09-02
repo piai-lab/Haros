@@ -10276,24 +10276,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
-    let modelServicesListAttempts = 0;
-    const listModelServices = vi.fn(async () => {
-      modelServicesListAttempts += 1;
-      if (modelServicesListAttempts === 1) {
-        throw {
-          _tag: "WsRpcError",
-          code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
-          retryable: true,
-          retryAfterMs: 1,
-        };
-      }
-      return {
-        state: "empty" as const,
-        services: [] as const,
-        connectableServices: [] as const,
-        errorCode: null,
-      };
-    });
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
     Object.defineProperty(window, "nativeApi", {
       configurable: true,
       value: {
@@ -10385,7 +10373,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect
         .element(page.getByRole("button", { name: "Change engine. Current: Codex" }))
         .toBeInTheDocument();
-      expect(listModelServices).toHaveBeenCalledTimes(2);
+      // Capacity retry is owned below NativeApi by WsTransport, so Product
+      // consumers observe one terminal list call rather than retrying again.
+      expect(listModelServices).toHaveBeenCalledTimes(1);
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

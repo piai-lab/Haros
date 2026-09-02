@@ -430,7 +430,7 @@ describe("workspace search", () => {
       }),
     );
     try {
-      await render(<SearchHarness onSelectFile={vi.fn()} />);
+      const mounted = await render(<SearchHarness onSelectFile={vi.fn()} />);
       await userEvent.type(page.getByRole("textbox", { name: "Search workspace" }), "none");
       await vi.waitFor(() =>
         expect(document.body.textContent).toContain(
@@ -439,17 +439,22 @@ describe("workspace search", () => {
       );
       expect(document.body.textContent).toContain("No matching files or contents.");
       expect(page.getByRole("status")).toHaveTextContent("0 search results");
+      await mounted.unmount();
     } finally {
       restoreApi();
     }
-
-    document.body.innerHTML = "";
     const onSelectFile = vi.fn();
     restoreApi = installNativeApi(
       makeNativeApi({
         searchEntries: emptyEntries,
         searchContent: vi.fn(async () => {
-          throw new Error("search failed");
+          // A terminal capacity error has already exhausted the transport's
+          // bounded retries and must render immediately; React Query must not
+          // multiply that retry budget and leave the surface looking busy.
+          throw Object.assign(new Error("search failed"), {
+            code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+            retryable: true,
+          });
         }),
       }),
     );

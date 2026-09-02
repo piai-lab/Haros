@@ -153,11 +153,13 @@ describe("contextWindow", () => {
         totalTokenBreakdown: {
           cachedInputTokens: 420,
           uncachedInputTokens: 70,
+          cacheWriteInputTokens: 11,
           outputTokens: 30,
         },
         lastTokenBreakdown: {
           cachedInputTokens: 42,
           uncachedInputTokens: 7,
+          cacheWriteInputTokens: 2,
           outputTokens: 3,
         },
       }),
@@ -166,11 +168,13 @@ describe("contextWindow", () => {
     expect(snapshot?.totalTokenBreakdown).toEqual({
       cachedInputTokens: 420,
       uncachedInputTokens: 70,
+      cacheWriteInputTokens: 11,
       outputTokens: 30,
     });
     expect(snapshot?.lastTokenBreakdown).toEqual({
       cachedInputTokens: 42,
       uncachedInputTokens: 7,
+      cacheWriteInputTokens: 2,
       outputTokens: 3,
     });
   });

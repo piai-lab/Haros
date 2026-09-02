@@ -18,7 +18,7 @@ export const PACKAGED_WORKSPACE_MANIFEST_PATHS = [
 
 export const PACKAGED_LOCKFILE_PATH = "bun.lock";
 export const PACKAGED_PATCHES_PATH = "patches";
-export const HARNESSOS_OA_RUNTIME_PACKAGE_PATH = "vendor/oa-runtime-0.84.3.tgz";
+export const HARNESSOS_OA_RUNTIME_PACKAGE_PATH = "vendor/oa-runtime-0.84.4.tgz";
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
   {

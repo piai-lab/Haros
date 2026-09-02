@@ -379,7 +379,13 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
   }
   const maxTotal = Math.max(
     1,
-    ...usage.days.map((day) => day.cachedInputTokens + day.uncachedInputTokens + day.outputTokens),
+    ...usage.days.map(
+      (day) =>
+        day.cachedInputTokens +
+        day.uncachedInputTokens +
+        day.cacheWriteInputTokens +
+        day.outputTokens,
+    ),
   );
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -410,7 +416,9 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
             : t("settings.cacheHitMeta", {
                 percent: usage.cacheHitPercent,
                 cached: formatCompact(usage.cachedInputTokens),
-                input: formatCompact(usage.cachedInputTokens + usage.uncachedInputTokens),
+                input: formatCompact(
+                  usage.cachedInputTokens + usage.uncachedInputTokens + usage.cacheWriteInputTokens,
+                ),
               })}
         </span>
       </div>
@@ -421,10 +429,15 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
         aria-label={t("settings.tokenChartAria")}
       >
         {usage.days.map((day, index) => {
-          const total = day.cachedInputTokens + day.uncachedInputTokens + day.outputTokens;
+          const total =
+            day.cachedInputTokens +
+            day.uncachedInputTokens +
+            day.cacheWriteInputTokens +
+            day.outputTokens;
           const barHeight = total > 0 ? Math.max(3, (total / maxTotal) * 100) : 2;
           const cachedHeight = total > 0 ? (day.cachedInputTokens / total) * 100 : 0;
           const uncachedHeight = total > 0 ? (day.uncachedInputTokens / total) * 100 : 0;
+          const cacheWriteHeight = total > 0 ? (day.cacheWriteInputTokens / total) * 100 : 0;
           const outputHeight = total > 0 ? (day.outputTokens / total) * 100 : 0;
           const date = formatShortDate(day.day, locale) ?? day.day;
           return (
@@ -444,6 +457,7 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
                       total: formatNumber(total),
                       cached: formatNumber(day.cachedInputTokens),
                       uncached: formatNumber(day.uncachedInputTokens),
+                      cacheWrite: formatNumber(day.cacheWriteInputTokens),
                       output: formatNumber(day.outputTokens),
                     })}
                     onFocus={() => setActiveIndex(index)}
@@ -462,6 +476,10 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
                   <span
                     className="w-full bg-[color-mix(in_srgb,var(--info)_45%,transparent)]"
                     style={{ height: `${uncachedHeight}%` }}
+                  />
+                  <span
+                    className="w-full bg-[color-mix(in_srgb,var(--warning)_65%,transparent)]"
+                    style={{ height: `${cacheWriteHeight}%` }}
                   />
                   <span
                     className="w-full bg-[color-mix(in_srgb,var(--color-text-foreground)_28%,transparent)]"
@@ -486,6 +504,11 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
                     tone="uncached"
                   />
                   <TokenTooltipRow
+                    label={t("settings.cacheWriteInput")}
+                    value={day.cacheWriteInputTokens}
+                    tone="cacheWrite"
+                  />
+                  <TokenTooltipRow
                     label={t("settings.outputTokens")}
                     value={day.outputTokens}
                     tone="output"
@@ -502,6 +525,7 @@ function TokenUsageSection({ tokenStats }: { readonly tokenStats: ProfileTokenSt
       >
         <LegendItem label={t("settings.cachedInput")} tone="cached" />
         <LegendItem label={t("settings.uncachedInput")} tone="uncached" />
+        <LegendItem label={t("settings.cacheWriteInput")} tone="cacheWrite" />
         <LegendItem label={t("settings.outputTokens")} tone="output" />
       </div>
       {usage.coverage === "partial" ? (
@@ -516,7 +540,7 @@ function LegendItem({
   tone,
 }: {
   readonly label: string;
-  readonly tone: "cached" | "uncached" | "output";
+  readonly tone: "cached" | "uncached" | "cacheWrite" | "output";
 }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -533,7 +557,7 @@ function TokenTooltipRow({
 }: {
   readonly label: string;
   readonly value: number;
-  readonly tone: "cached" | "uncached" | "output";
+  readonly tone: "cached" | "uncached" | "cacheWrite" | "output";
 }) {
   return (
     <div className="flex items-center justify-between gap-6">
@@ -546,10 +570,12 @@ function TokenTooltipRow({
   );
 }
 
-function toneClass(tone: "cached" | "uncached" | "output") {
+function toneClass(tone: "cached" | "uncached" | "cacheWrite" | "output") {
   if (tone === "cached") return "size-1.5 rounded-[2px] bg-[var(--info)]";
   if (tone === "uncached")
     return "size-1.5 rounded-[2px] bg-[color-mix(in_srgb,var(--info)_45%,transparent)]";
+  if (tone === "cacheWrite")
+    return "size-1.5 rounded-[2px] bg-[color-mix(in_srgb,var(--warning)_65%,transparent)]";
   return "size-1.5 rounded-[2px] bg-[color-mix(in_srgb,var(--color-text-foreground)_28%,transparent)]";
 }
 

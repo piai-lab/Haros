@@ -7,12 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const PI_REVISION = "4e58f324fae8ebfa98a3d45181fb248072a2afac";
-const PI_VERSION = "0.84.3";
+const PI_REVISION = "b8b873b9872db04a938fb4357b5e8e824ddc051c";
+const PI_VERSION = "0.84.4";
 const PI_AI_INTEGRITY =
-  "sha512-M0YUV8vNO3y2WwWSyY8ijKJV5W4gkSUixuvk+Z00ZBjsyMfsdXfITsHEwP1UIf09YRWXT6oGn0GlCamt+P32XQ==";
-const PATCH_SHA256 = "23cd289d663b21fa8a3f6fce4e1c90543662793adad217f4268ad40c1684b53a";
-const STOCK_PATCH_SHA256 = "b5c6c034862394e59eca73ef4d143a4618362a610312bd82238f9dd6b510e063";
+  "sha512-AClAZxf5+c4RRu44NJPS6wyQy+Nmq+Mzyyrdvm4ZVMNuixelO02RZX4G4Aq1F145Yzp43wnM5S+hLlSI7ypfVw==";
+const PATCH_SHA256 = "414962fee6a6021cc43154a42ed279facc367299524b63f856ef7a03ed1bb3b8";
+const STOCK_PATCH_SHA256 = "330b06f6fe4474953102ada8eb4e8326067c05108a9795625e5d399d05ea6a45";
 const PRODUCT_ARCHIVE_NAME = `oa-runtime-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");

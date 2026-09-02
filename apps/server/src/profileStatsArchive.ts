@@ -61,6 +61,7 @@ interface TokenActivityRow {
   readonly createdAt: string | null;
   readonly totalCachedInputTokens?: number | bigint | null;
   readonly totalUncachedInputTokens?: number | bigint | null;
+  readonly totalCacheWriteInputTokens?: number | bigint | null;
   readonly totalOutputTokens?: number | bigint | null;
 }
 
@@ -99,6 +100,7 @@ export interface ThreadTokenSnapshotRow {
   readonly tokens: number;
   readonly cachedInputTokens: number | null;
   readonly uncachedInputTokens: number | null;
+  readonly cacheWriteInputTokens: number | null;
   readonly outputTokens: number | null;
 }
 
@@ -328,6 +330,10 @@ function addTokenSnapshotRow(
         existing.uncachedInputTokens === null || row.uncachedInputTokens === null
           ? null
           : existing.uncachedInputTokens + row.uncachedInputTokens,
+      cacheWriteInputTokens:
+        existing.cacheWriteInputTokens === null || row.cacheWriteInputTokens === null
+          ? null
+          : existing.cacheWriteInputTokens + row.cacheWriteInputTokens,
       outputTokens:
         existing.outputTokens === null || row.outputTokens === null
           ? null
@@ -363,6 +369,7 @@ export function aggregateThreadTokenRows(
   let previousCumulativeTotal: number | null = null;
   let previousCachedInputTokens: number | null = null;
   let previousUncachedInputTokens: number | null = null;
+  let previousCacheWriteInputTokens: number | null = null;
   let previousOutputTokens: number | null = null;
   for (const row of rows) {
     const total = tokenCounterValue(row.totalProcessedTokens);
@@ -376,9 +383,13 @@ export function aggregateThreadTokenRows(
     previousCumulativeTotal = total;
     const currentCached = tokenCounterValue(row.totalCachedInputTokens);
     const currentUncached = tokenCounterValue(row.totalUncachedInputTokens);
+    const currentCacheWrite = tokenCounterValue(row.totalCacheWriteInputTokens);
     const currentOutput = tokenCounterValue(row.totalOutputTokens);
     const hasBreakdown =
-      currentCached !== null && currentUncached !== null && currentOutput !== null;
+      currentCached !== null &&
+      currentUncached !== null &&
+      currentCacheWrite !== null &&
+      currentOutput !== null;
     const componentDelta = (current: number, previous: number | null) =>
       previous === null || current < previous ? current : Math.max(0, current - previous);
     const cachedInputDelta = hasBreakdown
@@ -388,11 +399,16 @@ export function aggregateThreadTokenRows(
       ? componentDelta(currentUncached, previousUncachedInputTokens)
       : null;
     const outputDelta = hasBreakdown ? componentDelta(currentOutput, previousOutputTokens) : null;
+    const cacheWriteInputDelta = hasBreakdown
+      ? componentDelta(currentCacheWrite, previousCacheWriteInputTokens)
+      : null;
     const hasConsistentBreakdown =
-      hasBreakdown && cachedInputDelta! + uncachedInputDelta! + outputDelta! === delta;
+      hasBreakdown &&
+      cachedInputDelta! + uncachedInputDelta! + cacheWriteInputDelta! + outputDelta! === delta;
     if (hasBreakdown) {
       previousCachedInputTokens = currentCached;
       previousUncachedInputTokens = currentUncached;
+      previousCacheWriteInputTokens = currentCacheWrite;
       previousOutputTokens = currentOutput;
     }
     if (
@@ -410,6 +426,7 @@ export function aggregateThreadTokenRows(
       tokens: delta,
       cachedInputTokens: hasConsistentBreakdown ? cachedInputDelta : null,
       uncachedInputTokens: hasConsistentBreakdown ? uncachedInputDelta : null,
+      cacheWriteInputTokens: hasConsistentBreakdown ? cacheWriteInputDelta : null,
       outputTokens: hasConsistentBreakdown ? outputDelta : null,
     });
   }
@@ -447,6 +464,7 @@ export function aggregateThreadTokenRows(
       tokens: delta,
       cachedInputTokens: null,
       uncachedInputTokens: null,
+      cacheWriteInputTokens: null,
       outputTokens: null,
     });
   }
@@ -723,6 +741,8 @@ const makeProfileStatsArchive = Effect.gen(function* () {
             AS totalCachedInputTokens,
           CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') AS INTEGER)
             AS totalUncachedInputTokens,
+          CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cacheWriteInputTokens') AS INTEGER)
+            AS totalCacheWriteInputTokens,
           CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') AS INTEGER)
             AS totalOutputTokens
         FROM projection_thread_activities a
@@ -827,11 +847,12 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           (row) => sql`
             INSERT INTO profile_stats_deleted_tokens (
               thread_id, created_at, engine, model, tokens,
-              cached_input_tokens, uncached_input_tokens, output_tokens
+              cached_input_tokens, uncached_input_tokens, cache_write_input_tokens, output_tokens
             )
             VALUES (
               ${threadId}, ${row.createdAt}, ${row.engine}, ${row.model}, ${row.tokens},
-              ${row.cachedInputTokens}, ${row.uncachedInputTokens}, ${row.outputTokens}
+              ${row.cachedInputTokens}, ${row.uncachedInputTokens},
+              ${row.cacheWriteInputTokens}, ${row.outputTokens}
             )
           `,
           { concurrency: 1, discard: true },

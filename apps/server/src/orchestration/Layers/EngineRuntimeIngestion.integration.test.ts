@@ -3928,15 +3928,18 @@ describe("EngineRuntimeIngestion", () => {
     const activity = thread.activities.find(
       (candidate: EngineRuntimeTestActivity) => candidate.id === "evt-turn-completed-model-usage",
     );
-    // Zero-usage models are dropped; cache reads/writes fold into inputTokens.
+    // Zero-usage models are dropped; all four mutually exclusive buckets stay
+    // independently observable in the Product activity.
     expect(activity).toMatchObject({
       kind: "turn.completed",
       payload: {
         state: "completed",
         modelUsage: {
           "claude-fable-5": {
-            inputTokens: 960,
+            inputTokens: 100,
             outputTokens: 40,
+            cacheReadInputTokens: 800,
+            cacheWriteInputTokens: 60,
             totalTokens: 1000,
           },
         },
@@ -7634,11 +7637,13 @@ describe("EngineRuntimeIngestion", () => {
           totalTokenBreakdown: {
             cachedInputTokens: 500,
             uncachedInputTokens: 500,
+            cacheWriteInputTokens: 0,
             outputTokens: 50,
           },
           lastTokenBreakdown: {
             cachedInputTokens: 500,
             uncachedInputTokens: 500,
+            cacheWriteInputTokens: 0,
             outputTokens: 50,
           },
           lastUsedTokens: 1075,
@@ -7665,11 +7670,13 @@ describe("EngineRuntimeIngestion", () => {
       totalTokenBreakdown: {
         cachedInputTokens: 500,
         uncachedInputTokens: 500,
+        cacheWriteInputTokens: 0,
         outputTokens: 50,
       },
       lastTokenBreakdown: {
         cachedInputTokens: 500,
         uncachedInputTokens: 500,
+        cacheWriteInputTokens: 0,
         outputTokens: 50,
       },
       lastUsedTokens: 1075,
@@ -7837,11 +7844,13 @@ describe("EngineRuntimeIngestion", () => {
           totalTokenBreakdown: {
             cachedInputTokens: 0,
             uncachedInputTokens: 120,
+            cacheWriteInputTokens: 0,
             outputTokens: 6,
           },
           lastTokenBreakdown: {
             cachedInputTokens: 0,
             uncachedInputTokens: 120,
+            cacheWriteInputTokens: 0,
             outputTokens: 6,
           },
           lastUsedTokens: 126,
@@ -7866,11 +7875,13 @@ describe("EngineRuntimeIngestion", () => {
       totalTokenBreakdown: {
         cachedInputTokens: 0,
         uncachedInputTokens: 120,
+        cacheWriteInputTokens: 0,
         outputTokens: 6,
       },
       lastTokenBreakdown: {
         cachedInputTokens: 0,
         uncachedInputTokens: 120,
+        cacheWriteInputTokens: 0,
         outputTokens: 6,
       },
       lastUsedTokens: 126,

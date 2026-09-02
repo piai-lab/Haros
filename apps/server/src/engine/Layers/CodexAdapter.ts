@@ -313,6 +313,7 @@ export function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapsh
     return {
       cachedInputTokens,
       uncachedInputTokens: inputTokens - cachedInputTokens,
+      cacheWriteInputTokens: 0,
       // Codex reports reasoning as a subset of output_tokens.
       outputTokens,
     };

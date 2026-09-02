@@ -3,12 +3,7 @@
 // Layer: Web diff utilities
 // Depends on: @pierre/diffs patch parsing
 
-import {
-  COMMIT_METADATA_SPLIT,
-  GIT_DIFF_FILE_BREAK_REGEX,
-  parsePatchFiles,
-  UNIFIED_DIFF_FILE_BREAK_REGEX,
-} from "@pierre/diffs";
+import { parsePatchFiles } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 
 export type FileDiffStat = { additions: number; deletions: number };
@@ -147,7 +142,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   z-index: 4;
   background-color: var(--background) !important;
   border-bottom: 1px solid var(--border) !important;
-  cursor: pointer;
+  cursor: default;
 }
 
 [data-diffs-header="custom"] {
@@ -264,29 +259,206 @@ export function getRenderablePatch(
   }
 }
 
+interface PatchLineRange {
+  start: number;
+  text: string;
+}
+
+interface HunkCursor {
+  oldLinesRemaining: number;
+  newLinesRemaining: number;
+}
+
+type HunkLineResult = "consumed" | "outside" | "invalid" | "unsupported";
+
+const ORDINARY_FILE_HEADER_REGEX = /^---\s+\S/;
+const ORDINARY_FILE_TARGET_REGEX = /^\+\+\+\s+\S/;
+const ORDINARY_HUNK_HEADER_REGEX = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/;
+const MBOX_COMMIT_BOUNDARY_REGEX = /^From [0-9a-fA-F]{40,64} /;
+
+function patchLineRanges(patch: string): PatchLineRange[] {
+  const lines: PatchLineRange[] = [];
+  let start = 0;
+  while (start < patch.length) {
+    const newline = patch.indexOf("\n", start);
+    const end = newline === -1 ? patch.length : newline + 1;
+    let textEnd = newline === -1 ? patch.length : newline;
+    if (textEnd > start && patch.charCodeAt(textEnd - 1) === 13) {
+      textEnd -= 1;
+    }
+    lines.push({ start, text: patch.slice(start, textEnd) });
+    start = end;
+  }
+  return lines;
+}
+
+function createHunkCursor(): HunkCursor {
+  return { oldLinesRemaining: 0, newLinesRemaining: 0 };
+}
+
+function isInsideHunk(cursor: HunkCursor): boolean {
+  return cursor.oldLinesRemaining > 0 || cursor.newLinesRemaining > 0;
+}
+
+function consumeHunkLine(cursor: HunkCursor, line: string): HunkLineResult {
+  if (isInsideHunk(cursor)) {
+    const prefix = line[0];
+    if (prefix === " ") {
+      cursor.oldLinesRemaining -= 1;
+      cursor.newLinesRemaining -= 1;
+    } else if (prefix === "-") {
+      cursor.oldLinesRemaining -= 1;
+    } else if (prefix === "+") {
+      cursor.newLinesRemaining -= 1;
+    } else if (prefix !== "\\") {
+      return "invalid";
+    }
+    return cursor.oldLinesRemaining < 0 || cursor.newLinesRemaining < 0 ? "invalid" : "consumed";
+  }
+
+  if (line.startsWith("@@@")) return "unsupported";
+  const hunkCounts = parseHunkLineCounts(line);
+  if (!hunkCounts) return "outside";
+  cursor.oldLinesRemaining = hunkCounts.oldLines;
+  cursor.newLinesRemaining = hunkCounts.newLines;
+  return "consumed";
+}
+
+function sliceGitPatchSections(patch: string, lines: ReadonlyArray<PatchLineRange>): string[] {
+  const sections: string[] = [];
+  let sectionStart: number | undefined;
+  let hunkCursor = createHunkCursor();
+
+  for (const line of lines) {
+    if (line.text.startsWith("diff --git ")) {
+      if (isInsideHunk(hunkCursor)) return [];
+      if (sectionStart !== undefined) sections.push(patch.slice(sectionStart, line.start));
+      sectionStart = line.start;
+      hunkCursor = createHunkCursor();
+      continue;
+    }
+
+    if (sectionStart === undefined) continue;
+    const hunkResult = consumeHunkLine(hunkCursor, line.text);
+    if (hunkResult === "invalid" || hunkResult === "unsupported") return [];
+    if (hunkResult === "consumed") continue;
+
+    // `git format-patch` owns everything after its exact out-of-hunk `-- `
+    // signature separator. The signature is configurable and platform Git
+    // builds append non-semver text (for example Apple Git), so its payload is
+    // deliberately not parsed. Hunk counts above protect an identical deleted
+    // content line from being mistaken for this envelope boundary.
+    const isMboxSignature = line.text === "-- ";
+    if (MBOX_COMMIT_BOUNDARY_REGEX.test(line.text) || isMboxSignature) {
+      sections.push(patch.slice(sectionStart, line.start));
+      sectionStart = undefined;
+      hunkCursor = createHunkCursor();
+    }
+  }
+
+  if (sectionStart !== undefined) {
+    if (isInsideHunk(hunkCursor)) return [];
+    sections.push(patch.slice(sectionStart));
+  }
+  return sections;
+}
+
+function parseHunkLineCounts(line: string): { oldLines: number; newLines: number } | undefined {
+  const match = ORDINARY_HUNK_HEADER_REGEX.exec(line);
+  if (!match) return undefined;
+  return {
+    oldLines: match[1] === undefined ? 1 : Number.parseInt(match[1], 10),
+    newLines: match[2] === undefined ? 1 : Number.parseInt(match[2], 10),
+  };
+}
+
+function sliceOrdinaryPatchSections(patch: string, lines: ReadonlyArray<PatchLineRange>): string[] {
+  const sectionStarts: number[] = [];
+  const hunkCursor = createHunkCursor();
+
+  for (const [index, line] of lines.entries()) {
+    const hunkResult = consumeHunkLine(hunkCursor, line.text);
+    if (hunkResult === "invalid" || hunkResult === "unsupported") return [];
+    if (hunkResult === "consumed") continue;
+
+    const nextLine = lines[index + 1];
+    if (
+      ORDINARY_FILE_HEADER_REGEX.test(line.text) &&
+      nextLine !== undefined &&
+      ORDINARY_FILE_TARGET_REGEX.test(nextLine.text)
+    ) {
+      sectionStarts.push(line.start);
+    }
+  }
+
+  if (isInsideHunk(hunkCursor) || sectionStarts.length === 0) return [];
+  return sectionStarts.map((start, index) =>
+    patch.slice(start, sectionStarts[index + 1] ?? patch.length),
+  );
+}
+
 function rawPatchFileSections(patch: string): string[] {
-  const rawPatches =
-    patch.startsWith("From ") || patch.includes("\nFrom ")
-      ? patch.split(COMMIT_METADATA_SPLIT)
-      : [patch];
-  return rawPatches.flatMap((rawPatch) => {
-    const isGitDiff = rawPatch.startsWith("diff --git") || rawPatch.includes("\ndiff --git");
-    const sections = rawPatch.split(
-      isGitDiff ? GIT_DIFF_FILE_BREAK_REGEX : UNIFIED_DIFF_FILE_BREAK_REGEX,
-    );
-    return sections.filter((section) =>
-      isGitDiff ? section.startsWith("diff --git") : /^---\s+\S/.test(section),
-    );
+  const lines = patchLineRanges(patch);
+  if (
+    lines.some(
+      (line) => line.text.startsWith("diff --cc ") || line.text.startsWith("diff --combined "),
+    )
+  ) {
+    return [];
+  }
+  return lines.some((line) => line.text.startsWith("diff --git "))
+    ? sliceGitPatchSections(patch, lines)
+    : sliceOrdinaryPatchSections(patch, lines);
+}
+
+function fileStructureFingerprint(file: FileDiffMetadata): string {
+  return JSON.stringify({
+    name: file.name,
+    prevName: file.prevName,
+    type: file.type,
+    newObjectId: file.newObjectId,
+    prevObjectId: file.prevObjectId,
+    mode: file.mode,
+    prevMode: file.prevMode,
+    isPartial: file.isPartial,
+    splitLineCount: file.splitLineCount,
+    unifiedLineCount: file.unifiedLineCount,
+    // getRenderablePatch trims only the outer patch before Pierre parses it.
+    // Ignore that one representational EOL difference while still comparing
+    // every parsed source line; the clipboard value remains the untouched slice.
+    deletionLines: file.deletionLines.map((line) => line.replace(/\r?\n$/, "")),
+    additionLines: file.additionLines.map((line) => line.replace(/\r?\n$/, "")),
+    hunks: file.hunks.map((hunk) => ({
+      collapsedBefore: hunk.collapsedBefore,
+      additionStart: hunk.additionStart,
+      additionCount: hunk.additionCount,
+      additionLines: hunk.additionLines,
+      additionLineIndex: hunk.additionLineIndex,
+      deletionStart: hunk.deletionStart,
+      deletionCount: hunk.deletionCount,
+      deletionLines: hunk.deletionLines,
+      deletionLineIndex: hunk.deletionLineIndex,
+      hunkContent: hunk.hunkContent,
+      hunkContext: hunk.hunkContext,
+      hunkSpecs: hunk.hunkSpecs,
+      splitLineStart: hunk.splitLineStart,
+      splitLineCount: hunk.splitLineCount,
+      unifiedLineStart: hunk.unifiedLineStart,
+      unifiedLineCount: hunk.unifiedLineCount,
+      noEOFCRDeletions: hunk.noEOFCRDeletions,
+      noEOFCRAdditions: hunk.noEOFCRAdditions,
+    })),
   });
 }
 
-function sameFileIdentity(left: FileDiffMetadata, right: FileDiffMetadata): boolean {
-  return left.name === right.name && left.prevName === right.prevName && left.type === right.type;
+function sameFileStructure(left: FileDiffMetadata, right: FileDiffMetadata): boolean {
+  return fileStructureFingerprint(left) === fileStructureFingerprint(right);
 }
 
 /**
- * Pair parsed files with exact source sections for clipboard use. When parsing
- * cannot prove a one-to-one identity, callers must fall back to Copy All.
+ * Pairs already parsed files with their exact source sections for clipboard use.
+ * The raw patch remains the only truth: when Pierre's file segmentation cannot
+ * prove a one-to-one match, the result is empty instead of reconstructing text.
  */
 export function rawPatchByFileRenderKey(
   patch: string | undefined,
@@ -309,11 +481,13 @@ export function rawPatchByFileRenderKey(
         !file ||
         sectionFiles.length !== 1 ||
         !sectionFile ||
-        !sameFileIdentity(file, sectionFile)
+        !sameFileStructure(file, sectionFile)
       ) {
         return new Map();
       }
-      pairs.set(buildFileDiffRenderKey(file), section);
+      const renderKey = buildFileDiffRenderKey(file);
+      if (pairs.has(renderKey)) return new Map();
+      pairs.set(renderKey, section);
     } catch {
       return new Map();
     }
@@ -392,4 +566,72 @@ export function summarizePatchTotals(
 ): { additions: number; deletions: number; fileCount: number } | null {
   const renderable = getRenderablePatch(patch, "diff-panel:stats");
   return summarizeRenderablePatchStats(renderable);
+}
+
+// Per-file +N/-M parsed from a unified diff/patch, keyed by working-tree-relative
+// path (a/ b/ prefixes stripped via resolveFileDiffPath). Lets transcript
+// "Edited <file>" rows surface diff stats from a tool call's own patch when no
+// turn-diff summary is in scope (e.g. standalone work rows). Empty map when the
+// patch is missing or unparsable, so callers can fall back gracefully.
+export function fileDiffStatsByPath(patch: string | undefined): Map<string, FileDiffStat> {
+  const stats = new Map<string, FileDiffStat>();
+  const renderable = getRenderablePatch(patch, "tool-row:stats");
+  if (!renderable || renderable.kind !== "files") {
+    return stats;
+  }
+  for (const file of renderable.files) {
+    const path = resolveFileDiffPath(file);
+    if (path.length === 0) {
+      continue;
+    }
+    stats.set(path, summarizeFileDiffStats([file]));
+  }
+  return stats;
+}
+
+function normalizeDiffStatPath(path: string): string {
+  return path
+    .replace(/\\/g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/\/+/g, "/");
+}
+
+function diffStatPathsReferToSameFile(left: string, right: string): boolean {
+  const normalizedLeft = normalizeDiffStatPath(left);
+  const normalizedRight = normalizeDiffStatPath(right);
+  return (
+    normalizedLeft === normalizedRight ||
+    normalizedLeft.endsWith(`/${normalizedRight}`) ||
+    normalizedRight.endsWith(`/${normalizedLeft}`)
+  );
+}
+
+// Resolve a parsed patch stat for a visible changed-file row. Parsed patch paths are
+// usually repo-relative, while work-log changedFiles can be absolute or basename-only.
+export function resolveFileDiffStatByChangedPath(
+  statsByPath: ReadonlyMap<string, FileDiffStat>,
+  changedFilePath: string,
+  changedFileCount: number,
+): FileDiffStat | undefined {
+  if (statsByPath.size === 0) {
+    return undefined;
+  }
+
+  const direct = statsByPath.get(changedFilePath);
+  if (direct) {
+    return direct;
+  }
+
+  const matchingStats = Array.from(statsByPath.entries())
+    .filter(([path]) => diffStatPathsReferToSameFile(path, changedFilePath))
+    .map(([, stat]) => stat);
+  const uniqueMatch = matchingStats.length === 1 ? matchingStats.at(0) : undefined;
+  if (uniqueMatch) {
+    return uniqueMatch;
+  }
+
+  if (statsByPath.size === 1 && changedFileCount === 1) {
+    return statsByPath.values().next().value;
+  }
+  return undefined;
 }

@@ -32,6 +32,8 @@ import {
   isGuestAnnotationCommand,
 } from "./guestProtocol";
 
+import "../browserWebMcp/guestBridge";
+
 const HOST_ATTRIBUTE = "data-harnessos-browser-annotations";
 /** Mutation storms are coalesced into at most one marker re-resolve per window. */
 const MARKER_REVALIDATE_DELAY_MS = 400;

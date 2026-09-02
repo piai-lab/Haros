@@ -60,6 +60,7 @@ import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailabili
 import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
+  SIDEBAR_OFFCANVAS_FOCUS_FALLBACK_MS,
   SIDEBAR_OFFCANVAS_MOTION_CLASS,
   SidebarInstanceProvider,
   SidebarProvider,
@@ -82,7 +83,7 @@ const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_MIN_WIDTH = THREAD_SIDEBAR_MIN_WIDTH_PX;
 const THREAD_SIDEBAR_DEFAULT_WIDTH = 23 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
-const THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD = 3 * 16;
+const THREAD_SIDEBAR_DRAG_DISMISS_DISTANCE = 3 * 16;
 const THREAD_SIDEBAR_PEEK_ENTER_DELAY_MS = 90;
 const THREAD_SIDEBAR_PEEK_LEAVE_DELAY_MS = 60;
 const THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS = 180;
@@ -91,7 +92,7 @@ const THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS = 180;
 // and the detached content-seam <SidebarRail> (via SidebarInstanceProvider) so the
 // drag handle keeps working even though the rail lives outside <Sidebar> (above the card).
 const THREAD_SIDEBAR_RESIZABLE: SidebarResizableOptions = {
-  dragDismissThreshold: THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD,
+  dragDismissDistance: THREAD_SIDEBAR_DRAG_DISMISS_DISTANCE,
   minWidth: THREAD_SIDEBAR_MIN_WIDTH,
   shouldAcceptWidth: ({ nextWidth, wrapper }) =>
     wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
@@ -803,7 +804,10 @@ function ChatRouteLayout() {
     });
     // The Sidebar has a 240ms slide. The frame path covers reduced/no-motion modes;
     // this fallback moves focus once the rendered surface is definitely on-screen.
-    const transitionFallbackId = window.setTimeout(focusFirstVisibleControl, 260);
+    const transitionFallbackId = window.setTimeout(
+      focusFirstVisibleControl,
+      SIDEBAR_OFFCANVAS_FOCUS_FALLBACK_MS,
+    );
     return () => {
       window.cancelAnimationFrame(firstFrameId);
       if (secondFrameId !== null) window.cancelAnimationFrame(secondFrameId);

@@ -9,12 +9,12 @@ const patchPath = path.join(
   repositoryRoot,
   "patches",
   "pi-coding-agent",
-  "0.84.3-model-config-reader.patch",
+  "0.84.4-model-config-reader.patch",
 );
 const stockPatchPath = path.join(
   repositoryRoot,
   "patches",
-  "@earendil-works%2Fpi-coding-agent@0.84.3.patch",
+  "@earendil-works%2Fpi-coding-agent@0.84.4.patch",
 );
 
 describe("Haros Pi vendor generator", () => {

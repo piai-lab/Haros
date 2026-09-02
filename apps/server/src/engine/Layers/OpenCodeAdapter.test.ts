@@ -482,7 +482,8 @@ describe("normalizeOpenCodeTokenUsage", () => {
       lastUsedTokens: 190,
       lastTokenBreakdown: {
         cachedInputTokens: 10,
-        uncachedInputTokens: 105,
+        uncachedInputTokens: 100,
+        cacheWriteInputTokens: 5,
         outputTokens: 75,
       },
     });
@@ -1239,8 +1240,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             engineSelection: { engine: "opencode", model: "openai/gpt-5" },
           })
           .pipe(Effect.forkChild);
-        yield* Effect.sleep(20);
-        expect(runtime.promptCalls).toHaveLength(2);
+        yield* Effect.promise(() => vi.waitFor(() => expect(runtime.promptCalls).toHaveLength(2)));
         expect(
           runtime.mcpAddCalls.filter(
             (call) => (call.config as { enabled?: boolean } | undefined)?.enabled !== false,
@@ -3152,7 +3152,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           lastUsedTokens: 245,
           lastTokenBreakdown: {
             cachedInputTokens: 10,
-            uncachedInputTokens: 125,
+            uncachedInputTokens: 120,
+            cacheWriteInputTokens: 5,
             outputTokens: 110,
           },
         },

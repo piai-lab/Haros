@@ -1,12 +1,12 @@
 ## 目标
 
-在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-absorption` 完整吸收 OmniMind 固定 revision `b5a966bb9de09861c98a1d7ac3936b092614fed3` 最近 47 个已审实现提交的用户效果、故障不变量和维护约束。实现必须归入 Haros 既有唯一 owner，最终覆盖 Session admission、终止投递、Ask 草稿、Engine Web Surface/Curator/删除回收、Timeline/工具/Diff/Transcript/Send to Agent、确定性 unsigned Desktop 构建和来源记录。
+在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest` 保留此前 47 个已审实现提交的完整吸收，并继续吸收 OmniMind 到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1` 的新增用户效果、故障不变量和维护约束。实现必须归入 Haros 既有唯一 owner，最终覆盖 Session admission、终止投递、Ask 草稿、Engine Web Surface/Curator/删除回收、Timeline/工具/Diff/Transcript/Send to Agent、确定性 unsigned Desktop 构建、WebMCP、Prompt/Personal Strategy、缓存观测、进程回收、Thread Find 和来源记录。
 
 ## 范围与边界
 
 纳入：canonical spec 中 C-001–C-008 及其直接代码、迁移、测试、双语文案、构建脚本和 source adoption。保留 Haros 十个 Engine、Agent/Chat/Studio、`ProductSurface`、`ENGINE_DESCRIPTORS`、HostGateway、Product/native Session 分界和 migration lineage。
 
-排除：OmniMind 产品/发布身份、Chat/Agent 合并、第二状态机或 registry、兼容双读、永久原始工具结果库、跨 Engine 原生 Session 伪延续、真实用户私有 Engine 状态、签名、notarize、发布、updater feed 与 push。用户已授权本地合并并在成功后删除 `codex/omnimind-absorption` 及其 worktree；原始工作树中的 `.gitignore` 与 Guidebook evidence 受保护。
+排除：OmniMind 产品/发布身份、Chat/Agent 合并、第二状态机或 registry、兼容双读、永久原始工具结果库、跨 Engine 原生 Session 伪延续、真实用户私有 Engine 状态、签名、notarize、发布、updater feed 与 push。用户已授权本地合并并在成功后删除 `codex/omnimind-latest-absorption` 及其 worktree；原始工作树中的 `.gitignore` 与 Guidebook evidence 受保护。
 
 Stop boundary：命中 spec 任一 Stop condition、需要未授权外部副作用/秘密/破坏性用户数据操作、或发生真正产品分叉时立即停止并回写准确 blocker；不得扩张权限消除阻塞。
 
@@ -26,9 +26,9 @@ Stop boundary：命中 spec 任一 Stop condition、需要未授权外部副作�
 
 Canonical Executor 只更新 `missions/omnimind-absorption.md` 这一份状态真相。按 C-001→C-002→C-003→C-004→C-005→C-006→C-007/C-008 的依赖顺序推进；每个 owner cut 后运行能证伪该 Claim 的最窄 focused proof，记录独占证据 receipt，并把证据与状态迁移更新 spec 后才可 `open → candidate`。不建第二份 plan、ledger、handoff 或进度状态；不以 donor 文件布局覆盖 Haros owner。
 
-Active Claim: C-008, with C-007 final path audit.
+Active Claim: none for local implementation; native Linux/Windows C-006 evidence and a fresh independent evaluator remain external completion boundaries.
 
-当前实现 cut：吸收已无冲突合并进本地 `main`，最终产品候选为 `ff1762fe14315117aa15b1c076f287d27ff96eaf`，合并后终验与 macOS unsigned local-app 结果见 E-010；已完全合并的 feature worktree/branch 也已安全删除。C-001–C-005、C-007、C-008 已到 merged candidate；C-006 只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失。下一执行者不得重做已通过工作，也不得用生产补偿逻辑消除外部证据边界。
+当前实现 cut：先前吸收已在本地 `main`，本轮以 `1da509a68b270facb4e3cb87c5f319e30c07143b` 为基线，将 OmniMind 从 `b5a966bb9de09861c98a1d7ac3936b092614fed3` 推进到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1`。产品候选已冻结为 `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4`，位于唯一 worktree `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest` 和分支 `codex/omnimind-latest-absorption`；本地合并后仅删除该 worktree/branch。C-006 仍只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失；不得用生产补偿逻辑消除外部证据边界。
 
 UI 复用规则：直接 import Haros 现有 CodeBlock、FileDiff、Dock/Split、Timeline primitives；仅对精确 donor 机制做 copied-adapted 或 mechanism-only，并记录实际 source/target paths。所有新用户文案同时交付英文与简体中文，键盘、focus、响应式、light/dark、reduced-motion、失败与恢复不得退化。
 

@@ -16,18 +16,21 @@ function asTokenUsageBreakdown(value: unknown) {
   const record = asRecord(value);
   const cachedInputTokens = asFiniteNumber(record?.cachedInputTokens);
   const uncachedInputTokens = asFiniteNumber(record?.uncachedInputTokens);
+  const cacheWriteInputTokens = asFiniteNumber(record?.cacheWriteInputTokens);
   const outputTokens = asFiniteNumber(record?.outputTokens);
   if (
     cachedInputTokens === null ||
     uncachedInputTokens === null ||
+    cacheWriteInputTokens === null ||
     outputTokens === null ||
     cachedInputTokens < 0 ||
     uncachedInputTokens < 0 ||
+    cacheWriteInputTokens < 0 ||
     outputTokens < 0
   ) {
     return null;
   }
-  return { cachedInputTokens, uncachedInputTokens, outputTokens };
+  return { cachedInputTokens, uncachedInputTokens, cacheWriteInputTokens, outputTokens };
 }
 
 function asContextWindowPercent(value: unknown): number | null {

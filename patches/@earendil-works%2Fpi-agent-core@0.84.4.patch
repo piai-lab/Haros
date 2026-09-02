@@ -1,8 +1,8 @@
 diff --git a/dist/agent-loop.js b/dist/agent-loop.js
-index 569149f..81d7cf7 100644
+index 329c4e3e1048da553ebb66b7a41e517c6b036180..0bfecfe6509c6c5cb0b18ecfa0a50e80c0ac2e91 100644
 --- a/dist/agent-loop.js
 +++ b/dist/agent-loop.js
-@@ -286,12 +286,82 @@ async function failToolCallsFromTruncatedMessage(toolCalls, emit) {
+@@ -284,12 +284,82 @@ async function failToolCallsFromTruncatedMessage(toolCalls, emit) {
   */
  async function executeToolCalls(currentContext, assistantMessage, config, signal, emit) {
      const toolCalls = assistantMessage.content.filter((c) => c.type === "toolCall");
@@ -85,8 +85,24 @@ index 569149f..81d7cf7 100644
  async function executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, signal, emit) {
      const finalizedCalls = [];
      const messages = [];
+@@ -351,6 +421,15 @@ async function executeToolCallsParallel(currentContext, assistantMessage, toolCa
+             continue;
+         }
+         finalizedCalls.push(async () => {
++            if (signal?.aborted) {
++                const finalized = {
++                    toolCall,
++                    result: createErrorToolResult("Operation aborted"),
++                    isError: true,
++                };
++                await emitToolExecutionEnd(finalized, emit);
++                return finalized;
++            }
+             const executed = await executePreparedToolCall(preparation, signal, emit);
+             const finalized = await finalizeExecutedToolCall(currentContext, assistantMessage, preparation, executed, config, signal);
+             await emitToolExecutionEnd(finalized, emit);
 diff --git a/dist/types.d.ts b/dist/types.d.ts
-index a2d0ba2..6ec0ce2 100644
+index 834a15d907e063873ef9879dcad31d895a0283bd..f2e08900dd583e66e746755ffc9fe8df114ef006 100644
 --- a/dist/types.d.ts
 +++ b/dist/types.d.ts
 @@ -19,7 +19,7 @@ export type StreamFn = (model: Model<Api>, context: Context, options?: SimpleStr
@@ -98,7 +114,7 @@ index a2d0ba2..6ec0ce2 100644
  /**
   * Controls how many queued user messages are injected when the agent loop reaches a queue drain point.
   *
-@@ -350,6 +350,7 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
+@@ -351,6 +351,7 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
       * Per-tool execution mode override.
       * - "sequential": this tool must execute one at a time with other tool calls.
       * - "parallel": this tool can execute concurrently with other tool calls.

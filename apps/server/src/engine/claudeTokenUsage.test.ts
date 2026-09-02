@@ -47,7 +47,8 @@ describe("Claude token arithmetic", () => {
         lastUsedTokens: 24_542,
         lastTokenBreakdown: {
           cachedInputTokens: 21_144,
-          uncachedInputTokens: 2_719,
+          uncachedInputTokens: 4,
+          cacheWriteInputTokens: 2_715,
           outputTokens: 679,
         },
         maxTokens: 200_000,

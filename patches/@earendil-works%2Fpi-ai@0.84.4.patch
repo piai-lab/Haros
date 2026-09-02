@@ -1,5 +1,55 @@
+diff --git a/dist/api/openai-responses.js b/dist/api/openai-responses.js
+index 0fb7e8b26f323f2b44a5a4b760bccedc4c3abdd0..26050228ed2fc51133e3d7efd7831eac72145723 100644
+--- a/dist/api/openai-responses.js
++++ b/dist/api/openai-responses.js
+@@ -58,6 +58,7 @@ function getCompat(model) {
+         supportsAdditionalTools: model.compat?.supportsAdditionalTools ?? false,
+         supportsToolSearch: model.compat?.supportsToolSearch ?? false,
+         supportsExplicitPromptCacheMode: model.compat?.supportsExplicitPromptCacheMode ?? false,
++        supportsMaxOutputTokens: model.compat?.supportsMaxOutputTokens ?? true,
+     };
+ }
+ function getPromptCacheRetention(compat, cacheRetention) {
+@@ -221,7 +222,7 @@ function buildParams(model, context, options, compat = getCompat(model), grammar
+         prompt_cache_options: disableImplicitPromptCache ? { mode: "explicit" } : undefined,
+         store: false,
+     };
+-    if (options?.maxTokens) {
++    if (options?.maxTokens && compat.supportsMaxOutputTokens) {
+         params.max_output_tokens = Math.max(options.maxTokens, OPENAI_RESPONSES_MIN_OUTPUT_TOKENS);
+     }
+     if (options?.temperature !== undefined) {
+diff --git a/dist/api/transform-messages.js b/dist/api/transform-messages.js
+index 6aa6aa2bb660194e64a06d5dc98f61862311f210..350113cd96f6482274f013175e80e1d45f14b2b8 100644
+--- a/dist/api/transform-messages.js
++++ b/dist/api/transform-messages.js
+@@ -84,10 +84,8 @@ export function transformMessages(messages, model, normalizeToolCallId) {
+                         return [];
+                     if (isSameModel)
+                         return block;
+-                    return {
+-                        type: "text",
+-                        text: block.thinking,
+-                    };
++                    // Private reasoning is valid only for the exact originating model identity.
++                    return [];
+                 }
+                 if (block.type === "text") {
+                     if (isSameModel)
+@@ -159,6 +157,11 @@ export function transformMessages(messages, model, normalizeToolCallId) {
+             if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
+                 continue;
+             }
++            // Cross-model thinking-only turns become empty after private reasoning is removed.
++            // Drop them at the shared boundary so every provider converter sees the same valid history.
++            if (assistantMsg.content.length === 0) {
++                continue;
++            }
+             // Track tool calls from this assistant message
+             const toolCalls = assistantMsg.content.filter((b) => b.type === "toolCall");
+             if (toolCalls.length > 0) {
 diff --git a/dist/auth/oauth/anthropic.js b/dist/auth/oauth/anthropic.js
-index 8692e90..61d3981 100644
+index 8692e906caa2609396bdccae98d4d593e024ecf6..61d398187abce77a4eec03c2927211aa62330fb2 100644
 --- a/dist/auth/oauth/anthropic.js
 +++ b/dist/auth/oauth/anthropic.js
 @@ -77,7 +77,7 @@ function formatErrorDetails(error) {
@@ -56,7 +106,7 @@ index 8692e90..61d3981 100644
      const onAbort = () => server.cancelWait();
      interaction.signal.addEventListener("abort", onAbort, { once: true });
 diff --git a/dist/auth/oauth/oauth-page.d.ts b/dist/auth/oauth/oauth-page.d.ts
-index 2fe1a29..60d0b5e 100644
+index 2fe1a29d9f2d69bfcbe39ee80f4f1f1668cffb3f..60d0b5e703678c16ce878cd861ddad30838dc6b1 100644
 --- a/dist/auth/oauth/oauth-page.d.ts
 +++ b/dist/auth/oauth/oauth-page.d.ts
 @@ -1,3 +1,4 @@
@@ -68,7 +118,7 @@ index 2fe1a29..60d0b5e 100644
  //# sourceMappingURL=oauth-page.d.ts.map
 \ No newline at end of file
 diff --git a/dist/auth/oauth/oauth-page.js b/dist/auth/oauth/oauth-page.js
-index 1011535..6d05b27 100644
+index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..6d05b27195c1b085f3ea6bb03696f015431ac9eb 100644
 --- a/dist/auth/oauth/oauth-page.js
 +++ b/dist/auth/oauth/oauth-page.js
 @@ -87,19 +87,34 @@ function renderPage(options) {
@@ -114,7 +164,7 @@ index 1011535..6d05b27 100644
  //# sourceMappingURL=oauth-page.js.map
 \ No newline at end of file
 diff --git a/dist/auth/oauth/openai-codex.js b/dist/auth/oauth/openai-codex.js
-index 04813e4..75c2881 100644
+index 04813e44dde0d5cd2a828aa0a2fbc0ed1dfc2df9..75c2881ba8cc79b5a79d3b71db211023de5acecc 100644
 --- a/dist/auth/oauth/openai-codex.js
 +++ b/dist/auth/oauth/openai-codex.js
 @@ -242,7 +242,7 @@ async function createAuthorizationFlow(originator = "pi") {
@@ -173,7 +223,7 @@ index 04813e4..75c2881 100644
      const onAbort = () => server.cancelWait();
      interaction.signal.addEventListener("abort", onAbort, { once: true });
 diff --git a/dist/auth/oauth/openrouter.js b/dist/auth/oauth/openrouter.js
-index 865bb5a..99cd428 100644
+index 865bb5a6758ba27cd92f00fa61d0f0153185082b..99cd42868b4d4df71dcb353316ae0f6cfa45ff6d 100644
 --- a/dist/auth/oauth/openrouter.js
 +++ b/dist/auth/oauth/openrouter.js
 @@ -107,7 +107,7 @@ async function exchangeAuthorizationCode(code, verifier, signal) {
@@ -236,7 +286,7 @@ index 865bb5a..99cd428 100644
      let manualInput;
      let manualError;
 diff --git a/dist/auth/oauth/radius.js b/dist/auth/oauth/radius.js
-index f66d637..dae73ff 100644
+index f66d637e858e49d876cd52aae35916488229c04d..dae73ff8b8a60485576eab81b41f30250323d8f8 100644
 --- a/dist/auth/oauth/radius.js
 +++ b/dist/auth/oauth/radius.js
 @@ -101,7 +101,7 @@ async function requestOAuthToken(gateway, body, signal) {
@@ -289,7 +339,7 @@ index f66d637..dae73ff 100644
      interaction.notify({
          type: "auth_url",
 diff --git a/dist/auth/types.d.ts b/dist/auth/types.d.ts
-index 4183f99..ad99eff 100644
+index 4183f993631b48627c6803bf73e2882e62353455..ad99efff524a0d42e9aa7ff725103c398c39dea3 100644
 --- a/dist/auth/types.d.ts
 +++ b/dist/auth/types.d.ts
 @@ -147,6 +147,11 @@ export type AuthEvent = {
@@ -313,3 +363,112 @@ index 4183f99..ad99eff 100644
  }
  /** Normalized interaction passed to provider login implementations. */
  export type ProviderAuthInteraction = AuthInteraction & {
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+index 2bb23658ee692343e4561ac461bd0e8d9328c5a1..150ffd743567a2061e3681741122eafe2471f167 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -531,6 +531,8 @@ export interface OpenAIResponsesCompat {
+     supportsToolSearch?: boolean;
+     /** Whether the model accepts `prompt_cache_options` (OpenAI GPT-5.6+ explicit prompt caching). Older OpenAI models reject the parameter. Default: false. */
+     supportsExplicitPromptCacheMode?: boolean;
++    /** Whether the provider accepts the `max_output_tokens` parameter. Some Codex-protocol gateways reject it. Default: true. */
++    supportsMaxOutputTokens?: boolean;
+ }
+ /** Compatibility settings for Anthropic Messages-compatible APIs. */
+ export interface AnthropicMessagesCompat {
+diff --git a/dist/utils/node-http-proxy.js b/dist/utils/node-http-proxy.js
+index c3b44bd73d3178f8fbf5d1cbdf46ca217610497f..d7dd398e021e3e23be4648670012ba8cdd891678 100644
+--- a/dist/utils/node-http-proxy.js
++++ b/dist/utils/node-http-proxy.js
+@@ -27,6 +27,38 @@ function parseProxyTargetUrl(targetUrl) {
+         return undefined;
+     }
+ }
++function stripBrackets(host) {
++    return host.startsWith("[") && host.endsWith("]") ? host.slice(1, -1) : host;
++}
++function parseNoProxyEntry(entry) {
++    const trimmed = entry.trim().toLowerCase();
++    if (!trimmed)
++        return undefined;
++    if (trimmed.startsWith("[")) {
++        const closingBracket = trimmed.indexOf("]");
++        if (closingBracket !== -1) {
++            const host = trimmed.slice(1, closingBracket);
++            const rest = trimmed.slice(closingBracket + 1);
++            if (rest.startsWith(":")) {
++                const port = Number.parseInt(rest.slice(1), 10);
++                return { host, port: Number.isNaN(port) ? 0 : port };
++            }
++            return { host, port: 0 };
++        }
++    }
++    if (trimmed.includes(":") && trimmed.split(":").length > 2) {
++        return { host: trimmed, port: 0 };
++    }
++    const colonIndex = trimmed.lastIndexOf(":");
++    if (colonIndex !== -1 && colonIndex === trimmed.indexOf(":")) {
++        const host = trimmed.slice(0, colonIndex);
++        const port = Number.parseInt(trimmed.slice(colonIndex + 1), 10);
++        if (!Number.isNaN(port)) {
++            return { host, port };
++        }
++    }
++    return { host: trimmed, port: 0 };
++}
+ function shouldProxyHostname(hostname, port, env) {
+     const noProxy = getProxyEnv("no_proxy", env).toLowerCase();
+     if (!noProxy) {
+@@ -35,23 +67,32 @@ function shouldProxyHostname(hostname, port, env) {
+     if (noProxy === "*") {
+         return false;
+     }
+-    return noProxy.split(/[,\s]/).every((proxy) => {
+-        if (!proxy) {
++    const normalizedTargetHost = stripBrackets(hostname.toLowerCase());
++    return noProxy.split(/[,\s]/).every((entry) => {
++        const parsed = parseNoProxyEntry(entry);
++        if (!parsed) {
++            return true;
++        }
++        if (parsed.port && parsed.port !== port) {
+             return true;
+         }
+-        const parsedProxy = proxy.match(/^(.+):(\d+)$/);
+-        let proxyHostname = parsedProxy ? parsedProxy[1] : proxy;
+-        const proxyPort = parsedProxy ? Number.parseInt(parsedProxy[2], 10) : 0;
+-        if (proxyPort && proxyPort !== port) {
++        let domain = stripBrackets(parsed.host);
++        if (domain.startsWith("*.")) {
++            domain = domain.slice(2);
++        }
++        else if (domain.startsWith(".") || domain.startsWith("*")) {
++            domain = domain.slice(1);
++        }
++        if (!domain) {
+             return true;
+         }
+-        if (!/^[.*]/.test(proxyHostname)) {
+-            return hostname !== proxyHostname;
++        if (normalizedTargetHost === domain) {
++            return false;
+         }
+-        if (proxyHostname.startsWith("*")) {
+-            proxyHostname = proxyHostname.slice(1);
++        if (normalizedTargetHost.endsWith(`.${domain}`)) {
++            return false;
+         }
+-        return !hostname.endsWith(proxyHostname);
++        return true;
+     });
+ }
+ function getProxyForUrl(targetUrl, env) {
+@@ -60,7 +101,7 @@ function getProxyForUrl(targetUrl, env) {
+         return "";
+     }
+     const protocol = parsedUrl.protocol.split(":", 1)[0];
+-    const hostname = parsedUrl.host.replace(/:\d*$/, "");
++    const hostname = stripBrackets(parsedUrl.hostname || parsedUrl.host.replace(/:\d*$/, ""));
+     const port = Number.parseInt(parsedUrl.port, 10) || DEFAULT_PROXY_PORTS[protocol] || 0;
+     if (!shouldProxyHostname(hostname, port, env)) {
+         return "";

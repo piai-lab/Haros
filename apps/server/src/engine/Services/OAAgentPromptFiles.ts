@@ -9,7 +9,7 @@ import { ServiceMap } from "effect";
 
 export interface OAAgentPromptFilesShape {
   readonly getSnapshot: (
-    input?: OAAgentPromptGetSnapshotInput,
+    input: OAAgentPromptGetSnapshotInput,
   ) => Effect.Effect<OAAgentPromptSnapshot, Error>;
   readonly mutate: (
     input: OAAgentPromptMutationInput,
@@ -19,4 +19,4 @@ export interface OAAgentPromptFilesShape {
 export class OAAgentPromptFiles extends ServiceMap.Service<
   OAAgentPromptFiles,
   OAAgentPromptFilesShape
->()("harnessos/engine/Services/OAAgentPromptFiles") {}
+>()("oa/engine/Services/OAAgentPromptFiles") {}

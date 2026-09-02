@@ -1040,7 +1040,7 @@ describe("OAModelServicesLive", () => {
       service: {
         serviceId: "deepseek",
         authState: "configured",
-        availableModelCount: 2,
+        availableModelCount: 3,
       },
     });
   });

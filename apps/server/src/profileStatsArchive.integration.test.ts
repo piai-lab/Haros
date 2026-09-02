@@ -324,6 +324,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 2000,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
       {
@@ -333,6 +334,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 500,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
       {
@@ -342,6 +344,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 700,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
       {
@@ -351,6 +354,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 1000,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
     ]);
@@ -396,6 +400,7 @@ describe("ProfileStatsArchive", () => {
         totalProcessedTokens: 100,
         totalCachedInputTokens: 60,
         totalUncachedInputTokens: 30,
+        totalCacheWriteInputTokens: 0,
         totalOutputTokens: 10,
         usedTokens: null,
         engine: "codex",
@@ -407,6 +412,7 @@ describe("ProfileStatsArchive", () => {
         totalProcessedTokens: 200,
         totalCachedInputTokens: 110,
         totalUncachedInputTokens: 60,
+        totalCacheWriteInputTokens: 0,
         totalOutputTokens: 25,
         usedTokens: null,
         engine: "codex",
@@ -418,6 +424,7 @@ describe("ProfileStatsArchive", () => {
         totalProcessedTokens: 40,
         totalCachedInputTokens: 10,
         totalUncachedInputTokens: 20,
+        totalCacheWriteInputTokens: 0,
         totalOutputTokens: 10,
         usedTokens: null,
         engine: "codex",
@@ -435,6 +442,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 100,
         cachedInputTokens: 60,
         uncachedInputTokens: 30,
+        cacheWriteInputTokens: 0,
         outputTokens: 10,
       },
       {
@@ -444,6 +452,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 100,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
       {
@@ -453,6 +462,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 40,
         cachedInputTokens: 10,
         uncachedInputTokens: 20,
+        cacheWriteInputTokens: 0,
         outputTokens: 10,
       },
     ]);
@@ -480,6 +490,7 @@ describe("ProfileStatsArchive", () => {
         tokens: 1_500,
         cachedInputTokens: null,
         uncachedInputTokens: null,
+        cacheWriteInputTokens: null,
         outputTokens: null,
       },
     ]);

@@ -244,6 +244,10 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
     --seam-line: color-mix(in srgb, var(--foreground) 30%, transparent);
   }
 
+  [data-slot="sidebar-wrapper"][data-sidebar-dismiss-armed="true"] .chat-content-card {
+    --seam-line: color-mix(in srgb, var(--color-text-accent) 68%, transparent);
+  }
+
   body[data-sidebar-resizing="true"] [data-slot="tooltip-positioner"],
   body[data-sidebar-resizing="true"] [data-slot="preview-card-positioner"] {
     visibility: hidden !important;
@@ -2955,9 +2959,7 @@ diffs-container {
   background: var(--background);
 }
 
-.diff-render-file [data-diffs-header],
-.diff-render-file [data-diff-file-header],
-.diff-render-file [data-file-info] {
+.diff-render-file [data-diff-file-header-interactive="true"] button {
   cursor: pointer;
 }
 

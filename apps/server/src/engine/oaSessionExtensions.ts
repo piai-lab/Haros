@@ -18,6 +18,11 @@ import {
   makeOAPlanModeExtension,
   type OAPlanModeController,
 } from "./oaPlanModeExtension.ts";
+import {
+  createHarosPromptPolicyController,
+  makeHarosPromptPolicyExtension,
+  type HarosPromptPolicyController,
+} from "./oaPromptPolicyExtension.ts";
 
 export interface OASessionExtensionComposition {
   readonly extensions: InlineExtension[];
@@ -26,12 +31,14 @@ export interface OASessionExtensionComposition {
   readonly webAccess: InlineExtension;
   readonly askUserExtension?: InlineExtension;
   readonly planModeController: OAPlanModeController;
+  readonly promptPolicyController: HarosPromptPolicyController;
 }
 
 /** Explicit product wiring only; user and third-party Extensions stay in Pi's ResourceLoader. */
 export function buildOASessionExtensions(input: {
   readonly agentDir: string;
   readonly workSurface?: EngineWorkSurface;
+  readonly stableProductPrompt?: string;
   readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
   readonly gatewayConnection?: HostGatewayMcpConnection;
   readonly gatewayFetch?: HostGatewayMcpFetch;
@@ -44,6 +51,11 @@ export function buildOASessionExtensions(input: {
 }): OASessionExtensionComposition {
   const planModeController = createOAPlanModeController();
   const planModeExtension = makeOAPlanModeExtension(planModeController);
+  const promptPolicyController = createHarosPromptPolicyController();
+  const promptPolicyExtension = makeHarosPromptPolicyExtension(
+    promptPolicyController,
+    input.stableProductPrompt ?? "",
+  );
   const webAccess = makeOAWebAccessInlineExtension({
     configService: getWebSearchConfigService(input.agentDir),
     ...(input.curatorPresenter === undefined ? {} : { curatorPresenter: input.curatorPresenter }),
@@ -73,6 +85,7 @@ export function buildOASessionExtensions(input: {
   return {
     extensions: [
       planModeExtension,
+      promptPolicyExtension,
       webAccess,
       ...(todoExtension === undefined ? [] : [todoExtension]),
       ...(askUserExtension === undefined ? [] : [askUserExtension]),
@@ -83,5 +96,6 @@ export function buildOASessionExtensions(input: {
     ...(askUserExtension === undefined ? {} : { askUserExtension }),
     webAccess,
     planModeController,
+    promptPolicyController,
   };
 }

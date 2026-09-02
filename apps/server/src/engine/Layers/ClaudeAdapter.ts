@@ -2812,6 +2812,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               uncachedInputTokens:
                 (context.cumulativeTokenBreakdown?.uncachedInputTokens ?? 0) +
                 lastTokenBreakdown.uncachedInputTokens,
+              cacheWriteInputTokens:
+                (context.cumulativeTokenBreakdown?.cacheWriteInputTokens ?? 0) +
+                lastTokenBreakdown.cacheWriteInputTokens,
               outputTokens:
                 (context.cumulativeTokenBreakdown?.outputTokens ?? 0) +
                 lastTokenBreakdown.outputTokens,

@@ -224,6 +224,7 @@ export class BrowserHostPipeServer {
   private readonly pipePath: string;
   private readonly platform: NodeJS.Platform;
   private readonly automationHost: BrowserHostAutomationShape;
+  private readonly disposeAutomationHost: (() => Promise<void>) | undefined;
   private readonly maxInFlightRequests: number;
   private readonly maxQueuedOutputBytes: number;
   private readonly capability: string;
@@ -246,8 +247,14 @@ export class BrowserHostPipeServer {
     const hostOptions = normalized.requestOpenPanel
       ? { requestOpenPanel: normalized.requestOpenPanel }
       : {};
-    this.automationHost =
-      normalized.automationHost ?? new DesktopBrowserAutomationHost(browserManager, hostOptions);
+    if (normalized.automationHost) {
+      this.automationHost = normalized.automationHost;
+      this.disposeAutomationHost = undefined;
+    } else {
+      const automationHost = new DesktopBrowserAutomationHost(browserManager, hostOptions);
+      this.automationHost = automationHost;
+      this.disposeAutomationHost = () => automationHost.dispose();
+    }
     this.server = Net.createServer((socket) => this.handleConnection(socket));
   }
 
@@ -281,6 +288,7 @@ export class BrowserHostPipeServer {
     }
     this.sockets.clear();
     this.clients.clear();
+    await this.disposeAutomationHost?.();
     if (this.started) {
       await new Promise<void>((resolve) => this.server.close(() => resolve()));
       this.started = false;

@@ -26,7 +26,10 @@ export function resolveDesktopUserDataPath(input: {
   readonly appDataBase: string;
   readonly userDataDirectoryName: string;
   readonly productHome?: string;
+  readonly testOverridePath?: string | undefined;
 }): string {
+  const testOverridePath = input.testOverridePath?.trim();
+  if (testOverridePath) return Path.resolve(testOverridePath);
   const productHome = input.productHome?.trim();
   if (productHome) {
     return Path.join(productHome, "electron", input.userDataDirectoryName);

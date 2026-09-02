@@ -23,6 +23,7 @@ import {
   PlayIcon,
   SearchIcon,
   SettingsIcon,
+  SortIcon,
   StopFilledIcon,
   TagIcon,
   TemporaryThreadIcon,
@@ -65,13 +66,19 @@ import {
   type CollisionDetection,
   PointerSensor,
   type DragStartEvent,
+  closestCenter,
   closestCorners,
   pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -97,6 +104,11 @@ import {
   type SidebarThreadSortOrder,
   useLocalPreferences,
 } from "../localPreferences";
+import {
+  normalizeHiddenSidebarNavItems,
+  normalizeSidebarNavOrder,
+  type SidebarNavItemId,
+} from "../sidebarNavOrdering";
 import { useServerSettings } from "../serverSettings";
 import { isElectron } from "../env";
 import { useI18n, type MessageKey } from "../i18n";
@@ -240,6 +252,7 @@ import {
 } from "./desktopUpdate.logic";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { Input } from "./ui/input";
 import {
@@ -893,9 +906,11 @@ function PublicSiteMenuItem({
 function SidebarHelpMenu({
   onOpenShortcuts,
   onOpenFeedback,
+  onCustomizeSidebar,
 }: {
   onOpenShortcuts: () => void;
   onOpenFeedback: () => void;
+  onCustomizeSidebar: (() => void) | null;
 }) {
   const { t } = useI18n();
   return (
@@ -914,6 +929,12 @@ function SidebarHelpMenu({
             <SidebarContextMenuIcon icon={KeyboardIcon} />
             <span>{t("shortcuts.title")}</span>
           </MenuItem>
+          {onCustomizeSidebar ? (
+            <MenuItem className={SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME} onClick={onCustomizeSidebar}>
+              <SidebarContextMenuIcon icon={SortIcon} />
+              <span>{t("nav.customizeSidebar")}</span>
+            </MenuItem>
+          ) : null}
           <MenuSeparator />
           <MenuItem className={SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME} onClick={onOpenFeedback}>
             <SidebarContextMenuIcon icon={ChatBubbleIcon} />
@@ -1064,6 +1085,62 @@ function SidebarPrimaryAction({
         ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
+  );
+}
+
+type SidebarNavItemDescriptor = {
+  readonly icon: ComponentType<{ className?: string }>;
+  readonly iconClassName?: string;
+  readonly label: string;
+  readonly active: boolean;
+  readonly badge: SidebarActionBadge | null;
+  readonly onClick: () => void;
+};
+
+function SidebarNavCustomizeRow(props: {
+  id: SidebarNavItemId;
+  item: SidebarNavItemDescriptor;
+  visible: boolean;
+  showLabel: string;
+  hideLabel: string;
+  reorderLabel: string;
+  onVisibleChange: (visible: boolean) => void;
+}) {
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition } =
+    useSortable({ id: props.id });
+  const Icon = props.item.icon;
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className="relative list-none"
+    >
+      <div className={cn(SIDEBAR_HEADER_ROW_CLASS_NAME, "flex items-center gap-2 px-2")}>
+        <Checkbox
+          checked={props.visible}
+          onCheckedChange={(checked) => props.onVisibleChange(Boolean(checked))}
+          aria-label={props.visible ? props.hideLabel : props.showLabel}
+        />
+        <SidebarLeadingIcon size="sm">
+          <SidebarGlyph
+            icon={Icon}
+            variant="leading"
+            {...(props.item.iconClassName ? { className: props.item.iconClassName } : {})}
+          />
+        </SidebarLeadingIcon>
+        <span className="min-w-0 flex-1 truncate">{props.item.label}</span>
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className="inline-flex size-7 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          aria-label={props.reorderLabel}
+          {...attributes}
+          {...listeners}
+        >
+          <SortIcon className="size-3.5" />
+        </button>
+      </div>
+    </li>
   );
 }
 
@@ -5605,6 +5682,89 @@ export default function Sidebar() {
   const projectContextMenuHasOpenServer =
     projectContextMenuServer !== null && firstLocalServerUrl(projectContextMenuServer) !== null;
 
+  const [isCustomizingSidebarNav, setIsCustomizingSidebarNav] = useState(false);
+  const sidebarNavOrder = useMemo(
+    () => normalizeSidebarNavOrder(preferences.sidebarNavOrder),
+    [preferences.sidebarNavOrder],
+  );
+  const hiddenSidebarNavItems = useMemo(
+    () => new Set(normalizeHiddenSidebarNavItems(preferences.hiddenSidebarNavItems)),
+    [preferences.hiddenSidebarNavItems],
+  );
+  const sidebarNavDescriptors = useMemo<Record<SidebarNavItemId, SidebarNavItemDescriptor>>(
+    () => ({
+      newThread: {
+        icon: NewThreadIcon,
+        iconClassName: "size-3.5",
+        label: t("nav.newAgent"),
+        active: false,
+        badge: null,
+        onClick: handlePrimaryNewThread,
+      },
+      kanban: {
+        icon: KanbanIcon,
+        label: t("nav.kanban"),
+        active: isOnKanban,
+        badge: null,
+        onClick: () => void navigate({ to: "/kanban" }),
+      },
+      pullRequests: {
+        icon: IoIosGitCompare,
+        label: t("nav.pullRequests"),
+        active: isOnPullRequests,
+        badge: pullRequestsReviewBadge,
+        onClick: () =>
+          void navigate({
+            to: "/pull-requests",
+            search: { involvement: "all", state: "open" },
+          }),
+      },
+      automations: {
+        icon: ClockIcon,
+        label: t("nav.automations"),
+        active: isOnAutomations,
+        badge: automationAttentionBadge,
+        onClick: () => void navigate({ to: "/automations" }),
+      },
+    }),
+    [
+      automationAttentionBadge,
+      handlePrimaryNewThread,
+      isOnAutomations,
+      isOnKanban,
+      isOnPullRequests,
+      navigate,
+      pullRequestsReviewBadge,
+      t,
+    ],
+  );
+  const visibleSidebarNavIds = useMemo(
+    () =>
+      sidebarNavOrder.filter(
+        (id) => !hiddenSidebarNavItems.has(id) || sidebarNavDescriptors[id].active,
+      ),
+    [hiddenSidebarNavItems, sidebarNavDescriptors, sidebarNavOrder],
+  );
+  const handleSidebarNavDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!event.over || event.active.id === event.over.id) return;
+      const from = sidebarNavOrder.indexOf(event.active.id as SidebarNavItemId);
+      const to = sidebarNavOrder.indexOf(event.over.id as SidebarNavItemId);
+      if (from < 0 || to < 0) return;
+      updatePreferences({ sidebarNavOrder: arrayMove(sidebarNavOrder, from, to) });
+    },
+    [sidebarNavOrder, updatePreferences],
+  );
+  const handleSidebarNavVisibilityChange = useCallback(
+    (id: SidebarNavItemId, visible: boolean) => {
+      const withoutId = normalizeHiddenSidebarNavItems(preferences.hiddenSidebarNavItems).filter(
+        (candidate) => candidate !== id,
+      );
+      updatePreferences({ hiddenSidebarNavItems: visible ? withoutId : [...withoutId, id] });
+    },
+    [preferences.hiddenSidebarNavItems, updatePreferences],
+  );
+
   return (
     <>
       {isElectron ? (
@@ -5737,44 +5897,67 @@ export default function Sidebar() {
                         onClick={isOnStudio ? handleCreateStudioChat : handleCreateHomeChat}
                       />
                     </>
+                  ) : isCustomizingSidebarNav ? (
+                    <div className="rounded-2xl border border-border/60 bg-card/70 p-1.5 shadow-sm">
+                      <div className="flex items-center justify-between px-2 pb-1">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {t("nav.customizeSidebar")}
+                        </span>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setIsCustomizingSidebarNav(false)}
+                        >
+                          {t("common.done")}
+                        </Button>
+                      </div>
+                      <DndContext
+                        sensors={projectDnDSensors}
+                        collisionDetection={closestCenter}
+                        modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
+                        onDragEnd={handleSidebarNavDragEnd}
+                      >
+                        <SortableContext
+                          items={sidebarNavOrder}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <ul className="flex flex-col gap-0.5">
+                            {sidebarNavOrder.map((id) => {
+                              const item = sidebarNavDescriptors[id];
+                              return (
+                                <SidebarNavCustomizeRow
+                                  key={id}
+                                  id={id}
+                                  item={item}
+                                  visible={!hiddenSidebarNavItems.has(id)}
+                                  showLabel={t("nav.showItem", { name: item.label })}
+                                  hideLabel={t("nav.hideItem", { name: item.label })}
+                                  reorderLabel={t("nav.reorderItem", { name: item.label })}
+                                  onVisibleChange={(visible) =>
+                                    handleSidebarNavVisibilityChange(id, visible)
+                                  }
+                                />
+                              );
+                            })}
+                          </ul>
+                        </SortableContext>
+                      </DndContext>
+                    </div>
                   ) : (
-                    <>
-                      <SidebarPrimaryAction
-                        icon={NewThreadIcon}
-                        iconClassName="size-3.5"
-                        label={t("nav.newAgent")}
-                        onClick={handlePrimaryNewThread}
-                      />
-                      <SidebarPrimaryAction
-                        icon={KanbanIcon}
-                        label={t("nav.kanban")}
-                        active={isOnKanban}
-                        onClick={() => {
-                          void navigate({ to: "/kanban" });
-                        }}
-                      />
-                      <SidebarPrimaryAction
-                        icon={IoIosGitCompare}
-                        label={t("nav.pullRequests")}
-                        active={isOnPullRequests}
-                        badge={pullRequestsReviewBadge}
-                        onClick={() => {
-                          void navigate({
-                            to: "/pull-requests",
-                            search: { involvement: "all", state: "open" },
-                          });
-                        }}
-                      />
-                      <SidebarPrimaryAction
-                        icon={ClockIcon}
-                        label={t("nav.automations")}
-                        active={isOnAutomations}
-                        badge={automationAttentionBadge}
-                        onClick={() => {
-                          void navigate({ to: "/automations" });
-                        }}
-                      />
-                    </>
+                    visibleSidebarNavIds.map((id) => {
+                      const item = sidebarNavDescriptors[id];
+                      return (
+                        <SidebarPrimaryAction
+                          key={id}
+                          icon={item.icon}
+                          {...(item.iconClassName ? { iconClassName: item.iconClassName } : {})}
+                          label={item.label}
+                          active={item.active}
+                          badge={item.badge}
+                          onClick={item.onClick}
+                        />
+                      );
+                    })
                   )}
                 </SidebarMenu>
               </SidebarGroup>
@@ -6114,6 +6297,9 @@ export default function Sidebar() {
                       void navigate({ to: "/settings", search: { section: "shortcuts" } })
                     }
                     onOpenFeedback={openFeedbackDialog}
+                    onCustomizeSidebar={
+                      isOnContainerSurface ? null : () => setIsCustomizingSidebarNav(true)
+                    }
                   />
                 )}
               </div>

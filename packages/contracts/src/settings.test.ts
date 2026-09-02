@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
-import { HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS } from "./agentTools";
 import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./settings";
 
@@ -63,7 +62,7 @@ describe("agent tool settings contract", () => {
   });
 });
 
-describe("server-only Haros default prompt settings", () => {
+describe("retired Haros prompt settings", () => {
   it("ignores retired Haros model hints in persisted settings and public patches", () => {
     const retiredKey = ["custom", "Models"].join("");
     const settings = Schema.decodeUnknownSync(ServerSettings)({
@@ -71,7 +70,7 @@ describe("server-only Haros default prompt settings", () => {
         oa: {
           enabled: false,
           [retiredKey]: ["legacy/engine-model"],
-          defaultPrompt: null,
+          defaultPrompt: "retired private prompt",
         },
       },
     });
@@ -79,7 +78,7 @@ describe("server-only Haros default prompt settings", () => {
       engines: { oa: { [retiredKey]: ["legacy/engine-model"] } },
     });
 
-    expect(settings.engines.oa).toEqual({ enabled: false, defaultPrompt: null });
+    expect(settings.engines.oa).toEqual({ enabled: false });
     expect(patch.engines?.oa).toEqual({});
   });
 
@@ -88,18 +87,6 @@ describe("server-only Haros default prompt settings", () => {
       engines: { oa: { defaultPrompt: "must stay private" } },
     });
     expect(patch.engines?.oa).not.toHaveProperty("defaultPrompt");
-  });
-
-  it("uses the same UTF-8 byte boundary as the prompt contract", () => {
-    const emoji = "😀";
-    const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
-    const decodeSettings = (defaultPrompt: string) =>
-      Schema.decodeUnknownSync(ServerSettings)({
-        engines: { oa: { defaultPrompt } },
-      });
-
-    expect(decodeSettings(withinLimit).engines.oa.defaultPrompt).toBe(withinLimit);
-    expect(() => decodeSettings(`${withinLimit}${emoji}`)).toThrow();
   });
 });
 

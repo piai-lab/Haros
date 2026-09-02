@@ -25,7 +25,7 @@ export function activeThreadGoal(thread: {
   return thread.goalPausedAt == null ? thread.goal : undefined;
 }
 
-function buildProviderGoalPrompt(goal: string | undefined): string | null {
+export function buildProviderGoalPrompt(goal: string | undefined): string | null {
   const objective = goal?.trim();
   if (!objective) {
     return null;
