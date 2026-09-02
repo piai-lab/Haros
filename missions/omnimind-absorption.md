@@ -3,13 +3,13 @@
 ## 权威与环境
 
 - Canonical status: This file is the only current Campaign state; other artifacts are evidence, not competing status documents.
-- Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest`, Haros monorepo with root `package.json` name `@harnessos/monorepo`.
+- Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros`, Haros monorepo with root `package.json` name `@harnessos/monorepo`.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `cef48170705e40424ffa1d8f4d541c4e7d32a67c`.
-- Last reconciled revision: latest product candidate `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4`, based on local `main` `1da509a68b270facb4e3cb87c5f319e30c07143b`; the earlier merged candidate remains evidenced by E-010.
-- Worktree state: product code is frozen in one commit; only this canonical Campaign/Goal status update follows it. The original `main` worktree's user-owned `.gitignore` and Guidebook evidence remain untouched.
-- Last reconciled at: `2026-09-02T23:15:06+08:00`.
-- Active branch/worktree: `codex/omnimind-latest-absorption` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest`, based exactly on local `main` `1da509a68b270facb4e3cb87c5f319e30c07143b`.
+- Last reconciled revision: product candidate `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4` merged into local `main` by `743c0f38f2611341d0c71e0b26769590bce2bca8`; this status-only commit follows that unchanged product tree.
+- Worktree state: the absorption branch and isolated worktree are deleted after a conflict-free merge. The original `main` worktree's user-owned `.gitignore` and Guidebook evidence remain untouched.
+- Last reconciled at: `2026-09-02T23:17:34+08:00`.
+- Active branch/worktree: local `main` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros`; no absorption branch or worktree remains.
 - Applicable instructions: repository `AGENTS.md`; `README.md`; `docs/architecture.md`; for adopted source, `docs/source-intake.md` and `source-adoptions.json`; `zq-dev-rules`, `zq-ui`, and `zq-goal` Skills.
 - Superseded state sources: no competing state for this Campaign. `missions/haros-guidebook{,-goal}.md` and `missions/haros-owner-lifecycle-cut{,-goal}.md` are independent Campaigns with distinct worktrees and scopes; they are intentionally not superseded.
 
@@ -82,9 +82,9 @@
 
 ## 当前状态
 
-- Current checkpoint: the latest cut through OmniMind `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1` is frozen at product commit `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4`; all authorized local implementation and aggregate verification is complete.
+- Current checkpoint: the latest cut through OmniMind `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1` is frozen at product commit `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4` and merged into local `main` by `743c0f38f2611341d0c71e0b26769590bce2bca8`; all authorized local implementation, aggregate verification and cleanup is complete.
 - Active Claim: none for local implementation. Campaign-wide verified closure still requires native Linux/Windows artifact evidence for C-006 and a genuinely fresh evaluator; this macOS producer keeps all Claims at candidate rather than self-certifying them.
-- Next safe action: commit this status-only update, merge `codex/omnimind-latest-absorption` into local `main`, verify identical committed trees and protected dirty paths, then remove only this completed worktree and branch.
+- Next safe action: no local implementation action remains. Optional future completion work is limited to genuine native Linux/Windows artifact evidence and an independent fresh audit; neither changes the merged product unless it finds a reproducible defect.
 - Blockers to verified Campaign closure, not to local completion: unavailable native Linux/Windows artifact receipts and no separately authorized fresh evaluator. These do not justify production compensation or false platform claims.
 - Last material change: latest mechanisms were translated into Haros owners, including Pi 0.84.4, Prompt/Personal Strategy consolidation, WebMCP bounds, four-bucket cache telemetry, platform process teardown, source Desktop isolation, Thread Find, Sidebar/Right Dock behavior, SQLite scaling and latest diff evidence. Full aggregate local validation is green. The optional `public-surface:check` remains red on unchanged baseline README/provenance-scanner assumptions and is not represented as a product regression or a passed gate.
 

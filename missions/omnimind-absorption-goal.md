@@ -1,6 +1,6 @@
 ## 目标
 
-在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest` 保留此前 47 个已审实现提交的完整吸收，并继续吸收 OmniMind 到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1` 的新增用户效果、故障不变量和维护约束。实现必须归入 Haros 既有唯一 owner，最终覆盖 Session admission、终止投递、Ask 草稿、Engine Web Surface/Curator/删除回收、Timeline/工具/Diff/Transcript/Send to Agent、确定性 unsigned Desktop 构建、WebMCP、Prompt/Personal Strategy、缓存观测、进程回收、Thread Find 和来源记录。
+在 `/Users/liuzaoqu/Desktop/Develop/independent/Haros` 保留此前 47 个已审实现提交的完整吸收，并继续吸收 OmniMind 到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1` 的新增用户效果、故障不变量和维护约束。实现必须归入 Haros 既有唯一 owner，最终覆盖 Session admission、终止投递、Ask 草稿、Engine Web Surface/Curator/删除回收、Timeline/工具/Diff/Transcript/Send to Agent、确定性 unsigned Desktop 构建、WebMCP、Prompt/Personal Strategy、缓存观测、进程回收、Thread Find 和来源记录。
 
 ## 范围与边界
 
@@ -28,7 +28,7 @@ Canonical Executor 只更新 `missions/omnimind-absorption.md` 这一份状态�
 
 Active Claim: none for local implementation; native Linux/Windows C-006 evidence and a fresh independent evaluator remain external completion boundaries.
 
-当前实现 cut：先前吸收已在本地 `main`，本轮以 `1da509a68b270facb4e3cb87c5f319e30c07143b` 为基线，将 OmniMind 从 `b5a966bb9de09861c98a1d7ac3936b092614fed3` 推进到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1`。产品候选已冻结为 `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4`，位于唯一 worktree `/Users/liuzaoqu/Desktop/Develop/independent/Haros-omnimind-latest` 和分支 `codex/omnimind-latest-absorption`；本地合并后仅删除该 worktree/branch。C-006 仍只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失；不得用生产补偿逻辑消除外部证据边界。
+当前实现 cut：先前吸收已在本地 `main`，本轮以 `1da509a68b270facb4e3cb87c5f319e30c07143b` 为基线，将 OmniMind 从 `b5a966bb9de09861c98a1d7ac3936b092614fed3` 推进到冻结 revision `30a79b2e5845c1ae9899d6508d60e66b63ee4fd1`。产品候选 `52cd2cf54c65902c262a0b4b4be7bde70e42bfc4` 已通过 `743c0f38f2611341d0c71e0b26769590bce2bca8` 合并进本地 `main`；`codex/omnimind-latest-absorption` 与其 worktree 已删除。C-006 仍只受 native Linux/Windows 证据约束，fresh evaluator 仍缺失；不得用生产补偿逻辑消除外部证据边界。
 
 UI 复用规则：直接 import Haros 现有 CodeBlock、FileDiff、Dock/Split、Timeline primitives；仅对精确 donor 机制做 copied-adapted 或 mechanism-only，并记录实际 source/target paths。所有新用户文案同时交付英文与简体中文，键盘、focus、响应式、light/dark、reduced-motion、失败与恢复不得退化。
 
