@@ -3,7 +3,7 @@ import {
   type CapturedProcess,
   type ProcessTreeKiller,
   type TerminalKillSignal,
-} from "../terminal/processTreeKiller";
+} from "../platform/processTreeController";
 import { Effect } from "effect";
 
 const DEFAULT_TERM_GRACE_MS = 1_500;

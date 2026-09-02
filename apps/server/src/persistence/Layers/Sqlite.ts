@@ -1,7 +1,10 @@
+import { totalmem } from "node:os";
+
 import { Effect, Layer, FileSystem, Path } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { runMigrations } from "../Migrations.ts";
+import { resolveSqliteMemoryBudget } from "../sqliteMemoryBudget.ts";
 import {
   inspectPendingMigrationRecovery,
   reclaimOrphanedMigrationArtifacts,
@@ -94,17 +97,15 @@ const makeSetup = (dbPath?: string, pendingRecovery: MigrationRecoveryMarker | n
       // power loss is acceptable.
       yield* sql`PRAGMA synchronous = NORMAL;`;
       yield* sql`PRAGMA foreign_keys = ON;`;
-      // The event log can grow beyond a gigabyte. A bounded 256 MiB page-cache
-      // ceiling keeps hot b-tree pages resident during replay without allocating
-      // that memory up front. Keep temp_store at SQLite's default: snapshot
-      // queries may build history-sized temp b-trees, which must be allowed to
-      // spill instead of becoming unbounded native RSS.
-      yield* sql`PRAGMA cache_size = -262144;`;
+      // These on-demand ceilings scale down on smaller hosts so the database,
+      // renderer and Engine runtime do not compete their way into swap.
+      const memoryBudget = resolveSqliteMemoryBudget(totalmem());
+      yield* sql`PRAGMA cache_size = ${sql.literal(String(memoryBudget.cacheSizePragma))};`;
       if (dbPath) {
         // File-backed replay and backups can use the OS page cache without a
         // second full SQLite heap copy. The exclusive lifecycle lock prevents
         // another process from truncating the mapped database underneath us.
-        yield* sql`PRAGMA mmap_size = 1073741824;`;
+        yield* sql`PRAGMA mmap_size = ${sql.literal(String(memoryBudget.mmapSizeBytes))};`;
         // Setting locking_mode changes connection policy; this transaction
         // actually acquires and retains the database lock before startup
         // continues, closing the window where another client could attach.

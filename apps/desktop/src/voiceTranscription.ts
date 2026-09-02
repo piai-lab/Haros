@@ -22,6 +22,7 @@ import {
 } from "@harnessos/shared/outboundHttp";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { SERVER_TRANSCRIBE_VOICE_CHANNEL } from "./ipcChannels";
+import { terminateDesktopOwnedChild } from "./ownedChildProcess";
 
 const MAX_VOICE_DURATION_MS = 120_000;
 
@@ -108,7 +109,7 @@ async function resolveDesktopVoiceAuth(
         return;
       }
       settled = true;
-      child.kill();
+      terminateDesktopOwnedChild(child);
       reject(error);
     };
     const resolveOnce = (value: { token: string; transcriptionUrl: string }) => {
@@ -116,7 +117,7 @@ async function resolveDesktopVoiceAuth(
         return;
       }
       settled = true;
-      child.kill();
+      terminateDesktopOwnedChild(child);
       resolve(value);
     };
     const send = (payload: Record<string, unknown>) => {

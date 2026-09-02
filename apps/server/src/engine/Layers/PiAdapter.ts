@@ -66,7 +66,6 @@ import {
   makePiFamilyUserInputBridge,
 } from "../piFamilyUserInputBridge.ts";
 import { ServerConfig } from "../../config.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
 import { lazyModule } from "../../lazyModule.ts";
 import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
 import {
@@ -135,11 +134,17 @@ import {
 import { getOAModelRuntimeMutationRevision } from "../oaModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
-import { extractProposedPlanMarkdown, withEnginePlanModePrompt } from "../planMode.ts";
+import { extractProposedPlanMarkdown } from "../planMode.ts";
 import type { OAPlanModeController } from "../oaPlanModeExtension.ts";
+import {
+  modePolicyVersion,
+  stableCoreToolsetHash,
+  type HarosPromptPolicyController,
+} from "../oaPromptPolicyExtension.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
 import {
   makeOAEngineSystemPrompt,
+  oaFirmwareVersion,
   makePiHostSystemPrompt,
   promptRequiredHostGatewayToolNames,
 } from "../piFamilyPrompt.ts";
@@ -467,6 +472,8 @@ interface PiSessionContext {
   readonly resourceScopeIdentity: string;
   readonly hostProjection?: HostGatewayHostExtensionHandle;
   readonly planModeController?: OAPlanModeController;
+  readonly promptPolicyController?: HarosPromptPolicyController;
+  readonly stableToolsetHash?: string;
   gatewaySessionLease?: HostGatewaySessionLease;
   gatewayConnection?: HostGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -765,7 +772,8 @@ export function normalizePiTokenUsage(
   const totalTokenBreakdown = hasValidBreakdown
     ? {
         cachedInputTokens: cacheReadTokens,
-        uncachedInputTokens: inputTokens + cacheWriteTokens,
+        uncachedInputTokens: inputTokens,
+        cacheWriteInputTokens: cacheWriteTokens,
         outputTokens,
       }
     : undefined;
@@ -781,6 +789,10 @@ export function normalizePiTokenUsage(
             totalTokenBreakdown.uncachedInputTokens >= previousBreakdown.uncachedInputTokens
               ? totalTokenBreakdown.uncachedInputTokens - previousBreakdown.uncachedInputTokens
               : totalTokenBreakdown.uncachedInputTokens,
+          cacheWriteInputTokens:
+            totalTokenBreakdown.cacheWriteInputTokens >= previousBreakdown.cacheWriteInputTokens
+              ? totalTokenBreakdown.cacheWriteInputTokens - previousBreakdown.cacheWriteInputTokens
+              : totalTokenBreakdown.cacheWriteInputTokens,
           outputTokens:
             totalTokenBreakdown.outputTokens >= previousBreakdown.outputTokens
               ? totalTokenBreakdown.outputTokens - previousBreakdown.outputTokens
@@ -793,6 +805,7 @@ export function normalizePiTokenUsage(
     lastTokenBreakdown !== undefined &&
     lastTokenBreakdown.cachedInputTokens +
       lastTokenBreakdown.uncachedInputTokens +
+      lastTokenBreakdown.cacheWriteInputTokens +
       lastTokenBreakdown.outputTokens >
       0;
   return {
@@ -817,7 +830,7 @@ function makeAgentDir(
   return trimToUndefined(agentDir) ?? piSdk.getAgentDir();
 }
 
-// Mirrors Pi 0.84.3's own session path encoding while honoring the explicit
+// Mirrors Pi 0.84.4's own session path encoding while honoring the explicit
 // agentDir already passed through the SDK services. Pi's public SessionManager
 // accepts this path but does not expose its default-path helper.
 function piSessionDir(agentDir: string, cwd: string): string {
@@ -898,9 +911,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     const displayName = family.displayName;
     const extensionLabel = `${displayName} extension`;
     const serverConfig = yield* ServerConfig;
-    const serverSettings = Option.getOrUndefined(
-      yield* Effect.serviceOption(ServerSettingsService),
-    );
     const fileSystem = yield* FileSystem.FileSystem;
     const hostGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(HostGatewayCredentials),
@@ -1084,6 +1094,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }
       Effect.runFork(cancelHostGatewayTurn(context.gatewaySessionLease, turnId));
       context.planModeController?.deactivate(turnId);
+      context.promptPolicyController?.deactivate();
       context.activeTurnId = undefined;
       context.activeInteractionMode = undefined;
       context.proposedPlanCandidate = undefined;
@@ -1131,6 +1142,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     const disposeSessionContext = async (context: PiSessionContext) => {
       try {
         context.planModeController?.deactivate();
+        context.promptPolicyController?.deactivate();
         context.activeInteractionMode = undefined;
         context.proposedPlanCandidate = undefined;
         await Effect.runPromise(
@@ -1364,6 +1376,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         );
       }
       context.planModeController?.deactivate(turnId);
+      context.promptPolicyController?.deactivate();
       context.activeTurnId = undefined;
       context.activeInteractionMode = undefined;
       context.proposedPlanCandidate = undefined;
@@ -1980,7 +1993,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }) => void;
       askUserInteraction?: AskUserProductInteractionPort;
       hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
-      defaultPrompt?: string;
       immutableSystemPrompt?: string;
       workSurface?: EngineWorkSurface;
       productSurface?: ProductSurface;
@@ -2041,6 +2053,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         engine !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: HostGatewayHostExtensionHandle | undefined;
       let resolvedPlanModeController: OAPlanModeController | undefined;
+      let resolvedPromptPolicyController: HarosPromptPolicyController | undefined;
+      let resolvedStableToolsetHash: string | undefined;
       const hostProjectionDiagnostics: string[] = [];
       const webAccessDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
@@ -2050,13 +2064,21 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         sessionStartEvent,
       }) => {
         const composition: Pick<OASessionExtensionComposition, "extensions"> &
-          Partial<Pick<OASessionExtensionComposition, "host" | "planModeController">> =
+          Partial<
+            Pick<
+              OASessionExtensionComposition,
+              "host" | "planModeController" | "promptPolicyController"
+            >
+          > =
           engine === "oa"
             ? buildOASessionExtensions({
                 agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
                 ...(curatorPresenter === undefined ? {} : { curatorPresenter }),
                 ...(input.workSurface === undefined ? {} : { workSurface: input.workSurface }),
+                ...(input.immutableSystemPrompt === undefined
+                  ? {}
+                  : { stableProductPrompt: input.immutableSystemPrompt }),
                 ...(input.gatewayConnection === undefined
                   ? {}
                   : { gatewayConnection: input.gatewayConnection }),
@@ -2074,6 +2096,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         const inlineExtensions = composition.extensions;
         resolvedHostProjection = composition.host;
         resolvedPlanModeController = composition.planModeController;
+        resolvedPromptPolicyController = composition.promptPolicyController;
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
@@ -2110,6 +2133,17 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         const shellPath = services.settingsManager.getShellPath();
         const commandPrefix = services.settingsManager.getShellCommandPrefix();
         input.processSupervisor.setShellPath(shellPath);
+        const customTools = [
+          input.sdk.defineTool(
+            input.sdk.createBashToolDefinition(cwd, {
+              operations: input.processSupervisor.operations,
+              ...(commandPrefix === undefined ? {} : { commandPrefix }),
+              ...(shellPath === undefined ? {} : { shellPath }),
+            }),
+          ),
+          ...(input.gatewayTools ?? []),
+        ];
+        if (engine === "oa") resolvedStableToolsetHash = stableCoreToolsetHash(customTools);
         const agentSessionOptions = {
           services,
           sessionManager,
@@ -2119,17 +2153,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           ...(input.immutableSystemPrompt === undefined
             ? {}
             : { immutableSystemPrompt: input.immutableSystemPrompt }),
-          ...(input.defaultPrompt === undefined ? {} : { defaultPrompt: input.defaultPrompt }),
-          customTools: [
-            input.sdk.defineTool(
-              input.sdk.createBashToolDefinition(cwd, {
-                operations: input.processSupervisor.operations,
-                ...(commandPrefix === undefined ? {} : { commandPrefix }),
-                ...(shellPath === undefined ? {} : { shellPath }),
-              }),
-            ),
-            ...(input.gatewayTools ?? []),
-          ],
+          customTools,
         };
         const createdSession = await input.sdk.createAgentSessionFromServices(agentSessionOptions);
         if (composition.host !== undefined) {
@@ -2165,6 +2189,12 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         ...(resolvedPlanModeController === undefined
           ? {}
           : { planModeController: resolvedPlanModeController }),
+        ...(resolvedPromptPolicyController === undefined
+          ? {}
+          : { promptPolicyController: resolvedPromptPolicyController }),
+        ...(resolvedStableToolsetHash === undefined
+          ? {}
+          : { stableToolsetHash: resolvedStableToolsetHash }),
       };
     };
 
@@ -2210,33 +2240,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           }
         }
         const piSdk = yield* loadPiSdk("session/start");
-        const currentServerSettings =
-          engine === "oa" && serverSettings
-            ? yield* serverSettings.getSettings.pipe(
-                Effect.mapError(
-                  (cause) =>
-                    new EngineAdapterRequestError({
-                      engine,
-                      method: "session/start",
-                      detail: "Failed to load Haros settings.",
-                      cause,
-                    }),
-                ),
-              )
-            : undefined;
-        const configuredDefaultPrompt =
-          engine === "oa" ? currentServerSettings?.engines.oa.defaultPrompt : null;
-        const defaultPrompt =
-          engine === "oa"
-            ? (configuredDefaultPrompt ?? piSdk.DEFAULT_BASE_INSTRUCTIONS)
-            : undefined;
-        if (engine === "oa" && defaultPrompt === undefined) {
-          return yield* new EngineAdapterValidationError({
-            engine,
-            operation: "session/start",
-            issue: "Haros default instructions are unavailable.",
-          });
-        }
         const processSupervisor = makePiBashProcessSupervisor({
           getShellConfig: () => piSdk.getShellConfig(),
           ...(options?.spawnProcess ? { spawnProcess: options.spawnProcess } : {}),
@@ -2359,6 +2362,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           webAccessDiagnostics,
           hostProjection,
           planModeController,
+          promptPolicyController,
+          stableToolsetHash,
         } = yield* releaseHostGatewaySessionLeaseOnInterrupt(
           hostGatewaySessionLease,
           Effect.tryPromise({
@@ -2416,7 +2421,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                       engine === "oa" ? hostGatewayConnection !== undefined : available,
                     enabledBuiltInGroups,
                   }),
-                ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
                 ...(engine === "oa" && workSurface !== undefined
                   ? {
                       immutableSystemPrompt: makeOAEngineSystemPrompt({
@@ -2473,6 +2477,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           ),
           ...(hostProjection === undefined ? {} : { hostProjection }),
           ...(planModeController === undefined ? {} : { planModeController }),
+          ...(promptPolicyController === undefined ? {} : { promptPolicyController }),
+          ...(stableToolsetHash === undefined ? {} : { stableToolsetHash }),
           ...(hostGatewaySessionLease
             ? {
                 gatewaySessionLease: hostGatewaySessionLease,
@@ -2867,12 +2873,22 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           const payload = yield* buildPromptPayload(input);
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           const interactionMode = input.interactionMode ?? "default";
-          const promptText =
-            engine === "oa"
-              ? withEnginePlanModePrompt({ text: payload.text, interactionMode })
-              : payload.text;
+          const promptText = engine === "oa" ? payload.text : payload.text;
           context.activeTurnId = turnId;
           context.activeInteractionMode = interactionMode;
+          context.promptPolicyController?.activate({
+            surface: context.workSurface ?? "chat",
+            mode: interactionMode,
+            runtimeAccess: interactionMode === "plan" ? "read_only" : "read_write",
+            firmwareVersion: oaFirmwareVersion({
+              ...(context.productSurface === undefined
+                ? {}
+                : { productSurface: context.productSurface }),
+              ...(context.workSurface === undefined ? {} : { workSurface: context.workSurface }),
+            }),
+            modePolicyVersion: modePolicyVersion(interactionMode),
+            stableToolsetHash: context.stableToolsetHash ?? "unavailable",
+          });
           context.proposedPlanCandidate = undefined;
           if (engine === "oa" && interactionMode === "plan") {
             context.planModeController?.activate(turnId);
@@ -2934,6 +2950,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   });
                   yield* cancelHostGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
                   context.planModeController?.deactivate(turnId);
+                  context.promptPolicyController?.deactivate();
                   context.activeTurnId = undefined;
                   context.activeInteractionMode = undefined;
                   context.proposedPlanCandidate = undefined;
@@ -2955,6 +2972,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             } satisfies EngineRuntimeEvent);
             yield* cancelHostGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
             context.planModeController?.deactivate(turnId);
+            context.promptPolicyController?.deactivate();
             context.activeTurnId = undefined;
             context.activeInteractionMode = undefined;
             context.proposedPlanCandidate = undefined;
@@ -2990,14 +3008,24 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           const interactionMode = context.activeTurnId
             ? (context.activeInteractionMode ?? "default")
             : (input.interactionMode ?? "default");
-          const promptText =
-            engine === "oa"
-              ? withEnginePlanModePrompt({ text: payload.text, interactionMode })
-              : payload.text;
+          const promptText = engine === "oa" ? payload.text : payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
           if (!context.activeTurnId) {
             context.activeTurnId = turnId;
             context.activeInteractionMode = interactionMode;
+            context.promptPolicyController?.activate({
+              surface: context.workSurface ?? "chat",
+              mode: interactionMode,
+              runtimeAccess: interactionMode === "plan" ? "read_only" : "read_write",
+              firmwareVersion: oaFirmwareVersion({
+                ...(context.productSurface === undefined
+                  ? {}
+                  : { productSurface: context.productSurface }),
+                ...(context.workSurface === undefined ? {} : { workSurface: context.workSurface }),
+              }),
+              modePolicyVersion: modePolicyVersion(interactionMode),
+              stableToolsetHash: context.stableToolsetHash ?? "unavailable",
+            });
             context.proposedPlanCandidate = undefined;
             if (engine === "oa" && interactionMode === "plan") {
               context.planModeController?.activate(turnId);
@@ -3188,44 +3216,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             return "busy" as const;
           }
           context.planModeController?.deactivate();
+          context.promptPolicyController?.deactivate();
           context.activeInteractionMode = undefined;
           context.proposedPlanCandidate = undefined;
-          const currentServerSettings =
-            engine === "oa" && serverSettings
-              ? yield* serverSettings.getSettings.pipe(
-                  Effect.mapError(
-                    (cause) =>
-                      new EngineAdapterRequestError({
-                        engine,
-                        method: "session/reload",
-                        detail: "Failed to load Haros settings.",
-                        cause,
-                      }),
-                  ),
-                )
-              : undefined;
-          const reloadSdk = engine === "oa" ? yield* loadPiSdk("session/reload") : null;
-          const configuredDefaultPrompt =
-            engine === "oa" ? currentServerSettings?.engines.oa.defaultPrompt : null;
-          const defaultPrompt =
-            engine === "oa"
-              ? (configuredDefaultPrompt ?? reloadSdk?.DEFAULT_BASE_INSTRUCTIONS)
-              : undefined;
-          if (engine === "oa" && defaultPrompt === undefined) {
-            return yield* new EngineAdapterValidationError({
-              engine,
-              operation: "session/reload",
-              issue: "Haros default instructions are unavailable.",
-            });
-          }
           yield* Effect.tryPromise({
-            try: () =>
-              (
-                context.runtime.session.reload as (options?: {
-                  beforeSessionStart?: () => void | Promise<void>;
-                  defaultPrompt?: string;
-                }) => Promise<void>
-              )(defaultPrompt === undefined ? undefined : { defaultPrompt }),
+            try: () => context.runtime.session.reload(),
             catch: (cause) =>
               new EngineAdapterRequestError({
                 engine,

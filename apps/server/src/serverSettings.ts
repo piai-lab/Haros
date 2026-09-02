@@ -69,17 +69,8 @@ export interface ServerSettingsShape {
     engine: ExternalEngineServer,
     serverPassword: string,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
-  readonly mutateHarosDefaultPrompt: (
-    expected: string | null,
-    next: string | null,
-  ) => Effect.Effect<HarosDefaultPromptMutationResult, ServerSettingsError>;
   readonly streamChanges: Stream.Stream<ServerSettings>;
   readonly streamViews: Stream.Stream<ServerSettingsView>;
-}
-
-export interface HarosDefaultPromptMutationResult {
-  readonly state: "changed" | "unchanged" | "conflict";
-  readonly current: string | null;
 }
 
 export interface ServerSettingsSnapshot {
@@ -98,13 +89,8 @@ const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
 ] as const;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
-  const { defaultPrompt: _defaultPrompt, ...oa } = settings.engines.oa;
   return {
     ...settings,
-    engines: {
-      ...settings.engines,
-      oa,
-    },
   };
 }
 
@@ -166,10 +152,6 @@ export class ServerSettingsService extends ServiceMap.Service<
               ...DEFAULT_SERVER_SETTINGS,
               engines: {
                 ...DEFAULT_SERVER_SETTINGS.engines,
-                oa: {
-                  ...DEFAULT_SERVER_SETTINGS.engines.oa,
-                  defaultPrompt: current.engines.oa.defaultPrompt,
-                },
                 kilo: {
                   ...DEFAULT_SERVER_SETTINGS.engines.kilo,
                   serverPasswordConfigured: current.engines.kilo.serverPasswordConfigured,
@@ -186,25 +168,6 @@ export class ServerSettingsService extends ServiceMap.Service<
             return toServerSettingsView(next);
           }),
         );
-        const mutateHarosDefaultPrompt = (expected: string | null, next: string | null) =>
-          writeSemaphore.withPermits(1)(
-            Effect.gen(function* () {
-              const currentSettings = yield* Ref.get(currentSettingsRef);
-              const current = currentSettings.engines.oa.defaultPrompt;
-              if (current !== expected) return { state: "conflict" as const, current };
-              if (current === next) return { state: "unchanged" as const, current };
-              const nextSettings = yield* replaceHarosDefaultPrompt(
-                "<memory>",
-                currentSettings,
-                next,
-              );
-              yield* Ref.set(currentSettingsRef, nextSettings);
-              yield* Ref.update(revisionRef, (revision) => revision + 1);
-              yield* emitChange(nextSettings);
-              return { state: "changed" as const, current: next };
-            }),
-          );
-
         return {
           start: Effect.void,
           ready: Effect.void,
@@ -227,7 +190,6 @@ export class ServerSettingsService extends ServiceMap.Service<
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
           resetSettingsView,
           updateEngineCredential,
-          mutateHarosDefaultPrompt,
           get streamChanges() {
             return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
           },
@@ -284,32 +246,6 @@ function normalizeSettings(
         new ServerSettingsError({
           settingsPath,
           detail: `failed to normalize server settings: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
-          cause,
-        }),
-    ),
-  );
-}
-
-function replaceHarosDefaultPrompt(
-  settingsPath: string,
-  current: ServerSettings,
-  defaultPrompt: string | null,
-): Effect.Effect<ServerSettings, ServerSettingsError> {
-  return Schema.decodeUnknownEffect(ServerSettings)({
-    ...current,
-    engines: {
-      ...current.engines,
-      oa: {
-        ...current.engines.oa,
-        defaultPrompt,
-      },
-    },
-  }).pipe(
-    Effect.mapError(
-      (cause) =>
-        new ServerSettingsError({
-          settingsPath,
-          detail: `failed to normalize Haros default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
           cause,
         }),
     ),
@@ -664,27 +600,6 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
-  const mutateHarosDefaultPrompt = (expected: string | null, nextValue: string | null) =>
-    writeSemaphore.withPermits(1)(
-      Effect.gen(function* () {
-        const disk = yield* loadSettingsFromDisk;
-        const current = disk.settings.engines.oa.defaultPrompt;
-        if (current !== expected) return { state: "conflict" as const, current };
-        if (current === nextValue) return { state: "unchanged" as const, current };
-        const next = yield* replaceHarosDefaultPrompt(settingsPath, disk.settings, nextValue);
-        const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
-        yield* writeSettingsAtomically({
-          revision: nextRevision,
-          migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
-          settings: next,
-        });
-        yield* Ref.set(settingsRef, next);
-        yield* Ref.set(revisionRef, nextRevision);
-        yield* emitChange(next);
-        return { state: "changed" as const, current: nextValue };
-      }),
-    );
-
   const updateEngineCredential = (engine: ExternalEngineServer, serverPassword: string) =>
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
@@ -725,18 +640,9 @@ const makeServerSettings = Effect.gen(function* () {
 
   const resetSettingsView = writeSemaphore.withPermits(1)(
     Effect.gen(function* () {
-      const disk = yield* loadSettingsFromDisk;
       const credentialState = yield* withCredentialState(DEFAULT_SERVER_SETTINGS);
-      const next = {
-        ...credentialState,
-        engines: {
-          ...credentialState.engines,
-          oa: {
-            ...credentialState.engines.oa,
-            defaultPrompt: disk.settings.engines.oa.defaultPrompt,
-          },
-        },
-      } satisfies ServerSettings;
+      const disk = yield* loadSettingsFromDisk;
+      const next = credentialState;
       const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
       yield* writeSettingsAtomically({
         revision: nextRevision,
@@ -768,7 +674,6 @@ const makeServerSettings = Effect.gen(function* () {
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
     resetSettingsView,
     updateEngineCredential,
-    mutateHarosDefaultPrompt,
     get streamChanges() {
       return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
     },

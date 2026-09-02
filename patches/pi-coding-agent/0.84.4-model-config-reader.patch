@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index 37842d1..0a651fe 100644
+index cae7da67..17d72f4e 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -3536,6 +3536,12 @@
@@ -24,7 +24,7 @@ index 37842d1..0a651fe 100644
  				"proper-lockfile": "4.1.2",
  				"semver": "7.8.0",
 diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
-index 02f45a3..72061fe 100644
+index 8aa47351..708c80b2 100644
 --- a/packages/coding-agent/package.json
 +++ b/packages/coding-agent/package.json
 @@ -58,6 +58,7 @@
@@ -36,21 +36,19 @@ index 02f45a3..72061fe 100644
  		"proper-lockfile": "4.1.2",
  		"semver": "7.8.0",
 diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
-index 531f51d..43083fa 100644
+index 531f51d6..0c171001 100644
 --- a/packages/coding-agent/src/core/agent-session-services.ts
 +++ b/packages/coding-agent/src/core/agent-session-services.ts
-@@ -62,6 +62,10 @@ export interface CreateAgentSessionFromServicesOptions {
+@@ -62,6 +62,8 @@ export interface CreateAgentSessionFromServicesOptions {
  	excludeTools?: CreateAgentSessionOptions["excludeTools"];
  	noTools?: CreateAgentSessionOptions["noTools"];
  	customTools?: ToolDefinition[];
-+	/** Stable instruction segment used by the default prompt builder. */
-+	defaultPrompt?: string;
-+	/** Host-owned system prompt appended after per-turn extension mutation. */
++	/** Host-owned system prompt prepended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  /**
-@@ -151,45 +155,54 @@ export async function createAgentSessionServices(
+@@ -151,45 +153,54 @@ export async function createAgentSessionServices(
  		agentDir,
  		settingsManager,
  	});
@@ -140,20 +138,19 @@ index 531f51d..43083fa 100644
  }
  
  /**
-@@ -216,6 +229,8 @@ export async function createAgentSessionFromServices(
+@@ -216,6 +227,7 @@ export async function createAgentSessionFromServices(
  		excludeTools: options.excludeTools,
  		noTools: options.noTools,
  		customTools: options.customTools,
-+		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  		sessionStartEvent: options.sessionStartEvent,
  	});
  }
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index 488f5e0..319669b 100644
+index 27b5ac13..e1173ee6 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
-@@ -124,6 +124,12 @@ export interface ParsedSkillBlock {
+@@ -125,6 +125,12 @@ export interface ParsedSkillBlock {
  	userMessage: string | undefined;
  }
  
@@ -166,18 +163,16 @@ index 488f5e0..319669b 100644
  /**
   * Parse a skill block from message text.
   * Returns null if the text doesn't contain a skill block.
-@@ -227,6 +233,10 @@ export interface AgentSessionConfig {
+@@ -228,6 +234,8 @@ export interface AgentSessionConfig {
  	extensionRunnerRef?: { current?: ExtensionRunner };
  	/** Session start event metadata emitted when extensions bind to this runtime. */
  	sessionStartEvent?: SessionStartEvent;
-+	/** Stable instruction segment used by the default prompt builder. */
-+	defaultPrompt?: string;
-+	/** Host-owned system prompt appended after per-turn extension mutation. */
++	/** Host-owned system prompt prepended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  export interface ExtensionBindings {
-@@ -365,6 +375,7 @@ export class AgentSession {
+@@ -368,6 +376,7 @@ export class AgentSession {
  	private _extensionShutdownHandler?: ShutdownHandler;
  	private _extensionErrorListener?: ExtensionErrorListener;
  	private _extensionErrorUnsubscriber?: () => void;
@@ -185,34 +180,32 @@ index 488f5e0..319669b 100644
  
  	private _modelRuntime: ModelRuntime;
  
-@@ -378,6 +389,8 @@ export class AgentSession {
+@@ -381,6 +390,7 @@ export class AgentSession {
  	private _baseSystemPrompt = "";
  	private _baseSystemPromptOptions!: BuildSystemPromptOptions;
  	private _systemPromptOverride?: string;
-+	private _defaultPrompt?: string;
 +	private _immutableSystemPrompt?: string;
  
  	constructor(config: AgentSessionConfig) {
  		this.agent = config.agent;
-@@ -394,6 +407,8 @@ export class AgentSession {
+@@ -397,6 +407,7 @@ export class AgentSession {
  		this._excludedToolNames = config.excludedToolNames ? new Set(config.excludedToolNames) : undefined;
  		this._baseToolsOverride = config.baseToolsOverride;
  		this._sessionStartEvent = config.sessionStartEvent ?? { type: "session_start", reason: "startup" };
-+		this._defaultPrompt = config.defaultPrompt;
 +		this._immutableSystemPrompt = config.immutableSystemPrompt?.trim() || undefined;
  
  		// Always subscribe to agent events for internal handling
  		// (session persistence, extensions, auto-compaction, retry logic)
-@@ -551,7 +566,7 @@ export class AgentSession {
+@@ -574,7 +585,7 @@ export class AgentSession {
  				...previousSnapshot,
  				context: {
- 					...previousContext,
+ 					...nextContext,
 -					systemPrompt: this._systemPromptOverride ?? this._baseSystemPrompt,
 +					systemPrompt: this._systemPromptOverride ?? this._withImmutableSystemPrompt(this._baseSystemPrompt),
  					tools: this.agent.state.tools.slice(),
  				},
  				model: this.agent.state.model,
-@@ -950,7 +965,7 @@ export class AgentSession {
+@@ -982,7 +993,7 @@ export class AgentSession {
  
  		// Rebuild base system prompt with new tool set
  		this._baseSystemPrompt = this._rebuildSystemPrompt(validToolNames);
@@ -221,28 +214,26 @@ index 488f5e0..319669b 100644
  	}
  
  	/** Whether compaction or branch summarization is currently running */
-@@ -1031,6 +1046,12 @@ export class AgentSession {
+@@ -1063,6 +1074,18 @@ export class AgentSession {
  		return Array.from(unique);
  	}
  
 +	private _withImmutableSystemPrompt(systemPrompt: string): string {
 +		if (!this._immutableSystemPrompt) return systemPrompt;
-+		const mutablePrompt = systemPrompt.split(this._immutableSystemPrompt).join("").trimEnd();
-+		return mutablePrompt.length > 0 ? `${mutablePrompt}\n\n${this._immutableSystemPrompt}` : this._immutableSystemPrompt;
++		const immutablePrefix = `${this._immutableSystemPrompt}\n\n`;
++		const mutablePrompt =
++			systemPrompt === this._immutableSystemPrompt
++				? ""
++				: systemPrompt.startsWith(immutablePrefix)
++					? systemPrompt.slice(immutablePrefix.length).trimStart()
++					: systemPrompt.trim();
++		return mutablePrompt.length > 0 ? `${this._immutableSystemPrompt}\n\n${mutablePrompt}` : this._immutableSystemPrompt;
 +	}
 +
  	private _rebuildSystemPrompt(toolNames: string[]): string {
  		const validToolNames = toolNames.filter((name) => this._toolRegistry.has(name));
  		const toolSnippets: Record<string, string> = {};
-@@ -1056,6 +1077,7 @@ export class AgentSession {
- 
- 		this._baseSystemPromptOptions = {
- 			cwd: this._cwd,
-+			defaultPrompt: this._defaultPrompt,
- 			skills: loadedSkills,
- 			contextFiles: loadedContextFiles,
- 			customPrompt: loaderSystemPrompt,
-@@ -1124,7 +1146,7 @@ export class AgentSession {
+@@ -1157,7 +1180,7 @@ export class AgentSession {
  	 * @throws Error if streaming and no streamingBehavior specified
  	 * @throws Error if no model selected or no API key available (when not streaming)
  	 */
@@ -251,7 +242,7 @@ index 488f5e0..319669b 100644
  		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
  		const preflightResult = options?.preflightResult;
  		let messages: AgentMessage[] | undefined;
-@@ -1133,11 +1155,11 @@ export class AgentSession {
+@@ -1166,11 +1189,11 @@ export class AgentSession {
  			// Handle extension commands first (execute immediately, even during streaming)
  			// Extension commands manage their own LLM interaction via pi.sendMessage()
  			if (expandPromptTemplates && text.startsWith("/")) {
@@ -267,7 +258,7 @@ index 488f5e0..319669b 100644
  				}
  			}
  
-@@ -1151,15 +1173,29 @@ export class AgentSession {
+@@ -1184,15 +1207,29 @@ export class AgentSession {
  			let currentText = text;
  			let currentImages = options?.images;
  			if (this._extensionRunner.hasHandlers("input")) {
@@ -305,7 +296,7 @@ index 488f5e0..319669b 100644
  				}
  				if (inputResult.action === "transform") {
  					currentText = inputResult.text;
-@@ -1187,7 +1223,7 @@ export class AgentSession {
+@@ -1220,7 +1257,7 @@ export class AgentSession {
  					await this._queueSteer(expandedText, currentImages);
  				}
  				preflightResult?.(true);
@@ -313,8 +304,8 @@ index 488f5e0..319669b 100644
 +				return { kind: "queued" };
  			}
  
- 			// Flush any pending bash messages before the new prompt
-@@ -1263,12 +1299,12 @@ export class AgentSession {
+ 			// Flush any pending bash and custom messages before the new prompt
+@@ -1297,12 +1334,12 @@ export class AgentSession {
  			}
  			// Apply extension-modified system prompt, or reset to base
  			if (result?.systemPrompt !== undefined) {
@@ -330,7 +321,7 @@ index 488f5e0..319669b 100644
  			}
  		} catch (error) {
  			preflightResult?.(false);
-@@ -1276,40 +1312,53 @@ export class AgentSession {
+@@ -1310,40 +1347,53 @@ export class AgentSession {
  		}
  
  		if (!messages) {
@@ -390,7 +381,7 @@ index 488f5e0..319669b 100644
  	}
  
  	/**
-@@ -2406,7 +2455,7 @@ export class AgentSession {
+@@ -2482,7 +2532,7 @@ export class AgentSession {
  
  		this._resourceLoader.extendResources(extensionPaths);
  		this._baseSystemPrompt = this._rebuildSystemPrompt(this.getActiveToolNames());
@@ -399,7 +390,7 @@ index 488f5e0..319669b 100644
  	}
  
  	private buildExtensionResourcePaths(entries: Array<{ path: string; extensionPath: string }>): Array<{
-@@ -2487,10 +2536,13 @@ export class AgentSession {
+@@ -2563,10 +2613,13 @@ export class AgentSession {
  			return [...extensionCommands, ...templates, ...skills];
  		};
  
@@ -415,7 +406,7 @@ index 488f5e0..319669b 100644
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_message",
-@@ -2499,7 +2551,10 @@ export class AgentSession {
+@@ -2575,7 +2628,10 @@ export class AgentSession {
  					});
  				},
  				sendUserMessage: (content, options) => {
@@ -427,30 +418,22 @@ index 488f5e0..319669b 100644
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_user_message",
-@@ -2732,7 +2787,10 @@ export class AgentSession {
- 		});
+@@ -2835,6 +2891,13 @@ export class AgentSession {
+ 		}
  	}
  
--	async reload(options?: { beforeSessionStart?: () => void | Promise<void> }): Promise<void> {
-+	async reload(options?: {
-+		beforeSessionStart?: () => void | Promise<void>;
-+		defaultPrompt?: string;
-+	}): Promise<void> {
- 		const oldRunner = this._extensionRunner;
- 		const previousFlagValues = oldRunner.getFlagValues();
- 		await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
-@@ -2741,6 +2799,9 @@ export class AgentSession {
- 		this.syncQueueModesFromSettings();
- 		resetApiProviders();
- 		await this._resourceLoader.reload();
-+		if (options && "defaultPrompt" in options) {
-+			this._defaultPrompt = options.defaultPrompt;
-+		}
- 		this._buildRuntime({
- 			activeToolNames: this.getActiveToolNames(),
- 			flagValues: previousFlagValues,
++	/** Refresh only context files and rebuild the prompt without reloading runtime resources. */
++	refreshContextFiles(): void {
++		this._resourceLoader.refreshContextFiles();
++		this._baseSystemPrompt = this._rebuildSystemPrompt(this.getActiveToolNames());
++		this.agent.state.systemPrompt = this._systemPromptOverride ?? this._withImmutableSystemPrompt(this._baseSystemPrompt);
++	}
++
+ 	// =========================================================================
+ 	// Auto-Retry
+ 	// =========================================================================
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 6036d5a..2a350e2 100644
+index 4d426649..91419dc5 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -1,12 +1,18 @@
@@ -473,7 +456,15 @@ index 6036d5a..2a350e2 100644
  
  const PercentileCutoffsSchema = Type.Object({
  	p50: Type.Optional(Type.Number()),
-@@ -216,6 +222,396 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
+@@ -122,6 +128,7 @@ const OpenAIResponsesCompatSchema = Type.Object({
+ 	supportsAdditionalTools: Type.Optional(Type.Boolean()),
+ 	supportsToolSearch: Type.Optional(Type.Boolean()),
+ 	supportsMaxOutputTokens: Type.Optional(Type.Boolean()),
++	supportsExplicitPromptCacheMode: Type.Optional(Type.Boolean()),
+ });
+ 
+ const AnthropicMessagesCompatSchema = Type.Object({
+@@ -217,6 +224,398 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
  export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
  type ModelsJson = Static<typeof ModelsConfigSchema>;
  
@@ -603,6 +594,8 @@ index 6036d5a..2a350e2 100644
 +	"supportsOpenAIGrammarTools",
 +	"supportsStrictMode",
 +	"supportsToolSearch",
++	"supportsMaxOutputTokens",
++	"supportsExplicitPromptCacheMode",
 +	"supportsEagerToolInputStreaming",
 +	"supportsCacheControlOnTools",
 +	"supportsTemperature",
@@ -870,7 +863,7 @@ index 6036d5a..2a350e2 100644
  function formatValidationPath(error: TLocalizedValidationError): string {
  	if (error.keyword === "required") {
  		const requiredProperties = (error.params as { requiredProperties?: string[] }).requiredProperties;
-@@ -245,27 +641,14 @@ export class ModelConfig {
+@@ -246,27 +645,14 @@ export class ModelConfig {
  		this.error = error;
  	}
  
@@ -900,7 +893,7 @@ index 6036d5a..2a350e2 100644
  			);
  		}
  
-@@ -275,7 +658,10 @@ export class ModelConfig {
+@@ -276,7 +662,10 @@ export class ModelConfig {
  					.Errors(parsed)
  					.map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
  					.join("\n") || "Unknown schema error";
@@ -912,7 +905,7 @@ index 6036d5a..2a350e2 100644
  		}
  
  		const config = parsed as ModelsJson;
-@@ -286,15 +672,237 @@ export class ModelConfig {
+@@ -287,15 +676,237 @@ export class ModelConfig {
  		return new ModelConfig(providers);
  	}
  
@@ -1151,7 +1144,7 @@ index 6036d5a..2a350e2 100644
 +	}
  }
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b..b6b38b2 100644
+index 6f4071b6..b6b38b25 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -17,6 +17,7 @@ import {
@@ -1566,7 +1559,7 @@ index 6f4071b..b6b38b2 100644
  		if (options.providers) {
  			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index d65386c..ef3b86b 100644
+index d65386c6..ef3b86b6 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
 @@ -1,5 +1,5 @@
@@ -1918,7 +1911,7 @@ index d65386c..ef3b86b 100644
  		const parsed = this.parseSource(source);
  		if (parsed.type === "npm") {
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcd..04b8931 100644
+index 1be7fcdb..9c8fd91c 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -444,8 +444,16 @@ export function composeModelProvider(
@@ -1940,8 +1933,23 @@ index 1be7fcd..04b8931 100644
  	const apiKey = composeApiKeyAuth(providerId, base, config, extension);
  	const oauth = composeOAuthAuth(providerId, base, config, extension);
  	if (!apiKey && !oauth) throw new Error(`Provider ${providerId}: no authentication method configured.`);
+@@ -483,9 +491,12 @@ export function composeModelProvider(
+ 		refreshModels:
+ 			base?.refreshModels || extension?.refreshModels || extension?.oauth?.modifyModels
+ 				? async (context) => {
+-						await base?.refreshModels?.(context);
+ 						let refreshed: NonNullable<ProviderConfigInput["models"]> | undefined;
+-						if (extension?.refreshModels) refreshed = await extension.refreshModels(context);
++						if (extension?.refreshModels) {
++							refreshed = await extension.refreshModels(context);
++						} else {
++							await base?.refreshModels?.(context);
++						}
+ 						if (context.signal.aborted) return;
+ 						const oauthCredential = context.credential?.type === "oauth" ? context.credential : undefined;
+ 						await context.publish({
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index 0410242..ca67350 100644
+index 04102425..13719505 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
 @@ -18,7 +18,12 @@ import {
@@ -1966,7 +1974,16 @@ index 0410242..ca67350 100644
  }
  
  export interface ResourceLoader {
-@@ -119,8 +125,10 @@ function findShadowedContextFile(cwd: string): string | undefined {
+@@ -48,6 +54,8 @@ export interface ResourceLoader {
+ 	getAppendSystemPrompt(): string[];
+ 	getAppendSystemPromptSources(): Array<{ path: string }>;
+ 	extendResources(paths: ResourceExtensionPaths): void;
++	/** Refresh only global/project context files; extensions, skills, tools, and settings stay intact. */
++	refreshContextFiles(): void;
+ 	reload(options?: ResourceLoaderReloadOptions): Promise<void>;
+ }
+ 
+@@ -119,8 +127,10 @@ function findShadowedContextFile(cwd: string): string | undefined {
  export function loadProjectContextFiles(options: {
  	cwd: string;
  	agentDir: string;
@@ -1977,7 +1994,7 @@ index 0410242..ca67350 100644
  	const resolvedAgentDir = resolvePath(options.agentDir);
  
  	const contextFiles: Array<{ path: string; content: string }> = [];
-@@ -131,6 +139,23 @@ export function loadProjectContextFiles(options: {
+@@ -131,6 +141,23 @@ export function loadProjectContextFiles(options: {
  		contextFiles.push(globalContext);
  		seenPaths.add(globalContext.path);
  	}
@@ -2001,7 +2018,7 @@ index 0410242..ca67350 100644
  
  	const ancestorContextFiles: Array<{ path: string; content: string }> = [];
  
-@@ -146,6 +171,7 @@ export function loadProjectContextFiles(options: {
+@@ -146,6 +173,7 @@ export function loadProjectContextFiles(options: {
  			seenPaths.add(contextFile.path);
  		}
  
@@ -2009,7 +2026,7 @@ index 0410242..ca67350 100644
  		const parentDir = dirname(currentDir);
  		if (parentDir === currentDir) break;
  		currentDir = parentDir;
-@@ -171,6 +197,8 @@ export interface DefaultResourceLoaderOptions {
+@@ -171,6 +199,8 @@ export interface DefaultResourceLoaderOptions {
  	noPromptTemplates?: boolean;
  	noThemes?: boolean;
  	noContextFiles?: boolean;
@@ -2018,7 +2035,7 @@ index 0410242..ca67350 100644
  	systemPrompt?: string;
  	appendSystemPrompt?: string[];
  	extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
-@@ -209,6 +237,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+@@ -209,6 +239,7 @@ export class DefaultResourceLoader implements ResourceLoader {
  	private noPromptTemplates: boolean;
  	private noThemes: boolean;
  	private noContextFiles: boolean;
@@ -2026,7 +2043,7 @@ index 0410242..ca67350 100644
  	private systemPromptSource?: string;
  	private appendSystemPromptSource?: string[];
  	private extensionsOverride?: (base: LoadExtensionsResult) => LoadExtensionsResult;
-@@ -271,6 +300,7 @@ export class DefaultResourceLoader implements ResourceLoader {
+@@ -271,6 +302,7 @@ export class DefaultResourceLoader implements ResourceLoader {
  		this.noPromptTemplates = options.noPromptTemplates ?? false;
  		this.noThemes = options.noThemes ?? false;
  		this.noContextFiles = options.noContextFiles ?? false;
@@ -2034,11 +2051,27 @@ index 0410242..ca67350 100644
  		this.systemPromptSource = options.systemPrompt;
  		this.appendSystemPromptSource = options.appendSystemPrompt;
  		this.extensionsOverride = options.extensionsOverride;
-@@ -377,177 +407,192 @@ export class DefaultResourceLoader implements ResourceLoader {
+@@ -377,177 +409,196 @@ export class DefaultResourceLoader implements ResourceLoader {
  		}
  	}
  
 -	async loadProjectTrustExtensions(): Promise<LoadExtensionsResult> {
++	refreshContextFiles(): void {
++		const agentsFiles = {
++			agentsFiles: this.noContextFiles
++				? []
++				: loadProjectContextFiles({
++						cwd: this.cwd,
++						agentDir: this.agentDir,
++						...(this.projectContextRoot === undefined
++							? {}
++							: { projectContextRoot: this.projectContextRoot }),
++					}),
++		};
++		const resolved = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
++		this.agentsFiles = resolved.agentsFiles;
++	}
++
 +	async loadProjectTrustExtensions(
 +		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
 +	): Promise<LoadExtensionsResult> {
@@ -2156,12 +2189,12 @@ index 0410242..ca67350 100644
 +				}
  			}
 -		}
- 
+-
 -		const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
 -		const cliEnabledSkills = getEnabledPaths(cliExtensionPaths.skills);
 -		const cliEnabledPrompts = getEnabledPaths(cliExtensionPaths.prompts);
 -		const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
--
+ 
 -		const extensionPaths = this.noExtensions
 -			? cliEnabledExtensions
 -			: this.mergePaths(cliEnabledExtensions, enabledExtensions);
@@ -2268,10 +2301,11 @@ index 0410242..ca67350 100644
  				}
  			}
 -		}
--
+ 
 -		const themePaths = this.noThemes
 -			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
 -			: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
++			this.refreshContextFiles();
  
 -		this.lastThemePaths = themePaths;
 -		this.updateThemesFromPaths(themePaths, metadataByPath);
@@ -2279,48 +2313,14 @@ index 0410242..ca67350 100644
 -			const resolved = this.resolveResourcePath(p);
 -			if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
 -				this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
-+			const agentsFiles = {
-+				agentsFiles: this.noContextFiles
-+					? []
-+					: loadProjectContextFiles({
-+							cwd: this.cwd,
-+							agentDir: this.agentDir,
-+							...(this.projectContextRoot === undefined
-+								? {}
-+								: { projectContextRoot: this.projectContextRoot }),
-+						}),
-+			};
-+			const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
-+			this.agentsFiles = resolvedAgentsFiles.agentsFiles;
-+
+-			}
+-		}
 +			const systemPromptSource = this.systemPromptSource ?? this.discoverSystemPromptFile();
 +			const baseSystemPrompt = resolvePromptInput(systemPromptSource, "system prompt");
 +			this.systemPrompt = this.systemPromptOverride ? this.systemPromptOverride(baseSystemPrompt) : baseSystemPrompt;
 +			this.systemPromptSourcePath =
 +				systemPromptSource && existsSync(systemPromptSource) ? resolvePath(systemPromptSource) : undefined;
-+
-+			let appendSources = this.appendSystemPromptSource;
-+			if (!appendSources) {
-+				const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
-+				appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
-+			}
-+			const baseAppend = appendSources
-+				.map((s) => resolvePromptInput(s, "append system prompt"))
-+				.filter((s): s is string => s !== undefined);
-+			this.appendSystemPrompt = this.appendSystemPromptOverride
-+				? this.appendSystemPromptOverride(baseAppend)
-+				: baseAppend;
-+			this.appendSystemPromptSourcePaths = appendSources
-+				.filter((source) => existsSync(source))
-+				.map((source) => resolvePath(source));
-+			this.loaded = true;
-+			completed = true;
-+		} finally {
-+			if (!completed) {
-+				preTrustExtensions?.runtime.invalidate("Resource reload failed");
- 			}
- 		}
--
+ 
 -		const agentsFiles = {
 -			agentsFiles: this.noContextFiles
 -				? []
@@ -2342,7 +2342,27 @@ index 0410242..ca67350 100644
 -		if (!appendSources) {
 -			const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
 -			appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
--		}
++			let appendSources = this.appendSystemPromptSource;
++			if (!appendSources) {
++				const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
++				appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
++			}
++			const baseAppend = appendSources
++				.map((s) => resolvePromptInput(s, "append system prompt"))
++				.filter((s): s is string => s !== undefined);
++			this.appendSystemPrompt = this.appendSystemPromptOverride
++				? this.appendSystemPromptOverride(baseAppend)
++				: baseAppend;
++			this.appendSystemPromptSourcePaths = appendSources
++				.filter((source) => existsSync(source))
++				.map((source) => resolvePath(source));
++			this.loaded = true;
++			completed = true;
++		} finally {
++			if (!completed) {
++				preTrustExtensions?.runtime.invalidate("Resource reload failed");
++			}
+ 		}
 -		const baseAppend = appendSources
 -			.map((s) => resolvePromptInput(s, "append system prompt"))
 -			.filter((s): s is string => s !== undefined);
@@ -2366,61 +2386,150 @@ index 0410242..ca67350 100644
  			temporary: true,
  		});
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index adbf102..baee52c 100644
+index adbf102a..69793a3c 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -85,6 +85,10 @@ export interface CreateAgentSessionOptions {
+@@ -85,6 +85,8 @@ export interface CreateAgentSessionOptions {
  	settingsManager?: SettingsManager;
  	/** Session start event metadata for extension runtime startup. */
  	sessionStartEvent?: SessionStartEvent;
-+	/** Stable instruction segment used by the default prompt builder. */
-+	defaultPrompt?: string;
-+	/** Host-owned system prompt appended after per-turn extension mutation. */
++	/** Host-owned system prompt prepended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  /** Result from createAgentSession */
-@@ -399,6 +403,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -399,6 +401,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		excludedToolNames,
  		extensionRunnerRef,
  		sessionStartEvent: options.sessionStartEvent,
-+		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  	const extensionsResult = resourceLoader.getExtensions();
  
+diff --git a/packages/coding-agent/src/core/session-manager.ts b/packages/coding-agent/src/core/session-manager.ts
+index 8cad6fe3..e53bd3d4 100644
+--- a/packages/coding-agent/src/core/session-manager.ts
++++ b/packages/coding-agent/src/core/session-manager.ts
+@@ -55,6 +55,8 @@ export interface SessionMessageEntry extends SessionEntryBase {
+ 	message: AgentMessage;
+ }
+ 
++export type ToolResultMessage = Extract<AgentMessage, { role: "toolResult" }>;
++
+ export interface ThinkingLevelChangeEntry extends SessionEntryBase {
+ 	type: "thinking_level_change";
+ 	thinkingLevel: string;
+@@ -623,6 +625,92 @@ function readSessionHeaderForDiscovery(filePath: string): SessionHeader | null {
+ 	}
+ }
+ 
++function toolResultFromEntry(
++	entry: SessionEntry | undefined,
++	toolCallId: string,
++): ToolResultMessage | null {
++	if (entry?.type !== "message" || entry.message.role !== "toolResult") return null;
++	return entry.message.toolCallId === toolCallId ? entry.message : null;
++}
++
++function findToolResultOnBranch(
++	entries: SessionEntry[],
++	toolCallId: string,
++	leafId?: string | null,
++): ToolResultMessage | null {
++	const branch = buildSessionPath(entries, leafId);
++	for (let index = branch.length - 1; index >= 0; index--) {
++		const result = toolResultFromEntry(branch[index], toolCallId);
++		if (result) return result;
++	}
++	return null;
++}
++
++/**
++ * Read one tool result from the persisted current branch without opening,
++ * migrating, rewriting, or otherwise taking ownership of the session.
++ *
++ * Current v3 sessions are scanned as JSONL while retaining only the ancestry
++ * index and matching tool-result messages. Older formats are migrated in
++ * memory so their established Pi semantics remain intact without disk writes.
++ */
++export async function readToolResultFromSession(
++	filePath: string,
++	toolCallId: string,
++): Promise<ToolResultMessage | null> {
++	const resolvedFilePath = normalizePath(filePath);
++	if (!existsSync(resolvedFilePath)) return null;
++
++	const header = readSessionHeader(resolvedFilePath);
++	if (!header) return null;
++	const version = header.version ?? 1;
++	if (version > CURRENT_SESSION_VERSION) return null;
++
++	if (version < CURRENT_SESSION_VERSION) {
++		const fileEntries = loadEntriesFromFile(resolvedFilePath);
++		if (fileEntries.length === 0) return null;
++		migrateToCurrentVersion(fileEntries);
++		return findToolResultOnBranch(
++			fileEntries.filter((entry): entry is SessionEntry => entry.type !== "session"),
++			toolCallId,
++		);
++	}
++
++	const parentById = new Map<string, string | null>();
++	const matchingResults = new Map<string, ToolResultMessage>();
++	let leafId: string | null = null;
++	let observedHeader = false;
++	const rl = createInterface({
++		input: createReadStream(resolvedFilePath, { encoding: "utf8" }),
++		crlfDelay: Infinity,
++	});
++
++	for await (const line of rl) {
++		const entry = parseSessionEntryLine(line);
++		if (!entry) continue;
++		if (!observedHeader) {
++			if (entry.type !== "session") return null;
++			observedHeader = true;
++			continue;
++		}
++		if (entry.type === "session") continue;
++		parentById.set(entry.id, entry.parentId);
++		leafId = entry.id;
++		const result = toolResultFromEntry(entry, toolCallId);
++		if (result) matchingResults.set(entry.id, result);
++	}
++
++	const visited = new Set<string>();
++	let currentId = leafId;
++	while (currentId && !visited.has(currentId)) {
++		visited.add(currentId);
++		const result = matchingResults.get(currentId);
++		if (result) return result;
++		currentId = parentById.get(currentId) ?? null;
++	}
++	return null;
++}
++
+ function getSessionHeaderCwd(header: SessionHeader): string | undefined {
+ 	const cwd = (header as { cwd?: unknown }).cwd;
+ 	return typeof cwd === "string" ? cwd : undefined;
 diff --git a/packages/coding-agent/src/core/system-prompt.ts b/packages/coding-agent/src/core/system-prompt.ts
-index ec45067..e05b424 100644
+index ec450678..9eda7812 100644
 --- a/packages/coding-agent/src/core/system-prompt.ts
 +++ b/packages/coding-agent/src/core/system-prompt.ts
-@@ -2,12 +2,17 @@
+@@ -2,9 +2,11 @@
   * System prompt construction and project context loading
   */
  
 -import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
  import { formatSkillsForPrompt, type Skill } from "./skills.ts";
  
-+/** Stable, product-editable instruction segment used by the default builder. */
 +export const DEFAULT_BASE_INSTRUCTIONS =
 +	"Help users by reading files, executing commands, editing code, and writing new files.";
 +
  export interface BuildSystemPromptOptions {
  	/** Custom system prompt (replaces default). */
  	customPrompt?: string;
-+	/** Stable instruction segment used only by the default builder. */
-+	defaultPrompt?: string;
- 	/** Tools to include in prompt. Default: [read, bash, edit, write] */
- 	selectedTools?: string[];
- 	/** Optional one-line tool snippets keyed by tool name. */
-@@ -28,6 +33,7 @@ export interface BuildSystemPromptOptions {
- export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
- 	const {
- 		customPrompt,
-+		defaultPrompt,
- 		selectedTools,
- 		toolSnippets,
- 		promptGuidelines,
-@@ -71,11 +77,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+@@ -71,11 +73,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  		return prompt;
  	}
  
@@ -2432,15 +2541,14 @@ index ec45067..e05b424 100644
  	// Build tools list based on selected tools.
  	// A tool appears in Available tools only when the caller provides a one-line snippet.
  	const tools = selectedTools || ["read", "bash", "edit", "write"];
-@@ -125,24 +126,14 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+@@ -125,24 +122,13 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  
  	const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");
  
 -	let prompt = `You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.
 -
 -Available tools:
-+	const baseInstructions = defaultPrompt ?? DEFAULT_BASE_INSTRUCTIONS;
-+	let prompt = `${baseInstructions.length > 0 ? `${baseInstructions}\n\n` : ""}Available tools:
++	let prompt = `${DEFAULT_BASE_INSTRUCTIONS}\n\nAvailable tools:
  ${toolsList}
  
  In addition to the tools above, you may have access to other custom tools depending on the project.
@@ -2461,7 +2569,7 @@ index ec45067..e05b424 100644
  	if (appendSection) {
  		prompt += appendSection;
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 210b840..5cacd21 100644
+index 8e5ce2f3..d93cd51a 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -20,6 +20,7 @@ export {
@@ -2472,7 +2580,7 @@ index 210b840..5cacd21 100644
  	parseSkillBlock,
  	type SessionStats,
  } from "./core/agent-session.ts";
-@@ -170,6 +171,21 @@ export {
+@@ -173,6 +174,21 @@ export {
  // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
  export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts";
  export { convertToLlm } from "./core/messages.ts";
@@ -2494,7 +2602,7 @@ index 210b840..5cacd21 100644
  export { ModelRegistry } from "./core/model-registry.ts";
  export {
  	type ModelScopeDiagnostic,
-@@ -183,14 +199,25 @@ export {
+@@ -186,14 +202,25 @@ export {
  	type CreateModelRuntimeOptions,
  	CredentialSynchronizationError,
  	type CredentialSynchronizationOperation,
@@ -2520,31 +2628,96 @@ index 210b840..5cacd21 100644
  	ResolvedPaths,
  	ResolvedResource,
  } from "./core/package-manager.ts";
+@@ -243,6 +270,7 @@ export {
+ 	migrateSessionEntries,
+ 	type NewSessionOptions,
+ 	parseSessionEntries,
++	readToolResultFromSession,
+ 	type SessionContext,
+ 	type SessionEntry,
+ 	type SessionEntryBase,
+@@ -254,6 +282,7 @@ export {
+ 	type SessionTreeNode,
+ 	sessionEntryToContextMessages,
+ 	type ThinkingLevelChangeEntry,
++	type ToolResultMessage,
+ } from "./core/session-manager.ts";
+ export {
+ 	type CompactionSettings,
 diff --git a/packages/coding-agent/test/default-tools-setting.test.ts b/packages/coding-agent/test/default-tools-setting.test.ts
-index 5b93314..c347475 100644
+index 5b933140..3fcb24b7 100644
 --- a/packages/coding-agent/test/default-tools-setting.test.ts
 +++ b/packages/coding-agent/test/default-tools-setting.test.ts
-@@ -145,6 +145,7 @@ describe("defaultTools setting", () => {
- 			services,
- 			sessionManager: SessionManager.inMemory(tempDir),
- 			model: getModel("anthropic", "claude-sonnet-4-5")!,
-+			defaultPrompt: "Service-owned default instructions.",
- 		});
- 
- 		expect(
-@@ -154,6 +155,10 @@ describe("defaultTools setting", () => {
+@@ -154,6 +154,9 @@ describe("defaultTools setting", () => {
  				.sort(),
  		).toEqual(["bash", "edit", "find", "grep", "ls", "powershell", "read", "write"]);
  		expect(session.getActiveToolNames()).toEqual(["ls"]);
-+		expect(session.systemPrompt).toContain("Service-owned default instructions.");
-+		expect(session.systemPrompt).not.toContain(
++		expect(session.systemPrompt).toContain(
 +			"Help users by reading files, executing commands, editing code, and writing new files.",
 +		);
  		session.dispose();
  	});
  });
+diff --git a/packages/coding-agent/test/model-runtime-modify-models-compat.test.ts b/packages/coding-agent/test/model-runtime-modify-models-compat.test.ts
+index f3000513..7b36d06f 100644
+--- a/packages/coding-agent/test/model-runtime-modify-models-compat.test.ts
++++ b/packages/coding-agent/test/model-runtime-modify-models-compat.test.ts
+@@ -9,7 +9,7 @@ import {
+ 	type Model,
+ 	type Provider,
+ } from "@earendil-works/pi-ai";
+-import { describe, expect, it } from "vitest";
++import { describe, expect, it, vi } from "vitest";
+ import { AuthStorage } from "../src/core/auth-storage.ts";
+ import { ModelRegistry } from "../src/core/model-registry.ts";
+ import { ModelRuntime } from "../src/core/model-runtime.ts";
+@@ -292,6 +292,44 @@ describe("extension provider model lifecycle", () => {
+ 		expect(await modelsStore.read("extension-dynamic")).toBeUndefined();
+ 	});
+ 
++	it("lets an extension refresh override a colliding built-in provider refresh", async () => {
++		const runtime = await ModelRuntime.create({
++			credentials: AuthStorage.inMemory(),
++			modelsStore: new InMemoryModelsStore(),
++			modelsPath: null,
++			allowModelNetwork: false,
++		});
++		const extensionRefresh = vi.fn(async () => [
++			{
++				...model("extension-overlay"),
++				provider: "deepseek",
++				baseUrl: "https://extension.test/v1",
++			},
++		]);
++		const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("built-in refresh ran"));
++		try {
++			runtime.registerProvider("deepseek", {
++				baseUrl: "https://extension.test/v1",
++				apiKey: "extension-key",
++				api: "openai-completions",
++				refreshModels: extensionRefresh,
++			});
++
++			const result = await runtime.refresh({
++				providers: ["deepseek"],
++				allowNetwork: true,
++				force: true,
++			});
++
++			expect(result.errors).toEqual(new Map());
++			expect(extensionRefresh).toHaveBeenCalled();
++			expect(fetchSpy).not.toHaveBeenCalled();
++			expect(runtime.getModel("deepseek", "extension-overlay")).toBeDefined();
++		} finally {
++			fetchSpy.mockRestore();
++		}
++	});
++
+ 	it("applies legacy OAuth modifyModels after async credential initialization", async () => {
+ 		const runtime = await ModelRuntime.create({
+ 			credentials: AuthStorage.inMemory({
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 6f4f6b4..681683b 100644
+index 6f4f6b4f..681683b4 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
 @@ -297,6 +297,179 @@ Content`,
@@ -2728,7 +2901,7 @@ index 6f4f6b4..681683b 100644
  		it("should use the agent dir as baseDir for user .pi/agent skills", async () => {
  			const skillPath = join(agentDir, "skills", "user-pi", "SKILL.md");
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3..e4c97ac 100644
+index 145eca3b..e4c97acf 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
 @@ -4,7 +4,9 @@ import { join } from "node:path";
@@ -2902,11 +3075,43 @@ index 145eca3..e4c97ac 100644
  		it("should ignore context file candidates that are directories", async () => {
  			mkdirSync(join(cwd, "AGENTS.override.md"));
  			mkdirSync(join(cwd, "AGENTS.md"));
+diff --git a/packages/coding-agent/test/sdk-codex-cache-probe-tool-loop.ts b/packages/coding-agent/test/sdk-codex-cache-probe-tool-loop.ts
+index 8a6ca1b4..f8584b40 100644
+--- a/packages/coding-agent/test/sdk-codex-cache-probe-tool-loop.ts
++++ b/packages/coding-agent/test/sdk-codex-cache-probe-tool-loop.ts
+@@ -182,6 +182,7 @@ function createMinimalResourceLoader(systemPrompt: string): ResourceLoader {
+ 		getAppendSystemPrompt: () => [],
+ 		getAppendSystemPromptSources: () => [],
+ 		extendResources: () => {},
++		refreshContextFiles: () => {},
+ 		reload: async () => {},
+ 	};
+ }
+diff --git a/packages/coding-agent/test/sdk-skills.test.ts b/packages/coding-agent/test/sdk-skills.test.ts
+index 007a5140..891a8dfd 100644
+--- a/packages/coding-agent/test/sdk-skills.test.ts
++++ b/packages/coding-agent/test/sdk-skills.test.ts
+@@ -62,6 +62,7 @@ This is a test skill.
+ 			getAppendSystemPrompt: () => [],
+ 			getAppendSystemPromptSources: () => [],
+ 			extendResources: () => {},
++			refreshContextFiles: () => {},
+ 			reload: async () => {},
+ 		};
+ 
+@@ -97,6 +98,7 @@ This is a test skill.
+ 			getAppendSystemPrompt: () => [],
+ 			getAppendSystemPromptSources: () => [],
+ 			extendResources: () => {},
++			refreshContextFiles: () => {},
+ 			reload: async () => {},
+ 		};
+ 
 diff --git a/packages/coding-agent/test/suite/agent-session-compaction.test.ts b/packages/coding-agent/test/suite/agent-session-compaction.test.ts
-index 7d81358..a6afa13 100644
+index 64da8b4a..cf51cd7e 100644
 --- a/packages/coding-agent/test/suite/agent-session-compaction.test.ts
 +++ b/packages/coding-agent/test/suite/agent-session-compaction.test.ts
-@@ -571,7 +571,7 @@ describe("AgentSession compaction characterization", () => {
+@@ -742,7 +742,7 @@ describe("AgentSession compaction characterization", () => {
  		harnesses.push(harness);
  		harness.setResponses([fauxAssistantMessage("completed answer")]);
  
@@ -2916,21 +3121,21 @@ index 7d81358..a6afa13 100644
  		const compactionEnd = harness.eventsOfType("compaction_end").at(-1);
  		expect(compactionEnd).toMatchObject({
 diff --git a/packages/coding-agent/test/suite/agent-session-prompt.test.ts b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-index 1fa23fb..783051d 100644
+index 1fa23fbe..87e0edcd 100644
 --- a/packages/coding-agent/test/suite/agent-session-prompt.test.ts
 +++ b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-@@ -40,6 +40,60 @@ describe("AgentSession prompt characterization", () => {
+@@ -40,6 +40,97 @@ describe("AgentSession prompt characterization", () => {
  		expect(harness.getPendingResponseCount()).toBe(0);
  	});
  
-+	it("keeps the immutable host prompt exactly once after extension replacement, reload, and later turns", async () => {
++	it("keeps the immutable host prompt first and exactly once after extension replacement, reload, and later turns", async () => {
 +		const immutableSystemPrompt = "immutable host identity";
 +		const harness = await createHarness({
 +			immutableSystemPrompt,
 +			extensionFactories: [
 +				(pi) => {
 +					pi.on("before_agent_start", () => ({
-+						systemPrompt: `extension replacement\n\n${immutableSystemPrompt}`,
++						systemPrompt: `${immutableSystemPrompt}\n\nextension replacement`,
 +					}));
 +				},
 +			],
@@ -2952,8 +3157,8 @@ index 1fa23fb..783051d 100644
 +		await harness.session.prompt("again");
 +
 +		expect(observedSystemPrompts).toEqual([
-+			"extension replacement\n\nimmutable host identity",
-+			"extension replacement\n\nimmutable host identity",
++			"immutable host identity\n\nextension replacement",
++			"immutable host identity\n\nextension replacement",
 +		]);
 +		for (const prompt of observedSystemPrompts) {
 +			expect(prompt.split(immutableSystemPrompt)).toHaveLength(2);
@@ -2964,46 +3169,93 @@ index 1fa23fb..783051d 100644
 +		expect(harness.session.agent.state.systemPrompt.split(immutableSystemPrompt)).toHaveLength(2);
 +	});
 +
-+	it("changes the native default segment only when reload receives a new snapshot", async () => {
-+		const harness = await createHarness({ defaultPrompt: "Initial default instructions." });
++	it("does not delete mutable content that happens to match the immutable prompt", async () => {
++		const immutableSystemPrompt = "immutable host identity";
++		const mutableContent = `extension replacement\n\n${immutableSystemPrompt}`;
++		const harness = await createHarness({
++			immutableSystemPrompt,
++			extensionFactories: [
++				(pi) => {
++					pi.on("before_agent_start", () => ({ systemPrompt: mutableContent }));
++				},
++			],
++		});
++		harnesses.push(harness);
++		let observedSystemPrompt = "";
++		harness.setResponses([
++			(context) => {
++				observedSystemPrompt = context.systemPrompt;
++				return fauxAssistantMessage("ok");
++			},
++		]);
++
++		await harness.session.prompt("hello");
++
++		expect(observedSystemPrompt).toBe(`${immutableSystemPrompt}\n\n${mutableContent}`);
++		expect(observedSystemPrompt.split(immutableSystemPrompt)).toHaveLength(3);
++	});
++
++	it("refreshes only context files and rebuilds the current prompt", async () => {
++		let content = "initial strategy";
++		let reloads = 0;
++		const baseLoader = createTestResourceLoader();
++		const resourceLoader = {
++			...baseLoader,
++			getAgentsFiles: () => ({ agentsFiles: [{ path: "/AGENTS.md", content }] }),
++			refreshContextFiles: () => {
++				content = "updated strategy";
++			},
++			reload: async () => {
++				reloads += 1;
++			},
++		};
++		const harness = await createHarness({ resourceLoader });
 +		harnesses.push(harness);
 +
-+		expect(harness.session.agent.state.systemPrompt).toContain("Initial default instructions.");
-+		await harness.session.reload({ defaultPrompt: "Updated default instructions." });
-+
-+		expect(harness.session.agent.state.systemPrompt).toContain("Updated default instructions.");
-+		expect(harness.session.agent.state.systemPrompt).not.toContain("Initial default instructions.");
-+		expect(harness.session.agent.state.systemPrompt).toContain("Available tools:");
-+		expect(harness.session.agent.state.systemPrompt).toContain("Guidelines:");
++		expect(harness.session.agent.state.systemPrompt).toContain("initial strategy");
++		harness.session.refreshContextFiles();
++		expect(harness.session.agent.state.systemPrompt).toContain("updated strategy");
++		expect(harness.session.agent.state.systemPrompt).not.toContain("initial strategy");
++		expect(reloads).toBe(0);
 +	});
 +
  	it("handles a tool call turn and waits for the follow-up LLM response", async () => {
  		const toolRuns: string[] = [];
  		const echoTool: AgentTool = {
 diff --git a/packages/coding-agent/test/suite/harness.ts b/packages/coding-agent/test/suite/harness.ts
-index a1dd2ce..b62d193 100644
+index a1dd2ce2..3a88e0ef 100644
 --- a/packages/coding-agent/test/suite/harness.ts
 +++ b/packages/coding-agent/test/suite/harness.ts
-@@ -64,6 +64,8 @@ export interface HarnessOptions {
+@@ -64,6 +64,7 @@ export interface HarnessOptions {
  	models?: FauxModelDefinition[];
  	settings?: Partial<Settings>;
  	systemPrompt?: string;
-+	defaultPrompt?: string;
 +	immutableSystemPrompt?: string;
  	tools?: AgentTool[];
  	initialActiveToolNames?: string[];
  	allowedToolNames?: string[];
-@@ -191,6 +193,8 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
+@@ -191,6 +192,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
  		allowedToolNames: options.allowedToolNames,
  		excludedToolNames: options.excludedToolNames,
  		extensionRunnerRef,
-+		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  
  	const events: AgentSessionEvent[] = [];
+diff --git a/packages/coding-agent/test/suite/regressions/7193-event-bus-lifecycle.test.ts b/packages/coding-agent/test/suite/regressions/7193-event-bus-lifecycle.test.ts
+index a1cf741b..1ae091df 100644
+--- a/packages/coding-agent/test/suite/regressions/7193-event-bus-lifecycle.test.ts
++++ b/packages/coding-agent/test/suite/regressions/7193-event-bus-lifecycle.test.ts
+@@ -41,6 +41,7 @@ describe("issue #7193 extension event-bus lifecycle", () => {
+ 			getAppendSystemPrompt: () => [],
+ 			getAppendSystemPromptSources: () => [],
+ 			extendResources: () => {},
++			refreshContextFiles: () => {},
+ 			reload: async () => {
+ 				extensionsResult = await loadExtensions();
+ 			},
 diff --git a/packages/coding-agent/test/suite/regressions/pre-prompt-compaction-no-continue.test.ts b/packages/coding-agent/test/suite/regressions/pre-prompt-compaction-no-continue.test.ts
-index 3f53aba..6d378b1 100644
+index 3f53aba0..6d378b1c 100644
 --- a/packages/coding-agent/test/suite/regressions/pre-prompt-compaction-no-continue.test.ts
 +++ b/packages/coding-agent/test/suite/regressions/pre-prompt-compaction-no-continue.test.ts
 @@ -61,7 +61,7 @@ describe("pre-prompt compaction regression", () => {
@@ -3016,7 +3268,7 @@ index 3f53aba..6d378b1 100644
  		expect(continueSpy).not.toHaveBeenCalled();
  		expect(harness.eventsOfType("compaction_end").at(-1)).toMatchObject({
 diff --git a/packages/coding-agent/test/system-prompt.test.ts b/packages/coding-agent/test/system-prompt.test.ts
-index 41d8320..9ddb83f 100644
+index 41d83207..bb812bd0 100644
 --- a/packages/coding-agent/test/system-prompt.test.ts
 +++ b/packages/coding-agent/test/system-prompt.test.ts
 @@ -1,5 +1,5 @@
@@ -3026,13 +3278,12 @@ index 41d8320..9ddb83f 100644
  
  describe("buildSystemPrompt", () => {
  	describe("empty tools", () => {
-@@ -27,6 +27,23 @@ describe("buildSystemPrompt", () => {
+@@ -27,6 +27,21 @@ describe("buildSystemPrompt", () => {
  	});
  
  	describe("default tools", () => {
-+		test("keeps the stable default instructions separate from dynamic sections", () => {
++		test("keeps the identity-neutral base instructions before dynamic sections", () => {
 +			const prompt = buildSystemPrompt({
-+				defaultPrompt: "Prefer small, reversible changes.",
 +				selectedTools: ["read"],
 +				toolSnippets: { read: "Read file contents" },
 +				promptGuidelines: ["Check the result."],
@@ -3041,16 +3292,15 @@ index 41d8320..9ddb83f 100644
 +				cwd: process.cwd(),
 +			});
 +
-+			expect(prompt).toContain("Prefer small, reversible changes.\n\nAvailable tools:");
++			expect(prompt).toContain(`${DEFAULT_BASE_INSTRUCTIONS}\n\nAvailable tools:`);
 +			expect(prompt).toContain("- read: Read file contents");
 +			expect(prompt).toContain("- Check the result.");
-+			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
 +		});
 +
  		test("includes all default tools when snippets are provided", () => {
  			const prompt = buildSystemPrompt({
  				toolSnippets: {
-@@ -60,17 +77,35 @@ describe("buildSystemPrompt", () => {
+@@ -60,17 +75,33 @@ describe("buildSystemPrompt", () => {
  			expect(prompt).toContain(expected);
  		});
  
@@ -3071,10 +3321,9 @@ index 41d8320..9ddb83f 100644
 +	});
 +
 +	describe("custom system replacement", () => {
-+		test("continues to bypass the factory or customized default segment", () => {
++		test("continues to bypass the factory default segment", () => {
  			const prompt = buildSystemPrompt({
 +				customPrompt: "Manual system replacement.",
-+				defaultPrompt: "Customized default instructions.",
  				contextFiles: [],
  				skills: [],
  				cwd: process.cwd(),
@@ -3085,17 +3334,28 @@ index 41d8320..9ddb83f 100644
 -			);
 -			expect(prompt).toContain("environment variables (docs/environment-variables.md)");
 +			expect(prompt).toContain("Manual system replacement.");
-+			expect(prompt).not.toContain("Customized default instructions.");
 +			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
 +			expect(prompt).not.toContain("Available tools:");
  		});
  	});
  
+diff --git a/packages/coding-agent/test/utilities.ts b/packages/coding-agent/test/utilities.ts
+index 41641db7..d53fea77 100644
+--- a/packages/coding-agent/test/utilities.ts
++++ b/packages/coding-agent/test/utilities.ts
+@@ -228,6 +228,7 @@ export function createTestResourceLoader(options: CreateTestResourceLoaderOption
+ 		getAppendSystemPrompt: () => [],
+ 		getAppendSystemPromptSources: () => [],
+ 		extendResources: () => {},
++		refreshContextFiles: () => {},
+ 		reload: async () => {},
+ 	};
+ }
 diff --git a/scripts/build-coding-agent-bundle.mjs b/scripts/build-coding-agent-bundle.mjs
-index 1b6d233..cb8e621 100644
+index c27e8d56..76a41417 100644
 --- a/scripts/build-coding-agent-bundle.mjs
 +++ b/scripts/build-coding-agent-bundle.mjs
-@@ -49,6 +49,15 @@ export function createJiti(...args) {
+@@ -73,6 +73,15 @@ const httpsProxyAgentNamedExportPlugin = {
  	},
  };
  
@@ -3111,12 +3371,12 @@ index 1b6d233..cb8e621 100644
  function commonBuildOptions() {
  	return {
  		absWorkingDir: repoRoot,
-@@ -67,7 +76,7 @@ function commonBuildOptions() {
+@@ -91,7 +100,7 @@ function commonBuildOptions() {
  		// package replaces it with a synchronous lazy require so jiti loads only
  		// when importing an extension; Babel remains deferred until a cache miss
  		// needs transformation.
--		plugins: [lazyJitiPlugin],
-+		plugins: [lazyJitiPlugin, jsoncParserEsmPlugin],
+-		plugins: [lazyJitiPlugin, httpsProxyAgentNamedExportPlugin],
++		plugins: [lazyJitiPlugin, httpsProxyAgentNamedExportPlugin, jsoncParserEsmPlugin],
  		sourcemap: false,
  		target: "node22.19",
  		// Do not apply the monorepo's source-oriented path aliases while bundling

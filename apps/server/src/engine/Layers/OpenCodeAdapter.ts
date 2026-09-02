@@ -1213,7 +1213,8 @@ export function normalizeOpenCodeTokenUsage(
     lastUsedTokens: usedTokens,
     lastTokenBreakdown: {
       cachedInputTokens: cacheReadTokens,
-      uncachedInputTokens: inputTokens + cacheWriteTokens,
+      uncachedInputTokens: inputTokens,
+      cacheWriteInputTokens: cacheWriteTokens,
       outputTokens: outputTokens + reasoningOutputTokens,
     },
   };
@@ -1232,6 +1233,8 @@ function accumulateOpenCodeTokenUsage(
       (context.cumulativeTokenBreakdown?.cachedInputTokens ?? 0) + last.cachedInputTokens,
     uncachedInputTokens:
       (context.cumulativeTokenBreakdown?.uncachedInputTokens ?? 0) + last.uncachedInputTokens,
+    cacheWriteInputTokens:
+      (context.cumulativeTokenBreakdown?.cacheWriteInputTokens ?? 0) + last.cacheWriteInputTokens,
     outputTokens: (context.cumulativeTokenBreakdown?.outputTokens ?? 0) + last.outputTokens,
   };
   context.cumulativeTokenBreakdown = totalTokenBreakdown;

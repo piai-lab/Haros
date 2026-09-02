@@ -77,6 +77,7 @@ interface TokenBreakdownDayRow {
   readonly engine: string | null;
   readonly cachedInputTokens: number;
   readonly uncachedInputTokens: number;
+  readonly cacheWriteInputTokens: number;
   readonly outputTokens: number;
 }
 
@@ -1060,6 +1061,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             pm.dispatch_origin,
             CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') AS INTEGER) AS cached,
             CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') AS INTEGER) AS uncached,
+            CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cacheWriteInputTokens') AS INTEGER) AS cacheWrite,
             CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') AS INTEGER) AS output
           FROM projection_thread_activities a
           JOIN projection_threads t ON t.thread_id = a.thread_id
@@ -1070,6 +1072,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           WHERE a.kind = 'context-window.updated'
             AND json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') IS NOT NULL
             AND json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') IS NOT NULL
+            AND json_extract(a.payload_json, '$.totalTokenBreakdown.cacheWriteInputTokens') IS NOT NULL
             AND json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') IS NOT NULL
         ),
         deltas AS (
@@ -1081,12 +1084,15 @@ const makeProfileStatsQuery = Effect.gen(function* () {
               THEN cached ELSE MAX(0, cached - previous_cached) END AS cached_delta,
             CASE WHEN previous_uncached IS NULL OR uncached < previous_uncached
               THEN uncached ELSE MAX(0, uncached - previous_uncached) END AS uncached_delta,
+            CASE WHEN previous_cache_write IS NULL OR cacheWrite < previous_cache_write
+              THEN cacheWrite ELSE MAX(0, cacheWrite - previous_cache_write) END AS cache_write_delta,
             CASE WHEN previous_output IS NULL OR output < previous_output
               THEN output ELSE MAX(0, output - previous_output) END AS output_delta
           FROM (
             SELECT *,
               LAG(cached) OVER token_order AS previous_cached,
               LAG(uncached) OVER token_order AS previous_uncached,
+              LAG(cacheWrite) OVER token_order AS previous_cache_write,
               LAG(output) OVER token_order AS previous_output
             FROM known
             WINDOW token_order AS (
@@ -1097,7 +1103,8 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           )
         ),
         all_rows AS (
-          SELECT day, engine, cached_delta AS cached, uncached_delta AS uncached, output_delta AS output
+          SELECT day, engine, cached_delta AS cached, uncached_delta AS uncached,
+            cache_write_delta AS cacheWrite, output_delta AS output
           FROM deltas
           WHERE (dispatch_origin IS NULL OR dispatch_origin = 'user')
             AND day BETWEEN ${startDay} AND ${endDay}
@@ -1107,16 +1114,19 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             COALESCE(d.engine, 'unknown') AS engine,
             d.cached_input_tokens AS cached,
             d.uncached_input_tokens AS uncached,
+            d.cache_write_input_tokens AS cacheWrite,
             d.output_tokens AS output
           FROM profile_stats_deleted_tokens d
           WHERE d.cached_input_tokens IS NOT NULL
             AND d.uncached_input_tokens IS NOT NULL
+            AND d.cache_write_input_tokens IS NOT NULL
             AND d.output_tokens IS NOT NULL
             AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
         )
         SELECT day, engine,
           SUM(cached) AS cachedInputTokens,
           SUM(uncached) AS uncachedInputTokens,
+          SUM(cacheWrite) AS cacheWriteInputTokens,
           SUM(output) AS outputTokens
         FROM all_rows
         GROUP BY day, engine
@@ -1145,6 +1155,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             AND (
               json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') IS NULL
               OR json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') IS NULL
+              OR json_extract(a.payload_json, '$.totalTokenBreakdown.cacheWriteInputTokens') IS NULL
               OR json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') IS NULL
             )
             AND STRFTIME('%Y-%m-%d', DATETIME(a.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
@@ -1154,6 +1165,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           WHERE (
             d.cached_input_tokens IS NULL
             OR d.uncached_input_tokens IS NULL
+            OR d.cache_write_input_tokens IS NULL
             OR d.output_tokens IS NULL
           )
           AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
@@ -1432,7 +1444,12 @@ const makeProfileStatsQuery = Effect.gen(function* () {
 
       const breakdownByDay = new Map<
         string,
-        { cachedInputTokens: number; uncachedInputTokens: number; outputTokens: number }
+        {
+          cachedInputTokens: number;
+          uncachedInputTokens: number;
+          cacheWriteInputTokens: number;
+          outputTokens: number;
+        }
       >();
       const breakdownEngines = new Set<EngineKind>();
       for (const row of recentBreakdownRows) {
@@ -1441,10 +1458,12 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         const current = breakdownByDay.get(day) ?? {
           cachedInputTokens: 0,
           uncachedInputTokens: 0,
+          cacheWriteInputTokens: 0,
           outputTokens: 0,
         };
         current.cachedInputTokens += num(row.cachedInputTokens);
         current.uncachedInputTokens += num(row.uncachedInputTokens);
+        current.cacheWriteInputTokens += num(row.cacheWriteInputTokens);
         current.outputTokens += num(row.outputTokens);
         breakdownByDay.set(day, current);
         const engine = normalizeEngineKind(row.engine);
@@ -1463,6 +1482,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         ...(breakdownByDay.get(day) ?? {
           cachedInputTokens: 0,
           uncachedInputTokens: 0,
+          cacheWriteInputTokens: 0,
           outputTokens: 0,
         }),
       }));
@@ -1475,7 +1495,12 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         0,
       );
       const recentOutputTokens = recentTokenDays.reduce((sum, day) => sum + day.outputTokens, 0);
-      const recentInputTokens = recentCachedInputTokens + recentUncachedInputTokens;
+      const recentCacheWriteInputTokens = recentTokenDays.reduce(
+        (sum, day) => sum + day.cacheWriteInputTokens,
+        0,
+      );
+      const recentInputTokens =
+        recentCachedInputTokens + recentUncachedInputTokens + recentCacheWriteInputTokens;
       const hasRecentBreakdown = recentBreakdownRows.length > 0;
       const recentTokenCoverage = !hasRecentBreakdown
         ? "unavailable"
@@ -1496,6 +1521,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           endDay: todayKey,
           cachedInputTokens: recentCachedInputTokens,
           uncachedInputTokens: recentUncachedInputTokens,
+          cacheWriteInputTokens: recentCacheWriteInputTokens,
           outputTokens: recentOutputTokens,
           cacheHitPercent:
             recentInputTokens > 0 ? percent1(recentCachedInputTokens, recentInputTokens) : null,

@@ -24,7 +24,7 @@ const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
 export const DEFAULT_HARNESSOS_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".harnessos"),
+  path.join(homedir(), ".harnessos-dev"),
 );
 
 const MODE_ARGS = {

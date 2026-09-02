@@ -13,6 +13,7 @@ import {
   type DeferredDockPaneHydrationScheduler,
   type DockPaneRuntimeMode,
 } from "~/lib/dockPaneActivation";
+import type { RightDockVisibleActivation } from "~/rightDockStore";
 import type { RightDockPane, RightDockPaneKind } from "~/rightDockStore.logic";
 
 const browserDockPaneHydrationScheduler: DeferredDockPaneHydrationScheduler = {
@@ -25,29 +26,35 @@ const browserDockPaneHydrationScheduler: DeferredDockPaneHydrationScheduler = {
 export function useDockPaneRuntimeActivation(input: {
   threadId: ThreadId;
   activePane: RightDockPane | null;
+  pendingVisibleActivation: RightDockVisibleActivation | null;
+  consumeVisibleActivation: (threadId: ThreadId, requestId: string) => void;
 }) {
+  const { activePane, consumeVisibleActivation, pendingVisibleActivation, threadId } = input;
   const immediateHydrationKindRef = useRef<RightDockPaneKind | "any" | null>(null);
   const [hydratedPaneKey, setHydratedPaneKey] = useState<string | null>(null);
-  const activePaneId = input.activePane?.id ?? null;
-  const activePaneKind = input.activePane?.kind ?? null;
+  const activePaneId = activePane?.id ?? null;
+  const activePaneKind = activePane?.kind ?? null;
 
   const activePaneKey = useMemo(
     () =>
       activePaneId !== null && activePaneKind !== null
         ? dockPaneActivationKey({
-            threadId: input.threadId,
+            threadId,
             paneId: activePaneId,
             kind: activePaneKind,
           })
         : null,
-    [activePaneId, activePaneKind, input.threadId],
+    [activePaneId, activePaneKind, threadId],
   );
+  const pendingVisibleActivationMatches =
+    activePaneId !== null && pendingVisibleActivation?.paneId === activePaneId;
 
   const activePaneRuntimeMode: DockPaneRuntimeMode =
     activePaneKind !== null && activePaneKey !== null
       ? resolveDockPaneRuntimeMode({
           kind: activePaneKind,
           reason:
+            pendingVisibleActivationMatches ||
             immediateHydrationKindRef.current === "any" ||
             immediateHydrationKindRef.current === activePaneKind
               ? "explicit"
@@ -97,6 +104,7 @@ export function useDockPaneRuntimeActivation(input: {
     }
 
     const reason =
+      pendingVisibleActivationMatches ||
       immediateHydrationKindRef.current === "any" ||
       immediateHydrationKindRef.current === activePaneKind
         ? "explicit"
@@ -112,7 +120,13 @@ export function useDockPaneRuntimeActivation(input: {
     });
 
     if (nextRuntimeMode === "live") {
-      setHydratedPaneKey(activePaneKey);
+      if (hydratedPaneKey !== activePaneKey) {
+        setHydratedPaneKey(activePaneKey);
+        return;
+      }
+      if (pendingVisibleActivationMatches && pendingVisibleActivation) {
+        consumeVisibleActivation(threadId, pendingVisibleActivation.requestId);
+      }
       return;
     }
 
@@ -121,7 +135,15 @@ export function useDockPaneRuntimeActivation(input: {
       onHydrate: () => setHydratedPaneKey(activePaneKey),
       scheduler: browserDockPaneHydrationScheduler,
     });
-  }, [activePaneKey, activePaneKind, hydratedPaneKey]);
+  }, [
+    activePaneKey,
+    activePaneKind,
+    hydratedPaneKey,
+    consumeVisibleActivation,
+    pendingVisibleActivation,
+    threadId,
+    pendingVisibleActivationMatches,
+  ]);
 
   return {
     activePaneRuntimeMode,

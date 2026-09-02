@@ -26,6 +26,11 @@ describe("desktopIdentity", () => {
     expect(HARNESSOS_DESKTOP_ENTRY_URL).toBe("harnessos://app/index.html");
   });
 
+  it("keeps source development data separate from production", () => {
+    expect(harnessOSDesktopIdentity("development").defaultHomeDirectoryName).toBe(".harnessos-dev");
+    expect(harnessOSDesktopIdentity("production").defaultHomeDirectoryName).toBe(".harnessos");
+  });
+
   it("gives Canary a fully separate desktop identity and storage profile", () => {
     expect(HARNESSOS_CANARY_BUNDLE_ID).toBe("ai.piai.harnessos.canary");
     expect(HARNESSOS_CANARY_DESKTOP_ORIGIN).toBe("harnessos-canary://app");
@@ -52,5 +57,15 @@ describe("desktopIdentity", () => {
     expect(resolveHarosDesktopFlavor({ isDevelopment: true, requestedFlavor: "canary" })).toBe(
       "canary",
     );
+    expect(
+      resolveHarosDesktopFlavor({
+        isDevelopment: false,
+        requestedFlavor: "development",
+        allowDevelopmentOverride: true,
+      }),
+    ).toBe("development");
+    expect(
+      resolveHarosDesktopFlavor({ isDevelopment: false, requestedFlavor: "development" }),
+    ).toBe("production");
   });
 });

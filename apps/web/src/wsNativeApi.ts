@@ -865,7 +865,7 @@ export function createWsNativeApi(): NativeApi {
         }),
     },
     oaAgentPrompts: {
-      getSnapshot: (input = {}) => transport.request(WS_METHODS.oaAgentPromptsGetSnapshot, input),
+      getSnapshot: (input) => transport.request(WS_METHODS.oaAgentPromptsGetSnapshot, input),
       mutate: (input) =>
         transport.request(WS_METHODS.oaAgentPromptsMutate, input, {
           timeoutMs: null,

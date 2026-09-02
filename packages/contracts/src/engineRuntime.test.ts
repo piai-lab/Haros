@@ -222,6 +222,38 @@ describe("EngineRuntimeEvent", () => {
     expect(parsed.payload.usage.usedPercent).toBe(15.6255);
   });
 
+  it("upgrades persisted three-bucket token usage snapshots to the canonical four-bucket shape", () => {
+    const parsed = decodeRuntimeEvent({
+      type: "thread.token-usage.updated",
+      eventId: "event-token-usage-legacy",
+      engine: "codex",
+      createdAt: "2026-02-28T00:00:04.000Z",
+      threadId: "thread-1",
+      payload: {
+        usage: {
+          usedTokens: 126,
+          maxTokens: 258400,
+          totalTokenBreakdown: {
+            cachedInputTokens: 0,
+            uncachedInputTokens: 120,
+            outputTokens: 6,
+          },
+        },
+      },
+    });
+
+    expect(parsed.type).toBe("thread.token-usage.updated");
+    if (parsed.type !== "thread.token-usage.updated") {
+      throw new Error("expected thread.token-usage.updated");
+    }
+    expect(parsed.payload.usage.totalTokenBreakdown).toEqual({
+      cachedInputTokens: 0,
+      uncachedInputTokens: 120,
+      cacheWriteInputTokens: 0,
+      outputTokens: 6,
+    });
+  });
+
   it("preserves untrimmed tool output in item lifecycle detail", () => {
     const rawOutput = "  COMMAND   PID  USER\nbun.exe 33263 zachz\ndone\n";
     const parsed = decodeRuntimeEvent({

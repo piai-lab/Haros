@@ -323,13 +323,17 @@ const ThreadMetadataUpdatedPayload = Schema.Struct({
 export type ThreadMetadataUpdatedPayload = typeof ThreadMetadataUpdatedPayload.Type;
 
 /**
- * Engine-neutral processed-token buckets. The three values are mutually
- * exclusive: cache writes belong to uncached input, and generated reasoning is
- * included in output exactly once by the engine adapter.
+ * Engine-neutral processed-token buckets. The four values are mutually
+ * exclusive, and generated reasoning is included in output exactly once by
+ * the engine adapter.
  */
 export const TokenUsageBreakdown = Schema.Struct({
   cachedInputTokens: NonNegativeInt,
   uncachedInputTokens: NonNegativeInt,
+  // Runtime journals written before the four-bucket contract do not contain
+  // this key. Decode those snapshots into the canonical zero value while
+  // keeping the in-memory/newly encoded shape required and single-owned.
+  cacheWriteInputTokens: NonNegativeInt.pipe(Schema.withDecodingDefaultKey(() => 0)),
   outputTokens: NonNegativeInt,
 });
 export type TokenUsageBreakdown = typeof TokenUsageBreakdown.Type;

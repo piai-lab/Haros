@@ -136,7 +136,7 @@ describe("ServerSettingsService", () => {
     });
   });
 
-  it("retires only the old Haros model hint field on the next normal settings save", async () => {
+  it("retires old Haros model and prompt fields on the next normal settings save", async () => {
     const retiredKey = ["custom", "Models"].join("");
     const result = await runWithSettings(
       Effect.gen(function* () {
@@ -157,7 +157,7 @@ describe("ServerSettingsService", () => {
                 oa: {
                   enabled: false,
                   [retiredKey]: ["legacy/provider-model"],
-                  defaultPrompt: "private prompt",
+                  defaultPrompt: "retired private prompt",
                 },
                 codex: { customModels: ["custom/codex-model"] },
               },
@@ -187,10 +187,7 @@ describe("ServerSettingsService", () => {
 
     expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
     expect(result.view.engines.oa).toEqual({ enabled: false });
-    expect(result.internal.engines.oa).toEqual({
-      enabled: false,
-      defaultPrompt: "private prompt",
-    });
+    expect(result.internal.engines.oa).toEqual({ enabled: false });
     expect(result.persisted).toMatchObject({
       revision: 5,
       migrationVersion: 4,
@@ -199,7 +196,7 @@ describe("ServerSettingsService", () => {
         enableEngineUpdateChecks: false,
         addProjectBaseDirectory: "/tmp/harnessos-projects",
         engines: {
-          oa: { enabled: false, defaultPrompt: "private prompt" },
+          oa: { enabled: false },
           codex: { customModels: ["custom/codex-model"] },
         },
         agentTools: { builtInGroupOverrides: {} },
@@ -724,56 +721,6 @@ describe("ServerSettingsService", () => {
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);
-  });
-
-  it("keeps the customized default prompt out of public views and streams", async () => {
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const service = yield* ServerSettingsService;
-        const initialView = yield* service.getSettingsView;
-        const streamedViewFiber = yield* Stream.runHead(service.streamViews).pipe(
-          Effect.forkChild({ startImmediately: true }),
-        );
-        const mutation = yield* service.mutateHarosDefaultPrompt("private one", "private two");
-        const streamedView = Option.getOrThrow(yield* Fiber.join(streamedViewFiber));
-        return { initialView, mutation, streamedView };
-      }).pipe(
-        Effect.provide(
-          ServerSettingsService.layerTest({
-            engines: { oa: { defaultPrompt: "private one" } },
-          }),
-        ),
-      ),
-    );
-
-    expect(result.mutation.state).toBe("changed");
-    expect(result.initialView.engines.oa).not.toHaveProperty("defaultPrompt");
-    expect(result.streamedView.engines.oa).not.toHaveProperty("defaultPrompt");
-    expect(JSON.stringify(result.initialView)).not.toContain("private one");
-    expect(JSON.stringify(result.streamedView)).not.toContain("private two");
-  });
-
-  it("serializes default-prompt compare-and-set so one concurrent edit conflicts", async () => {
-    const result = await Effect.runPromise(
-      Effect.gen(function* () {
-        const service = yield* ServerSettingsService;
-        const mutations = yield* Effect.all(
-          [
-            service.mutateHarosDefaultPrompt(null, "first"),
-            service.mutateHarosDefaultPrompt(null, "second"),
-          ],
-          { concurrency: "unbounded" },
-        );
-        return {
-          mutations,
-          snapshot: yield* service.getSnapshot,
-        };
-      }).pipe(Effect.provide(ServerSettingsService.layerTest())),
-    );
-
-    expect(result.mutations.map(({ state }) => state).toSorted()).toEqual(["changed", "conflict"]);
-    expect(["first", "second"]).toContain(result.snapshot.settings.engines.oa.defaultPrompt);
-    expect(result.snapshot.revision).toBe(1);
   });
 
   it("resolves text generation selection away from disabled engines", async () => {

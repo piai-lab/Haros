@@ -60,9 +60,9 @@ import {
 import { createTerminalModeReplayTracker } from "../terminalModeReplay";
 import {
   defaultProcessTreeKiller,
+  terminateProcessTree,
   type ProcessTreeKiller,
-  type TerminalKillSignal,
-} from "../processTreeKiller";
+} from "../../platform/processTreeController";
 import {
   captureProcessChildrenMap,
   defaultSubprocessChecker,
@@ -70,9 +70,9 @@ import {
   type TerminalSubprocessActivity,
 } from "../subprocessActivity";
 import {
-  createWindowsProcessSnapshotObserver,
+  sharedWindowsProcessSnapshotObserver,
   type ProcessChildrenSnapshotObserver,
-} from "../windowsProcessSnapshot";
+} from "../../platform/windowsProcessSnapshot";
 
 export type { TerminalSubprocessActivity } from "../subprocessActivity";
 
@@ -108,7 +108,6 @@ const DEFAULT_OPEN_COLS = 120;
 const DEFAULT_OPEN_ROWS = 30;
 const ENGINE_INPUT_ACTIVITY_GRACE_MS = 120_000;
 const ENGINE_OUTPUT_ACTIVITY_GRACE_MS = 30_000;
-const SHUTDOWN_ESCALATION_SETTLE_MS = 25;
 const TERMINAL_ENV_BLOCKLIST = new Set([
   "PORT",
   "ELECTRON_RENDERER_PORT",
@@ -756,10 +755,7 @@ interface TerminalManagerOptions {
 }
 
 interface KillEscalationHandle {
-  timer: ReturnType<typeof setTimeout>;
-  unsubscribeExit: (() => void) | null;
-  retainAfterRootExit: boolean;
-  rootExited: boolean;
+  promise: Promise<void>;
 }
 
 export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> {
@@ -787,6 +783,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   private readonly processTreeKiller: ProcessTreeKiller;
   private readonly useDefaultSubprocessChecker: boolean;
   private readonly processSnapshotObserver: ProcessChildrenSnapshotObserver | null;
+  private readonly ownsProcessSnapshotObserver: boolean;
   private readonly subprocessPollIntervalMs: number;
   private readonly processKillGraceMs: number;
   private readonly maxRetainedInactiveSessions: number;
@@ -816,10 +813,11 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     // Only the built-in checker can share a single process snapshot across the
     // poll cycle; injected checkers (tests) keep the per-pid path.
     this.useDefaultSubprocessChecker = options.subprocessChecker === undefined;
+    this.ownsProcessSnapshotObserver = options.processSnapshotObserver !== undefined;
     this.processSnapshotObserver =
       options.processSnapshotObserver ??
       (this.useDefaultSubprocessChecker && process.platform === "win32"
-        ? createWindowsProcessSnapshotObserver()
+        ? sharedWindowsProcessSnapshotObserver()
         : null);
     this.subprocessPollIntervalMs =
       options.subprocessPollIntervalMs ?? DEFAULT_SUBPROCESS_POLL_INTERVAL_MS;
@@ -938,7 +936,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           });
         }
       } else if (existing.cwd !== input.cwd || runtimeEnvChanged) {
-        this.stopProcess(existing);
+        await this.stopProcess(existing);
         existing.cwd = input.cwd;
         existing.runtimeEnv = nextRuntimeEnv;
         resetSessionHistory(existing);
@@ -1121,7 +1119,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
         this.sessions.set(sessionKey, session);
         this.evictInactiveSessionsIfNeeded();
       } else {
-        this.stopProcess(session);
+        await this.stopProcess(session);
         session.cwd = input.cwd;
         session.runtimeEnv = normalizedRuntimeEnv(input.env);
       }
@@ -1176,7 +1174,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   ): Promise<void> {
     const threadSessions = this.sessionsForThread(threadId).filter(shouldClose);
     for (const session of threadSessions) {
-      this.stopProcess(session);
+      await this.stopProcess(session);
       this.sessions.delete(toSessionKey(session.threadId, session.terminalId));
     }
     await Promise.all(
@@ -1195,48 +1193,36 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   }
 
   dispose(): void {
-    this.disposeInternal({ keepEscalationTimers: false });
+    void Promise.all(this.disposeInternal());
   }
 
   async disposeForShutdown(): Promise<void> {
-    const pendingEscalations = this.disposeInternal({ keepEscalationTimers: true });
-    if (pendingEscalations > 0) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.processKillGraceMs + SHUTDOWN_ESCALATION_SETTLE_MS),
-      );
-    }
-    this.clearAllKillEscalationTimers();
+    await Promise.all(this.disposeInternal());
   }
 
-  private disposeInternal(options: { keepEscalationTimers: boolean }): number {
+  private disposeInternal(): Promise<void>[] {
     this.stopSubprocessPolling();
-    this.processSnapshotObserver?.dispose();
     const sessions = [...this.sessions.values()];
     this.sessions.clear();
-    for (const session of sessions) {
+    const terminations = sessions.map((session) => {
       // Flush any remaining batched output before tearing down.
       this.flushOutputBuffer(session);
-      this.stopProcess(session);
+      return this.stopProcess(session);
+    });
+    for (const handle of this.killEscalationTimers.values()) {
+      terminations.push(handle.promise);
     }
     for (const timer of this.persistTimers.values()) {
       clearTimeout(timer);
     }
     this.persistTimers.clear();
-    if (!options.keepEscalationTimers) {
-      this.clearAllKillEscalationTimers();
-    }
     this.pendingPersistHistory.clear();
     this.threadLocks.clear();
     this.persistQueues.clear();
-    return this.killEscalationTimers.size;
-  }
-
-  private clearAllKillEscalationTimers(): void {
-    for (const handle of this.killEscalationTimers.values()) {
-      clearTimeout(handle.timer);
-      handle.unsubscribeExit?.();
+    if (this.ownsProcessSnapshotObserver) {
+      void Promise.allSettled(terminations).then(() => this.processSnapshotObserver?.dispose());
     }
-    this.killEscalationTimers.clear();
+    return terminations;
   }
 
   private async startSession(
@@ -1244,7 +1230,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     input: TerminalStartInput,
     eventType: "started" | "restarted",
   ): Promise<void> {
-    this.stopProcess(session);
+    await this.stopProcess(session);
 
     session.status = "starting";
     session.cwd = input.cwd;
@@ -1351,7 +1337,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       }
     } catch (error) {
       if (ptyProcess) {
-        this.killProcessWithEscalation(ptyProcess, session.threadId, session.terminalId);
+        await this.killProcessWithEscalation(ptyProcess, session.threadId, session.terminalId);
       }
       session.status = "error";
       session.pid = null;
@@ -1630,7 +1616,6 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   private onProcessExit(session: TerminalSessionState, event: PtyExitEvent): void {
     // Drain any remaining batched output before emitting the exit event.
     this.flushOutputBuffer(session);
-    this.clearKillEscalationTimer(session.process, { force: false });
     this.cleanupProcessHandles(session);
     session.process = null;
     session.pid = null;
@@ -1662,12 +1647,21 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     this.updateSubprocessPollingState();
   }
 
-  private stopProcess(session: TerminalSessionState): void {
+  private stopProcess(session: TerminalSessionState): Promise<void> {
     // Drain any remaining batched output before killing.
     this.flushOutputBuffer(session);
     const process = session.process;
-    if (!process) return;
+    if (!process) return Promise.resolve();
+    // Hand exit ownership to teardown synchronously. Keeping both observers
+    // live lets the ordinary session callback mutate listener state while the
+    // same exit is being delivered, which can hide the exit from escalation.
+    // No event-loop turn occurs between these two synchronous operations.
     this.cleanupProcessHandles(session);
+    const termination = this.killProcessWithEscalation(
+      process,
+      session.threadId,
+      session.terminalId,
+    );
     session.process = null;
     session.pid = null;
     session.hasRunningSubprocess = false;
@@ -1684,9 +1678,9 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.status = "exited";
     session.pendingHistoryControlSequence = "";
     session.updatedAt = new Date().toISOString();
-    this.killProcessWithEscalation(process, session.threadId, session.terminalId);
     this.evictInactiveSessionsIfNeeded();
     this.updateSubprocessPollingState();
+    return termination;
   }
 
   private cleanupProcessHandles(session: TerminalSessionState): void {
@@ -1696,103 +1690,66 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.unsubscribeExit = null;
   }
 
-  private clearKillEscalationTimer(
-    process: PtyProcess | null,
-    options: { force: boolean } = { force: true },
-  ): void {
-    if (!process) return;
-    const handle = this.killEscalationTimers.get(process);
-    if (!handle) return;
-    if (!options.force && handle.retainAfterRootExit) return;
-    clearTimeout(handle.timer);
-    handle.unsubscribeExit?.();
-    this.killEscalationTimers.delete(process);
-  }
-
   private killProcessWithEscalation(
     ptyProcess: PtyProcess,
     threadId: string,
     terminalId: string,
-  ): void {
-    this.clearKillEscalationTimer(ptyProcess);
+  ): Promise<void> {
+    const existing = this.killEscalationTimers.get(ptyProcess);
+    if (existing) return existing.promise;
     const pid = ptyProcess.pid;
-    const tree = this.processTreeKiller.capture(pid);
-    const retainAfterRootExit = tree.descendants.length > 0;
-    const signalProcess = (signal: TerminalKillSignal) => {
-      try {
-        ptyProcess.kill(signal);
-      } catch (error) {
-        const errno = error as NodeJS.ErrnoException;
-        if (errno?.code === "ESRCH") {
-          return;
-        }
-        this.logger.warn("process signal failed", {
+    let rootExited = false;
+    const unsubscribeExit = ptyProcess.onExit(() => {
+      rootExited = true;
+    });
+    const promise = terminateProcessTree(pid, {
+      rootExited: () => rootExited,
+      signalRoot: (signal) => ptyProcess.kill(signal),
+      graceMs: this.processKillGraceMs,
+      timeoutMs: this.processKillGraceMs + 2_000,
+      processTreeKiller: this.processTreeKiller,
+      ...(process.platform === "win32" && this.processSnapshotObserver
+        ? { captureWindowsChildren: () => this.processSnapshotObserver!.capture() }
+        : {}),
+      onError: (error, context) => {
+        this.logger.warn("process-tree signal failed", {
           threadId,
           terminalId,
-          pid,
-          signal,
+          pid: context.pid,
+          rootPid: pid,
+          source: context.source,
+          error: error.message,
+        });
+      },
+    })
+      .then((result) => {
+        if (!result.rootExited || !result.verified || result.survivors.length > 0) {
+          this.logger.warn("process-tree exit could not be fully verified", {
+            threadId,
+            terminalId,
+            rootPid: pid,
+            rootExited: result.rootExited,
+            snapshotVerified: result.verified,
+            survivorCount: result.survivors.length,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        this.logger.warn("process-tree teardown failed", {
+          threadId,
+          terminalId,
+          rootPid: pid,
           error: error instanceof Error ? error.message : String(error),
         });
-      }
-    };
-    const signalTree = (
-      signal: TerminalKillSignal,
-      options: { includeRootTree?: boolean } = {},
-    ) => {
-      this.processTreeKiller.signal({
-        rootPid: pid,
-        signal,
-        tree,
-        includeRootTree: options.includeRootTree,
-        onError: (error, context) => {
-          this.logger.warn(
-            context.source === "tree-kill"
-              ? `tree-kill ${signal} failed`
-              : `captured process ${signal} failed`,
-            {
-              threadId,
-              terminalId,
-              pid: context.pid,
-              rootPid: pid,
-              error: error.message,
-            },
-          );
-        },
+      })
+      .finally(() => {
+        unsubscribeExit();
+        if (this.killEscalationTimers.get(ptyProcess)?.promise === promise) {
+          this.killEscalationTimers.delete(ptyProcess);
+        }
       });
-    };
-
-    signalTree("SIGTERM");
-    // Also signal the PTY handle directly for adapter compatibility and test doubles.
-    signalProcess("SIGTERM");
-
-    const unsubscribeExit = ptyProcess.onExit(() => {
-      const handle = this.killEscalationTimers.get(ptyProcess);
-      if (handle?.retainAfterRootExit) {
-        handle.rootExited = true;
-      }
-      this.clearKillEscalationTimer(ptyProcess, { force: false });
-    });
-
-    const timer = setTimeout(() => {
-      const handle = this.killEscalationTimers.get(ptyProcess);
-      if (handle) {
-        handle.unsubscribeExit?.();
-      }
-      this.killEscalationTimers.delete(ptyProcess);
-      const rootExited = handle?.rootExited === true;
-      signalTree("SIGKILL", { includeRootTree: !rootExited });
-      // Once the root exit is observed, only the captured descendants are safe to signal.
-      if (!rootExited) {
-        signalProcess("SIGKILL");
-      }
-    }, this.processKillGraceMs);
-    timer.unref?.();
-    this.killEscalationTimers.set(ptyProcess, {
-      timer,
-      unsubscribeExit,
-      retainAfterRootExit,
-      rootExited: false,
-    });
+    this.killEscalationTimers.set(ptyProcess, { promise });
+    return promise;
   }
 
   private evictInactiveSessionsIfNeeded(): void {
@@ -1826,7 +1783,6 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       ).finally(() => {
         this.releasePersistedHistoryCache(session.threadId, session.terminalId);
       });
-      this.clearKillEscalationTimer(session.process);
     }
   }
 
@@ -2237,7 +2193,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     const key = toSessionKey(threadId, terminalId);
     const session = this.sessions.get(key);
     if (session) {
-      this.stopProcess(session);
+      await this.stopProcess(session);
       this.sessions.delete(key);
     }
     this.updateSubprocessPollingState();

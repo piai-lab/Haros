@@ -37,8 +37,8 @@ describe("Pi runtime physical isolation", () => {
     const productAgentDir = path.join(root, "product-agent");
     mkdirSync(cwd, { recursive: true });
 
-    expect(stock.VERSION).toBe("0.84.3");
-    expect(product.VERSION).toBe("0.84.3");
+    expect(stock.VERSION).toBe("0.84.4");
+    expect(product.VERSION).toBe("0.84.4");
     expect(stock.CONFIG_DIR_NAME).toBe(".pi");
     expect(product.CONFIG_DIR_NAME).toBe(".harnessos");
     expect(stock.SessionManager).not.toBe(product.SessionManager);

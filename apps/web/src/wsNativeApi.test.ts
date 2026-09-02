@@ -1064,22 +1064,26 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
-    await api.oaAgentPrompts.getSnapshot({});
+    await api.oaAgentPrompts.getSnapshot({ locale: "en" });
     await api.oaAgentPrompts.mutate({
-      action: "updateCustomRules",
+      action: "setPersonalStrategy",
       sourceId: "AGENTS.md",
       expectedVersion: "a".repeat(64),
+      locale: "en",
       content: "Be concise.",
     });
 
-    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.oaAgentPromptsGetSnapshot, {});
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.oaAgentPromptsGetSnapshot, {
+      locale: "en",
+    });
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
       WS_METHODS.oaAgentPromptsMutate,
       {
-        action: "updateCustomRules",
+        action: "setPersonalStrategy",
         sourceId: "AGENTS.md",
         expectedVersion: "a".repeat(64),
+        locale: "en",
         content: "Be concise.",
       },
       { timeoutMs: null },

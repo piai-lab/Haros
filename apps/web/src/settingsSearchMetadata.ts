@@ -44,6 +44,5 @@ export const SETTINGS_TARGETS = {
   environmentPanel: "environment-panel",
   gitWritingModel: "setting-git-writing-model",
   theme: "setting-theme",
-  defaultPrompt: "setting-default-prompt",
-  customRules: "setting-custom-rules",
+  personalStrategy: "setting-personal-strategy",
 } as const;

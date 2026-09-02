@@ -4,6 +4,7 @@ export * from "./baseSchemas";
 export * from "./editableText";
 export * from "./browserAutomationBounds";
 export * from "./browserAutomationIds";
+export * from "./browserAutomationJson";
 export * from "./browserAutomationErrors";
 export * from "./browserAutomationCssSelector";
 export * from "./browserAutomationTargets";

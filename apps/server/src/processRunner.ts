@@ -1,6 +1,8 @@
-import { type ChildProcess as ChildProcessHandle, spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
+
+import { terminateProcessTree } from "./platform/processTreeController.ts";
 
 export interface ProcessRunOptions {
   cwd?: string | undefined;
@@ -91,20 +93,6 @@ function processAbortError(): Error {
   return error;
 }
 
-// Windows `.cmd` shims may run under an explicit cmd.exe wrapper; taskkill keeps
-// timeout/cancel paths from leaving the real command behind.
-function killChild(child: ChildProcessHandle, signal: NodeJS.Signals = "SIGTERM"): void {
-  if (process.platform === "win32" && child.pid !== undefined) {
-    try {
-      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
-      return;
-    } catch {
-      // fallback to direct kill
-    }
-  }
-  child.kill(signal);
-}
-
 function appendChunkWithinLimit(
   target: string,
   currentBytes: number,
@@ -164,18 +152,77 @@ export async function runProcess(
     let timedOut = false;
     let aborted = false;
     let settled = false;
+    let rootExited = false;
+    let closeObserved = false;
+    let terminationDone = false;
+    let terminalFailure: Error | null = null;
+    let closeCode: number | null = null;
+    let closeSignal: NodeJS.Signals | null = null;
     let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
-    let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
+    let termination: Promise<void> | null = null;
     const stdoutDecoder = new StringDecoder("utf8");
     const stderrDecoder = new StringDecoder("utf8");
     const stdoutObserverDecoder = options.onStdoutChunk ? new StringDecoder("utf8") : null;
     const stderrObserverDecoder = options.onStderrChunk ? new StringDecoder("utf8") : null;
 
-    const scheduleForceKill = (): void => {
-      if (forceKillTimer) clearTimeout(forceKillTimer);
-      forceKillTimer = setTimeout(() => {
-        killChild(child, "SIGKILL");
-      }, 1_000);
+    const flushOutput = (): void => {
+      if (!stdoutTruncated) stdout += stdoutDecoder.end();
+      if (!stderrTruncated) stderr += stderrDecoder.end();
+      flushOutputObserver(options.onStdoutChunk, stdoutObserverDecoder);
+      flushOutputObserver(options.onStderrChunk, stderrObserverDecoder);
+    };
+
+    const finishIfReady = (): void => {
+      if (settled || (termination ? !terminationDone : !closeObserved)) return;
+      flushOutput();
+      const result: ProcessRunResult = {
+        stdout,
+        stderr,
+        code: closeObserved ? closeCode : child.exitCode,
+        signal: closeObserved ? closeSignal : child.signalCode,
+        timedOut,
+        stdoutTruncated,
+        stderrTruncated,
+      };
+      finalize(() => {
+        if (terminalFailure) {
+          reject(terminalFailure);
+          return;
+        }
+        if (aborted) {
+          reject(processAbortError());
+          return;
+        }
+        if (
+          !options.allowNonZeroExit &&
+          (timedOut || (result.code !== null && result.code !== 0))
+        ) {
+          reject(normalizeExitError(command, args, result));
+          return;
+        }
+        resolve(result);
+      });
+    };
+
+    const requestTermination = (): void => {
+      if (termination) return;
+      const pid = child.pid;
+      termination =
+        pid === undefined
+          ? Promise.resolve()
+          : terminateProcessTree(pid, {
+              rootExited: () => rootExited || child.exitCode !== null || child.signalCode !== null,
+              signalRoot: (processSignal) => child.kill(processSignal),
+              graceMs: 1_000,
+              timeoutMs: 3_000,
+            }).then(
+              () => undefined,
+              () => undefined,
+            );
+      void termination.finally(() => {
+        terminationDone = true;
+        finishIfReady();
+      });
     };
 
     const onAbort = (): void => {
@@ -187,14 +234,12 @@ export async function runProcess(
         clearTimeout(timeoutTimer);
         timeoutTimer = null;
       }
-      killChild(child, "SIGTERM");
-      scheduleForceKill();
+      requestTermination();
     };
 
     timeoutTimer = setTimeout(() => {
       timedOut = true;
-      killChild(child, "SIGTERM");
-      scheduleForceKill();
+      requestTermination();
     }, timeoutMs);
 
     const finalize = (callback: () => void): void => {
@@ -203,18 +248,13 @@ export async function runProcess(
       if (timeoutTimer) {
         clearTimeout(timeoutTimer);
       }
-      if (forceKillTimer) {
-        clearTimeout(forceKillTimer);
-      }
       options.signal?.removeEventListener("abort", onAbort);
       callback();
     };
 
     const fail = (error: Error): void => {
-      killChild(child, "SIGTERM");
-      finalize(() => {
-        reject(error);
-      });
+      terminalFailure ??= error;
+      requestTermination();
     };
 
     const appendOutput = (stream: "stdout" | "stderr", chunk: Buffer | string): Error | null => {
@@ -307,38 +347,22 @@ export async function runProcess(
     });
 
     child.once("error", (error) => {
-      finalize(() => {
-        reject(aborted ? processAbortError() : normalizeSpawnError(command, args, error));
-      });
+      terminalFailure ??= aborted ? processAbortError() : normalizeSpawnError(command, args, error);
+      if (child.pid === undefined) {
+        rootExited = true;
+        closeObserved = true;
+        finishIfReady();
+      } else {
+        requestTermination();
+      }
     });
 
     child.once("close", (code, signal) => {
-      if (!stdoutTruncated) stdout += stdoutDecoder.end();
-      if (!stderrTruncated) stderr += stderrDecoder.end();
-      flushOutputObserver(options.onStdoutChunk, stdoutObserverDecoder);
-      flushOutputObserver(options.onStderrChunk, stderrObserverDecoder);
-
-      const result: ProcessRunResult = {
-        stdout,
-        stderr,
-        code,
-        signal,
-        timedOut,
-        stdoutTruncated,
-        stderrTruncated,
-      };
-
-      finalize(() => {
-        if (aborted) {
-          reject(processAbortError());
-          return;
-        }
-        if (!options.allowNonZeroExit && (timedOut || (code !== null && code !== 0))) {
-          reject(normalizeExitError(command, args, result));
-          return;
-        }
-        resolve(result);
-      });
+      rootExited = true;
+      closeObserved = true;
+      closeCode = code;
+      closeSignal = signal;
+      finishIfReady();
     });
 
     child.stdin.once("error", (error) => {

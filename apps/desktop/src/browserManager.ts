@@ -593,6 +593,10 @@ export class DesktopBrowserManager {
     };
   }
 
+  isWebMcpCompatibilityAllowed(webContentsId: number): boolean {
+    return this.sessionPolicy.isWebMcpCompatibilityAllowed(webContentsId);
+  }
+
   subscribeEngineWebSurfacePresentationRelease(
     listener: EngineWebSurfacePresentationReleaseListener,
   ): () => void {

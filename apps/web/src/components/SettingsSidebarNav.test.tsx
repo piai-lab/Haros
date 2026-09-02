@@ -174,9 +174,8 @@ describe("rankSettingsSearchEntries", () => {
     expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
   });
 
-  it("routes prompt search results to the two product-owned editors", () => {
-    expect(PROMPTS_SETTINGS_SEARCH.defaultPrompt.target).toBe(SETTINGS_TARGETS.defaultPrompt);
-    expect(PROMPTS_SETTINGS_SEARCH.customRules.target).toBe(SETTINGS_TARGETS.customRules);
+  it("routes prompt search results to the sole Personal Strategy owner", () => {
+    expect(PROMPTS_SETTINGS_SEARCH.personalStrategy.target).toBe(SETTINGS_TARGETS.personalStrategy);
   });
 });
 

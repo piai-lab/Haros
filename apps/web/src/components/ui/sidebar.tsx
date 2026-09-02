@@ -42,6 +42,7 @@ export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;
  */
 const SIDEBAR_OFFCANVAS_MOTION_CLASS =
   "will-change-[transform] duration-[240ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
+const SIDEBAR_OFFCANVAS_FOCUS_FALLBACK_MS = 260;
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -61,8 +62,8 @@ type SidebarContextProps = {
 };
 
 type SidebarResizableOptions = {
-  /** When set, releasing with only this many visible pixels commits off-canvas close. */
-  dragDismissThreshold?: number;
+  /** Pixels dragged beyond minWidth before releasing commits an off-canvas close. */
+  dragDismissDistance?: number;
   maxWidth?: number;
   minWidth?: number;
   onResize?: (width: number) => void;
@@ -78,7 +79,7 @@ type SidebarResizableOptions = {
 };
 
 type SidebarResolvedResizableOptions = {
-  dragDismissThreshold: number | null;
+  dragDismissDistance: number | null;
   maxWidth: number;
   minWidth: number;
   onResize?: (width: number) => void;
@@ -230,7 +231,7 @@ function resolveSidebarResizable(
   }
   const options = typeof resizable === "boolean" ? {} : resizable;
   return {
-    dragDismissThreshold: options.dragDismissThreshold ?? null,
+    dragDismissDistance: options.dragDismissDistance ?? null,
     maxWidth: options.maxWidth ?? Number.POSITIVE_INFINITY,
     minWidth: options.minWidth ?? SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH,
     storageKey: options.storageKey ?? null,
@@ -484,6 +485,53 @@ function clampSidebarWidth(width: number, options: SidebarResolvedResizableOptio
   return Math.max(options.minWidth, Math.min(width, options.maxWidth));
 }
 
+function focusVisibleSidebarTrigger(wrapper: HTMLElement) {
+  const focusTrigger = () => {
+    const trigger = Array.from(
+      wrapper.querySelectorAll<HTMLButtonElement>("[data-slot='sidebar-trigger']"),
+    ).find(
+      (candidate) =>
+        !candidate.disabled &&
+        candidate.getClientRects().length > 0 &&
+        !candidate.closest("[inert], [aria-hidden='true']"),
+    );
+    trigger?.focus({ preventScroll: true });
+    return trigger !== undefined;
+  };
+
+  let observer: MutationObserver | null = null;
+  let timeoutId: number | null = null;
+  const stopWatching = () => {
+    observer?.disconnect();
+    observer = null;
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+    timeoutId = null;
+  };
+  const focusStableTrigger = () => {
+    if (!focusTrigger()) return false;
+    stopWatching();
+    return true;
+  };
+  observer = new MutationObserver(() => {
+    focusStableTrigger();
+  });
+  observer.observe(wrapper, {
+    attributeFilter: ["aria-hidden", "inert"],
+    attributes: true,
+    childList: true,
+    subtree: true,
+  });
+  timeoutId = window.setTimeout(stopWatching, 1_000);
+  const focusOnNextFrame = (remainingAttempts: number) => {
+    window.requestAnimationFrame(() => {
+      if (focusStableTrigger()) return;
+      if (remainingAttempts <= 1) return;
+      focusOnNextFrame(remainingAttempts - 1);
+    });
+  };
+  focusOnNextFrame(3);
+}
+
 function SidebarRail({
   placement: placementProp,
   className,
@@ -505,17 +553,14 @@ function SidebarRail({
   const isContentSeam = placement === "content-seam";
   const railRef = React.useRef<HTMLButtonElement | null>(null);
   const suppressClickRef = React.useRef(false);
-  const settleCleanupRef = React.useRef<(() => void) | null>(null);
-  const settleTimeoutRef = React.useRef<number | null>(null);
   const resizeStateRef = React.useRef<{
-    container: HTMLElement;
-    gap: HTMLElement;
+    dismissArmed: boolean;
+    moveFocusOnDismiss: boolean;
     moved: boolean;
     pointerId: number;
     pendingWidth: number;
     rail: HTMLButtonElement;
     rafId: number | null;
-    retreating: boolean;
     sidebarRoot: HTMLElement;
     session: PanelResizeSession;
     side: "left" | "right";
@@ -535,11 +580,11 @@ function SidebarRail({
     if (!resizeState || !resolvedResizable) return;
 
     const rawWidth = Math.min(resizeState.pendingWidth, resolvedResizable.maxWidth);
-    const retreating =
-      resolvedResizable.dragDismissThreshold !== null && rawWidth < resolvedResizable.minWidth;
-    const nextWidth = retreating
-      ? resolvedResizable.minWidth
-      : clampSidebarWidth(rawWidth, resolvedResizable);
+    const overshoot = Math.max(0, resolvedResizable.minWidth - rawWidth);
+    const dismissArmed =
+      resolvedResizable.dragDismissDistance !== null &&
+      overshoot >= resolvedResizable.dragDismissDistance;
+    const nextWidth = clampSidebarWidth(rawWidth, resolvedResizable);
     const accepted =
       resolvedResizable.shouldAcceptWidth?.({
         currentWidth: resizeState.width,
@@ -551,26 +596,13 @@ function SidebarRail({
       }) ?? true;
     if (!accepted) return;
 
-    if (retreating) {
-      const visibleWidth = Math.max(0, rawWidth);
-      const translateX =
-        resizeState.side === "left"
-          ? visibleWidth - resolvedResizable.minWidth
-          : resolvedResizable.minWidth - visibleWidth;
-      resizeState.wrapper.style.setProperty("--sidebar-width", `${resolvedResizable.minWidth}px`);
-      resizeState.gap.style.setProperty("width", `${visibleWidth}px`);
-      resizeState.container.style.setProperty("transform", `translate3d(${translateX}px, 0, 0)`);
-      resizeState.sidebarRoot.dataset.resizeRetreating = "true";
-      resizeState.retreating = true;
-      resizeState.width = resolvedResizable.minWidth;
-      return;
-    }
-
-    resizeState.gap.style.removeProperty("width");
-    resizeState.container.style.removeProperty("transform");
-    resizeState.sidebarRoot.removeAttribute("data-resize-retreating");
     resizeState.wrapper.style.setProperty("--sidebar-width", `${nextWidth}px`);
-    resizeState.retreating = false;
+    if (dismissArmed) {
+      resizeState.wrapper.dataset.sidebarDismissArmed = "true";
+    } else {
+      resizeState.wrapper.removeAttribute("data-sidebar-dismiss-armed");
+    }
+    resizeState.dismissArmed = dismissArmed;
     resizeState.width = nextWidth;
   }, [resolvedResizable]);
 
@@ -585,31 +617,24 @@ function SidebarRail({
         resizeState.rafId = null;
         applyPendingResize();
       }
-      const dismiss =
-        outcome === "commit" &&
-        resolvedResizable?.dragDismissThreshold !== null &&
-        resolvedResizable?.dragDismissThreshold !== undefined &&
-        resizeState.pendingWidth <= resolvedResizable.dragDismissThreshold;
-      const restorePreview = outcome === "cancel" || (resizeState.retreating && !dismiss);
+      const dismiss = outcome === "commit" && resizeState.dismissArmed;
+      const restoreStartWidth = outcome === "cancel" || dismiss;
+      const shouldMoveFocus = dismiss && resizeState.moveFocusOnDismiss;
 
       resizeState.transitionTargets.forEach((element) => {
         element.style.removeProperty("transition-duration");
       });
       resizeState.wrapper.removeAttribute("data-sidebar-resizing");
-      resizeState.sidebarRoot.removeAttribute("data-resize-retreating");
+      resizeState.wrapper.removeAttribute("data-sidebar-dismiss-armed");
       document.body.removeAttribute("data-sidebar-resizing");
 
+      if (restoreStartWidth) {
+        resizeState.wrapper.style.setProperty("--sidebar-width", `${resizeState.startWidth}px`);
+      }
       if (dismiss) {
-        // The below-minimum retreat is a close gesture, not a new committed width.
-        // Keep the last valid width intact so a later dock/peek restores it.
-        resizeState.wrapper.style.setProperty("--sidebar-width", `${resizeState.startWidth}px`);
-        resizeState.gap.style.setProperty("width", "0px");
         void setOpen(false);
-      } else if (restorePreview) {
-        resizeState.wrapper.style.setProperty("--sidebar-width", `${resizeState.startWidth}px`);
-        resizeState.gap.style.removeProperty("width");
-        resizeState.container.style.removeProperty("transform");
-      } else {
+        if (shouldMoveFocus) focusVisibleSidebarTrigger(resizeState.wrapper);
+      } else if (!restoreStartWidth) {
         if (resolvedResizable?.storageKey && typeof window !== "undefined") {
           setLocalStorageItem(resolvedResizable.storageKey, resizeState.width, Schema.Finite);
         }
@@ -619,19 +644,6 @@ function SidebarRail({
       resizeStateRef.current = null;
       if (resizeState.rail.hasPointerCapture(pointerId)) {
         resizeState.rail.releasePointerCapture(pointerId);
-      }
-      if (dismiss || restorePreview) {
-        const finishSettling = () => {
-          if (settleTimeoutRef.current !== null) {
-            window.clearTimeout(settleTimeoutRef.current);
-            settleTimeoutRef.current = null;
-          }
-          resizeState.gap.style.removeProperty("width");
-          resizeState.container.style.removeProperty("transform");
-          settleCleanupRef.current = null;
-        };
-        settleCleanupRef.current = finishSettling;
-        settleTimeoutRef.current = window.setTimeout(finishSettling, 320);
       }
     },
     [applyPendingResize, resolvedResizable, setOpen],
@@ -663,9 +675,6 @@ function SidebarRail({
       const initialWidth = clampSidebarWidth(startWidth, resolvedResizable);
       const sidebarGap = sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-gap']");
       if (!sidebarGap) return;
-      if (settleTimeoutRef.current !== null) {
-        settleCleanupRef.current?.();
-      }
       const transitionTargets = [sidebarGap, sidebarContainer];
       transitionTargets.forEach((element) => {
         element.style.setProperty("transition-duration", "0ms");
@@ -674,19 +683,22 @@ function SidebarRail({
       event.preventDefault();
       event.stopPropagation();
       const pointerId = event.pointerId;
+      const activeElement = document.activeElement;
+      const moveFocusOnDismiss =
+        activeElement instanceof HTMLElement &&
+        (activeElement === event.currentTarget || sidebarRoot.contains(activeElement));
       const session = createPanelResizeSession({
         cursor: "col-resize",
         onFinish: (outcome) => stopResize(pointerId, outcome),
       });
       resizeStateRef.current = {
-        container: sidebarContainer,
-        gap: sidebarGap,
+        dismissArmed: false,
+        moveFocusOnDismiss,
         moved: false,
         pointerId,
         pendingWidth: initialWidth,
         rail: event.currentTarget,
         rafId: null,
-        retreating: false,
         sidebarRoot,
         session,
         side: sidebarInstance?.side ?? "left",
@@ -799,12 +811,8 @@ function SidebarRail({
 
   React.useEffect(() => {
     return () => {
-      if (settleTimeoutRef.current !== null) {
-        settleCleanupRef.current?.();
-      }
       const resizeState = resizeStateRef.current;
       resizeState?.session.finish("cancel");
-      settleCleanupRef.current?.();
     };
   }, []);
 
@@ -1286,6 +1294,7 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  SIDEBAR_OFFCANVAS_FOCUS_FALLBACK_MS,
   SIDEBAR_OFFCANVAS_MOTION_CLASS,
   SIDEBAR_OFFCANVAS_MOTION_SUPPRESSED_CLASS,
   useSidebar,

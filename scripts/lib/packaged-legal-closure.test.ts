@@ -1,4 +1,4 @@
-import { createPackage } from "@electron/asar";
+import { createPackage, extractFile } from "@electron/asar";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -8,6 +8,23 @@ import { afterEach, describe, expect, it } from "vitest";
 import { verifyPackagedLegalClosureArchive } from "./packaged-legal-closure";
 
 const roots: string[] = [];
+const ARCHIVE_FIXTURE_READY_TIMEOUT_MS = 2_000;
+
+async function waitForArchiveInventory(archive: string): Promise<void> {
+  const inventoryPath = "apps/server/dist/client/licenses/packaged-dependencies.json";
+  const deadline = Date.now() + ARCHIVE_FIXTURE_READY_TIMEOUT_MS;
+  let lastError: unknown;
+  while (Date.now() <= deadline) {
+    try {
+      JSON.parse(extractFile(archive, inventoryPath).toString("utf8"));
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise<void>((resolve) => setTimeout(resolve, 5));
+    }
+  }
+  throw new Error("ASAR fixture payload did not finish writing", { cause: lastError });
+}
 
 function write(path: string, contents: string): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -35,10 +52,10 @@ async function archiveFixture(
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(
       join(source, "node_modules", ...name.split("/"), "package.json"),
-      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.3" }),
+      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.4" }),
     );
   }
-  const components = packages.map((name) => ({ id: `${name}@0.84.3` }));
+  const components = packages.map((name) => ({ id: `${name}@0.84.4` }));
   components.push({
     id: "@harnessos/oa-ask@5.0.0-oa.1",
     name: "@harnessos/oa-ask",
@@ -67,6 +84,10 @@ async function archiveFixture(
   write(join(source, "apps/server/dist/client/licenses/sbom.cdx.json"), "{}\n");
   write(join(source, "apps/server/dist/client/licenses/THIRD-PARTY-NOTICES.txt"), "notices\n");
   await createPackage(source, archive);
+  // @electron/asar resolves createPackage after calling Writable.end(), not
+  // after the output stream's finish event. Under parallel workspace tests the
+  // header can therefore be visible before the inventory payload is flushed.
+  await waitForArchiveInventory(archive);
   return archive;
 }
 

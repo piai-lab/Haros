@@ -10,6 +10,8 @@ export const HARNESSOS_CANARY_BUNDLE_ID = `${HARNESSOS_PRODUCTION_BUNDLE_ID}.can
 export const HARNESSOS_CANARY_DESKTOP_SCHEME = "harnessos-canary";
 export const HARNESSOS_CANARY_DESKTOP_ORIGIN = `${HARNESSOS_CANARY_DESKTOP_SCHEME}://app`;
 export const HARNESSOS_CANARY_DESKTOP_ENTRY_URL = `${HARNESSOS_CANARY_DESKTOP_ORIGIN}/index.html`;
+export const HARNESSOS_SOURCE_DESKTOP_BUILD_MARKER = "harnessos-source-desktop-build-v1";
+export const HARNESSOS_DESKTOP_SMOKE_USER_DATA_ENV = "HARNESSOS_DESKTOP_SMOKE_USER_DATA";
 
 export type HarosDesktopFlavor = "production" | "development" | "canary";
 
@@ -28,9 +30,17 @@ export interface HarosDesktopIdentity {
 export function resolveHarosDesktopFlavor(input: {
   readonly isDevelopment: boolean;
   readonly requestedFlavor?: string | undefined;
+  readonly allowDevelopmentOverride?: boolean | undefined;
 }): HarosDesktopFlavor {
-  if (input.requestedFlavor?.trim().toLowerCase() === "canary") {
+  const requestedFlavor = input.requestedFlavor?.trim().toLowerCase();
+  if (requestedFlavor === "canary") {
     return "canary";
+  }
+  if (
+    requestedFlavor === "development" &&
+    (input.isDevelopment || input.allowDevelopmentOverride === true)
+  ) {
+    return "development";
   }
   return input.isDevelopment ? "development" : "production";
 }
@@ -58,7 +68,7 @@ export function harnessOSDesktopIdentity(flavor: HarosDesktopFlavor): HarosDeskt
       origin: HARNESSOS_DESKTOP_ORIGIN,
       entryUrl: HARNESSOS_DESKTOP_ENTRY_URL,
       userDataDirectoryName: "harnessos-dev",
-      defaultHomeDirectoryName: ".harnessos",
+      defaultHomeDirectoryName: ".harnessos-dev",
       usesScriptedUpdates: false,
     };
   }

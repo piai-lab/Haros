@@ -122,7 +122,7 @@ const KILO_ENGINE = "kilo" as const;
 const OPENCODE_ENGINE = "opencode" as const;
 const PI_ENGINE = "pi" as const;
 const OA_ENGINE = "oa" as const;
-const BUNDLED_OA_RUNTIME_VERSION = "0.84.3";
+const BUNDLED_OA_RUNTIME_VERSION = "0.84.4";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
 const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in Haros settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
@@ -1572,7 +1572,7 @@ export const checkPiEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
         version: BUNDLED_OA_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
         message:
-          "Pi 0.84.3 is bundled. Native Pi discovery and state access begin only after you select Pi.",
+          "Pi 0.84.4 is bundled. Native Pi discovery and state access begin only after you select Pi.",
       }) satisfies ServerEngineStatus,
   );
 

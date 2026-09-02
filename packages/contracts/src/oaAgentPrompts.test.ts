@@ -8,135 +8,83 @@ import {
   OAAgentPromptSnapshot,
 } from "./oaAgentPrompts";
 
-const defaultPromptInput = (content: string) => ({
-  action: "setDefault" as const,
+const setInput = (content: string) => ({
+  action: "setPersonalStrategy" as const,
+  sourceId: "AGENTS.md" as const,
   expectedVersion: "a".repeat(64),
+  locale: "en" as const,
   content,
 });
 
-describe("Haros Agent prompt contracts", () => {
-  it("accepts product intents without accepting renderer-selected paths", () => {
-    expect(
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
-        action: "updateCustomRules",
-        sourceId: "AGENTS.md",
-        expectedVersion: "a".repeat(64),
-        content: "Be concise.",
-      }),
-    ).toEqual({
-      action: "updateCustomRules",
-      sourceId: "AGENTS.md",
-      expectedVersion: "a".repeat(64),
-      content: "Be concise.",
+describe("OA Agent Personal Strategy contracts", () => {
+  it("requires the initialization locale and exposes one persistent owner", () => {
+    expect(Schema.decodeUnknownSync(OAAgentPromptGetSnapshotInput)({ locale: "zh-CN" })).toEqual({
+      locale: "zh-CN",
     });
-    expect(() =>
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
-        action: "updateCustomRules",
-        sourceId: "/tmp/AGENTS.md",
-        expectedVersion: "a".repeat(64),
-        content: "forged",
-      }),
-    ).toThrow();
-    expect(
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
-        action: "updateCustomRules",
-        sourceId: "AGENTS.md",
-        expectedVersion: "a".repeat(64),
-        content: "forged",
-        revealPath: "/tmp/AGENTS.md",
-      }),
-    ).not.toHaveProperty("revealPath");
-  });
+    expect(() => Schema.decodeUnknownSync(OAAgentPromptGetSnapshotInput)({})).toThrow();
 
-  it("projects factory/current defaults and only the active custom-rules source", () => {
-    expect(Schema.decodeUnknownSync(OAAgentPromptGetSnapshotInput)({})).toEqual({});
     const snapshot = Schema.decodeUnknownSync(OAAgentPromptSnapshot)({
-      defaultPrompt: {
-        content: "Customized instructions",
-        customized: true,
-        version: "a".repeat(64),
-      },
-      customRules: {
+      personalStrategy: {
         availability: "available",
         unavailableReason: null,
         sourceId: "AGENTS.md",
-        displayPath: "~/.harnessos/agent/AGENTS.md",
-        revealPath: "/private/example/.harnessos/agent/AGENTS.md",
-        exists: true,
+        displayPath: "~/.oa/agent/AGENTS.md",
+        revealPath: "/private/example/.oa/agent/AGENTS.md",
         version: "b".repeat(64),
         content: "Be concise.",
       },
       maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
     });
-    expect(snapshot.defaultPrompt.customized).toBe(true);
-    expect(snapshot.customRules.content).toBe("Be concise.");
+    expect(snapshot.personalStrategy.content).toBe("Be concise.");
+    expect(snapshot).not.toHaveProperty("defaultPrompt");
+    expect(snapshot).not.toHaveProperty("customRules");
   });
 
-  it("rejects contradictory custom-rules availability states", () => {
+  it("accepts only managed source ids and strips renderer-selected paths", () => {
+    expect(Schema.decodeUnknownSync(OAAgentPromptMutationInput)(setInput("Be direct."))).toEqual(
+      setInput("Be direct."),
+    );
     expect(() =>
-      Schema.decodeUnknownSync(OAAgentPromptSnapshot)({
-        defaultPrompt: {
-          content: "Factory",
-          customized: false,
-          version: "a".repeat(64),
-        },
-        customRules: {
-          availability: "available",
-          unavailableReason: null,
-          sourceId: "AGENTS.md",
-          displayPath: "~/.harnessos/agent/AGENTS.md",
-          revealPath: "/private/example/.harnessos/agent/AGENTS.md",
-          exists: false,
-          version: null,
-          content: "",
-        },
-        maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
+      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
+        ...setInput("forged"),
+        sourceId: "/tmp/AGENTS.md",
       }),
     ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
+        ...setInput("forged"),
+        revealPath: "/tmp/AGENTS.md",
+      }),
+    ).not.toHaveProperty("revealPath");
   });
 
-  it("rejects oversized payloads, disallowed C0 controls, and invalid UTF-16 before transport", () => {
-    for (const action of ["setDefault", "createCustomRules"] as const) {
-      const base =
-        action === "setDefault" ? { action, expectedVersion: "a".repeat(64) } : { action };
+  it("rejects oversized, invalid-control, and invalid-UTF-16 content", () => {
+    for (const content of [
+      "x".repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1),
+      "before\0after",
+      "before\u0001after",
+      "before\ud800after",
+      "before\udc00after",
+    ]) {
       expect(() =>
-        Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
-          ...base,
-          content: "x".repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1),
-        }),
+        Schema.decodeUnknownSync(OAAgentPromptMutationInput)(setInput(content)),
       ).toThrow();
-      for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
-        expect(() =>
-          Schema.decodeUnknownSync(OAAgentPromptMutationInput)({ ...base, content }),
-        ).toThrow();
-      }
-      for (const content of ["before\ud800after", "before\udc00after"]) {
-        expect(() =>
-          Schema.decodeUnknownSync(OAAgentPromptMutationInput)({ ...base, content }),
-        ).toThrow();
-      }
     }
   });
 
-  it("allows ordinary prompt whitespace", () => {
-    expect(
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)({
-        action: "setDefault",
-        expectedVersion: "a".repeat(64),
-        content: "line one\n\tline two\r\n",
-      }),
-    ).toMatchObject({ content: "line one\n\tline two\r\n" });
-  });
-
-  it("enforces the prompt byte boundary for multibyte content", () => {
+  it("enforces the UTF-8 byte boundary and permits ordinary whitespace", () => {
     const emoji = "😀";
     const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
-    const overLimit = `${withinLimit}${emoji}`;
     expect(() =>
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)(defaultPromptInput(withinLimit)),
+      Schema.decodeUnknownSync(OAAgentPromptMutationInput)(setInput(withinLimit)),
     ).not.toThrow();
     expect(() =>
-      Schema.decodeUnknownSync(OAAgentPromptMutationInput)(defaultPromptInput(overLimit)),
+      Schema.decodeUnknownSync(OAAgentPromptMutationInput)(setInput(`${withinLimit}${emoji}`)),
     ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(OAAgentPromptMutationInput)(setInput("one\n\ttwo\r\n")),
+    ).toMatchObject({
+      content: "one\n\ttwo\r\n",
+    });
   });
 });

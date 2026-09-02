@@ -6,7 +6,10 @@
 import { type MessageId, ThreadId, type ThreadMarker, type TurnId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
+  useCallback,
   useEffect,
+  useId,
+  useRef,
   useState,
   type ComponentProps,
   type CSSProperties,
@@ -36,6 +39,12 @@ import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 import { useI18n } from "~/i18n";
+import { ChatThreadFindHost } from "./ThreadFindBar";
+import {
+  createThreadFindHighlightStore,
+  eventTargetsInAppBrowser,
+  type ThreadFindMatch,
+} from "./threadFind.logic";
 
 interface ChatTranscriptPaneProps {
   activeThreadId: string;
@@ -57,6 +66,7 @@ interface ChatTranscriptPaneProps {
   isRevertingCheckpoint: boolean;
   isTemporaryThread?: boolean;
   isWorking: boolean;
+  isFocusedPane?: boolean;
   followLiveOutput: boolean;
   listRef: RefObject<LegendListRef | null>;
   timelineControllerRef?: RefObject<MessagesTimelineController | null>;
@@ -134,6 +144,7 @@ export function ChatTranscriptPane({
   isRevertingCheckpoint,
   isTemporaryThread,
   isWorking,
+  isFocusedPane,
   followLiveOutput,
   listRef,
   timelineControllerRef,
@@ -188,7 +199,59 @@ export function ChatTranscriptPane({
   worktreeSetupPendingAction,
   onResolveWorktreeSetup,
 }: ChatTranscriptPaneProps) {
+  const focusedPane = isFocusedPane ?? true;
   const { t } = useI18n();
+  const [findOpen, setFindOpen] = useState(false);
+  const [findFocusNonce, setFindFocusNonce] = useState(0);
+  const findScopeId = useId();
+  const [findHighlightStore] = useState(() => createThreadFindHighlightStore(findScopeId));
+  const focusBeforeFindRef = useRef<HTMLElement | null>(null);
+
+  const closeFind = useCallback(() => {
+    setFindOpen(false);
+    findHighlightStore.set(null);
+    const focusTarget = focusBeforeFindRef.current;
+    window.requestAnimationFrame(() => focusTarget?.focus());
+  }, [findHighlightStore]);
+
+  useEffect(() => {
+    if (!focusedPane || agentActivityDetail || terminalWorkspaceTerminalTabActive) {
+      setFindOpen(false);
+      findHighlightStore.set(null);
+      return;
+    }
+    const handleFindShortcut = (event: KeyboardEvent) => {
+      if (
+        event.key.toLocaleLowerCase() !== "f" ||
+        (!event.metaKey && !event.ctrlKey) ||
+        event.altKey ||
+        eventTargetsInAppBrowser(event.target)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      if (!findOpen) focusBeforeFindRef.current = document.activeElement as HTMLElement | null;
+      setFindOpen(true);
+      setFindFocusNonce((nonce) => nonce + 1);
+    };
+    window.addEventListener("keydown", handleFindShortcut, true);
+    return () => window.removeEventListener("keydown", handleFindShortcut, true);
+  }, [
+    agentActivityDetail,
+    findHighlightStore,
+    findOpen,
+    focusedPane,
+    terminalWorkspaceTerminalTabActive,
+  ]);
+
+  const navigateToFindMatch = useCallback(
+    (match: ThreadFindMatch) => {
+      timelineControllerRef?.current?.scrollToFindMatch(match.messageId);
+      findHighlightStore.requestNavigation(match);
+    },
+    [findHighlightStore, timelineControllerRef],
+  );
   // The composer floats over the transcript's bottom edge, so the scroll-to-bottom
   // affordance rides above it on the same inset the transcript content uses.
   const scrollButtonFrameStyle: CSSProperties | undefined =
@@ -227,6 +290,15 @@ export function ChatTranscriptPane({
       )}
     >
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        <ChatThreadFindHost
+          open={findOpen}
+          focusNonce={findFocusNonce}
+          timelineEntries={timelineEntries}
+          threadId={activeThreadId}
+          onClose={closeFind}
+          onNavigate={navigateToFindMatch}
+          onHighlightChange={findHighlightStore.set}
+        />
         {agentActivityDetail && onCloseAgentActivityDetail ? (
           <AgentActivityDetailView
             detail={agentActivityDetail}
@@ -252,6 +324,7 @@ export function ChatTranscriptPane({
             {...(turnProcessPhase ? { turnProcessPhase } : {})}
             listRef={listRef}
             {...(timelineControllerRef ? { controllerRef: timelineControllerRef } : {})}
+            threadFindHighlightStore={findHighlightStore}
             {...(pinnedMessageIds ? { pinnedMessageIds } : {})}
             {...(canPinMessage ? { canPinMessage } : {})}
             {...(onTogglePinMessage ? { onTogglePinMessage } : {})}

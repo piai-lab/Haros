@@ -3,14 +3,20 @@ import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 import { isOAAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 
-export const OAAgentCustomRulesSourceId = Schema.Literals([
+export const HARNESSOS_AGENT_PERSONAL_STRATEGY_SOURCE_IDS = [
   "AGENTS.override.md",
   "AGENTS.md",
   "AGENTS.MD",
   "CLAUDE.md",
   "CLAUDE.MD",
+] as const;
+export const OAAgentPersonalStrategySourceId = Schema.Literals([
+  ...HARNESSOS_AGENT_PERSONAL_STRATEGY_SOURCE_IDS,
 ]);
-export type OAAgentCustomRulesSourceId = typeof OAAgentCustomRulesSourceId.Type;
+export type OAAgentPersonalStrategySourceId = typeof OAAgentPersonalStrategySourceId.Type;
+
+export const OAAgentPromptLocale = Schema.Literals(["en", "zh-CN"]);
+export type OAAgentPromptLocale = typeof OAAgentPromptLocale.Type;
 
 const PromptVersion = TrimmedNonEmptyString.check(
   Schema.isMinLength(64),
@@ -24,94 +30,59 @@ const PromptContent = Schema.String.check(
   Schema.makeFilter(isOAAgentPromptContent),
 );
 
-export const OAAgentDefaultPromptSnapshot = Schema.Struct({
-  content: PromptContent,
-  customized: Schema.Boolean,
-  version: PromptVersion,
-});
-export type OAAgentDefaultPromptSnapshot = typeof OAAgentDefaultPromptSnapshot.Type;
-
-export const OAAgentCustomRulesSnapshot = Schema.Union([
-  Schema.Struct({
-    availability: Schema.Literal("absent"),
-    unavailableReason: Schema.Null,
-    sourceId: Schema.Null,
-    displayPath: Schema.Null,
-    revealPath: Schema.Null,
-    exists: Schema.Literal(false),
-    version: Schema.Null,
-    content: Schema.Literal(""),
-  }),
+export const OAAgentPersonalStrategySnapshot = Schema.Union([
   Schema.Struct({
     availability: Schema.Literal("available"),
     unavailableReason: Schema.Null,
-    sourceId: OAAgentCustomRulesSourceId,
+    sourceId: OAAgentPersonalStrategySourceId,
     displayPath: DisplayPath,
     revealPath: RevealPath,
-    exists: Schema.Literal(true),
     version: PromptVersion,
     content: PromptContent,
   }),
   Schema.Struct({
     availability: Schema.Literal("unavailable"),
     unavailableReason: Schema.Literals(["too_large", "unsupported_text"]),
-    sourceId: Schema.NullOr(OAAgentCustomRulesSourceId),
+    sourceId: Schema.NullOr(OAAgentPersonalStrategySourceId),
     displayPath: DisplayPath,
     revealPath: RevealPath,
-    exists: Schema.Literal(true),
     version: Schema.Null,
     content: Schema.Literal(""),
   }),
 ]);
-export type OAAgentCustomRulesSnapshot = typeof OAAgentCustomRulesSnapshot.Type;
+export type OAAgentPersonalStrategySnapshot = typeof OAAgentPersonalStrategySnapshot.Type;
 
 export const OAAgentPromptSnapshot = Schema.Struct({
-  defaultPrompt: OAAgentDefaultPromptSnapshot,
-  customRules: OAAgentCustomRulesSnapshot,
+  personalStrategy: OAAgentPersonalStrategySnapshot,
   maxBytes: Schema.Literal(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
 });
 export type OAAgentPromptSnapshot = typeof OAAgentPromptSnapshot.Type;
 
-export const OAAgentPromptGetSnapshotInput = Schema.Struct({});
+export const OAAgentPromptGetSnapshotInput = Schema.Struct({
+  locale: OAAgentPromptLocale,
+});
 export type OAAgentPromptGetSnapshotInput = typeof OAAgentPromptGetSnapshotInput.Type;
 
-export const OAAgentDefaultPromptSetInput = Schema.Struct({
-  action: Schema.Literal("setDefault"),
+export const OAAgentPersonalStrategySetInput = Schema.Struct({
+  action: Schema.Literal("setPersonalStrategy"),
+  sourceId: OAAgentPersonalStrategySourceId,
   expectedVersion: PromptVersion,
+  locale: OAAgentPromptLocale,
   content: PromptContent,
 });
-export const OAAgentDefaultPromptRestoreInput = Schema.Struct({
-  action: Schema.Literal("restoreDefault"),
+export const OAAgentPersonalStrategyRestoreInput = Schema.Struct({
+  action: Schema.Literal("restorePersonalStrategy"),
+  sourceId: OAAgentPersonalStrategySourceId,
   expectedVersion: PromptVersion,
-});
-export const OAAgentCustomRulesCreateInput = Schema.Struct({
-  action: Schema.Literal("createCustomRules"),
-  content: PromptContent,
-});
-export const OAAgentCustomRulesUpdateInput = Schema.Struct({
-  action: Schema.Literal("updateCustomRules"),
-  sourceId: OAAgentCustomRulesSourceId,
-  expectedVersion: PromptVersion,
-  content: PromptContent,
-});
-export const OAAgentCustomRulesRemoveInput = Schema.Struct({
-  action: Schema.Literal("removeCustomRules"),
-  sourceId: OAAgentCustomRulesSourceId,
-  expectedVersion: PromptVersion,
+  locale: OAAgentPromptLocale,
 });
 
 export const OAAgentPromptMutationInput = Schema.Union([
-  OAAgentDefaultPromptSetInput,
-  OAAgentDefaultPromptRestoreInput,
-  OAAgentCustomRulesCreateInput,
-  OAAgentCustomRulesUpdateInput,
-  OAAgentCustomRulesRemoveInput,
+  OAAgentPersonalStrategySetInput,
+  OAAgentPersonalStrategyRestoreInput,
 ]);
 export type OAAgentPromptMutationInput = typeof OAAgentPromptMutationInput.Type;
 
-// Custom rules use optimistic version checks against non-cooperating external
-// editors. Node does not provide strict inode/version CAS for replace/remove;
-// callers must not describe the final narrow race as atomically eliminated.
 const PromptMutationCompleted = Schema.Struct({
   state: Schema.Literals(["changed", "unchanged"]),
   snapshot: OAAgentPromptSnapshot,

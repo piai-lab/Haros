@@ -4,7 +4,7 @@
 // Depends on: canonical engine metadata, asset registry, live health, and shared menu primitives.
 
 import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
@@ -57,12 +57,33 @@ function statusLabel(
 export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
   const { t } = useI18n();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const focusRestoreFrameRef = useRef<number | null>(null);
   const isOpen = props.open ?? uncontrolledOpen;
   const setOpen = (nextOpen: boolean) => {
     if (props.open === undefined) {
       setUncontrolledOpen(nextOpen);
     }
     props.onOpenChange?.(nextOpen);
+  };
+
+  useEffect(
+    () => () => {
+      if (focusRestoreFrameRef.current !== null) {
+        cancelAnimationFrame(focusRestoreFrameRef.current);
+      }
+    },
+    [],
+  );
+
+  const restoreTriggerFocusAfterClose = () => {
+    if (focusRestoreFrameRef.current !== null) {
+      cancelAnimationFrame(focusRestoreFrameRef.current);
+    }
+    focusRestoreFrameRef.current = requestAnimationFrame(() => {
+      focusRestoreFrameRef.current = null;
+      triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const hiddenEngines = new Set(props.hiddenEngines ?? []);
@@ -79,6 +100,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
 
   const trigger = (
     <Button
+      ref={triggerRef}
       type="button"
       size="icon-xs"
       variant="chrome"
@@ -93,12 +115,20 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
   return (
     <Menu
       open={isOpen}
-      onOpenChange={(nextOpen) => {
+      onOpenChange={(nextOpen, eventDetails) => {
         if (props.disabled) {
           setOpen(false);
           return;
         }
         setOpen(nextOpen);
+        if (!nextOpen && eventDetails.reason === "escape-key") {
+          // Base UI normally restores the trigger itself, but under a busy
+          // portalled menu teardown its focus step can race the trigger clone
+          // owned by Tooltip. Restore on the next frame, scoped only to an
+          // explicit Escape close so unrelated controlled closes cannot steal
+          // focus from another surface.
+          restoreTriggerFocusAfterClose();
+        }
       }}
     >
       <Tooltip>

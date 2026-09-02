@@ -2,7 +2,6 @@ import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { EngineSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
-import { isOAAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
@@ -18,12 +17,6 @@ const EngineSettingsBase = {
 
 export const HarosServerEngineSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  defaultPrompt: Schema.NullOr(
-    Schema.String.check(
-      Schema.isMaxLength(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
-      Schema.makeFilter(isOAAgentPromptContent),
-    ),
-  ).pipe(Schema.withDecodingDefault(() => null)),
 });
 export type HarosServerEngineSettings = typeof HarosServerEngineSettings.Type;
 
@@ -144,8 +137,6 @@ const HarosServerEngineSettingsView = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
 });
 
-// Public settings deliberately omit the customized default prompt. Its only
-// projection and mutation authority is the dedicated Haros prompt contract.
 export const ServerSettingsView = Schema.Struct({
   defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),

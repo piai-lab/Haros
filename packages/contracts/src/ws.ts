@@ -168,11 +168,8 @@ import {
   OAEcosystemResourceToggleInput,
 } from "./oaEcosystem";
 import {
-  OAAgentCustomRulesCreateInput,
-  OAAgentCustomRulesRemoveInput,
-  OAAgentCustomRulesUpdateInput,
-  OAAgentDefaultPromptRestoreInput,
-  OAAgentDefaultPromptSetInput,
+  OAAgentPersonalStrategyRestoreInput,
+  OAAgentPersonalStrategySetInput,
   OAAgentPromptGetSnapshotInput,
 } from "./oaAgentPrompts";
 import {
@@ -416,11 +413,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.oaEcosystemReload, OAEcosystemReloadInput),
   tagRequestBody(WS_METHODS.oaAgentPromptsGetSnapshot, OAAgentPromptGetSnapshotInput),
   Schema.Union([
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentDefaultPromptSetInput),
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentDefaultPromptRestoreInput),
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentCustomRulesCreateInput),
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentCustomRulesUpdateInput),
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentCustomRulesRemoveInput),
+    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentPersonalStrategySetInput),
+    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentPersonalStrategyRestoreInput),
   ]),
   tagRequestBody(WS_METHODS.oaWebSearchOpen, OAWebSearchOpenInput),
   tagRequestBody(WS_METHODS.oaWebSearchRefresh, OAWebSearchRefreshInput),

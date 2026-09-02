@@ -433,14 +433,16 @@ function asPositiveFiniteNumber(value: unknown): number | undefined {
 
 interface CompactModelUsage {
   readonly inputTokens: number;
+  readonly cacheReadInputTokens: number;
+  readonly cacheWriteInputTokens: number;
   readonly outputTokens: number;
   readonly totalTokens: number;
 }
 
 // Claude's SDK reports a per-model token breakdown on the turn result (subagent
 // models included). Persist a compact copy on the turn.completed activity so
-// token stats can attribute multi-model turns exactly; cache reads/writes fold
-// into inputTokens, matching how the adapters build context-window snapshots.
+// token stats can attribute multi-model turns exactly without misclassifying
+// cache reads or cache writes as ordinary uncached input.
 function compactTurnModelUsage(
   modelUsage: Record<string, unknown> | undefined,
 ): Record<string, CompactModelUsage> | undefined {
@@ -453,16 +455,21 @@ function compactTurnModelUsage(
     if (!usage) {
       continue;
     }
-    const inputTokens =
-      (asPositiveFiniteNumber(usage.inputTokens) ?? 0) +
-      (asPositiveFiniteNumber(usage.cacheReadInputTokens) ?? 0) +
-      (asPositiveFiniteNumber(usage.cacheCreationInputTokens) ?? 0);
+    const inputTokens = asPositiveFiniteNumber(usage.inputTokens) ?? 0;
+    const cacheReadInputTokens = asPositiveFiniteNumber(usage.cacheReadInputTokens) ?? 0;
+    const cacheWriteInputTokens = asPositiveFiniteNumber(usage.cacheCreationInputTokens) ?? 0;
     const outputTokens = asPositiveFiniteNumber(usage.outputTokens) ?? 0;
-    const totalTokens = inputTokens + outputTokens;
+    const totalTokens = inputTokens + cacheReadInputTokens + cacheWriteInputTokens + outputTokens;
     if (totalTokens <= 0) {
       continue;
     }
-    compact[model] = { inputTokens, outputTokens, totalTokens };
+    compact[model] = {
+      inputTokens,
+      cacheReadInputTokens,
+      cacheWriteInputTokens,
+      outputTokens,
+      totalTokens,
+    };
   }
   return Object.keys(compact).length > 0 ? compact : undefined;
 }

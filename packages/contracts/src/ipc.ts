@@ -1088,7 +1088,7 @@ export interface NativeApi {
     reload: (input: OAEcosystemReloadInput) => Promise<OAEcosystemReloadResult>;
   };
   oaAgentPrompts: {
-    getSnapshot: (input?: OAAgentPromptGetSnapshotInput) => Promise<OAAgentPromptSnapshot>;
+    getSnapshot: (input: OAAgentPromptGetSnapshotInput) => Promise<OAAgentPromptSnapshot>;
     mutate: (input: OAAgentPromptMutationInput) => Promise<OAAgentPromptMutationResult>;
   };
   oaWebSearch: {

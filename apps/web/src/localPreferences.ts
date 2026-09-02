@@ -19,6 +19,12 @@ import {
 } from "./engineOrdering";
 import { DEFAULT_UI_DENSITY, UI_DENSITY_MODES, normalizeUiDensity } from "./lib/appDensity";
 import { DEFAULT_CHAT_WIDTH, CHAT_WIDTH_MODES, normalizeChatWidthMode } from "./lib/chatWidth";
+import {
+  DEFAULT_SIDEBAR_NAV_ORDER,
+  normalizeHiddenSidebarNavItems,
+  normalizeSidebarNavOrder,
+  SIDEBAR_NAV_ITEM_IDS,
+} from "./sidebarNavOrdering";
 
 export const LOCAL_PREFERENCES_STORAGE_KEY = "harnessos:local-preferences:v1";
 
@@ -54,6 +60,7 @@ export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "manu
 export const SidebarThreadSortOrder = Schema.Literals(["updated_at", "created_at"]);
 export type SidebarThreadSortOrder = typeof SidebarThreadSortOrder.Type;
 export const DEFAULT_SIDEBAR_THREAD_SORT_ORDER: SidebarThreadSortOrder = "updated_at";
+const SidebarNavItemId = Schema.Literals(SIDEBAR_NAV_ITEM_IDS);
 export const FollowUpBehavior = Schema.Literals(["queue", "steer"]);
 export type FollowUpBehavior = typeof FollowUpBehavior.Type;
 export const DEFAULT_FOLLOW_UP_BEHAVIOR: FollowUpBehavior = "queue";
@@ -130,6 +137,10 @@ export const LocalPreferencesSchema = Schema.Struct({
   sidebarThreadSortOrder: SidebarThreadSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_THREAD_SORT_ORDER),
   ),
+  sidebarNavOrder: Schema.Array(SidebarNavItemId).pipe(
+    withDefaults(() => [...DEFAULT_SIDEBAR_NAV_ORDER]),
+  ),
+  hiddenSidebarNavItems: Schema.Array(SidebarNavItemId).pipe(withDefaults(() => [])),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   hiddenEngines: Schema.Array(PersistedEngineKind).pipe(withDefaults(() => [])),
@@ -200,6 +211,8 @@ export function normalizeLocalPreferences(preferences: LocalPreferences): LocalP
     chatFontSizePx: normalizeChatFontSizePx(preferences.chatFontSizePx),
     terminalFontSizePx: normalizeTerminalFontSizePx(preferences.terminalFontSizePx),
     terminalFontFamily: normalizeTerminalFontFamily(preferences.terminalFontFamily),
+    sidebarNavOrder: normalizeSidebarNavOrder(preferences.sidebarNavOrder),
+    hiddenSidebarNavItems: normalizeHiddenSidebarNavItems(preferences.hiddenSidebarNavItems),
     hiddenEngines: normalizeHiddenEngines(preferences.hiddenEngines),
     engineOrder: normalizeEngineOrder(preferences.engineOrder),
   };

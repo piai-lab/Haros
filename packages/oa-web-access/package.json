@@ -75,9 +75,9 @@
     "typescript": "^5.7.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "0.84.3",
-    "@earendil-works/pi-coding-agent": "0.84.3",
-    "@earendil-works/pi-tui": "0.84.3",
+    "@earendil-works/pi-ai": "0.84.4",
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "@earendil-works/pi-tui": "0.84.4",
     "@harnessos/contracts": "0.1.0-alpha.0"
   },
   "peerDependenciesMeta": {

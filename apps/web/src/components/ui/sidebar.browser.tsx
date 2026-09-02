@@ -42,7 +42,7 @@ function DragDismissSidebar() {
     <SidebarProvider desktopPresentation defaultOpen>
       <Sidebar
         resizable={{
-          dragDismissThreshold: 48,
+          dragDismissDistance: 48,
           minWidth: 208,
           storageKey: "test:sidebar-width",
         }}
@@ -140,12 +140,13 @@ describe("SidebarProvider persistence boundary", () => {
     await screen.unmount();
   });
 
-  it("keeps retreat reversible, restores on cancel, and suppresses hover chrome", async () => {
+  it("keeps dismiss arming reversible, restores on cancel, and suppresses hover chrome", async () => {
     localStorage.removeItem("test:sidebar-width");
     await page.viewport(1280, 720);
     const screen = await render(<DragDismissSidebar />);
     const rail = screen.container.querySelector<HTMLButtonElement>("[data-slot='sidebar-rail']")!;
     const root = screen.container.querySelector<HTMLElement>("[data-slot='sidebar']")!;
+    const wrapper = screen.container.querySelector<HTMLElement>("[data-slot='sidebar-wrapper']")!;
     const container = screen.container.querySelector<HTMLElement>(
       "[data-slot='sidebar-container']",
     )!;
@@ -173,14 +174,14 @@ describe("SidebarProvider persistence boundary", () => {
     pointer("pointerdown", startX);
     pointer("pointermove", 24);
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(root.getAttribute("data-resize-retreating")).toBe("true");
-    expect(Math.abs(container.getBoundingClientRect().right - 24)).toBeLessThanOrEqual(1);
+    expect(wrapper.getAttribute("data-sidebar-dismiss-armed")).toBe("true");
+    expect(container.getBoundingClientRect().width).toBeCloseTo(208, 0);
     expect(document.body.getAttribute("data-sidebar-resizing")).toBe("true");
     expect(getComputedStyle(tooltip).visibility).toBe("hidden");
 
     pointer("pointermove", startX + 80);
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(root.hasAttribute("data-resize-retreating")).toBe(false);
+    expect(wrapper.hasAttribute("data-sidebar-dismiss-armed")).toBe(false);
     expect(container.getBoundingClientRect().width).toBeCloseTo(startWidth + 80, 0);
 
     pointer("pointercancel", startX + 80);

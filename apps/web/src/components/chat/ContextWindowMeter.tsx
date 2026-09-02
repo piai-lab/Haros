@@ -18,7 +18,9 @@ export function ContextWindowMeter(props: {
   const display = deriveContextWindowMeterDisplay(usage);
   const lastBreakdown = usage.lastTokenBreakdown;
   const comparableInputTokens = lastBreakdown
-    ? lastBreakdown.cachedInputTokens + lastBreakdown.uncachedInputTokens
+    ? lastBreakdown.cachedInputTokens +
+      lastBreakdown.uncachedInputTokens +
+      lastBreakdown.cacheWriteInputTokens
     : 0;
   const cacheHitPercent =
     lastBreakdown && comparableInputTokens > 0
@@ -143,6 +145,13 @@ export function ContextWindowMeter(props: {
                 percentage: cacheHitPercent,
                 cached: formatContextWindowTokens(lastBreakdown.cachedInputTokens),
                 input: formatContextWindowTokens(comparableInputTokens),
+              })}
+            </div>
+          ) : null}
+          {lastBreakdown && lastBreakdown.cacheWriteInputTokens > 0 ? (
+            <div className="whitespace-nowrap text-xs text-muted-foreground">
+              {t("contextWindow.cacheWriteLine", {
+                tokens: formatContextWindowTokens(lastBreakdown.cacheWriteInputTokens),
               })}
             </div>
           ) : null}

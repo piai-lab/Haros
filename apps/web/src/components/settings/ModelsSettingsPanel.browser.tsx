@@ -539,7 +539,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("keeps custom setup intent alive through a bounded detail-capacity retry", async () => {
+  it("keeps custom setup intent alive after the transport resolves a bounded capacity retry", async () => {
     const customService = service({
       serviceId: "saved-custom",
       providerId: "saved-custom",
@@ -548,7 +548,7 @@ describe("ModelsSettingsPanel model services", () => {
       availableModelCount: 1,
     });
     let saved = false;
-    let intentDetailCalls = 0;
+    let transportDetailAttempts = 0;
     const onSetupReady = vi.fn();
     const mounted = await renderPanel({
       startInAddFlow: true,
@@ -579,13 +579,10 @@ describe("ModelsSettingsPanel model services", () => {
         if (serviceId !== customService.serviceId || intent !== "add_service") {
           return { state: "empty", service: null, errorCode: null };
         }
-        intentDetailCalls += 1;
-        if (intentDetailCalls === 1) {
-          throw {
-            code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
-            retryAfterMs: 1,
-          };
-        }
+        // WsTransport owns bounded capacity retries. The query sees the one
+        // terminal response produced after those internal attempts rather
+        // than multiplying the same retry budget at the React Query layer.
+        transportDetailAttempts += 2;
         return {
           state: "ready",
           service: customService,
@@ -630,7 +627,7 @@ describe("ModelsSettingsPanel model services", () => {
       engine: "oa",
       model: "saved-custom/custom-model",
     });
-    expect(intentDetailCalls).toBe(2);
+    expect(transportDetailAttempts).toBe(2);
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

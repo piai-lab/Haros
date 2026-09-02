@@ -63,7 +63,11 @@ import {
   WorkspaceFileOpenerContext,
   type WorkspaceFileOpener,
 } from "../../lib/workspaceFileOpener";
-import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
+import {
+  selectRightDockState,
+  selectRightDockVisibleActivation,
+  useRightDockStore,
+} from "../../rightDockStore";
 import {
   resolveActivePane,
   findMissingSidechatPaneIds,
@@ -459,6 +463,10 @@ export function SingleChatSurface(props: {
   const [editorDiffOptionsControl, setEditorDiffOptionsControl] = useState<ReactNode | null>(null);
 
   const activePane = resolveActivePane(dockState);
+  const pendingVisibleDockActivation = useRightDockStore(
+    useMemo(() => selectRightDockVisibleActivation(props.threadId), [props.threadId]),
+  );
+  const consumeVisibleDockActivation = useRightDockStore((store) => store.consumeVisibleActivation);
   const {
     activePaneRuntimeMode,
     requestActivePaneLive: requestActiveDockPaneLive,
@@ -466,6 +474,8 @@ export function SingleChatSurface(props: {
   } = useDockPaneRuntimeActivation({
     threadId: props.threadId,
     activePane,
+    pendingVisibleActivation: pendingVisibleDockActivation,
+    consumeVisibleActivation: consumeVisibleDockActivation,
   });
 
   // Bridge the dock's active browser/diff pane back into the panelState shape the
@@ -482,26 +492,21 @@ export function SingleChatSurface(props: {
   };
 
   const handleToggleDiff = () => {
-    requestImmediateDockHydration("diff");
     toggleSingletonPane(props.threadId, { kind: "diff" });
   };
   const handleToggleBrowser = () => {
-    requestImmediateDockHydration("browser");
     toggleSingletonPane(props.threadId, { kind: "browser" });
   };
   const handleToggleDevice = () => {
-    requestImmediateDockHydration("device");
     toggleSingletonPane(props.threadId, { kind: "device" });
   };
   const handleToggleRightDock = () => {
     setDockOpen(props.threadId, !dockState.open);
   };
   const handleOpenBrowserUrl = () => {
-    requestImmediateDockHydration("browser");
     openPane(props.threadId, { kind: "browser" });
   };
   const handleOpenTurnDiff = (turnId: TurnId, filePath?: string) => {
-    requestImmediateDockHydration("diff");
     openPane(props.threadId, {
       kind: "diff",
       diffTurnId: turnId,
@@ -631,7 +636,6 @@ export function SingleChatSurface(props: {
       if (!targetPath) {
         return false;
       }
-      requestImmediateDockHydration("file");
       openPane(props.threadId, { kind: "file", filePath: targetPath });
       return true;
     },
@@ -707,10 +711,8 @@ export function SingleChatSurface(props: {
     }
 
     if (panelPatch.panel === "browser") {
-      requestImmediateDockHydration("browser");
       openPane(props.threadId, { kind: "browser" });
     } else if (panelPatch.panel === "diff") {
-      requestImmediateDockHydration("diff");
       openPane(props.threadId, {
         kind: "diff",
         diffTurnId: panelPatch.diffTurnId ?? null,
@@ -725,18 +727,10 @@ export function SingleChatSurface(props: {
       replace: true,
       search: (previous) => stripDiffSearchParams(previous),
     });
-  }, [
-    navigate,
-    openPane,
-    props.search,
-    props.threadId,
-    requestImmediateDockHydration,
-    setDockOpen,
-  ]);
+  }, [navigate, openPane, props.search, props.threadId, setDockOpen]);
 
   useBrowserPanelDesktopBridge({
     onToggle: () => {
-      requestImmediateDockHydration("browser");
       toggleSingletonPane(props.threadId, { kind: "browser" });
     },
     onOpen: (requestedThreadId, presentationId, acquireLease) =>
@@ -905,7 +899,6 @@ export function SingleChatSurface(props: {
       : undefined;
 
   const handleAddDockPane = (kind: RightDockPaneKind) => {
-    requestImmediateDockHydration(kind);
     if (kind === "sidechat") {
       // Sidechat spawns a thread; reuse the composer's /side flow (correct model
       // selection) published via the registry instead of opening an empty pane.
@@ -1068,7 +1061,7 @@ export function SingleChatSurface(props: {
           return <PanelStateMessage>{t("workbench.loadingSideChat")}</PanelStateMessage>;
         }
         if (context.runtimeMode === "preview") {
-          return null;
+          return <PanelStateMessage>{t("workbench.loadingSideChat")}</PanelStateMessage>;
         }
         return (
           <DeferredChatView
@@ -1092,7 +1085,6 @@ export function SingleChatSurface(props: {
   };
 
   const handleSelectDockPane = (paneId: string) => {
-    requestImmediateDockHydration(dockState.panes.find((pane) => pane.id === paneId)?.kind);
     setActivePane(props.threadId, paneId);
   };
 
@@ -1286,6 +1278,7 @@ export function SingleChatSurface(props: {
           shouldAcceptWidth={shouldAcceptDockWidth}
           addMenuKinds={availableDockPaneKinds}
           launcherItems={dockLauncherItems}
+          motionScopeKey={props.threadId}
           activePaneRuntimeMode={activePaneRuntimeMode}
           minimumPrimaryWidth={
             CHAT_CANVAS_MIN_WIDTH_PX + (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0)

@@ -868,7 +868,13 @@ describe("engine runtime activity projection", () => {
       payload: {
         state: "completed",
         modelUsage: {
-          "claude-fable-5": { inputTokens: 960, outputTokens: 40, totalTokens: 1_000 },
+          "claude-fable-5": {
+            inputTokens: 100,
+            cacheReadInputTokens: 800,
+            cacheWriteInputTokens: 60,
+            outputTokens: 40,
+            totalTokens: 1_000,
+          },
         },
       },
     });

@@ -28,6 +28,7 @@ const BROWSER_PANE: RightDockPane = {
 interface RuntimeActivationProps {
   readonly threadId: ThreadId;
   readonly activePane: RightDockPane | null;
+  readonly pendingVisibleActivation?: { requestId: string; paneId: string } | null;
 }
 
 describe("useDockPaneRuntimeActivation", () => {
@@ -43,12 +44,15 @@ describe("useDockPaneRuntimeActivation", () => {
       threadId: THREAD_A,
       activePane: BROWSER_PANE,
     };
+    const consumeVisibleActivation = vi.fn();
 
     const hook = await renderHook(
       (props?: RuntimeActivationProps) =>
         useDockPaneRuntimeActivation({
           threadId: props?.threadId ?? THREAD_A,
           activePane: props ? props.activePane : BROWSER_PANE,
+          pendingVisibleActivation: props?.pendingVisibleActivation ?? null,
+          consumeVisibleActivation,
         }),
       {
         initialProps,
@@ -67,6 +71,38 @@ describe("useDockPaneRuntimeActivation", () => {
     await expect
       .poll(() => hook.result.current.activePaneRuntimeMode, { timeout: 1_000 })
       .toBe("live");
+
+    await hook.unmount();
+  });
+
+  it("mounts an explicitly revealed pane live before consuming its one-shot request", async () => {
+    let nextFrameId = 1;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => nextFrameId++);
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+    const consumeVisibleActivation = vi.fn();
+    const activation = { requestId: "activation-1", paneId: BROWSER_PANE.id };
+
+    const hook = await renderHook(
+      (props?: RuntimeActivationProps) =>
+        useDockPaneRuntimeActivation({
+          threadId: props?.threadId ?? THREAD_A,
+          activePane: props?.activePane ?? BROWSER_PANE,
+          pendingVisibleActivation: props?.pendingVisibleActivation ?? activation,
+          consumeVisibleActivation,
+        }),
+      {
+        initialProps: {
+          threadId: THREAD_A,
+          activePane: BROWSER_PANE,
+          pendingVisibleActivation: activation,
+        },
+      },
+    );
+
+    expect(hook.result.current.activePaneRuntimeMode).toBe("live");
+    await expect
+      .poll(() => consumeVisibleActivation.mock.calls, { timeout: 1_000 })
+      .toEqual([[THREAD_A, activation.requestId]]);
 
     await hook.unmount();
   });

@@ -50,7 +50,7 @@ function fixture(
     const manifest = `${JSON.stringify(
       {
         name,
-        version: "0.84.3",
+        version: "0.84.4",
         ...(options.undeclaredLicense && name === piNames[0] ? {} : { license: "MIT" }),
       },
       null,
@@ -73,13 +73,13 @@ function fixture(
             ? []
             : [
                 {
-                  packageIds: [`${piNames[0]}@0.84.3`],
+                  packageIds: [`${piNames[0]}@0.84.4`],
                   license: "MIT",
                   kind: "exact-upstream",
                   assetPath: "assets/licenses/exact.txt",
                   sha256: options.assetDigest ?? sha256(legalText),
                   manifestSha256ByPackageId: {
-                    [`${piNames[0]}@0.84.3`]: options.manifestDigest ?? sha256(targetManifest),
+                    [`${piNames[0]}@0.84.4`]: options.manifestDigest ?? sha256(targetManifest),
                   },
                   revision,
                   sourcePath: "LICENSE",
@@ -112,7 +112,7 @@ describe("legal metadata", () => {
       join(root, "apps/server/package.json"),
       JSON.stringify({
         dependencies: {
-          "@earendil-works/pi-agent-core": "0.84.3",
+          "@earendil-works/pi-agent-core": "0.84.4",
           "@harnessos/contracts": "workspace:*",
           effect: "1.0.0",
         },
@@ -236,7 +236,7 @@ describe("legal metadata", () => {
       `${JSON.stringify(
         {
           name: "@earendil-works/pi-tui",
-          version: "0.84.3",
+          version: "0.84.4",
           license: "MIT",
           peerDependencies: { "peer-only": "1.0.0" },
         },

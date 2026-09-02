@@ -153,7 +153,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
-    it.effect("defaults HARNESSOS_HOME to ~/.harnessos when not provided", () =>
+    it.effect("defaults source development to ~/.harnessos-dev when not provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
@@ -170,7 +170,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.HARNESSOS_HOME, resolve(homedir(), ".harnessos"));
+        assert.equal(env.HARNESSOS_HOME, resolve(homedir(), ".harnessos-dev"));
         assert.equal(env.HARNESSOS_HOST, "127.0.0.1");
         assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:3773");
       }),

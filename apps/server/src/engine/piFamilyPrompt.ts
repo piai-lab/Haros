@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { BuiltInToolGroupId, EngineWorkSurface } from "@harnessos/contracts";
 import type { ProductSurface } from "@harnessos/shared/productSurface";
 
@@ -106,4 +108,11 @@ export function makeOAEngineSystemPrompt(input: {
     surfaceContract,
     "</harnessos_engine_contract>",
   ].join("\n");
+}
+
+export function oaFirmwareVersion(input: {
+  readonly productSurface?: ProductSurface;
+  readonly workSurface?: EngineWorkSurface;
+}): string {
+  return createHash("sha256").update(makeOAEngineSystemPrompt(input)).digest("hex");
 }

@@ -75,7 +75,7 @@ const ENGINE_INTERACTION_MODE_ENVELOPES = {
   learn: ENGINE_LEARN_MODE_ENVELOPE,
 } as const satisfies Record<EngineInteractionMode, string | null>;
 
-function providerInteractionModeEnvelope(
+export function providerInteractionModeEnvelope(
   interactionMode: EngineInteractionMode | undefined,
 ): string | null {
   return ENGINE_INTERACTION_MODE_ENVELOPES[interactionMode ?? "default"];

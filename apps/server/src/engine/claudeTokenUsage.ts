@@ -76,7 +76,8 @@ function claudeTokenBreakdownFromRawUsage(usage: Record<string, unknown>) {
   }
   return {
     cachedInputTokens: cacheReadTokens,
-    uncachedInputTokens: baseInputTokens + cacheCreationTokens,
+    uncachedInputTokens: baseInputTokens,
+    cacheWriteInputTokens: cacheCreationTokens,
     outputTokens,
   } as const;
 }

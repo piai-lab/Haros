@@ -26,8 +26,14 @@ import {
 const RIGHT_DOCK_STORAGE_KEY = "harnessos:right-dock-state:v1";
 const rightDockStorage = resolveLocalStateStorage();
 
+export interface RightDockVisibleActivation {
+  requestId: string;
+  paneId: string;
+}
+
 interface RightDockStore {
   dockStateByThreadId: Record<string, RightDockThreadState | undefined>;
+  pendingVisibleActivationByThreadId: Record<string, RightDockVisibleActivation | undefined>;
   browserPresentationByThreadId: Record<
     string,
     | {
@@ -43,6 +49,7 @@ interface RightDockStore {
     presentationId: string,
     disposition: "restore" | "preserve",
   ) => void;
+  consumeVisibleActivation: (threadId: ThreadId, requestId: string) => void;
   openPane: (
     threadId: ThreadId,
     input: Omit<OpenPaneInput, "paneId"> & { paneId?: string },
@@ -85,16 +92,36 @@ function commit(
   set: (fn: (store: RightDockStore) => Partial<RightDockStore>) => void,
   threadId: ThreadId,
   transform: (state: RightDockThreadState) => RightDockThreadState,
-  suppressPresentation = true,
+  options: {
+    suppressPresentation?: boolean;
+    visibleActivation?: "explicit" | "revealed-active" | "preserve";
+  } = {},
 ): void {
   set((store) => {
     const previous = store.dockStateByThreadId[threadId] ?? DEFAULT_RIGHT_DOCK_STATE;
     const next = transform(previous);
     const presentation = store.browserPresentationByThreadId[threadId];
     const shouldSuppress =
-      suppressPresentation && presentation !== undefined && !presentation.suppressedByUser;
+      options.suppressPresentation !== false &&
+      presentation !== undefined &&
+      !presentation.suppressedByUser;
     if (next === previous && !shouldSuppress) {
       return {};
+    }
+    const visibleActivation = options.visibleActivation ?? "explicit";
+    const shouldUpdateVisibleActivation =
+      visibleActivation === "explicit" ||
+      (visibleActivation === "revealed-active" &&
+        (next.open !== previous.open || next.activePaneId !== previous.activePaneId));
+    const nextVisibleActivations = shouldUpdateVisibleActivation
+      ? { ...store.pendingVisibleActivationByThreadId }
+      : null;
+    if (nextVisibleActivations) {
+      if (next.open && next.activePaneId !== null) {
+        nextVisibleActivations[threadId] = { requestId: randomUUID(), paneId: next.activePaneId };
+      } else {
+        delete nextVisibleActivations[threadId];
+      }
     }
     return {
       ...(next !== previous
@@ -104,6 +131,9 @@ function commit(
               [threadId]: next,
             },
           }
+        : {}),
+      ...(nextVisibleActivations
+        ? { pendingVisibleActivationByThreadId: nextVisibleActivations }
         : {}),
       ...(shouldSuppress
         ? {
@@ -142,16 +172,24 @@ function projectBrowserPresentation(
   return projected;
 }
 
+export function partializeRightDockStore(store: RightDockStore) {
+  return { dockStateByThreadId: store.dockStateByThreadId };
+}
+
 export const useRightDockStore = create<RightDockStore>()(
   persist(
     (set) => ({
       dockStateByThreadId: {},
+      pendingVisibleActivationByThreadId: {},
       browserPresentationByThreadId: {},
       acquireBrowserPresentation: (threadId, presentationId) =>
         set((store) => {
           const existing = store.browserPresentationByThreadId[threadId];
           if (existing?.presentationId === presentationId) return {};
+          const nextVisibleActivations = { ...store.pendingVisibleActivationByThreadId };
+          delete nextVisibleActivations[threadId];
           return {
+            pendingVisibleActivationByThreadId: nextVisibleActivations,
             browserPresentationByThreadId: {
               ...store.browserPresentationByThreadId,
               [threadId]: {
@@ -194,17 +232,31 @@ export const useRightDockStore = create<RightDockStore>()(
           toggleSingletonPaneInState(state, { ...input, paneId: input.paneId ?? randomUUID() }),
         ),
       closePane: (threadId, paneId) =>
-        commit(set, threadId, (state) => closePaneInState(state, paneId)),
+        commit(set, threadId, (state) => closePaneInState(state, paneId), {
+          visibleActivation: "revealed-active",
+        }),
       setActivePane: (threadId, paneId) =>
         commit(set, threadId, (state) => setActivePaneInState(state, paneId)),
       setDockOpen: (threadId, open) =>
         commit(set, threadId, (state) => setDockOpenInState(state, open)),
       updatePane: (threadId, paneId, patch) =>
-        commit(set, threadId, (state) => updatePaneInState(state, paneId, patch), false),
+        commit(set, threadId, (state) => updatePaneInState(state, paneId, patch), {
+          suppressPresentation: false,
+          visibleActivation: "preserve",
+        }),
+      consumeVisibleActivation: (threadId, requestId) =>
+        set((store) => {
+          const pending = store.pendingVisibleActivationByThreadId[threadId];
+          if (!pending || pending.requestId !== requestId) return {};
+          const next = { ...store.pendingVisibleActivationByThreadId };
+          delete next[threadId];
+          return { pendingVisibleActivationByThreadId: next };
+        }),
       clearThreadDockState: (threadId) =>
         set((store) => {
           if (
             !Object.hasOwn(store.dockStateByThreadId, threadId) &&
+            !Object.hasOwn(store.pendingVisibleActivationByThreadId, threadId) &&
             !Object.hasOwn(store.browserPresentationByThreadId, threadId)
           ) {
             return {};
@@ -213,8 +265,11 @@ export const useRightDockStore = create<RightDockStore>()(
           delete next[threadId];
           const nextPresentations = { ...store.browserPresentationByThreadId };
           delete nextPresentations[threadId];
+          const nextVisibleActivations = { ...store.pendingVisibleActivationByThreadId };
+          delete nextVisibleActivations[threadId];
           return {
             dockStateByThreadId: next,
+            pendingVisibleActivationByThreadId: nextVisibleActivations,
             browserPresentationByThreadId: nextPresentations,
           };
         }),
@@ -230,7 +285,7 @@ export const useRightDockStore = create<RightDockStore>()(
           (persisted as { dockStateByThreadId?: unknown } | undefined)?.dockStateByThreadId,
         ),
       }),
-      partialize: (store) => ({ dockStateByThreadId: store.dockStateByThreadId }),
+      partialize: partializeRightDockStore,
     },
   ),
 );
@@ -244,4 +299,9 @@ export function selectRightDockState(threadId: ThreadId | null) {
     const presentation = threadId ? store.browserPresentationByThreadId[threadId] : undefined;
     return presentation ? projectBrowserPresentation(base, presentation) : base;
   };
+}
+
+export function selectRightDockVisibleActivation(threadId: ThreadId) {
+  return (store: RightDockStore): RightDockVisibleActivation | null =>
+    store.pendingVisibleActivationByThreadId[threadId] ?? null;
 }

@@ -8,8 +8,10 @@ import {
   editableTextByteLength,
   hasDisallowedEditableTextControl,
   isOAAgentPromptContent,
+  HARNESSOS_AGENT_PERSONAL_STRATEGY_SOURCE_IDS,
   HARNESSOS_AGENT_PROMPT_MAX_BYTES,
-  type OAAgentCustomRulesSourceId,
+  type OAAgentPersonalStrategySourceId,
+  type OAAgentPromptLocale,
   type OAAgentPromptGetSnapshotInput,
   type OAAgentPromptMutationInput,
   type OAAgentPromptMutationResult,
@@ -20,21 +22,14 @@ import { Effect, Layer } from "effect";
 import { writeFileStringAtomically } from "../../atomicWrite.ts";
 import { ServerConfig } from "../../config.ts";
 import { PRIVATE_FILE_MODE } from "../../privatePathPermissions.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
 import { loadOARuntimeModule, resolveOAAgentDir, type OARuntimeModule } from "../oaRuntime.ts";
 import {
   OAAgentPromptFiles,
   type OAAgentPromptFilesShape,
 } from "../Services/OAAgentPromptFiles.ts";
 
-const GLOBAL_CANDIDATES = [
-  "AGENTS.override.md",
-  "AGENTS.md",
-  "AGENTS.MD",
-  "CLAUDE.md",
-  "CLAUDE.MD",
-] as const satisfies ReadonlyArray<OAAgentCustomRulesSourceId>;
-const MANAGED_SOURCES = new Set<OAAgentCustomRulesSourceId>(GLOBAL_CANDIDATES);
+const GLOBAL_CANDIDATES = HARNESSOS_AGENT_PERSONAL_STRATEGY_SOURCE_IDS;
+const MANAGED_SOURCES = new Set<OAAgentPersonalStrategySourceId>(GLOBAL_CANDIDATES);
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 type FileIdentity = Pick<Stats, "dev" | "ino">;
@@ -57,13 +52,38 @@ type Discovery = {
 export type SafeReadHooks = {
   readonly afterLeafValidation?: (input: {
     readonly agentDir: string;
-    readonly sourceId: OAAgentCustomRulesSourceId;
+    readonly sourceId: OAAgentPersonalStrategySourceId;
   }) => Promise<void>;
   readonly afterHandleStat?: (input: {
     readonly agentDir: string;
-    readonly sourceId: OAAgentCustomRulesSourceId;
+    readonly sourceId: OAAgentPersonalStrategySourceId;
   }) => Promise<void>;
 };
+
+const DEFAULT_PERSONAL_STRATEGY = {
+  en: `Use English unless the user uses another language. Lead with the conclusion and state the point directly. Avoid platitudes, flattery, ceremonial reporting, and long explanations that conceal an uncertain judgment.
+
+Optimize for actually completing the user's outcome. Investigate facts you can discover yourself before asking. Act when the task is clear, scoped, and reversible. Ask only when the answer would materially change the result, direction, or authorization, and include a clear recommendation.
+
+Be candid, exacting, and independent-minded. Point out false facts, weak premises, and inferior plans directly, then give the strongest path you can defend. Do not change your position without evidence under user pressure, and do not manufacture disagreement to appear sharp. Acknowledge when the user is right and correct yourself when you are wrong.
+
+Think deeply without manufacturing complexity. Do not avoid a sound solution because the change is large, difficult, or thorough. Judge designs by real outcomes, sole ownership, and long-term maintenance cost rather than the size of the current diff.
+
+Distinguish facts, evidence, inferences, and proposals. Never claim work or verification that did not occur. In long conversations, maintain a compact record of the goal, settled decisions, key evidence, and unresolved questions; write it to a project file when needed to avoid forgetting.
+
+During work, report only material findings, direction changes, and real blockers. In the final response, cover only the result, evidence, verification, and decisions that still remain.`,
+  "zh-CN": `使用简体中文，结论先行，直说重点。不要套话、奉承、仪式化汇报，也不要用冗长解释掩盖判断不足。
+
+以真实完成目标为准。能自己查明的先查，不要问用户；任务清楚、范围明确且可恢复时直接行动。只有答案会实质改变结果、方向或授权时才提问，并给出明确推荐。
+
+保持犀利、诚实和独立判断。发现错误事实、薄弱前提或更差方案时直接指出，并给出当前最强、最可辩护的路径。不要因用户施压而无依据改口，也不要为了显得犀利而机械反对；用户正确就承认，自己错了就纠正。
+
+深度思考，但不要制造复杂度。不要怕改动大、实现麻烦或需要动透；以真实结果、唯一责任和长期维护成本裁决方案，不以本次 diff 大小裁决。
+
+区分事实、证据、推断和建议。不要声称做过未实际完成或验证的事情。长对话中持续维护紧凑的目标、已定决定、关键证据和未决问题，必要时写入项目文件，避免遗忘。
+
+过程只汇报关键发现、方向变化和真实阻塞；最终只讲结果、证据、验证情况和仍需决定的事项。`,
+} as const satisfies Record<OAAgentPromptLocale, string>;
 
 class PromptConflict extends Error {
   constructor(readonly reason: "content_changed" | "source_changed" | "state_changed") {
@@ -75,7 +95,7 @@ class PromptConflict extends Error {
 class PromptUnavailable extends Error {
   constructor(
     readonly reason: "too_large" | "unsupported_text",
-    readonly sourceId: OAAgentCustomRulesSourceId | null,
+    readonly sourceId: OAAgentPersonalStrategySourceId | null,
   ) {
     super(reason);
   }
@@ -151,7 +171,7 @@ async function rootState(
 
 async function validateLeaf(
   agentDir: string,
-  sourceId: OAAgentCustomRulesSourceId,
+  sourceId: OAAgentPersonalStrategySourceId,
 ): Promise<Stats | null> {
   if (!MANAGED_SOURCES.has(sourceId)) throw new Error("Unknown prompt source");
   const root = await rootState(agentDir);
@@ -174,7 +194,7 @@ async function validateLeaf(
 
 async function safeRead(
   agentDir: string,
-  sourceId: OAAgentCustomRulesSourceId,
+  sourceId: OAAgentPersonalStrategySourceId,
   hooks: SafeReadHooks = {},
 ): Promise<SafeFile> {
   const rootBefore = await rootState(agentDir);
@@ -252,8 +272,8 @@ async function discover(input: {
 }): Promise<Discovery> {
   const candidateExists = new Map<(typeof GLOBAL_CANDIDATES)[number], boolean>();
   const seenCandidateIdentities = new Set<string>();
-  const existingCandidates: OAAgentCustomRulesSourceId[] = [];
-  const oversizedCandidates: OAAgentCustomRulesSourceId[] = [];
+  const existingCandidates: OAAgentPersonalStrategySourceId[] = [];
+  const oversizedCandidates: OAAgentPersonalStrategySourceId[] = [];
   for (const sourceId of GLOBAL_CANDIDATES) {
     const stat = await validateLeaf(input.agentDir, sourceId);
     const identity = stat ? `${stat.dev}:${stat.ino}` : null;
@@ -273,11 +293,21 @@ async function discover(input: {
   if (!(await rootState(input.agentDir))) {
     return { agentDir: input.agentDir, activeSourceId: null, activeFile: null, candidateExists };
   }
-  const selected = input.sdk.loadProjectContextFiles({
-    cwd: input.agentDir,
-    agentDir: input.agentDir,
-    projectContextRoot: false,
-  });
+  let selected: ReturnType<OARuntimeModule["loadProjectContextFiles"]>;
+  try {
+    selected = input.sdk.loadProjectContextFiles({
+      cwd: input.agentDir,
+      agentDir: input.agentDir,
+      projectContextRoot: false,
+    });
+  } catch (error) {
+    // Pi deliberately owns candidate selection. If its text loader rejects the
+    // selected file, classify the same source through our bounded editor read
+    // so Settings can preserve and reveal unsupported user content.
+    const activeSourceId = GLOBAL_CANDIDATES.find((sourceId) => candidateExists.get(sourceId));
+    if (activeSourceId) await safeRead(input.agentDir, activeSourceId, input.hooks);
+    throw error;
+  }
   if (selected.length === 0) {
     return { agentDir: input.agentDir, activeSourceId: null, activeFile: null, candidateExists };
   }
@@ -299,8 +329,6 @@ async function makeSnapshot(input: {
   readonly sdk: OARuntimeModule;
   readonly agentDir: string;
   readonly homeDir: string;
-  readonly factoryContent: string;
-  readonly customizedContent: string | null;
   readonly hooks: SafeReadHooks | undefined;
 }): Promise<OAAgentPromptSnapshot> {
   let discovery: Discovery | null = null;
@@ -311,11 +339,6 @@ async function makeSnapshot(input: {
     if (!(error instanceof PromptUnavailable)) throw error;
     unavailable = error;
   }
-  const currentDefault = input.customizedContent ?? input.factoryContent;
-  const defaultVersion = createHash("sha256")
-    .update(input.customizedContent === null ? "factory\0" : "custom\0")
-    .update(currentDefault)
-    .digest("hex");
   const activePath = discovery?.activeSourceId
     ? path.join(input.agentDir, discovery.activeSourceId)
     : null;
@@ -325,12 +348,7 @@ async function makeSnapshot(input: {
       : input.agentDir
     : null;
   return {
-    defaultPrompt: {
-      content: currentDefault,
-      customized: input.customizedContent !== null,
-      version: defaultVersion,
-    },
-    customRules:
+    personalStrategy:
       unavailable && unavailablePath
         ? {
             availability: "unavailable",
@@ -338,7 +356,6 @@ async function makeSnapshot(input: {
             sourceId: unavailable.sourceId,
             displayPath: displayPath(unavailablePath, input.homeDir),
             revealPath: unavailablePath,
-            exists: true,
             version: null,
             content: "",
           }
@@ -349,20 +366,12 @@ async function makeSnapshot(input: {
               sourceId: discovery.activeSourceId,
               displayPath: displayPath(activePath, input.homeDir),
               revealPath: activePath,
-              exists: true,
               version: discovery.activeFile.version,
               content: discovery.activeFile.content,
             }
-          : {
-              availability: "absent",
-              unavailableReason: null,
-              sourceId: null,
-              displayPath: null,
-              revealPath: null,
-              exists: false,
-              version: null,
-              content: "",
-            },
+          : (() => {
+              throw new Error("Personal Strategy was not initialized");
+            })(),
     maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   };
 }
@@ -384,27 +393,60 @@ export function makeOAAgentPromptFilesLive(options: OAAgentPromptFilesLiveOption
     OAAgentPromptFiles,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
-      const serverSettings = yield* ServerSettingsService;
       let mutationTail = Promise.resolve();
       const owners = async () => ({
         sdk: await (options.loadModule ?? loadOARuntimeModule)(),
         agentDir: resolveOAAgentDir(config.baseDir),
       });
-      const snapshot = async () => {
+      const ensureInitialized = async (locale: OAAgentPromptLocale) => {
         const current = await owners();
-        const settings = await Effect.runPromise(serverSettings.getSettings);
+        let discovery: Discovery;
+        try {
+          discovery = await discover({ ...current, hooks: options.safeReadHooks });
+        } catch (error) {
+          // An existing unsupported or oversized source is still the user's
+          // Personal Strategy. Preserve it and let makeSnapshot expose the
+          // unavailable state instead of creating a replacement file.
+          if (error instanceof PromptUnavailable) return current;
+          throw error;
+        }
+        if (discovery.activeSourceId !== null) return current;
+        if ([...discovery.candidateExists.values()].some(Boolean)) {
+          throw new PromptConflict("state_changed");
+        }
+        const sourceId = "AGENTS.md" as const;
+        await Effect.runPromise(
+          writeFileStringAtomically({
+            filePath: path.join(current.agentDir, sourceId),
+            contents: Buffer.from(DEFAULT_PERSONAL_STRATEGY[locale], "utf8"),
+            mode: PRIVATE_FILE_MODE,
+            placement: "create",
+            beforeReplace: async () => {
+              assertCurrentAgentDir(config.baseDir, current.agentDir);
+              const fresh = await discover({ ...current, hooks: options.safeReadHooks });
+              if (
+                fresh.activeSourceId !== null ||
+                [...fresh.candidateExists.values()].some(Boolean)
+              ) {
+                throw new PromptConflict("state_changed");
+              }
+            },
+          }),
+        );
+        return current;
+      };
+      const snapshot = async (locale: OAAgentPromptLocale) => {
+        const current = await ensureInitialized(locale);
         return makeSnapshot({
           ...current,
           homeDir: config.homeDir,
-          factoryContent: current.sdk.DEFAULT_BASE_INSTRUCTIONS,
-          customizedContent: settings.engines.oa.defaultPrompt,
           hooks: options.safeReadHooks,
         });
       };
       const run = <A>(operation: () => Promise<A>) =>
         Effect.tryPromise({
           try: operation,
-          catch: () => new Error("Haros Agent prompt file operation failed"),
+          catch: () => new Error("OA Agent prompt file operation failed"),
         });
       const serialize = <A>(operation: () => Promise<A>) => {
         const result = mutationTail.then(operation, operation);
@@ -416,116 +458,47 @@ export function makeOAAgentPromptFilesLive(options: OAAgentPromptFilesLiveOption
       };
       const conflict = async (
         reason: PromptConflict["reason"],
+        locale: OAAgentPromptLocale,
       ): Promise<OAAgentPromptMutationResult> => ({
         state: "conflict",
         reason,
-        snapshot: await snapshot(),
+        snapshot: await snapshot(locale),
       });
 
       return {
-        getSnapshot: (_input: OAAgentPromptGetSnapshotInput = {}) => run(snapshot),
+        getSnapshot: (input: OAAgentPromptGetSnapshotInput) =>
+          run(() => serialize(() => snapshot(input.locale))),
         mutate: (input: OAAgentPromptMutationInput) =>
           run(() =>
             serialize(async (): Promise<OAAgentPromptMutationResult> => {
               if ("content" in input) assertEditableContent(input.content);
 
-              if (input.action === "setDefault" || input.action === "restoreDefault") {
-                const before = await snapshot();
-                if (before.defaultPrompt.version !== input.expectedVersion) {
-                  return conflict("content_changed");
-                }
-                const nextContent = input.action === "setDefault" ? input.content : null;
-                const expectedContent = before.defaultPrompt.customized
-                  ? before.defaultPrompt.content
-                  : null;
-                const mutation = await Effect.runPromise(
-                  serverSettings.mutateHarosDefaultPrompt(expectedContent, nextContent),
-                );
-                if (mutation.state === "conflict") return conflict("content_changed");
-                return {
-                  state: mutation.state,
-                  snapshot: mutation.state === "unchanged" ? before : await snapshot(),
-                };
-              }
-
-              const { sdk, agentDir } = await owners();
+              const { sdk, agentDir } = await ensureInitialized(input.locale);
               const discovery = await discover({ sdk, agentDir, hooks: options.safeReadHooks });
               const selectedSource = discovery.activeSourceId;
 
-              if (input.action === "createCustomRules") {
-                if (input.content.length === 0) {
-                  return { state: "unchanged", snapshot: await snapshot() };
-                }
-                if (
-                  discovery.activeSourceId !== null ||
-                  [...discovery.candidateExists.values()].some(Boolean)
-                ) {
-                  return conflict("state_changed");
-                }
-                const sourceId = "AGENTS.md" as const;
-                const bytes = encodeForExisting(input.content);
-                await Effect.runPromise(
-                  writeFileStringAtomically({
-                    filePath: path.join(agentDir, sourceId),
-                    contents: bytes,
-                    mode: PRIVATE_FILE_MODE,
-                    placement: "create",
-                    beforeReplace: async () => {
-                      assertCurrentAgentDir(config.baseDir, agentDir);
-                      const fresh = await discover({
-                        sdk,
-                        agentDir,
-                        hooks: options.safeReadHooks,
-                      });
-                      const occupied =
-                        fresh.activeSourceId !== null ||
-                        [...fresh.candidateExists.values()].some(Boolean);
-                      if (occupied) throw new PromptConflict("state_changed");
-                    },
-                  }),
-                );
-                return { state: "changed", snapshot: await snapshot() };
-              }
-
               if (selectedSource !== input.sourceId) {
-                return conflict("source_changed");
+                return conflict("source_changed", input.locale);
               }
               let existing: SafeFile;
               try {
                 existing = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
               } catch (error) {
-                if (error instanceof PromptConflict) return conflict(error.reason);
+                if (error instanceof PromptConflict) return conflict(error.reason, input.locale);
                 throw error;
               }
               if (existing.version !== input.expectedVersion) {
-                return conflict("content_changed");
+                return conflict("content_changed", input.locale);
               }
 
-              if (input.action === "removeCustomRules") {
-                assertCurrentAgentDir(config.baseDir, agentDir);
-                const freshDiscovery = await discover({
-                  sdk,
-                  agentDir,
-                  hooks: options.safeReadHooks,
-                });
-                if (freshDiscovery.activeSourceId !== input.sourceId) {
-                  return conflict("source_changed");
-                }
-                const freshFile = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
-                if (
-                  freshFile.version !== input.expectedVersion ||
-                  !sameIdentity(freshFile.identity, existing.identity)
-                ) {
-                  return conflict("content_changed");
-                }
-                await fs.unlink(path.join(agentDir, input.sourceId));
-                return { state: "changed", snapshot: await snapshot() };
+              const nextContent =
+                input.action === "restorePersonalStrategy"
+                  ? DEFAULT_PERSONAL_STRATEGY[input.locale]
+                  : input.content;
+              if (existing.content === normalizeContent(nextContent)) {
+                return { state: "unchanged", snapshot: await snapshot(input.locale) };
               }
-
-              if (existing.content === normalizeContent(input.content)) {
-                return { state: "unchanged", snapshot: await snapshot() };
-              }
-              const bytes = encodeForExisting(input.content, existing);
+              const bytes = encodeForExisting(nextContent, existing);
               await Effect.runPromise(
                 writeFileStringAtomically({
                   filePath: path.join(agentDir, input.sourceId),
@@ -555,16 +528,16 @@ export function makeOAAgentPromptFilesLive(options: OAAgentPromptFilesLiveOption
                   },
                 }),
               );
-              return { state: "changed", snapshot: await snapshot() };
+              return { state: "changed", snapshot: await snapshot(input.locale) };
             }).catch(async (error) => {
-              if (error instanceof PromptConflict) return conflict(error.reason);
+              if (error instanceof PromptConflict) return conflict(error.reason, input.locale);
               if (
                 typeof error === "object" &&
                 error !== null &&
                 "code" in error &&
                 error.code === "EEXIST"
               ) {
-                return conflict("state_changed");
+                return conflict("state_changed", input.locale);
               }
               throw error;
             }),

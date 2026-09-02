@@ -1828,11 +1828,13 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         totalTokenBreakdown: {
           cachedInputTokens: 3456,
           uncachedInputTokens: 8377,
+          cacheWriteInputTokens: 0,
           outputTokens: 6,
         },
         lastTokenBreakdown: {
           cachedInputTokens: 0,
           uncachedInputTokens: 120,
+          cacheWriteInputTokens: 0,
           outputTokens: 6,
         },
         compactsAutomatically: true,

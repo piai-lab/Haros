@@ -23,8 +23,8 @@ import {
   TerminalManagerRuntime,
   type TerminalSubprocessActivity,
 } from "./Manager";
-import type { ProcessTreeKiller } from "../processTreeKiller";
-import type { ProcessChildrenSnapshotObserver } from "../windowsProcessSnapshot";
+import type { ProcessTreeKiller } from "../../platform/processTreeController";
+import type { ProcessChildrenSnapshotObserver } from "../../platform/windowsProcessSnapshot";
 import { Effect, Encoding } from "effect";
 
 class FakePtyProcess implements PtyProcess {
@@ -33,10 +33,14 @@ class FakePtyProcess implements PtyProcess {
   readonly killSignals: Array<string | undefined> = [];
   private readonly dataListeners = new Set<(data: string) => void>();
   private readonly exitListeners = new Set<(event: PtyExitEvent) => void>();
+  private exited = false;
   killed = false;
   paused = false;
 
-  constructor(readonly pid: number) {}
+  constructor(
+    readonly pid: number,
+    private readonly autoExitOnTerminate = true,
+  ) {}
 
   write(data: string): void {
     this.writes.push(data);
@@ -49,6 +53,9 @@ class FakePtyProcess implements PtyProcess {
   kill(signal?: string): void {
     this.killed = true;
     this.killSignals.push(signal);
+    if (this.autoExitOnTerminate && signal === "SIGTERM" && !this.exited) {
+      queueMicrotask(() => this.emitExit({ exitCode: 0, signal: 15 }));
+    }
   }
 
   pause(): void {
@@ -80,6 +87,8 @@ class FakePtyProcess implements PtyProcess {
   }
 
   emitExit(event: PtyExitEvent): void {
+    if (this.exited) return;
+    this.exited = true;
     for (const listener of this.exitListeners) {
       listener(event);
     }
@@ -92,7 +101,10 @@ class FakePtyAdapter implements PtyAdapterShape {
   readonly spawnFailures: Error[] = [];
   private nextPid = 9000;
 
-  constructor(private readonly mode: "sync" | "async" = "sync") {}
+  constructor(
+    private readonly mode: "sync" | "async" = "sync",
+    private readonly autoExitOnTerminate = true,
+  ) {}
 
   spawn(input: PtySpawnInput): Effect.Effect<PtyProcess, PtySpawnError> {
     this.spawnInputs.push(input);
@@ -106,7 +118,7 @@ class FakePtyAdapter implements PtyAdapterShape {
         }),
       );
     }
-    const process = new FakePtyProcess(this.nextPid++);
+    const process = new FakePtyProcess(this.nextPid++, this.autoExitOnTerminate);
     this.processes.push(process);
     if (this.mode === "async") {
       return Effect.tryPromise({
@@ -1177,7 +1189,10 @@ describe("TerminalManager", () => {
   });
 
   it("escalates terminal shutdown to SIGKILL when process does not exit in time", async () => {
-    const { manager, ptyAdapter } = makeManager(5, { processKillGraceMs: 10 });
+    const { manager, ptyAdapter } = makeManager(5, {
+      processKillGraceMs: 10,
+      ptyAdapter: new FakePtyAdapter("sync", false),
+    });
     await manager.open(openInput());
     const process = ptyAdapter.processes[0];
     expect(process).toBeDefined();
@@ -1193,14 +1208,19 @@ describe("TerminalManager", () => {
   });
 
   it("cancels SIGKILL escalation when the process exits after SIGTERM", async () => {
-    const { manager, ptyAdapter } = makeManager(5, { processKillGraceMs: 30 });
+    const { manager, ptyAdapter } = makeManager(5, {
+      processKillGraceMs: 30,
+      ptyAdapter: new FakePtyAdapter("sync", false),
+    });
     await manager.open(openInput());
     const process = ptyAdapter.processes[0];
     expect(process).toBeDefined();
     if (!process) return;
 
-    await manager.close({ threadId: "thread-1" });
+    const close = manager.close({ threadId: "thread-1" });
+    await waitFor(() => process.killSignals[0] === "SIGTERM");
     process.emitExit({ exitCode: 0, signal: 15 });
+    await close;
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     expect(process.killSignals[0]).toBe("SIGTERM");
@@ -1216,9 +1236,14 @@ describe("TerminalManager", () => {
       descendantPids: number[];
       includeRootTree: boolean | undefined;
     }> = [];
+    let descendantAlive = true;
     const processTreeKiller: ProcessTreeKiller = {
       capture: () => ({
         descendants: [{ pid: 4242, command: "tsdown --watch --clean" }],
+      }),
+      inspect: (tree) => ({
+        verified: true,
+        survivors: descendantAlive ? tree.descendants : [],
       }),
       signal: ({ rootPid, signal, tree, includeRootTree }) => {
         treeSignals.push({
@@ -1227,19 +1252,23 @@ describe("TerminalManager", () => {
           descendantPids: tree.descendants.map((descendant) => descendant.pid),
           includeRootTree,
         });
+        if (signal === "SIGKILL") descendantAlive = false;
       },
     };
     const { manager, ptyAdapter } = makeManager(5, {
-      processKillGraceMs: 10,
+      processKillGraceMs: 50,
       processTreeKiller,
+      ptyAdapter: new FakePtyAdapter("sync", false),
     });
     await manager.open(openInput());
     const process = ptyAdapter.processes[0];
     expect(process).toBeDefined();
     if (!process) return;
 
-    await manager.close({ threadId: "thread-1" });
+    const close = manager.close({ threadId: "thread-1" });
+    await waitFor(() => process.killSignals[0] === "SIGTERM");
     process.emitExit({ exitCode: 0, signal: 15 });
+    await close;
     await waitFor(() => treeSignals.some((entry) => entry.signal === "SIGKILL"));
 
     expect(treeSignals).toContainEqual({
@@ -1254,7 +1283,10 @@ describe("TerminalManager", () => {
   });
 
   it("shutdown disposal waits for kill escalation before returning", async () => {
-    const { manager, ptyAdapter } = makeManager(5, { processKillGraceMs: 10 });
+    const { manager, ptyAdapter } = makeManager(5, {
+      processKillGraceMs: 10,
+      ptyAdapter: new FakePtyAdapter("sync", false),
+    });
     await manager.open(openInput());
     const process = ptyAdapter.processes[0];
     expect(process).toBeDefined();

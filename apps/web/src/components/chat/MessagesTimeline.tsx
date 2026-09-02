@@ -114,6 +114,8 @@ import { ThinkingStatus } from "./ThinkingStatus";
 import { useTailAnchorScroll } from "./useTailAnchorScroll";
 import { useTimelineRowOverlapGuard } from "./useTimelineRowOverlapGuard";
 import { useI18n } from "~/i18n";
+import { ThreadFindHighlights } from "./ThreadFindHighlights";
+import type { ThreadFindHighlightStore } from "./threadFind.logic";
 import {
   deriveDisplayedUserMessageState,
   type ParsedTerminalContextEntry,
@@ -250,6 +252,7 @@ function readLegendListState(
  */
 export interface MessagesTimelineController {
   scrollToMessage: (messageId: MessageId) => void;
+  scrollToFindMatch: (messageId: MessageId) => void;
   scrollToMarker: (marker: ThreadMarker) => void;
 }
 
@@ -531,6 +534,8 @@ interface MessagesTimelineProps {
   listRef?: RefObject<LegendListRef | null>;
   /** Receives the scroll-to-message controller so the Environment panel can jump to a pin. */
   controllerRef?: RefObject<MessagesTimelineController | null>;
+  /** Stable find store so query updates repaint highlights without re-rendering every row. */
+  threadFindHighlightStore?: ThreadFindHighlightStore;
   /** Message ids currently pinned for the active thread (drives the footer pin toggle state). */
   pinnedMessageIds?: ReadonlySet<MessageId>;
   /** Excludes transient rows from persistent pin affordances. */
@@ -640,6 +645,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   followLiveOutput: followLiveOutputProp,
   listRef,
   controllerRef,
+  threadFindHighlightStore,
   pinnedMessageIds,
   canPinMessage,
   onTogglePinMessage,
@@ -1203,6 +1209,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         setHighlightedMessageId(messageId);
         clearJumpHighlightAfterDelay();
       },
+      scrollToFindMatch: (messageId) => {
+        cancelPendingMarkerFineScroll();
+        clearActiveMarkerDecoration();
+        setExpandedUserMessagesById((previous) =>
+          previous[messageId] ? previous : { ...previous, [messageId]: true },
+        );
+        if (!scrollToMessage(messageId)) return;
+        setHighlightedMessageId(messageId);
+        clearJumpHighlightAfterDelay();
+      },
       scrollToMarker: (marker) => {
         clearActiveMarkerDecoration();
         if (!scrollToMessage(marker.messageId)) {
@@ -1476,6 +1492,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       data-timeline-row-kind={row.kind}
       data-message-id={row.kind === "message" ? row.message.id : undefined}
       data-message-role={row.kind === "message" ? row.message.role : undefined}
+      data-chat-find-document-id={row.kind === "message" ? row.message.id : undefined}
     >
       {forkDividerBeforeRowId === row.id ? forkSourceDivider : null}
       <AssistantTurnRowFrame
@@ -2069,7 +2086,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <>
                 <div className="group min-w-0 py-0.5">
                   {messageText !== null ? (
-                    <div data-assistant-message-id={row.message.id}>
+                    <div data-assistant-message-id={row.message.id} data-chat-find-text-root="true">
                       <ChatMarkdown
                         text={messageText}
                         cwd={markdownCwd}
@@ -2212,6 +2229,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 
   return (
     <div ref={timelineRootRef} className="contents" data-messages-timeline-root="true">
+      {threadFindHighlightStore ? (
+        <ThreadFindHighlights rootRef={timelineRootRef} store={threadFindHighlightStore} />
+      ) : null}
       <LegendList<MessagesTimelineRow>
         ref={resolvedListRef}
         data={rows}
@@ -2772,6 +2792,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
       <div
         id={contentId}
         ref={contentRef}
+        data-chat-find-text-root="true"
         data-user-message-clamp={clamped ? "true" : "false"}
         className={cn("min-w-0", collapsed && "overflow-hidden")}
         style={

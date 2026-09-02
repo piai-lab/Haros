@@ -79,6 +79,7 @@ const tokenStats = {
     endDay: "2026-07-02",
     cachedInputTokens: 0,
     uncachedInputTokens: 5000,
+    cacheWriteInputTokens: 0,
     outputTokens: 1000,
     cacheHitPercent: 0,
     coverage: "complete",
