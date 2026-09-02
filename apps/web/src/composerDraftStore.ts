@@ -33,9 +33,8 @@ import {
 } from "./composerDraftPersistence";
 import {
   createDeferredPersistStorage,
-  createMemoryStorage,
   flushStorageBeforePageHide,
-  type StateStorage,
+  resolveLocalStateStorage,
 } from "./lib/storage";
 
 export {
@@ -74,8 +73,7 @@ export type { EffectiveComposerModelState } from "./composerDraftModels";
 export { partializeComposerDraftStoreState } from "./composerDraftPersistence";
 
 const COMPOSER_PERSIST_DEBOUNCE_MS = 300;
-const composerBaseStorage: StateStorage =
-  typeof localStorage !== "undefined" ? localStorage : createMemoryStorage();
+const composerBaseStorage = resolveLocalStateStorage();
 const composerPersistStorage = createDeferredPersistStorage<
   ComposerDraftStoreState,
   PersistedComposerDraftStoreState

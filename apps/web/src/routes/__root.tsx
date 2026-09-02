@@ -27,6 +27,7 @@ import { Throttler } from "@tanstack/react-pacer";
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
 import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
+import { QueuedComposerDrainCoordinator } from "../components/QueuedComposerDrainCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
 import { FeedbackDialog } from "../components/FeedbackDialog";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
@@ -319,6 +320,7 @@ function RootRouteView() {
             <GlobalFeedbackDialog />
             <TaskCompletionNotifications />
             <RunningTasksQuitCoordinator />
+            <QueuedComposerDrainCoordinator />
             <AppSnapWelcomeDialog />
             <AppSnapCoordinator />
             <DesktopProjectBootstrap />

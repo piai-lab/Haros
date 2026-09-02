@@ -12,7 +12,11 @@ import {
 import type { ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createDeferredPersistStorage, flushStorageBeforePageHide } from "./lib/storage";
+import {
+  createDeferredPersistStorage,
+  flushStorageBeforePageHide,
+  resolveLocalStateStorage,
+} from "./lib/storage";
 import {
   DEFAULT_THREAD_TERMINAL_HEIGHT,
   DEFAULT_THREAD_TERMINAL_ID,
@@ -1276,11 +1280,12 @@ interface TerminalStateStoreState {
 // Defers partialize + JSON.stringify off the hot set() path (terminal layout
 // changes, resizes, activity updates fire rapidly). Serialization now runs once
 // per debounce window at flush time instead of synchronously on every set().
+const terminalBaseStorage = resolveLocalStateStorage();
 const terminalPersistStorage = createDeferredPersistStorage<
   TerminalStateStoreState,
   Pick<TerminalStateStoreState, "terminalStateByThreadId">
 >({
-  getStorage: () => localStorage,
+  getStorage: () => terminalBaseStorage,
   partialize: (state) => ({
     terminalStateByThreadId: sanitizePersistedTerminalStateByThreadId(
       state.terminalStateByThreadId,
