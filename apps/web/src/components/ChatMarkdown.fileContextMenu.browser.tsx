@@ -2,8 +2,10 @@
 // Purpose: Verifies assistant file links reuse the shared localized native menu.
 // Layer: Web chat browser tests
 
+import type { NativeApi } from "@harnessos/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "vitest-browser-react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
   showFileReferenceContextMenu: vi.fn(),
@@ -22,10 +24,31 @@ vi.mock("../hooks/useTheme", () => ({
 }));
 
 import ChatMarkdown from "./ChatMarkdown";
+import { WorkspaceFileOpenerContext } from "../lib/workspaceFileOpener";
+
+function installNativeApi(api: NativeApi): () => void {
+  const previousDescriptor = Object.getOwnPropertyDescriptor(window, "nativeApi");
+  Object.defineProperty(window, "nativeApi", { configurable: true, value: api });
+  return () => {
+    if (previousDescriptor) Object.defineProperty(window, "nativeApi", previousDescriptor);
+    else Reflect.deleteProperty(window, "nativeApi");
+  };
+}
+
+function makeQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+let restoreNativeApi: (() => void) | undefined;
 
 beforeEach(() => {
   harness.showFileReferenceContextMenu.mockReset();
   harness.showFileReferenceContextMenu.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  restoreNativeApi?.();
+  restoreNativeApi = undefined;
 });
 
 describe("ChatMarkdown file context menu", () => {
@@ -95,28 +118,50 @@ describe("ChatMarkdown file context menu", () => {
     expect(document.activeElement).toBe(link);
   });
 
-  it("does not offer a reveal path for an unresolved relative file chip", async () => {
-    await render(<ChatMarkdown text="`src/notes.md`" cwd={undefined} isStreaming={false} />);
-    const link = document.querySelector<HTMLAnchorElement>('a[title="src/notes.md"]');
-    expect(link).not.toBeNull();
-
-    link!.dispatchEvent(
-      new MouseEvent("contextmenu", {
-        bubbles: true,
-        cancelable: true,
-        clientX: 9,
-        clientY: 11,
-      }),
-    );
-
-    await vi.waitFor(() => expect(harness.showFileReferenceContextMenu).toHaveBeenCalledOnce());
-    expect(harness.showFileReferenceContextMenu.mock.calls[0]?.[0]).toMatchObject({
-      path: "src/notes.md",
-      position: { x: 9, y: 11 },
-      onReferenceInChat: undefined,
+  it("opens a relative inline-code file only after workspace verification", async () => {
+    const openFile = vi.fn().mockReturnValue(true);
+    const resolveWorkspaceFileReferences = vi.fn().mockResolvedValue({
+      relativePaths: ["src/notes.md"],
     });
-    expect(harness.showFileReferenceContextMenu.mock.calls[0]?.[0]).not.toHaveProperty(
-      "revealPath",
+    restoreNativeApi = installNativeApi({
+      projects: { resolveWorkspaceFileReferences },
+    } as unknown as NativeApi);
+    const screen = await render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <WorkspaceFileOpenerContext.Provider value={{ openFile }}>
+          <ChatMarkdown text="`src/notes.md`" cwd="/repo" isStreaming={false} />
+        </WorkspaceFileOpenerContext.Provider>
+      </QueryClientProvider>,
     );
+
+    await vi.waitFor(() => screen.getByRole("link", { name: "notes.md" }).element());
+    screen
+      .getByRole("link", { name: "notes.md" })
+      .element()
+      .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+
+    expect(openFile).toHaveBeenCalledWith("src/notes.md");
+    expect(resolveWorkspaceFileReferences).toHaveBeenCalledWith({
+      cwd: "/repo",
+      relativePaths: ["src/notes.md"],
+    });
+  });
+
+  it("keeps a missing relative path as inline code", async () => {
+    restoreNativeApi = installNativeApi({
+      projects: {
+        resolveWorkspaceFileReferences: vi.fn().mockResolvedValue({ relativePaths: [null] }),
+      },
+    } as unknown as NativeApi);
+    await render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <ChatMarkdown text="`src/missing.md`" cwd="/repo" isStreaming={false} />
+      </QueryClientProvider>,
+    );
+
+    await vi.waitFor(() =>
+      expect(document.querySelector("code")?.textContent).toBe("src/missing.md"),
+    );
+    expect(document.querySelector('a[title="src/missing.md"]')).toBeNull();
   });
 });

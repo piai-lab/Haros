@@ -80,6 +80,7 @@ import {
   ProjectListDirectoriesInput,
   ProjectPrewarmSearchIndexInput,
   ProjectReadFileInput,
+  ProjectResolveWorkspaceFileReferencesInput,
   ProjectResolveOutOfRootFileReferenceInput,
   ProjectRunDevServerInput,
   ProjectSearchContentInput,
@@ -213,6 +214,7 @@ export const WS_METHODS = {
   projectsSearchLocalEntries: "projects.searchLocalEntries",
   projectsPrewarmSearchIndex: "projects.prewarmSearchIndex",
   projectsReadFile: "projects.readFile",
+  projectsResolveWorkspaceFileReferences: "projects.resolveWorkspaceFileReferences",
   projectsResolveOutOfRootFileReference: "projects.resolveOutOfRootFileReference",
   projectsCreateLocalFilePreviewGrant: "projects.createLocalFilePreviewGrant",
   projectsWriteFile: "projects.writeFile",
@@ -455,6 +457,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsSearchLocalEntries, ProjectSearchLocalEntriesInput),
   tagRequestBody(WS_METHODS.projectsPrewarmSearchIndex, ProjectPrewarmSearchIndexInput),
   tagRequestBody(WS_METHODS.projectsReadFile, ProjectReadFileInput),
+  tagRequestBody(
+    WS_METHODS.projectsResolveWorkspaceFileReferences,
+    ProjectResolveWorkspaceFileReferencesInput,
+  ),
   tagRequestBody(
     WS_METHODS.projectsResolveOutOfRootFileReference,
     ProjectResolveOutOfRootFileReferenceInput,

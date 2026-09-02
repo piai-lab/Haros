@@ -45,6 +45,7 @@ import {
   showFileReferenceContextMenu,
 } from "~/lib/fileReferenceContextMenu";
 import { PlusIcon } from "~/lib/icons";
+import { isRpcCapacityExceededError } from "~/lib/expensiveReadRetry";
 import { toggleMarkdownTaskMarker } from "~/lib/markdownTaskList";
 import {
   isLocalPreviewGrantUsable,
@@ -471,11 +472,15 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   // workspace file invalidation restore that priority when the local file is
   // created later.
   const binaryPreviewFailed = binaryPreviewErrorKey === relocationRequestKey;
+  const fileReadFailedWithoutContents =
+    fileQuery.isError &&
+    fileQuery.data === undefined &&
+    !isRpcCapacityExceededError(fileQuery.error);
   const outOfRootResolutionEnabled =
     workspaceRoot !== null &&
     requestedFilePath !== null &&
     isWorkspaceRelativePathSafe(requestedFilePath) &&
-    (fileQuery.isError || binaryPreviewFailed || relocatedFullPath !== null);
+    (fileReadFailedWithoutContents || binaryPreviewFailed || relocatedFullPath !== null);
   const outOfRootResolutionQuery = useQuery(
     projectResolveOutOfRootFileReferenceQueryOptions({
       cwd: workspaceRoot,
@@ -850,6 +855,11 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
 
   const hoveredCommentLine = lineCommenting.hoveredLine;
   const activeCommentLine = lineCommenting.activeLine;
+  const hasFileContents = fileQuery.data !== undefined;
+  const fileReadError = fileQuery.error;
+  const fileReadCapacityError = isRpcCapacityExceededError(fileReadError);
+  const showFileReadErrorIndicator =
+    hasFileContents && fileReadError !== null && !activeEditBuffer?.error;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[var(--color-background-surface)]">
@@ -892,6 +902,23 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             {t("file.reloadFromDisk")}
           </button>
         </div>
+      ) : showFileReadErrorIndicator ? (
+        <div
+          role={fileReadCapacityError ? "status" : "alert"}
+          className={
+            fileReadCapacityError
+              ? "flex shrink-0 items-center border-b border-border/60 px-3 py-2 text-[11px] text-muted-foreground"
+              : "flex shrink-0 items-center border-b border-destructive/25 bg-destructive/5 px-3 py-2 text-[11px] text-destructive"
+          }
+        >
+          {fileReadCapacityError
+            ? fileQuery.isFetching
+              ? t("file.refreshing")
+              : t("file.refreshDelayed")
+            : fileReadError instanceof Error
+              ? fileReadError.message
+              : t("file.refreshFailed")}
+        </div>
       ) : null}
       {locatingOutOfRootFile ? (
         <FilePreviewLoadingState />
@@ -914,11 +941,13 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         </div>
       ) : fileQuery.isLoading ? (
         <FilePreviewLoadingState />
-      ) : fileQuery.error ? (
+      ) : !hasFileContents && fileReadError ? (
         <FilePreviewErrorState
           message={t("file.readFailed")}
-          detail={fileQuery.error instanceof Error ? fileQuery.error.message : null}
+          detail={fileReadError instanceof Error ? fileReadError.message : null}
         />
+      ) : !hasFileContents ? (
+        <FilePreviewLoadingState />
       ) : activeEditBuffer && editableDocument && !showMarkdownPreview ? (
         <textarea
           className="editor-file-editor"

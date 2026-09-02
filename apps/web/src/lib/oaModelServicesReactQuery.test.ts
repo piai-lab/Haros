@@ -56,28 +56,9 @@ describe("Haros model services React Query options", () => {
     ]);
   });
 
-  it("retries only bounded server read-capacity rejections", () => {
+  it("leaves server read-capacity retries to the transport", () => {
     const options = oaModelServicesListQueryOptions({ enabled: true });
-    const retry = options.retry;
-    const retryDelay = options.retryDelay;
-    expect(retry).toBeTypeOf("function");
-    expect(retryDelay).toBeTypeOf("function");
-    if (typeof retry !== "function" || typeof retryDelay !== "function") return;
-
-    const capacityError = {
-      code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
-      retryAfterMs: 375,
-    };
-    expect(retry(0, capacityError)).toBe(true);
-    expect(retry(11, capacityError)).toBe(true);
-    expect(retry(12, capacityError)).toBe(false);
-    expect(retry(0, { code: "RPC_REQUEST_CAPACITY_EXCEEDED" })).toBe(false);
-    expect(retryDelay(0, capacityError)).toBe(375);
-    expect(
-      retryDelay(0, {
-        code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
-      }),
-    ).toBe(250);
+    expect(options.retry).toBe(false);
   });
 
   it("retries only capacity admission for intent-scoped Extension projection", () => {
@@ -92,13 +73,7 @@ describe("Haros model services React Query options", () => {
     });
 
     for (const options of [addList, addDetail]) {
-      const retry = options.retry;
-      expect(retry).toBeTypeOf("function");
-      if (typeof retry !== "function") continue;
-
-      expect(retry(0, { code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED" })).toBe(true);
-      expect(retry(0, { code: "EXTENSION_PROJECTION_FAILED" })).toBe(false);
-      expect(retry(0, new Error("Extension load failed"))).toBe(false);
+      expect(options.retry).toBe(false);
     }
   });
 

@@ -12,6 +12,7 @@ import {
   discoverProjectScripts,
   listWorkspaceDirectories,
   prewarmWorkspaceSearchIndex,
+  resolveWorkspaceFileReferences,
   searchLocalEntries,
   searchWorkspaceContent,
   searchWorkspaceEntries,
@@ -37,6 +38,44 @@ function runGit(cwd: string, args: string[]): void {
     throw new Error(result.stderr || `git ${args.join(" ")} failed`);
   }
 }
+
+describe("resolveWorkspaceFileReferences", () => {
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0, tempDirs.length)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves exact and unique suffixes but rejects missing, ambiguous, and escaping paths", async () => {
+    const cwd = makeTempDir("harnessos-workspace-references-");
+    writeFile(cwd, "src/lib/unique.ts");
+    writeFile(cwd, "src/a/index.ts");
+    writeFile(cwd, "src/b/index.ts");
+
+    await expect(
+      resolveWorkspaceFileReferences({
+        cwd,
+        relativePaths: [
+          "src/lib/unique.ts",
+          "lib/unique.ts",
+          "unique.ts",
+          "index.ts",
+          "missing.ts",
+          "../outside.ts",
+        ],
+      }),
+    ).resolves.toEqual({
+      relativePaths: [
+        "src/lib/unique.ts",
+        "src/lib/unique.ts",
+        "src/lib/unique.ts",
+        null,
+        null,
+        null,
+      ],
+    });
+  });
+});
 
 describe("searchWorkspaceEntries", () => {
   afterEach(() => {

@@ -13,6 +13,11 @@ import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@harnessos/contracts";
 import { isLocalAbsolutePath } from "@harnessos/shared/path";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
+import {
+  EXPENSIVE_READ_RETRY_OPTIONS,
+  expensiveReadErrorRefetchInterval,
+} from "./expensiveReadRetry";
+import { resolveWorkspaceFileReferenceBatched } from "./workspaceFileReferenceBatch";
 
 export const projectQueryKeys = {
   all: ["projects"] as const,
@@ -23,6 +28,8 @@ export const projectQueryKeys = {
   localPreviewGrant: (path: string | null) => ["projects", "local-preview-grant", path] as const,
   resolveOutOfRootFileReference: (cwd: string | null, relativePath: string | null) =>
     ["projects", "resolve-out-of-root-file-reference", cwd, relativePath] as const,
+  resolveWorkspaceFileReference: (cwd: string | null, relativePath: string | null) =>
+    ["projects", "resolve-workspace-file-reference", cwd, relativePath] as const,
   discoverScripts: (cwd: string | null, depth: number) =>
     ["projects", "discover-scripts", cwd, depth] as const,
   searchEntries: (
@@ -51,6 +58,9 @@ export function invalidateProjectFileQueriesForCwds(
       queryClient.invalidateQueries({
         queryKey: ["projects", "resolve-out-of-root-file-reference", cwd] as const,
       }),
+      queryClient.invalidateQueries({
+        queryKey: ["projects", "resolve-workspace-file-reference", cwd] as const,
+      }),
       queryClient.invalidateQueries({ queryKey: ["projects", "search-entries", cwd] as const }),
       queryClient.invalidateQueries({ queryKey: ["projects", "search-content", cwd] as const }),
     ]),
@@ -68,6 +78,7 @@ const DEFAULT_DISCOVER_SCRIPTS_STALE_TIME = 30_000;
 const DEFAULT_SEARCH_LOCAL_ENTRIES_LIMIT = 50;
 const DEFAULT_SEARCH_LOCAL_ENTRIES_STALE_TIME = 10_000;
 const DEFAULT_READ_FILE_STALE_TIME = 5_000;
+const DEFAULT_WORKSPACE_FILE_REFERENCE_STALE_TIME = 30_000;
 const LOCAL_PREVIEW_GRANT_REFRESH_SAFETY_MS = 15_000;
 const LOCAL_PREVIEW_GRANT_MIN_REFETCH_INTERVAL_MS = 1_000;
 export const LOCAL_PREVIEW_GRANT_MAX_REFETCH_INTERVAL_MS = 30_000;
@@ -97,6 +108,32 @@ export function prewarmProjectSearchIndex(cwd: string | null): void {
   } catch {
     // The real search will build the same index after the native API connects.
   }
+}
+
+export function projectResolveWorkspaceFileReferenceQueryOptions(input: {
+  cwd: string | null;
+  relativePath: string | null;
+  enabled?: boolean;
+}) {
+  return queryOptions<string | null>({
+    queryKey: projectQueryKeys.resolveWorkspaceFileReference(input.cwd, input.relativePath),
+    queryFn: () => {
+      if (!input.cwd || !input.relativePath) {
+        throw new Error("Workspace file reference resolution is unavailable.");
+      }
+      return resolveWorkspaceFileReferenceBatched({
+        cwd: input.cwd,
+        relativePath: input.relativePath,
+      });
+    },
+    enabled:
+      (input.enabled ?? true) &&
+      input.cwd !== null &&
+      input.relativePath !== null &&
+      typeof window !== "undefined",
+    staleTime: DEFAULT_WORKSPACE_FILE_REFERENCE_STALE_TIME,
+    ...EXPENSIVE_READ_RETRY_OPTIONS,
+  });
 }
 
 export function isLocalPreviewGrantUsable(
@@ -172,19 +209,24 @@ export function projectReadFileQueryOptions(input: {
       : null);
   return queryOptions<ProjectReadFileResult>({
     queryKey: projectQueryKeys.readFile(input.cwd, input.relativePath),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const api = ensureNativeApi();
       if (!effectiveCwd || !input.relativePath) {
         throw new Error("Workspace file read is unavailable.");
       }
-      return api.projects.readFile({
-        cwd: effectiveCwd,
-        relativePath: input.relativePath,
-        ...(input.previewGrant ? { previewGrant: input.previewGrant } : {}),
-      });
+      return api.projects.readFile(
+        {
+          cwd: effectiveCwd,
+          relativePath: input.relativePath,
+          ...(input.previewGrant ? { previewGrant: input.previewGrant } : {}),
+        },
+        { signal },
+      );
     },
     enabled: (input.enabled ?? true) && effectiveCwd !== null && input.relativePath !== null,
     staleTime: input.staleTime ?? DEFAULT_READ_FILE_STALE_TIME,
+    retry: false,
+    refetchInterval: expensiveReadErrorRefetchInterval,
   });
 }
 
@@ -285,6 +327,7 @@ export function projectSearchEntriesQueryOptions(input: {
     enabled: (input.enabled ?? true) && input.cwd !== null && input.query.length > 0,
     staleTime: input.staleTime ?? DEFAULT_SEARCH_ENTRIES_STALE_TIME,
     placeholderData: (previous) => previous ?? EMPTY_SEARCH_ENTRIES_RESULT,
+    ...EXPENSIVE_READ_RETRY_OPTIONS,
   });
 }
 
@@ -312,6 +355,7 @@ export function projectSearchContentQueryOptions(input: {
       trimmedQuery.length >= SEARCH_CONTENT_MIN_QUERY_LENGTH,
     staleTime: input.staleTime ?? DEFAULT_SEARCH_CONTENT_STALE_TIME,
     placeholderData: (previous) => previous ?? EMPTY_SEARCH_CONTENT_RESULT,
+    ...EXPENSIVE_READ_RETRY_OPTIONS,
   });
 }
 
@@ -342,5 +386,6 @@ export function projectSearchLocalEntriesQueryOptions(input: {
     enabled: (input.enabled ?? true) && input.rootPath !== null && trimmedQuery.length >= 2,
     staleTime: input.staleTime ?? DEFAULT_SEARCH_LOCAL_ENTRIES_STALE_TIME,
     placeholderData: (previous) => previous ?? EMPTY_SEARCH_LOCAL_ENTRIES_RESULT,
+    ...EXPENSIVE_READ_RETRY_OPTIONS,
   });
 }

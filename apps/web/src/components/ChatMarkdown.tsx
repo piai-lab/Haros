@@ -6,6 +6,7 @@
 import { TriangleAlertIcon } from "~/lib/icons";
 import type { MessageId, EngineMentionReference, ThreadMarker } from "@harnessos/contracts";
 import { isLocalAbsolutePath } from "@harnessos/shared/path";
+import { useQuery } from "@tanstack/react-query";
 import "katex/dist/katex.min.css";
 import React, {
   Children,
@@ -54,6 +55,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
 import { useThrottledStreamingValue } from "../hooks/useThrottledStreamingValue";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
+import { projectResolveWorkspaceFileReferenceQueryOptions } from "../lib/projectReactQuery";
 import { resolveMarkdownFileLinkTarget, rewriteMarkdownFileUriHref } from "../markdown-links";
 import type { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { GeneratedMarkdownImage } from "./chat/GeneratedMarkdownImage";
@@ -1093,15 +1095,36 @@ function inlineCodeFilePath(raw: string): string | null {
   // Strip a pair of surrounding quotes/backticks the author may have wrapped the
   // path in (e.g. `'src/data/social-metrics.ts'`).
   const value = raw.trim().replace(/^['"`]+|['"`]+$/g, "");
-  if (
-    value.length === 0 ||
-    value.length > INLINE_CODE_FILE_PATH_MAX_LENGTH ||
-    /\s/.test(value) ||
-    value.includes("://")
-  ) {
+  if (value.length === 0 || /\s/.test(value) || value.includes("://")) {
     return null;
   }
-  return pathLooksLikeKnownFile(value) ? value : null;
+  const withoutPosition = value.replace(MARKDOWN_LINK_POSITION_SUFFIX_PATTERN, "");
+  if (resolveMarkdownFileLinkTarget(withoutPosition)) return value;
+  if (withoutPosition.length > INLINE_CODE_FILE_PATH_MAX_LENGTH) return null;
+  return pathLooksLikeKnownFile(withoutPosition) ? value : null;
+}
+
+function VerifiedWorkspaceFileChip(props: {
+  rawReference: string;
+  cwd: string;
+  theme: "light" | "dark";
+  sourceRange?: TranscriptSourceRange;
+}) {
+  const relativePath = props.rawReference.replace(MARKDOWN_LINK_POSITION_SUFFIX_PATTERN, "");
+  const query = useQuery(
+    projectResolveWorkspaceFileReferenceQueryOptions({ cwd: props.cwd, relativePath }),
+  );
+  if (query.isPending || query.isError || query.data == null) {
+    return <code>{props.rawReference}</code>;
+  }
+  const position = MARKDOWN_LINK_POSITION_SUFFIX_PATTERN.exec(props.rawReference)?.[0] ?? "";
+  return (
+    <OpenableFileChip
+      targetPath={`${query.data}${position}`}
+      theme={props.theme}
+      {...(props.sourceRange ? { sourceRange: props.sourceRange } : {})}
+    />
+  );
 }
 
 // Shared openable file chip: the same mention-chip UI (file icon + medium label)
@@ -1614,20 +1637,32 @@ function ChatMarkdown({
       code({ node: _node, className, children, ...props }) {
         // Fenced blocks carry a `language-*` class and are rendered by `pre`;
         // only inline code (no class) that names a file becomes an openable
-        // mention chip. The target is resolved against cwd so it opens like a
-        // markdown file link; an unresolvable path still chips on its raw value.
+        // mention chip. Absolute paths stay directly openable; relative names
+        // become chips only after the workspace index proves a unique file.
         if (!className) {
           const filePath = inlineCodeFilePath(nodeToPlainText(children));
           if (filePath) {
-            const targetPath = resolveMarkdownFileLinkTarget(filePath, cwd) ?? filePath;
             const sourceRange = transcriptSourceRangeFromHastNode(_node);
-            return (
-              <OpenableFileChip
-                targetPath={targetPath}
-                theme={resolvedTheme}
-                {...(sourceRange ? { sourceRange } : {})}
-              />
-            );
+            const absoluteTarget = resolveMarkdownFileLinkTarget(filePath);
+            if (absoluteTarget) {
+              return (
+                <OpenableFileChip
+                  targetPath={absoluteTarget}
+                  theme={resolvedTheme}
+                  {...(sourceRange ? { sourceRange } : {})}
+                />
+              );
+            }
+            if (cwd) {
+              return (
+                <VerifiedWorkspaceFileChip
+                  rawReference={filePath}
+                  cwd={cwd}
+                  theme={resolvedTheme}
+                  {...(sourceRange ? { sourceRange } : {})}
+                />
+              );
+            }
           }
         }
         return (

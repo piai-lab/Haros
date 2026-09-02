@@ -690,6 +690,55 @@ describe("WsTransport", () => {
     expect(getStreamFailureCode(Cause.fail(new Error("transient")))).toBeNull();
   });
 
+  it("retries a capacity-rejected unary request in place", async () => {
+    vi.useFakeTimers();
+    bindWindowTimersToCurrentGlobals();
+    try {
+      const { transport, internals } = makeBareTransport();
+      const capacityError = {
+        code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+        retryable: true,
+        retryAfterMs: 250,
+      };
+      const runPromise = vi
+        .fn()
+        .mockRejectedValueOnce(capacityError)
+        .mockResolvedValueOnce({ contents: "ok" });
+      Object.assign(internals, {
+        getClient: vi.fn(async () => ({
+          [WS_METHODS.projectsReadFile]: () => Effect.succeed({ contents: "ok" }),
+        })),
+        getClientRuntime: () => ({ runPromise }),
+      });
+
+      const pending = transport.request(WS_METHODS.projectsReadFile, {}, { timeoutMs: null });
+      await vi.advanceTimersByTimeAsync(249);
+      expect(runPromise).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(pending).resolves.toEqual({ contents: "ok" });
+      expect(runPromise).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry a non-capacity unary failure", async () => {
+    const { transport, internals } = makeBareTransport();
+    const failure = new Error("file missing");
+    const runPromise = vi.fn().mockRejectedValue(failure);
+    Object.assign(internals, {
+      getClient: vi.fn(async () => ({
+        [WS_METHODS.projectsReadFile]: () => Effect.succeed({ contents: "ok" }),
+      })),
+      getClientRuntime: () => ({ runPromise }),
+    });
+
+    await expect(
+      transport.request(WS_METHODS.projectsReadFile, {}, { timeoutMs: null }),
+    ).rejects.toBe(failure);
+    expect(runPromise).toHaveBeenCalledTimes(1);
+  });
+
   it("treats structurally identical thread subscribe params as the same input", () => {
     const input = { threadId: "thread-1" };
 

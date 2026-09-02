@@ -2,36 +2,10 @@ import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";
 
-const RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED = "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED";
-const MODEL_SERVICES_CAPACITY_RETRY_LIMIT = 12;
-const DEFAULT_MODEL_SERVICES_CAPACITY_RETRY_MS = 250;
-
-function isExpensiveReadCapacityError(
-  error: unknown,
-): error is { readonly code: string; readonly retryAfterMs?: unknown } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED
-  );
-}
-
-function shouldRetryModelServicesRead(failureCount: number, error: unknown): boolean {
-  return isExpensiveReadCapacityError(error) && failureCount < MODEL_SERVICES_CAPACITY_RETRY_LIMIT;
-}
-
-function modelServicesReadRetryDelay(_attemptIndex: number, error: unknown): number {
-  if (!isExpensiveReadCapacityError(error)) return 0;
-  const retryAfterMs = error.retryAfterMs;
-  return typeof retryAfterMs === "number" && retryAfterMs > 0
-    ? retryAfterMs
-    : DEFAULT_MODEL_SERVICES_CAPACITY_RETRY_MS;
-}
-
 const MODEL_SERVICES_READ_RETRY_OPTIONS = {
-  retry: shouldRetryModelServicesRead,
-  retryDelay: modelServicesReadRetryDelay,
+  // Admission capacity is retried by WsTransport. A query-level retry would
+  // multiply the same budget and keep stale Add-extension requests alive.
+  retry: false,
 } as const;
 
 export const oaModelServicesQueryKeys = {
