@@ -68,9 +68,9 @@ function whenOr(left: KeybindingWhenNode, right: KeybindingWhenNode): Keybinding
 }
 
 const whenNotTerminalFocus = whenNot(whenIdentifier("terminalFocus"));
-const whenThreadJumpAvailable = whenAnd(
-  whenNotTerminalFocus,
-  whenNot(whenIdentifier("terminalWorkspaceOpen")),
+const whenThreadJumpAvailable = whenOr(
+  whenAnd(whenNotTerminalFocus, whenNot(whenIdentifier("terminalWorkspaceOpen"))),
+  whenIdentifier("isMac"),
 );
 // App-level `mod` chords (new chat/terminal/engine chat/split, copy thread id) bind to
 // `mod`, which is Cmd on macOS. xterm never forwards a Cmd-chord to the PTY, so a bare
@@ -255,12 +255,12 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   },
   {
     command: "terminal.workspace.terminal",
-    shortcut: commandShortcut("1"),
+    shortcut: commandShortcut("1", { ctrlKey: true, modKey: false }),
     whenAst: whenIdentifier("terminalWorkspaceOpen"),
   },
   {
     command: "terminal.workspace.chat",
-    shortcut: commandShortcut("2"),
+    shortcut: commandShortcut("2", { ctrlKey: true, modKey: false }),
     whenAst: whenIdentifier("terminalWorkspaceOpen"),
   },
 ];

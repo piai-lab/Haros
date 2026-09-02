@@ -41,7 +41,7 @@ export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;
  * Shared by the thread sidebar (left) and the right dock so the two slides match.
  */
 const SIDEBAR_OFFCANVAS_MOTION_CLASS =
-  "duration-[240ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
+  "will-change-[transform] duration-[240ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -381,10 +381,10 @@ function Sidebar({
         />
         <div
           className={cn(
-            "fixed inset-y-0 z-0 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear",
+            "fixed inset-y-0 z-0 flex h-svh w-(--sidebar-width) transition-[left,right,width,transform] duration-200 ease-linear",
             side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-              : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+              ? "left-0 group-data-[collapsible=offcanvas]:-translate-x-full"
+              : "right-0 group-data-[collapsible=offcanvas]:translate-x-full",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"

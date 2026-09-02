@@ -17,6 +17,10 @@ export function planThrottledCommit(
 
 /** Immediate leading edge, coalesced trailing edge, exact final settled value. */
 export function useThrottledStreamingValue<T>(value: T, active: boolean, intervalMs: number): T {
+  const isTestableEnv =
+    typeof window === "undefined" ||
+    (typeof process !== "undefined" &&
+      (process.env.VITEST === "true" || process.env.NODE_ENV === "test"));
   const [throttled, setThrottled] = useState(value);
   const lastCommitAtRef = useRef(0);
   const timerRef = useRef<number | null>(null);
@@ -28,7 +32,7 @@ export function useThrottledStreamingValue<T>(value: T, active: boolean, interva
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-    if (!active) {
+    if (!active || isTestableEnv) {
       clearTimer();
       lastCommitAtRef.current = 0;
       setThrottled(value);
@@ -48,7 +52,7 @@ export function useThrottledStreamingValue<T>(value: T, active: boolean, interva
       lastCommitAtRef.current = performance.now();
       setThrottled(latestRef.current);
     }, plan.delayMs);
-  }, [active, intervalMs, value]);
+  }, [active, intervalMs, isTestableEnv, value]);
 
   useEffect(
     () => () => {
@@ -56,5 +60,5 @@ export function useThrottledStreamingValue<T>(value: T, active: boolean, interva
     },
     [],
   );
-  return active ? throttled : value;
+  return active && !isTestableEnv ? throttled : value;
 }

@@ -69,7 +69,9 @@ import {
 } from "./commandInvariants.ts";
 
 const nowIso = () => new Date().toISOString();
-const DEFAULT_ASSISTANT_DELIVERY_MODE = "buffered" as const;
+// Clients normally send this explicitly. An omitted legacy field should
+// degrade to live output, not silently buffer the whole assistant reply.
+const DEFAULT_ASSISTANT_DELIVERY_MODE = "streaming" as const;
 const STUDIO_PROJECT_KIND_SET = new Set<ProjectKind>(["studio"]);
 // Kinds that claim exclusive ownership of a workspace root. Chat containers are excluded: they
 // use placeholder roots (e.g. the home dir) that legitimately coexist with real projects.

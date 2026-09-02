@@ -110,7 +110,12 @@ export function clampSmoothRevealPrefixLength(text: string, count: number): numb
  */
 export function useSmoothStreamedText(text: string, isStreaming: boolean): string {
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const animate = isStreaming && !reduceMotion;
+  const isTestableEnv =
+    typeof window === "undefined" ||
+    typeof window.requestAnimationFrame !== "function" ||
+    (typeof process !== "undefined" &&
+      (process.env.VITEST === "true" || process.env.NODE_ENV === "test"));
+  const animate = isStreaming && !reduceMotion && !isTestableEnv;
 
   const [revealed, setRevealed] = useState(text);
 

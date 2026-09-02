@@ -4640,7 +4640,7 @@ describe("EngineRuntimeIngestion", () => {
     expect(proposedPlan?.planMarkdown).toBe("## Buffered plan\n\n- first\n- second");
   });
 
-  it("buffers assistant deltas by default until completion", async () => {
+  it("streams assistant deltas by default until completion", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -4681,7 +4681,7 @@ describe("EngineRuntimeIngestion", () => {
       midThread?.messages.some(
         (message: EngineRuntimeTestMessage) => message.id === "assistant:item-buffered",
       ),
-    ).toBe(false);
+    ).toBe(true);
 
     harness.emit({
       type: "item.completed",
@@ -4710,7 +4710,7 @@ describe("EngineRuntimeIngestion", () => {
     expect(message?.streaming).toBe(false);
   });
 
-  it("ignores whitespace-only buffered assistant deltas on completion", async () => {
+  it("preserves whitespace-only streamed assistant deltas through completion", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -4752,7 +4752,7 @@ describe("EngineRuntimeIngestion", () => {
       midThread?.messages.some(
         (message: EngineRuntimeTestMessage) => message.id === "assistant:item-buffered-whitespace",
       ),
-    ).toBe(false);
+    ).toBe(true);
 
     harness.emit({
       type: "item.completed",
@@ -4777,7 +4777,7 @@ describe("EngineRuntimeIngestion", () => {
     const message = thread.messages.find(
       (entry: EngineRuntimeTestMessage) => entry.id === "assistant:item-buffered-whitespace",
     );
-    expect(message?.text).toBe("");
+    expect(message?.text).toBe("  \n\t  ");
     expect(message?.streaming).toBe(false);
   });
 
@@ -6208,7 +6208,10 @@ describe("EngineRuntimeIngestion", () => {
     expect(message?.text.length).toBe(oversizedText.length + tailText.length);
     expect(message?.text).toBe(`${oversizedText}${tailText}`);
     expect(message?.streaming).toBe(false);
-    expect(message?.textSegments).toBeUndefined();
+    expect(message?.textSegments?.map((segment) => segment.text)).toEqual([
+      oversizedText,
+      tailText,
+    ]);
   });
 
   it("does not duplicate assistant completion when item.completed is followed by turn.completed", async () => {

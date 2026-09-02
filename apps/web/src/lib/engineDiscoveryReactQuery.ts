@@ -284,7 +284,6 @@ function isExplicitlyRetryableDiscoveryError(error: unknown): error is {
 
 const EXPENSIVE_READ_CAPACITY_CODE = "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED";
 const WS_REQUEST_TIMEOUT_CODE = "WS_REQUEST_TIMEOUT";
-const EXPENSIVE_READ_CAPACITY_RETRY_LIMIT = 12;
 const TRANSIENT_DISCOVERY_RETRY_LIMIT = 3;
 
 function discoveryErrorCode(error: unknown): string | null {
@@ -304,12 +303,8 @@ function isRetryableEngineCatalogDiscoveryError(error: unknown): boolean {
 
 export function shouldRetryEngineCatalogDiscovery(failureCount: number, error: unknown): boolean {
   if (!isRetryableEngineCatalogDiscoveryError(error)) return false;
-  return (
-    failureCount <
-    (discoveryErrorCode(error) === EXPENSIVE_READ_CAPACITY_CODE
-      ? EXPENSIVE_READ_CAPACITY_RETRY_LIMIT
-      : TRANSIENT_DISCOVERY_RETRY_LIMIT)
-  );
+  if (discoveryErrorCode(error) === EXPENSIVE_READ_CAPACITY_CODE) return false;
+  return failureCount < TRANSIENT_DISCOVERY_RETRY_LIMIT;
 }
 
 export function engineCatalogDiscoveryRetryDelay(attemptIndex: number, error: unknown): number {
@@ -379,8 +374,9 @@ export function engineModelsQueryOptions(input: {
     // explicitly declares itself transient may retry.
     retry: shouldRetryEngineCatalogDiscovery,
     retryDelay: engineCatalogDiscoveryRetryDelay,
-    staleTime: input.engine === "droid" ? 5 * 60_000 : 60_000,
+    staleTime: input.engine === "droid" ? 5 * 60_000 : 30_000,
     ...(input.engine === "droid" ? { refetchOnWindowFocus: false } : {}),
+    gcTime: 30 * 60_000,
     placeholderData: (previous) => previous ?? EMPTY_MODELS_RESULT,
   });
 }

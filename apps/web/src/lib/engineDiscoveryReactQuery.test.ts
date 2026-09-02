@@ -255,8 +255,7 @@ describe("engineModelsQueryOptions", () => {
     expect(shouldRetryEngineCatalogDiscovery(0, transient)).toBe(true);
     expect(shouldRetryEngineCatalogDiscovery(2, transient)).toBe(true);
     expect(shouldRetryEngineCatalogDiscovery(3, transient)).toBe(false);
-    expect(shouldRetryEngineCatalogDiscovery(11, startupCapacity)).toBe(true);
-    expect(shouldRetryEngineCatalogDiscovery(12, startupCapacity)).toBe(false);
+    expect(shouldRetryEngineCatalogDiscovery(0, startupCapacity)).toBe(false);
     expect(shouldRetryEngineCatalogDiscovery(0, { code: "WS_REQUEST_TIMEOUT" })).toBe(true);
     expect(shouldRetryEngineCatalogDiscovery(0, { code: "WS_REQUEST_ABORTED" })).toBe(false);
     expect(shouldRetryEngineCatalogDiscovery(0, new Error("missing CLI"))).toBe(false);
@@ -291,30 +290,19 @@ describe("engineModelsQueryOptions", () => {
     expect(listModels).toHaveBeenCalledTimes(2);
   });
 
-  it("settles a catalog after temporary startup admission pressure", async () => {
-    const catalog = {
-      models: [{ slug: "gpt-5.4", name: "GPT-5.4" }],
-      source: "codex",
-      cached: false,
-    };
+  it("leaves startup admission pressure retries to the transport", async () => {
     const startupCapacity = {
       code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
       retryable: true,
       retryAfterMs: 1,
     };
-    const listModels = mockListModels(
-      vi
-        .fn()
-        .mockRejectedValueOnce(startupCapacity)
-        .mockRejectedValueOnce(startupCapacity)
-        .mockResolvedValue(catalog),
-    );
+    const listModels = mockListModels(vi.fn().mockRejectedValue(startupCapacity));
     const queryClient = new QueryClient();
 
     await expect(
       queryClient.fetchQuery(engineModelsQueryOptions({ engine: "codex", enabled: true })),
-    ).resolves.toEqual(catalog);
-    expect(listModels).toHaveBeenCalledTimes(3);
+    ).rejects.toEqual(startupCapacity);
+    expect(listModels).toHaveBeenCalledTimes(1);
   });
 
   it("fails fast for unclassified engine errors instead of adding a seven-second loop", async () => {

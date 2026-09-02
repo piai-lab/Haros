@@ -101,7 +101,10 @@ const providerTurnKey = (threadId: ThreadId, turnId: TurnId) => `${threadId}:${t
 const providerCommandId = (event: EngineRuntimeEvent, tag: string, target = "event"): CommandId =>
   CommandId.makeUnsafe(`engine:${event.eventId}:${tag}:${target}`);
 
-const DEFAULT_ASSISTANT_DELIVERY_MODE: AssistantDeliveryMode = "buffered";
+// Delivery-mode binding is in-memory. If a restart or missing lifecycle event
+// loses that binding, fail toward live output; only an explicit buffered
+// dispatch may withhold text until completion.
+const DEFAULT_ASSISTANT_DELIVERY_MODE: AssistantDeliveryMode = "streaming";
 const ENGINE_REPLACEMENT_RESTORE_FAILED_EVENT = "engine.replacement.restore.failed";
 const ENGINE_RUNTIME_INGESTION_CAPACITY = 1_024;
 const ENGINE_RUNTIME_REPLAY_PAGE_SIZE = 128;
