@@ -72,6 +72,27 @@ describe("studioGeneratedImageFileName", () => {
 });
 
 describe("copyGeneratedImageToStudioWorkspace", () => {
+  it("accepts a trusted child directory beginning with two dots", async () => {
+    const root = await temporaryRoot();
+    const trustedRoot = path.join(root, "codex-home", "generated_images");
+    const sourceDirectory = path.join(trustedRoot, "..reviewed");
+    const sourcePath = path.join(sourceDirectory, "source.png");
+    await mkdir(sourceDirectory, { recursive: true });
+    await writeFile(sourcePath, "image bytes");
+    const workspaceRoot = path.join(root, "Studio");
+
+    const copied = await Effect.runPromise(
+      copyGeneratedImageToStudioWorkspace({
+        sourcePath,
+        workspaceRoot,
+        createdAt: "2026-07-08T10:00:00.000Z",
+        trustedSourceRoots: [trustedRoot],
+      }),
+    );
+
+    expect(await readFile(copied!.fullPath, "utf8")).toBe("image bytes");
+  });
+
   it("copies without moving the original, creates Outbox/Images, and leaves no temp files", async () => {
     const root = await temporaryRoot();
     const { trustedRoot, sourcePath } = await trustedSourceImage(root, "exec-1.png", "image bytes");

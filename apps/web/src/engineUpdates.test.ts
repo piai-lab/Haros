@@ -345,6 +345,29 @@ describe("withEngineUpdateTimeout", () => {
 });
 
 describe("shouldOfferEngineUpdateAction", () => {
+  it("does not offer updates without a confirmed CLI version", () => {
+    const unavailable = engineStatus("droid", {
+      status: "error",
+      available: false,
+      version: null,
+      versionAdvisory: {
+        status: "unknown",
+        currentVersion: null,
+        latestVersion: null,
+        updateCommand: "droid update",
+        canUpdate: true,
+        checkedAt: "2026-07-15T14:00:00.000Z",
+        message: null,
+      },
+    });
+
+    expect(shouldOfferEngineUpdateAction(unavailable)).toBe(false);
+  });
+
+  it("offers updates for installed outdated CLIs", () => {
+    expect(shouldOfferEngineUpdateAction(engineStatus("codex"))).toBe(true);
+  });
+
   it("offers native AGY updates even when upstream latest-version metadata is unavailable", () => {
     expect(
       shouldOfferEngineUpdateAction(

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Effect, FileSystem } from "effect";
 
 import {
+  compareSemverVersions,
   createEngineVersionAdvisory,
   deriveNpmGlobalPrefix,
   HOMEBREW_ENGINE_UPDATE_TIMEOUT_MS,
@@ -90,6 +91,18 @@ describe("engineMaintenance", () => {
     assert.strictEqual(parseGenericCliVersion("codex-cli 0.130.0\n"), "0.130.0");
     assert.strictEqual(parseGenericCliVersion("claude 2.1\n"), "2.1.0");
     assert.strictEqual(parseGenericCliVersion("no version here"), null);
+  });
+
+  it("preserves hyphens inside a prerelease suffix", () => {
+    assert.strictEqual(
+      parseGenericCliVersion("engine-cli 0.124.0-alpha-beta\n"),
+      "0.124.0-alpha-beta",
+    );
+    assert.strictEqual(parseGenericCliVersion("engine 2.1-alpha-beta"), "2.1.0-alpha-beta");
+  });
+
+  it("keeps distinct hyphenated prereleases distinguishable", () => {
+    assert.ok(compareSemverVersions("0.124.0-alpha-beta", "0.124.0-alpha-gamma") < 0);
   });
 
   it("resolves npm global update commands for unqualified binaries", () => {

@@ -114,6 +114,7 @@ export function shouldOfferEngineUpdateAction(engine: ServerEngineStatus): boole
   const advisory = engine.versionAdvisory;
   return (
     advisory?.canUpdate === true &&
+    advisory.currentVersion !== null &&
     advisory.updateCommand !== null &&
     (advisory.status === "behind_latest" || advisory.status === "unknown")
   );

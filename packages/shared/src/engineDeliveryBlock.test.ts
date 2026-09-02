@@ -25,4 +25,10 @@ describe("engineDeliveryBlock", () => {
       isEngineDeliveryBlockDetail("Turn failed: thread is blocked by an earlier engine failure"),
     ).toBe(false);
   });
+
+  it("does not match unrelated details that only share the summary prefix", () => {
+    expect(isEngineDeliveryBlockDetail(ENGINE_DELIVERY_BLOCK_SUMMARY)).toBe(true);
+    expect(isEngineDeliveryBlockDetail(`${ENGINE_DELIVERY_BLOCK_SUMMARY}: blocked`)).toBe(true);
+    expect(isEngineDeliveryBlockDetail(`${ENGINE_DELIVERY_BLOCK_SUMMARY} elsewhere`)).toBe(false);
+  });
 });

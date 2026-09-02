@@ -153,4 +153,31 @@ describe("workspacePathsStore", () => {
     expect(localStorage.getItem("harnessos:workspace-pages:v2")).toBeNull();
     expect(localStorage.getItem("harnessos:workspace-paths:v1")).not.toBeNull();
   });
+
+  it("removes the legacy fallback when cached paths are cleared", async () => {
+    installMemoryLocalStorage();
+    localStorage.setItem(
+      "harnessos:workspace-pages:v2",
+      JSON.stringify({
+        state: {
+          homeDir: "/Users/legacy",
+          chatWorkspaceRoot: "/Users/legacy/Documents/Haros",
+        },
+        version: 2,
+      }),
+    );
+    vi.resetModules();
+
+    let workspaceModule = await import("./workspacePathsStore");
+    expect(workspaceModule.useWorkspacePathsStore.getState().homeDir).toBe("/Users/legacy");
+
+    await workspaceModule.useWorkspacePathsStore.persist.clearStorage();
+    expect(localStorage.getItem("harnessos:workspace-paths:v1")).toBeNull();
+    expect(localStorage.getItem("harnessos:workspace-pages:v2")).toBeNull();
+
+    vi.resetModules();
+    workspaceModule = await import("./workspacePathsStore");
+    expect(workspaceModule.useWorkspacePathsStore.getState().homeDir).toBeNull();
+    expect(workspaceModule.useWorkspacePathsStore.getState().chatWorkspaceRoot).toBeNull();
+  });
 });
