@@ -5,20 +5,16 @@
 import { useEffect } from "react";
 
 import { resolveAssistantDeliveryMode } from "../engineSettings";
-import {
-  setQueuedComposerDrainAssistantDeliveryMode,
-  startQueuedComposerDrainWatcher,
-} from "../lib/queuedComposerDrain";
+import { startQueuedComposerDrainWatcher } from "../lib/queuedComposerDrain";
 import { useServerSettings } from "../serverSettings";
 
 export function QueuedComposerDrainCoordinator() {
-  const { settings, defaults } = useServerSettings();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings ?? defaults);
-
-  useEffect(() => startQueuedComposerDrainWatcher(), []);
+  const { settings } = useServerSettings();
+  const assistantDeliveryMode = settings ? resolveAssistantDeliveryMode(settings) : null;
 
   useEffect(() => {
-    setQueuedComposerDrainAssistantDeliveryMode(assistantDeliveryMode);
+    if (assistantDeliveryMode === null) return;
+    return startQueuedComposerDrainWatcher({ assistantDeliveryMode });
   }, [assistantDeliveryMode]);
 
   return null;

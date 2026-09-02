@@ -56,7 +56,7 @@ type QueuedComposerDispatchFn = (input: {
   assistantDeliveryMode: AssistantDeliveryMode;
 }) => Promise<boolean>;
 
-const claimedThreadIds = new Set<ThreadId>();
+const claimCountByThreadId = new Map<ThreadId, number>();
 const autoDispatchLocks = new Set<ThreadId>();
 const steerGatesByThreadId = new Map<ThreadId, QueuedSteerGate>();
 const awaitingTurnStartsByThreadId = new Map<ThreadId, LocalDispatchSnapshot>();
@@ -119,16 +119,14 @@ export async function runLockedQueuedComposerAutoDispatch(input: {
 }
 
 export function claimQueuedComposerAutoDispatch(threadId: ThreadId): void {
-  claimedThreadIds.add(threadId);
+  claimCountByThreadId.set(threadId, (claimCountByThreadId.get(threadId) ?? 0) + 1);
 }
 
 export function releaseQueuedComposerAutoDispatch(threadId: ThreadId): void {
-  claimedThreadIds.delete(threadId);
+  const claimCount = claimCountByThreadId.get(threadId) ?? 0;
+  if (claimCount <= 1) claimCountByThreadId.delete(threadId);
+  else claimCountByThreadId.set(threadId, claimCount - 1);
   requestQueuedComposerDrainPass();
-}
-
-export function setQueuedComposerDrainAssistantDeliveryMode(nextMode: AssistantDeliveryMode): void {
-  assistantDeliveryMode = nextMode;
 }
 
 export function startQueuedComposerDrainWatcher(options?: {
@@ -165,22 +163,24 @@ export function startQueuedComposerDrainWatcher(options?: {
     if (drainWakeTimer !== null) clearTimeout(drainWakeTimer);
     drainWakeTimer = null;
     tickScheduled = false;
+    assistantDeliveryMode = "streaming";
     dispatchQueuedTurn = dispatchQueuedComposerTurnHeadless;
     nowMs = () => Date.now();
   };
 }
 
 function requestQueuedComposerDrainPass(): void {
-  if (tickScheduled || !hasQueuedComposerDrainWork()) return;
+  if (drainStartCount === 0 || tickScheduled || !hasQueuedComposerDrainWork()) return;
   tickScheduled = true;
   queueMicrotask(() => {
     tickScheduled = false;
+    if (drainStartCount === 0) return;
     runQueuedComposerDrainPass();
   });
 }
 
 export function resetQueuedComposerDrainForTests(): void {
-  claimedThreadIds.clear();
+  claimCountByThreadId.clear();
   autoDispatchLocks.clear();
   steerGatesByThreadId.clear();
   awaitingTurnStartsByThreadId.clear();
@@ -377,7 +377,7 @@ function advanceAwaitingTurnStarts(): number | null {
 function advanceSteerGates(): number | null {
   let earliestExpiryMs: number | null = null;
   const now = nowMs();
-  for (const [threadId, gate] of [...steerGatesByThreadId.entries()]) {
+  for (const [threadId, gate] of steerGatesByThreadId) {
     const thread = getThreadFromState(useStore.getState(), threadId);
     const transition = resolveQueuedSteerGateTransition({
       gate,
@@ -442,7 +442,7 @@ function runQueuedComposerDrainPass(): void {
         : Math.min(steerExpiryMs, awaitingStartExpiryMs);
 
   for (const threadId of collectThreadIdsWithQueuedTurns()) {
-    if (claimedThreadIds.has(threadId)) continue;
+    if (claimCountByThreadId.has(threadId)) continue;
     const nextQueuedTurn =
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0];
     if (!nextQueuedTurn) continue;

@@ -85,6 +85,7 @@ describe("queued Composer drain watcher", () => {
     NonNullable<Parameters<typeof startQueuedComposerDrainWatcher>[0]>["dispatch"]
   >;
   const dispatch = vi.fn<DrainDispatch>(async () => true);
+  let stopWatcher: () => void;
 
   beforeEach(() => {
     resetQueuedComposerDrainForTests();
@@ -92,7 +93,7 @@ describe("queued Composer drain watcher", () => {
     useStore.setState(initialState);
     dispatch.mockReset();
     dispatch.mockResolvedValue(true);
-    startQueuedComposerDrainWatcher({ dispatch });
+    stopWatcher = startQueuedComposerDrainWatcher({ dispatch });
   });
 
   afterEach(() => {
@@ -151,6 +152,36 @@ describe("queued Composer drain watcher", () => {
 
     releaseQueuedComposerAutoDispatch(THREAD_ID);
     await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps a thread claimed until every mounted ChatView releases it", async () => {
+    seedThread(makeThread({ id: THREAD_ID, session: makeSession("ready") }));
+    claimQueuedComposerAutoDispatch(THREAD_ID);
+    claimQueuedComposerAutoDispatch(THREAD_ID);
+    useComposerDraftStore
+      .getState()
+      .enqueueQueuedTurn(THREAD_ID, makeQueuedChatTurn("queued-multi-view"));
+
+    releaseQueuedComposerAutoDispatch(THREAD_ID);
+    await flushDrain();
+    expect(dispatch).not.toHaveBeenCalled();
+
+    releaseQueuedComposerAutoDispatch(THREAD_ID);
+    await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not dispatch a queued microtask after the final watcher stops", async () => {
+    seedThread(makeThread({ id: THREAD_ID, session: makeSession("ready") }));
+    claimQueuedComposerAutoDispatch(THREAD_ID);
+    useComposerDraftStore
+      .getState()
+      .enqueueQueuedTurn(THREAD_ID, makeQueuedChatTurn("queued-after-stop"));
+
+    stopWatcher();
+    releaseQueuedComposerAutoDispatch(THREAD_ID);
+    await flushDrain();
+
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("shares one exclusive per-thread send lock with ChatView", async () => {
