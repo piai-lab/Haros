@@ -8060,7 +8060,7 @@ describe("EngineCommandReactor", () => {
         createdAt: now,
       }),
     );
-    await waitFor(() => harness.stopSession.mock.calls.length === 1);
+    await waitFor(() => harness.stopRuntimeSession.mock.calls.length === 1);
 
     harness.setRuntimeSessionTurnState({ threadId: "thread-1", status: "ready" });
     await harness.emitRuntimeEvent({
@@ -12524,7 +12524,7 @@ describe("EngineCommandReactor", () => {
     );
 
     await waitFor(async () => {
-      if (harness.stopSession.mock.calls.length !== 1) return false;
+      if (harness.stopRuntimeSession.mock.calls.length !== 1) return false;
       const readModel = await Effect.runPromise(harness.engine.getReadModel());
       const thread = readModel.threads.find(
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
@@ -12570,7 +12570,7 @@ describe("EngineCommandReactor", () => {
     );
 
     await waitFor(async () => {
-      if (harness.stopSession.mock.calls.length !== 1) return false;
+      if (harness.stopRuntimeSession.mock.calls.length !== 1) return false;
       const readModel = await Effect.runPromise(harness.engine.getReadModel());
       const thread = readModel.threads.find(
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
@@ -12578,9 +12578,10 @@ describe("EngineCommandReactor", () => {
       return thread?.archivedAt !== null && thread?.session?.status === "stopped";
     });
 
-    expect(harness.stopSession).toHaveBeenCalledWith({
+    expect(harness.stopRuntimeSession).toHaveBeenCalledWith({
       threadId: ThreadId.makeUnsafe("thread-1"),
     });
+    expect(harness.stopSession).not.toHaveBeenCalled();
   });
 
   it("does not restore pending sidechat context after an explicit session stop", async () => {
@@ -12657,7 +12658,7 @@ describe("EngineCommandReactor", () => {
     await waitFor(async () => {
       const readModel = await Effect.runPromise(harness.engine.getReadModel());
       return (
-        harness.stopSession.mock.calls.length === 1 &&
+        harness.stopRuntimeSession.mock.calls.length === 1 &&
         readModel.threads.find((thread) => thread.id === threadId)?.session?.status === "stopped"
       );
     });

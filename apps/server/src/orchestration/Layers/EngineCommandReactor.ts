@@ -4617,21 +4617,33 @@ const make = Effect.gen(function* () {
     if (thread.session && thread.session.status !== "stopped" && ownsEngineSession) {
       // A stop that cannot finish must still settle the projection: the session
       // row below is the only thing that releases the turn in the UI.
-      const stopped = yield* runBoundedProviderCall({
-        label: "The engine session stop",
-        timeout: ENGINE_COMMAND_STOP_TIMEOUT,
-        call: engineService.stopSession({ threadId: engineSessionThread.id }),
-      });
-      if (stopped._tag !== "ok") {
+      if (!engineService.stopRuntimeSession) {
         yield* appendProviderFailureActivity({
           threadId: thread.id,
           kind: "engine.session.stop.failed",
           summary: "Engine session stop failed",
-          detail: stopped._tag === "timeout" ? stopped.detail : stopped.outcome.detail,
+          detail: "The cursor-preserving runtime stop is unavailable.",
           turnId: null,
           createdAt: input.createdAt,
           settlementStatus: "uncertain",
         });
+      } else {
+        const stopped = yield* runBoundedProviderCall({
+          label: "The engine session stop",
+          timeout: ENGINE_COMMAND_STOP_TIMEOUT,
+          call: engineService.stopRuntimeSession({ threadId: engineSessionThread.id }),
+        });
+        if (stopped._tag !== "ok") {
+          yield* appendProviderFailureActivity({
+            threadId: thread.id,
+            kind: "engine.session.stop.failed",
+            summary: "Engine session stop failed",
+            detail: stopped._tag === "timeout" ? stopped.detail : stopped.outcome.detail,
+            turnId: null,
+            createdAt: input.createdAt,
+            settlementStatus: "uncertain",
+          });
+        }
       }
     }
 

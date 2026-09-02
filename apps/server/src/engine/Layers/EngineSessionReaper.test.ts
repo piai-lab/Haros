@@ -62,6 +62,9 @@ describe("EngineSessionReaperLive", () => {
   it("stops stale sessions without active turns", async () => {
     const threadId = ThreadId.makeUnsafe("thread-reaper-stale");
     const stopSession = vi.fn<EngineServiceShape["stopSession"]>(() => Effect.void);
+    const stopRuntimeSession = vi.fn<NonNullable<EngineServiceShape["stopRuntimeSession"]>>(
+      () => Effect.void,
+    );
     const directory: EngineSessionDirectoryShape = {
       upsert: () => Effect.void,
       replace: () => Effect.void,
@@ -92,6 +95,7 @@ describe("EngineSessionReaperLive", () => {
       respondToRequest: () => unsupported(),
       respondToUserInput: () => unsupported(),
       stopSession,
+      stopRuntimeSession,
       listSessions: () => Effect.succeed([]),
       listSessionsStrict: () => Effect.succeed([]),
       withModelServiceMutationFence: (_serviceId, effect) => effect,
@@ -120,18 +124,22 @@ describe("EngineSessionReaperLive", () => {
         ),
         Effect.runPromise,
       );
-      await waitFor(() => stopSession.mock.calls.length === 1);
+      await waitFor(() => stopRuntimeSession.mock.calls.length === 1);
     } finally {
       await Effect.runPromise(Scope.close(scope, Exit.void));
     }
 
-    expect(stopSession).toHaveBeenCalledWith({ threadId });
+    expect(stopRuntimeSession).toHaveBeenCalledWith({ threadId });
+    expect(stopSession).not.toHaveBeenCalled();
   });
 
   it("skips stale sessions with active turns", async () => {
     const threadId = ThreadId.makeUnsafe("thread-reaper-active");
     const turnId = TurnId.makeUnsafe("turn-reaper-active");
     const stopSession = vi.fn<EngineServiceShape["stopSession"]>(() => Effect.void);
+    const stopRuntimeSession = vi.fn<NonNullable<EngineServiceShape["stopRuntimeSession"]>>(
+      () => Effect.void,
+    );
     const directory: EngineSessionDirectoryShape = {
       upsert: () => Effect.void,
       replace: () => Effect.void,
@@ -162,6 +170,7 @@ describe("EngineSessionReaperLive", () => {
       respondToRequest: () => unsupported(),
       respondToUserInput: () => unsupported(),
       stopSession,
+      stopRuntimeSession,
       listSessions: () => Effect.succeed([]),
       listSessionsStrict: () => Effect.succeed([]),
       withModelServiceMutationFence: (_serviceId, effect) => effect,
@@ -184,6 +193,76 @@ describe("EngineSessionReaperLive", () => {
         Effect.provide(
           makeLayer({
             threadShell: makeThreadShell({ threadId, activeTurnId: turnId }),
+            directory,
+            engineService,
+          }),
+        ),
+        Effect.runPromise,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      await Effect.runPromise(Scope.close(scope, Exit.void));
+    }
+
+    expect(stopSession).not.toHaveBeenCalled();
+    expect(stopRuntimeSession).not.toHaveBeenCalled();
+  });
+
+  it("does not delete bindings when cursor-preserving runtime stop is unavailable", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-reaper-no-runtime-stop");
+    const stopSession = vi.fn<EngineServiceShape["stopSession"]>(() => Effect.void);
+    const directory: EngineSessionDirectoryShape = {
+      upsert: () => Effect.void,
+      replace: () => Effect.void,
+      getEngine: () => unsupported(),
+      getBinding: () => unsupported(),
+      remove: () => Effect.void,
+      listThreadIds: () => Effect.succeed([]),
+      listBindings: () =>
+        Effect.succeed([
+          {
+            threadId,
+            engine: "codex",
+            status: "running",
+            lastSeenAt: "2026-01-01T00:00:00.000Z",
+          },
+        ]),
+    };
+    const engineService = {
+      startSession: () => unsupported(),
+      reloadSessionResources: () => unsupported(),
+      sendTurn: () => unsupported(),
+      steerTurn: () => unsupported(),
+      startReview: () => unsupported(),
+      interruptTurn: () => unsupported(),
+      stopTask: () => unsupported(),
+      backgroundTask: () => unsupported(),
+      steerSubagent: () => unsupported(),
+      respondToRequest: () => unsupported(),
+      respondToUserInput: () => unsupported(),
+      stopSession,
+      listSessions: () => Effect.succeed([]),
+      listSessionsStrict: () => Effect.succeed([]),
+      withModelServiceMutationFence: (_serviceId, effect) => effect,
+      withRuntimeEventProjectionLease: (_threadId, effect) => effect,
+      getCapabilities: () => unsupported(),
+      rollbackConversation: () => unsupported(),
+      compactThread: () => unsupported(),
+      readToolResult: () =>
+        Effect.succeed({ status: "unavailable", reason: "session_unavailable" }),
+      closeRuntimeEvents: Effect.void,
+      streamEvents: Stream.empty,
+    } satisfies EngineServiceShape;
+
+    const scope = await Effect.runPromise(Scope.make());
+    try {
+      await Effect.gen(function* () {
+        const reaper = yield* EngineSessionReaper;
+        yield* Scope.provide(reaper.start(), scope);
+      }).pipe(
+        Effect.provide(
+          makeLayer({
+            threadShell: makeThreadShell({ threadId, activeTurnId: null }),
             directory,
             engineService,
           }),

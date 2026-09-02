@@ -631,12 +631,10 @@ function mergeStreamingMessage(
     nextText = incomingMessage.text;
   } else if (incomingMessage.streaming || incomingMessage.text.length === 0) {
     nextText = `${existingMessage.text}${incomingMessage.text}`;
-  } else if (incomingMessage.text.startsWith(existingMessage.text)) {
-    nextText = incomingMessage.text;
-  } else if (existingMessage.text.startsWith(incomingMessage.text)) {
-    nextText = existingMessage.text;
   } else {
-    nextText = `${existingMessage.text}${incomingMessage.text}`;
+    // Product Orchestration emits non-streaming completions as authoritative
+    // accumulated snapshots. A divergent local stream must not survive settlement.
+    nextText = incomingMessage.text;
   }
   const nextAttachments = incomingMessage.attachments ?? existingMessage.attachments;
   const nextSkills =

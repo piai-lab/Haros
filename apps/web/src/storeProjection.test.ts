@@ -1008,7 +1008,7 @@ describe("store projection", () => {
     expect(nextThread?.session?.activeTurnId).toBe(turnId);
   });
 
-  it("applies incoming dispatch origin corrections while retaining live message text", () => {
+  it("applies authoritative message edits with incoming dispatch origin corrections", () => {
     const threadId = ThreadId.makeUnsafe("thread-origin-hot-path");
     const messageId = MessageId.makeUnsafe("message-origin-hot-path");
     const liveState = makeState(
@@ -1054,7 +1054,7 @@ describe("store projection", () => {
     const message = getThreadFromState(next, threadId)?.messages.find(
       (entry) => entry.id === messageId,
     );
-    expect(message?.text).toBe("automation draft that is still longer locally");
+    expect(message?.text).toBe("human edit");
     expect(message?.dispatchOrigin).toBe("user");
   });
 

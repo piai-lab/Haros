@@ -29,6 +29,13 @@ const makeEngineSessionReaper = (options?: EngineSessionReaperLiveOptions) =>
     const sweepIntervalMs = Math.max(1, options?.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS);
 
     const sweep = Effect.gen(function* () {
+      if (!engineService.stopRuntimeSession) {
+        yield* Effect.logWarning(
+          "engine session reaper skipped sweep: stopRuntimeSession is unavailable",
+        );
+        return;
+      }
+      const stopRuntimeSession = engineService.stopRuntimeSession;
       const bindings = yield* directory.listBindings();
       const now = Date.now();
 
@@ -54,7 +61,7 @@ const makeEngineSessionReaper = (options?: EngineSessionReaperLiveOptions) =>
           .pipe(Effect.map(Option.getOrUndefined));
         if (thread?.session?.activeTurnId != null) continue;
 
-        yield* engineService.stopSession({ threadId: binding.threadId }).pipe(
+        yield* stopRuntimeSession({ threadId: binding.threadId }).pipe(
           Effect.catchCause((cause) =>
             Effect.logWarning("engine session reaper failed to stop stale session", {
               threadId: binding.threadId,

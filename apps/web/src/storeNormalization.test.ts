@@ -1,7 +1,7 @@
 // FILE: storeNormalization.test.ts
 // Purpose: Pins the incremental activity accumulator to the `normalizeActivities` fold it replaces.
 
-import { MessageId } from "@harnessos/contracts";
+import { MessageId, TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -128,6 +128,118 @@ describe("normalizeChatMessage text segments", () => {
     });
     const edited = mergeReadModelThreadDetailWithLiveHotPath(editedSnapshot, previous);
     expect(edited.messages[0]?.textSegments).toBeUndefined();
+  });
+});
+
+describe("completed assistant snapshot reconciliation", () => {
+  it("takes persisted text when a completed local message is longer than its server twin", () => {
+    const assistantId = MessageId.makeUnsafe("assistant-completed-duplicate");
+    const turnId = TurnId.makeUnsafe("turn-completed-duplicate");
+    const serverText = "Final reply text from the server.";
+    const previousThread = makeThread({
+      latestTurn: {
+        turnId,
+        state: "completed",
+        requestedAt: "2026-02-27T00:00:00.000Z",
+        startedAt: "2026-02-27T00:00:01.000Z",
+        completedAt: "2026-02-27T00:00:05.000Z",
+        assistantMessageId: assistantId,
+      },
+      messages: [
+        {
+          id: assistantId,
+          role: "assistant",
+          text: `${serverText}${serverText}`,
+          turnId,
+          createdAt: "2026-02-27T00:00:01.000Z",
+          completedAt: "2026-02-27T00:00:05.000Z",
+          streaming: false,
+          source: "native",
+        },
+      ],
+    });
+    const incoming = makeReadModelThread({
+      latestTurn: {
+        turnId,
+        state: "completed",
+        requestedAt: "2026-02-27T00:00:00.000Z",
+        startedAt: "2026-02-27T00:00:01.000Z",
+        completedAt: "2026-02-27T00:00:05.000Z",
+        assistantMessageId: assistantId,
+      },
+      messages: [
+        {
+          id: assistantId,
+          role: "assistant",
+          text: serverText,
+          turnId,
+          streaming: false,
+          source: "native",
+          createdAt: "2026-02-27T00:00:01.000Z",
+          updatedAt: "2026-02-27T00:00:05.000Z",
+          attachments: [],
+        },
+      ],
+    });
+
+    const merged = mergeReadModelThreadDetailWithLiveHotPath(incoming, previousThread);
+
+    expect(merged.messages.find((message) => message.id === assistantId)?.text).toBe(serverText);
+  });
+
+  it("keeps longer local assistant text while that message is still streaming", () => {
+    const assistantId = MessageId.makeUnsafe("assistant-still-streaming");
+    const turnId = TurnId.makeUnsafe("turn-still-streaming");
+    const localText = "I'll start by scanning the repo. Then I'll summarize.";
+    const previousThread = makeThread({
+      latestTurn: {
+        turnId,
+        state: "running",
+        requestedAt: "2026-02-27T00:00:00.000Z",
+        startedAt: "2026-02-27T00:00:01.000Z",
+        completedAt: null,
+        assistantMessageId: assistantId,
+      },
+      messages: [
+        {
+          id: assistantId,
+          role: "assistant",
+          text: localText,
+          turnId,
+          createdAt: "2026-02-27T00:00:01.000Z",
+          streaming: true,
+          source: "native",
+        },
+      ],
+    });
+    const incoming = makeReadModelThread({
+      latestTurn: {
+        turnId,
+        state: "running",
+        requestedAt: "2026-02-27T00:00:00.000Z",
+        startedAt: "2026-02-27T00:00:01.000Z",
+        completedAt: null,
+        assistantMessageId: assistantId,
+      },
+      messages: [
+        {
+          id: assistantId,
+          role: "assistant",
+          text: "I'll start by scanning the repo.",
+          turnId,
+          streaming: false,
+          source: "native",
+          createdAt: "2026-02-27T00:00:01.000Z",
+          updatedAt: "2026-02-27T00:00:02.000Z",
+          attachments: [],
+        },
+      ],
+    });
+
+    const merged = mergeReadModelThreadDetailWithLiveHotPath(incoming, previousThread);
+
+    expect(merged.messages.find((message) => message.id === assistantId)?.text).toBe(localText);
+    expect(merged.messages.find((message) => message.id === assistantId)?.streaming).toBe(true);
   });
 });
 

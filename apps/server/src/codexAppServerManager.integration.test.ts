@@ -34,6 +34,7 @@ import {
   normalizeCodexProcessLine,
   readCodexAccountSnapshot,
   resolveCodexModelForAccount,
+  shouldWarnCodexFreshStartWithoutResume,
 } from "./codexAppServerManager";
 import {
   assertCodexWorkingDirectoryExists,
@@ -1441,6 +1442,29 @@ describe("buildCodexThreadOpenRequest", () => {
         sessionOverrides,
       }),
     ).toThrow("cannot resume and fork at the same time");
+  });
+});
+
+describe("shouldWarnCodexFreshStartWithoutResume", () => {
+  it("warns only when a previously bound product thread would start fresh", () => {
+    expect(
+      shouldWarnCodexFreshStartWithoutResume({
+        threadOpenMethod: "thread/start",
+        previouslyBound: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldWarnCodexFreshStartWithoutResume({
+        threadOpenMethod: "thread/resume",
+        previouslyBound: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldWarnCodexFreshStartWithoutResume({
+        threadOpenMethod: "thread/start",
+        previouslyBound: false,
+      }),
+    ).toBe(false);
   });
 });
 

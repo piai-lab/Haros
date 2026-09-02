@@ -694,9 +694,11 @@ function mergeReadModelMessagesWithLiveHotPath(
     }
 
     const incomingCompletedAt = incomingMessage.streaming ? undefined : incomingMessage.updatedAt;
+    const localStreamingTextIsAhead =
+      previousMessage.streaming && previousMessage.text.length > incomingMessage.text.length;
     const shouldPreferLiveMessage =
       (authoritativeTurnId === null || incomingMessage.turnId !== authoritativeTurnId) &&
-      (previousMessage.text.length > incomingMessage.text.length ||
+      (localStreamingTextIsAhead ||
         (!previousMessage.streaming && incomingMessage.streaming) ||
         (previousMessage.completedAt !== undefined &&
           (incomingCompletedAt === undefined ||
@@ -1000,9 +1002,9 @@ export function mergeReadModelThreadDetailWithLiveHotPath(
   // A scoped projection refresh is authoritative for a *terminal transition*: the
   // turn it settles must not keep local streaming flags or a resurrected running
   // session alive. It is not authoritative for message contents, so the normal
-  // merge still runs — skipping it drops locally streamed assistant text and
-  // locally preserved mentions/skills/attachments the snapshot has not caught up
-  // with yet.
+  // merge still runs so an older in-flight snapshot cannot drop locally streamed
+  // text or locally preserved mentions/skills/attachments. Once a message is
+  // complete, the persisted snapshot is authoritative for its text.
   const settledLocalTurnId =
     previousThread.latestTurn?.state === "running" &&
     incoming.latestTurn !== null &&

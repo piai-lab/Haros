@@ -8461,6 +8461,109 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
     );
   });
 
+  it.effect("accepts a bare Auto model when discovery returns supported context variants", () => {
+    const query = new FakeClaudeQuery();
+    (
+      query as unknown as {
+        supportedModels: () => Promise<
+          Array<{
+            value: string;
+            displayName: string;
+            supportsAutoMode: boolean;
+          }>
+        >;
+      }
+    ).supportedModels = async () => [
+      {
+        value: "claude-opus-5[1m]",
+        displayName: "Claude Opus 5 (1M context)",
+        supportsAutoMode: true,
+      },
+      {
+        value: "claude-opus-5[200k]",
+        displayName: "Claude Opus 5 (200K context)",
+        supportsAutoMode: true,
+      },
+    ];
+    const layer = makeClaudeAdapterLive({ createQuery: () => query }).pipe(
+      Layer.provideMerge(ServerConfig.layerTest("/tmp/claude-adapter-test", "/tmp")),
+      Layer.provideMerge(NodeServices.layer),
+    );
+
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      const session = yield* adapter.startSession({
+        admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+        threadId: THREAD_ID,
+        engine: "claude",
+        runtimeMode: "auto",
+        engineSelection: {
+          engine: "claude",
+          model: "claude-opus-5",
+        },
+      });
+
+      assert.equal(session.status, "ready");
+      assert.equal(yield* adapter.hasSession(THREAD_ID), true);
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(layer),
+    );
+  });
+
+  it.effect("rejects conflicting Auto capability across context variants", () => {
+    const query = new FakeClaudeQuery();
+    (
+      query as unknown as {
+        supportedModels: () => Promise<
+          Array<{
+            value: string;
+            displayName: string;
+            supportsAutoMode: boolean;
+          }>
+        >;
+      }
+    ).supportedModels = async () => [
+      {
+        value: "claude-opus-5[1m]",
+        displayName: "Claude Opus 5 (1M context)",
+        supportsAutoMode: true,
+      },
+      {
+        value: "claude-opus-5[200k]",
+        displayName: "Claude Opus 5 (200K context)",
+        supportsAutoMode: false,
+      },
+    ];
+    const layer = makeClaudeAdapterLive({ createQuery: () => query }).pipe(
+      Layer.provideMerge(ServerConfig.layerTest("/tmp/claude-adapter-test", "/tmp")),
+      Layer.provideMerge(NodeServices.layer),
+    );
+
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      const result = yield* Effect.exit(
+        adapter.startSession({
+          admission: { productSurface: "agent", workSurface: "agent", projectContextRoot: "/tmp" },
+          threadId: THREAD_ID,
+          engine: "claude",
+          runtimeMode: "auto",
+          engineSelection: {
+            engine: "claude",
+            model: "claude-opus-5",
+          },
+        }),
+      );
+
+      assert.ok(Exit.isFailure(result));
+      assert.equal(query.closeCalls, 1);
+      assert.equal(yield* adapter.hasSession(THREAD_ID), false);
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(layer),
+    );
+  });
+
   it.effect("rejects Auto when the Claude SDK marks the selected model unsupported", () => {
     const query = new FakeClaudeQuery();
     (

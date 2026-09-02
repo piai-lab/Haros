@@ -611,16 +611,17 @@ describe("store event reducer", () => {
     ]);
   });
 
-  it("does not truncate streamed assistant text when completion only carries the trailing chunk", () => {
+  it("replaces streamed assistant text when the completion diverges from the local prefix", () => {
     const assistantId = MessageId.makeUnsafe("assistant-message");
     const turnId = TurnId.makeUnsafe("turn-1");
+    const serverText = "The reply begins here, then continues to the end.";
     const initialState = makeState(
       makeThread({
         messages: [
           {
             id: assistantId,
             role: "assistant",
-            text: "Hello",
+            text: "The reply begins here and then drifts.",
             turnId,
             createdAt: "2026-02-27T00:01:05.000Z",
             streaming: true,
@@ -643,7 +644,7 @@ describe("store event reducer", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: assistantId,
         role: "assistant",
-        text: " world",
+        text: serverText,
         turnId,
         streaming: false,
         createdAt: "2026-02-27T00:01:05.000Z",
@@ -656,7 +657,7 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.messages).toMatchObject([
       {
         id: assistantId,
-        text: "Hello world",
+        text: serverText,
         streaming: false,
         completedAt: "2026-02-27T00:01:06.000Z",
       },
