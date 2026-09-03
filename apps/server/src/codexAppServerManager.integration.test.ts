@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import {
+  chmodSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -452,6 +453,147 @@ function createProcessOutputHarness() {
 }
 
 describe("Codex app-server teardown", () => {
+  it("preserves subprocess diagnostics when app-server exits during initialize", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-start-failure-"));
+    const isWindows = process.platform === "win32";
+    const binaryPath = path.join(root, isWindows ? "codex.cmd" : "codex.sh");
+    const diagnostic = "fatal: packaged Codex app-server could not initialize";
+    writeFileSync(
+      binaryPath,
+      isWindows
+        ? [
+            "@echo off",
+            'if "%~1"=="--version" (',
+            "  echo codex-cli 9.9.9",
+            "  exit /b 0",
+            ")",
+            `echo ${diagnostic} 1>&2`,
+            "exit /b 23",
+            "",
+          ].join("\r\n")
+        : [
+            "#!/bin/sh",
+            'if [ "$1" = "--version" ]; then',
+            '  echo "codex-cli 9.9.9"',
+            "  exit 0",
+            "fi",
+            `echo "${diagnostic}" >&2`,
+            "exit 23",
+            "",
+          ].join("\n"),
+    );
+    if (!isWindows) chmodSync(binaryPath, 0o755);
+
+    const teardownProcessTree = vi.fn(async (input: { readonly rootExited: Promise<unknown> }) => {
+      await input.rootExited;
+      return { escalated: false as const, signalErrors: [] };
+    });
+    const manager = new CodexAppServerManager(undefined, { teardownProcessTree });
+    const events: Array<{ method: string; message?: string }> = [];
+    manager.on("event", (event) => {
+      events.push({
+        method: event.method,
+        ...(event.message ? { message: event.message } : {}),
+      });
+    });
+    __codexCliVersionGateTesting.reset();
+
+    try {
+      await expect(
+        manager.startSession({
+          threadId: asThreadId("thread-packaged-start-failure"),
+          engine: "codex",
+          cwd: root,
+          runtimeMode: "full-access",
+          engineOptions: { codex: { binaryPath } },
+        }),
+      ).rejects.toThrow(diagnostic);
+      expect(events.find((event) => event.method === "session/startFailed")?.message).toContain(
+        diagnostic,
+      );
+      expect(events.find((event) => event.method === "session/startFailed")?.message).not.toContain(
+        "Session stopped before request completed",
+      );
+      expect(teardownProcessTree).toHaveBeenCalledOnce();
+      expect(manager.hasSession(asThreadId("thread-packaged-start-failure"))).toBe(false);
+    } finally {
+      __codexCliVersionGateTesting.reset();
+      await manager.stopAll();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("lets Windows-style stderr and exit details win the stdout-end race", async () => {
+    class FakeCodexChild extends EventEmitter {
+      readonly pid = 5049;
+      exitCode: number | null = null;
+      signalCode: NodeJS.Signals | null = null;
+      readonly stdin = new PassThrough();
+      readonly stdout = new PassThrough();
+      readonly stderr = new PassThrough();
+    }
+    const child = new FakeCodexChild();
+    const teardownProcessTree = vi.fn(async () => ({
+      escalated: false as const,
+      signalErrors: [],
+    }));
+    const manager = new CodexAppServerManager(undefined, { teardownProcessTree });
+    const threadId = asThreadId("thread-codex-windows-exit-race");
+    const events: Array<{ method: string; message?: string }> = [];
+    manager.on("event", (event) => {
+      events.push({
+        method: event.method,
+        ...(event.message ? { message: event.message } : {}),
+      });
+    });
+    const context = {
+      session: {
+        engine: "codex",
+        status: "connecting",
+        threadId,
+        runtimeMode: "full-access",
+        createdAt: "2026-07-14T00:00:00.000Z",
+        updatedAt: "2026-07-14T00:00:00.000Z",
+      },
+      account: { type: "unknown", planType: null, sparkEnabled: true },
+      child,
+      stdoutFramer: new CodexJsonlFramer(),
+      stdinWriter: new CodexJsonlWriter(child.stdin),
+      pending: new Map(),
+      pendingApprovals: new Map(),
+      pendingUserInputs: new Map(),
+      collabReceiverTurns: new Map(),
+      collabReceiverParents: new Map(),
+      reviewTurnIds: new Set(),
+      nextRequestId: 1,
+      stopping: false,
+    };
+    const internals = manager as unknown as {
+      sessions: Map<ThreadId, unknown>;
+      attachProcessListeners: (context: unknown) => void;
+    };
+    internals.sessions.set(threadId, context);
+    internals.attachProcessListeners(context);
+
+    child.stdout.emit("end");
+    child.stderr.emit(
+      "data",
+      Buffer.from("fatal: Windows packaged app-server initialization failed\r\n"),
+    );
+    child.exitCode = 23;
+    child.emit("exit", 23, null);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(events).toContainEqual({
+      method: "session/exited",
+      message: expect.stringMatching(
+        /exited \(code=23, signal=null\).*Windows packaged app-server initialization failed/,
+      ),
+    });
+    expect(events.some((event) => event.method === "protocol/transportError")).toBe(false);
+    expect(teardownProcessTree).toHaveBeenCalledOnce();
+  });
+
   it("keeps a live process routable when only the last turn status is error", () => {
     class FakeCodexChild extends EventEmitter {
       readonly pid = 5050;

@@ -179,6 +179,10 @@ interface CodexSessionContext {
   stopping: boolean;
   stopPromise?: Promise<void>;
   discovery?: boolean;
+  recentProcessErrors?: Array<{
+    readonly message: string;
+    readonly recordedAt: number;
+  }>;
 }
 
 interface CodexSkillListInput {
@@ -906,6 +910,55 @@ export interface CodexAppServerManagerEvents {
 
 const CODEX_DISCOVERY_CACHE_MAX_ENTRIES = 128;
 const GATEWAY_TURN_CANCELLATION_TIMEOUT_MS = 2_000;
+const CODEX_PROCESS_ERROR_TAIL_MAX_LINES = 4;
+const CODEX_PROCESS_ERROR_LINE_MAX_CHARS = 500;
+const CODEX_PROCESS_ERROR_TAIL_MAX_AGE_MS = 5_000;
+
+function recordCodexProcessError(context: CodexSessionContext, message: string): void {
+  const normalized = message.trim().slice(0, CODEX_PROCESS_ERROR_LINE_MAX_CHARS);
+  if (!normalized) return;
+
+  const recent = context.recentProcessErrors ?? [];
+  const entry = { message: normalized, recordedAt: Date.now() };
+  if (recent.at(-1)?.message === normalized) {
+    recent[recent.length - 1] = entry;
+  } else {
+    recent.push(entry);
+  }
+  if (recent.length > CODEX_PROCESS_ERROR_TAIL_MAX_LINES) {
+    recent.splice(0, recent.length - CODEX_PROCESS_ERROR_TAIL_MAX_LINES);
+  }
+  context.recentProcessErrors = recent;
+}
+
+function appendCodexProcessErrorTail(context: CodexSessionContext, message: string): string {
+  const cutoff = Date.now() - CODEX_PROCESS_ERROR_TAIL_MAX_AGE_MS;
+  const stderrTail = context.recentProcessErrors
+    ?.filter((entry) => entry.recordedAt >= cutoff)
+    .map((entry) => entry.message)
+    .join(" | ");
+  if (!stderrTail || message.includes(stderrTail)) {
+    return message;
+  }
+  return `${message} Process stderr: ${stderrTail}`;
+}
+
+function combineCodexFailureWithCleanupError(
+  message: string,
+  cause: unknown,
+  cleanupCause: unknown,
+): Error {
+  const cleanupMessage =
+    cleanupCause instanceof Error ? cleanupCause.message : String(cleanupCause);
+  const originalError = cause instanceof Error ? cause : new Error(message, { cause });
+  const cleanupError =
+    cleanupCause instanceof Error
+      ? cleanupCause
+      : new Error(cleanupMessage, { cause: cleanupCause });
+  return new Error(`${message} Codex process cleanup also failed: ${cleanupMessage}`, {
+    cause: new AggregateError([originalError, cleanupError]),
+  });
+}
 
 function getRecentCacheEntry<K, V>(cache: Map<K, V>, key: K): V | undefined {
   const value = cache.get(key);
@@ -1262,13 +1315,22 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       return { ...context.session };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start Codex session.";
+      let cleanupError: unknown;
       if (context) {
         this.updateSession(context, {
           status: "error",
           lastError: message,
         });
         this.emitErrorEvent(context, "session/startFailed", message);
-        await this.stopSession(threadId);
+        try {
+          await this.stopSession(threadId);
+        } catch (cause) {
+          cleanupError = cause;
+          log.error("failed to clean up Codex process tree after session start failure", {
+            threadId,
+            error: cause,
+          });
+        }
       } else {
         gatewaySessionLease?.release();
         this.emitEvent({
@@ -1283,6 +1345,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           method: "session/startFailed",
           message,
         });
+      }
+      if (cleanupError !== undefined) {
+        throw combineCodexFailureWithCleanupError(message, error, cleanupError);
       }
       throw new Error(message, { cause: error });
     }
@@ -1946,15 +2011,27 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to fork Codex thread.";
+      let cleanupError: unknown;
       if (context) {
         this.updateSession(context, {
           status: "error",
           lastError: message,
         });
         this.emitErrorEvent(context, "session/threadForkFailed", message);
-        await this.stopSession(threadId);
+        try {
+          await this.stopSession(threadId);
+        } catch (cause) {
+          cleanupError = cause;
+          log.error("failed to clean up Codex process tree after thread fork failure", {
+            threadId,
+            error: cause,
+          });
+        }
       } else {
         gatewaySessionLease?.release();
+      }
+      if (cleanupError !== undefined) {
+        throw combineCodexFailureWithCleanupError(message, error, cleanupError);
       }
       throw new Error(message, { cause: error });
     }
@@ -2270,61 +2347,76 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     context.pending.clear();
   }
 
-  async stopSession(threadId: ThreadId): Promise<void> {
-    const context = this.sessions.get(threadId);
-    if (!context) {
-      return;
-    }
+  private stopContext(
+    context: CodexSessionContext,
+    input: {
+      readonly pendingError: Error;
+      readonly closeError: Error;
+      readonly humanRequestReason: string;
+      readonly lifecycleEvent?: {
+        readonly method: "session/closed" | "session/exited";
+        readonly message: string;
+      };
+    },
+  ): Promise<void> {
     if (context.stopPromise) {
       return context.stopPromise;
     }
 
+    const threadId = context.session.threadId;
     let settleBeforeTeardown: Promise<void> | undefined;
     if (!context.stopping) {
       context.stopping = true;
       this.clearTaskCompleteFallback(context);
       context.gatewaySessionLease?.release();
 
-      this.rejectPendingRequests(context, new Error("Session stopped before request completed."));
+      this.rejectPendingRequests(context, input.pendingError);
       if (this.hasPendingHumanRequests(context)) {
         // Answer parked server requests while stdin is still writable, then close.
         // Time-boxed so a child that stopped reading stdin cannot stall teardown.
         settleBeforeTeardown = withCodexPendingSettleDeadline(
-          this.settlePendingHumanRequests(context, "session stopped"),
+          this.settlePendingHumanRequests(context, input.humanRequestReason),
         ).finally(() => {
-          context.stdinWriter?.close(new Error("Codex session stopped"));
+          context.stdinWriter?.close(input.closeError);
         });
       } else {
-        context.stdinWriter?.close(new Error("Codex session stopped"));
+        context.stdinWriter?.close(input.closeError);
       }
 
       context.detachStdout?.();
 
-      // The session becomes unroutable immediately, but remains in the map as a
-      // replacement barrier until teardown proves the old process tree exited.
-      // Otherwise a failed proof could let startSession spawn a second engine
-      // process for the same thread.
+      // The session becomes unroutable immediately, but remains in its owner map
+      // as a replacement barrier until teardown proves the whole old process tree exited.
       this.updateSession(context, {
         status: "closed",
         activeTurnId: undefined,
       });
-      this.emitLifecycleEvent(context, "session/closed", "Session stopped");
+      if (input.lifecycleEvent) {
+        this.emitLifecycleEvent(context, input.lifecycleEvent.method, input.lifecycleEvent.message);
+      }
     }
+
     let stopPromise: Promise<void>;
     // Teardown starts synchronously unless parked requests still need answering,
-    // so a stop with nothing parked stays as prompt as it was before settling.
+    // so a stop with nothing parked stays prompt.
     const teardown = settleBeforeTeardown
       ? settleBeforeTeardown.then(() => this.teardownContextProcess(context))
       : this.teardownContextProcess(context);
     stopPromise = teardown.then(
       () => {
-        if (this.sessions.get(threadId) === context) {
+        if (context.discovery) {
+          const discoveryKey = context.session.cwd ?? "";
+          if (discoveryKey && this.discoverySessions.get(discoveryKey) === context) {
+            this.discoverySessions.delete(discoveryKey);
+          }
+        } else if (this.sessions.get(threadId) === context) {
           this.sessions.delete(threadId);
         }
       },
       (error: unknown) => {
         log.error("codex app-server teardown did not prove process-tree exit", {
           threadId,
+          discovery: context.discovery === true,
           error,
         });
         // A later stop/start may retry proof after the process has exited.
@@ -2336,6 +2428,22 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     );
     context.stopPromise = stopPromise;
     return stopPromise;
+  }
+
+  async stopSession(threadId: ThreadId): Promise<void> {
+    const context = this.sessions.get(threadId);
+    if (!context) {
+      return;
+    }
+    return this.stopContext(context, {
+      pendingError: new Error("Session stopped before request completed."),
+      closeError: new Error("Codex session stopped"),
+      humanRequestReason: "session stopped",
+      lifecycleEvent: {
+        method: "session/closed",
+        message: "Session stopped",
+      },
+    });
   }
 
   listSessions(): EngineSession[] {
@@ -2835,38 +2943,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     if (!context) {
       return;
     }
-    if (context.stopPromise) {
-      return context.stopPromise;
-    }
-
-    context.stopping = true;
-    this.rejectPendingRequests(
-      context,
-      new Error("Discovery session stopped before request completed."),
-    );
-    context.detachStdout?.();
-    context.stdinWriter?.close(new Error("Codex discovery session stopped"));
-    // Keep a non-routable replacement barrier until exit is proven.
-    let stopPromise: Promise<void>;
-    stopPromise = this.teardownContextProcess(context).then(
-      () => {
-        if (this.discoverySessions.get(discoveryKey) === context) {
-          this.discoverySessions.delete(discoveryKey);
-        }
-      },
-      (error: unknown) => {
-        log.error("codex discovery teardown did not prove process-tree exit", {
-          discoveryKey,
-          error,
-        });
-        if (context.stopPromise === stopPromise) {
-          delete context.stopPromise;
-        }
-        throw error;
-      },
-    );
-    context.stopPromise = stopPromise;
-    return stopPromise;
+    return this.stopContext(context, {
+      pendingError: new Error("Discovery session stopped before request completed."),
+      closeError: new Error("Codex discovery session stopped"),
+      humanRequestReason: "discovery session stopped",
+    });
   }
 
   private attachProcessListeners(context: CodexSessionContext): void {
@@ -2884,6 +2965,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if (context.stopping) return;
       try {
         context.stdoutFramer.finish();
+      } catch (cause) {
+        this.handleTransportFailure(context, cause);
+        return;
+      }
+
+      // stdout and stderr are independent pipes. A naturally exiting Windows
+      // `.cmd` shim can close stdout just before its final stderr bytes and exit
+      // event arrive. Defer one event-loop turn so the terminal owner can retain
+      // those diagnostics; a process that only closes stdout still fails promptly.
+      const failure = setImmediate(() => {
+        if (context.stopping) return;
         this.handleTransportFailure(
           context,
           new CodexAppServerTransportError({
@@ -2892,9 +2984,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
             observedBytes: 0,
           }),
         );
-      } catch (cause) {
-        this.handleTransportFailure(context, cause);
-      }
+      });
+      failure.unref();
     };
     context.child.stdout.on("data", onStdoutData);
     context.child.stdout.once("end", onStdoutEnd);
@@ -2917,6 +3008,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           continue;
         }
 
+        recordCodexProcessError(context, classified.message);
         this.emitErrorEvent(context, "process/stderr", classified.message);
       }
     });
@@ -2928,30 +3020,35 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         return;
       }
 
-      context.detachStdout?.();
-      this.clearTaskCompleteFallback(context);
-      context.gatewaySessionLease?.release();
-      const message = `codex app-server exited (code=${code ?? "null"}, signal=${signal ?? "null"}).`;
+      const message = appendCodexProcessErrorTail(
+        context,
+        `codex app-server exited (code=${code ?? "null"}, signal=${signal ?? "null"}).`,
+      );
       const exitError = new Error(message);
-      context.stdinWriter.close(exitError);
-      this.rejectPendingRequests(context, exitError);
-      // The child is gone, so the responses cannot land; settling still clears
-      // the maps and emits the resolutions that close the pending UI cards.
-      void this.settlePendingHumanRequests(context, "session exited");
       this.updateSession(context, {
         status: "closed",
         activeTurnId: undefined,
         lastError: code === 0 ? context.session.lastError : message,
       });
-      this.emitLifecycleEvent(context, "session/exited", message);
-      if (context.discovery) {
-        const discoveryKey = context.session.cwd ?? "";
-        if (discoveryKey) {
-          this.discoverySessions.delete(discoveryKey);
-        }
-      } else {
-        this.sessions.delete(context.session.threadId);
-      }
+      const stopping = this.stopContext(context, {
+        pendingError: exitError,
+        closeError: exitError,
+        humanRequestReason: "session exited",
+        ...(context.discovery
+          ? {}
+          : {
+              lifecycleEvent: {
+                method: "session/exited" as const,
+                message,
+              },
+            }),
+      });
+      void stopping.catch((stopError) => {
+        log.error("failed to finish Codex process-tree cleanup after process exit", {
+          threadId: context.session.threadId,
+          error: stopError,
+        });
+      });
     });
   }
 
@@ -2959,16 +3056,29 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     if (context.stopping) return;
     const error =
       cause instanceof Error ? cause : new Error("Codex app-server transport failed", { cause });
-    const message =
+    const message = appendCodexProcessErrorTail(
+      context,
       error instanceof CodexAppServerTransportError
         ? error.message
-        : `Codex app-server transport failed: ${error.message}`;
+        : `Codex app-server transport failed: ${error.message}`,
+    );
+    const transportError = new Error(message, { cause: error });
     this.updateSession(context, { status: "error", lastError: message });
     this.emitErrorEvent(context, "protocol/transportError", message);
 
-    const stopping = context.discovery
-      ? this.stopDiscoverySession(context.session.cwd ?? "")
-      : this.stopSession(context.session.threadId);
+    const stopping = this.stopContext(context, {
+      pendingError: transportError,
+      closeError: transportError,
+      humanRequestReason: "transport failed",
+      ...(context.discovery
+        ? {}
+        : {
+            lifecycleEvent: {
+              method: "session/closed" as const,
+              message: "Session stopped after Codex transport failure",
+            },
+          }),
+    });
     void stopping.catch((stopError) => {
       log.error("failed to stop Codex session after transport error", {
         threadId: context.session.threadId,
