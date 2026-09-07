@@ -1,6 +1,8 @@
 import {
   defaultProcessTreeKiller,
+  terminateProcessTree,
   type CapturedProcess,
+  type ProcessChildrenMap,
   type ProcessTreeKiller,
   type TerminalKillSignal,
 } from "../platform/processTreeController";
@@ -103,12 +105,74 @@ function waitForOwnedProcessExit(process: ProcessExitHandle): Promise<void> {
   });
 }
 
-export async function teardownChildProcessTree(
+export interface WindowsOwnedProcessTeardownOptions {
+  readonly graceMs?: number;
+  readonly timeoutMs?: number;
+  readonly pollIntervalMs?: number;
+  readonly platform?: NodeJS.Platform;
+  readonly captureWindowsChildren?: () => Promise<ProcessChildrenMap | null>;
+  readonly processTreeKiller?: ProcessTreeKiller;
+}
+
+/**
+ * Windows twin of the supervised teardown. The synchronous killer cannot
+ * capture descendants on win32, so `teardownEngineProcessTree` can never prove
+ * exit there; this variant drives the async Windows process-table observer
+ * (`terminateProcessTree`) while keeping the same prove-or-fail-closed
+ * contract as the POSIX flow.
+ */
+export async function teardownWindowsOwnedProcessTree(
   process: ProcessExitHandle,
-  teardownProcessTree: typeof teardownEngineProcessTree = teardownEngineProcessTree,
+  options: WindowsOwnedProcessTeardownOptions = {},
 ): Promise<SupervisedProcessTeardownResult> {
   if (process.pid === undefined) {
     throw new Error("Cannot prove process exit because the spawned process has no PID.");
+  }
+  const signalErrors: Error[] = [];
+  const termination = await terminateProcessTree(process.pid, {
+    rootExited: () => process.exitCode !== null || process.signalCode !== null,
+    graceMs: options.graceMs ?? DEFAULT_TERM_GRACE_MS,
+    timeoutMs: options.timeoutMs ?? DEFAULT_TERM_GRACE_MS + DEFAULT_FORCE_EXIT_MS,
+    ...(options.pollIntervalMs !== undefined ? { pollIntervalMs: options.pollIntervalMs } : {}),
+    ...(options.platform !== undefined ? { platform: options.platform } : {}),
+    ...(options.captureWindowsChildren !== undefined
+      ? { captureWindowsChildren: options.captureWindowsChildren }
+      : {}),
+    ...(options.processTreeKiller !== undefined
+      ? { processTreeKiller: options.processTreeKiller }
+      : {}),
+    onError: (error) => signalErrors.push(error),
+  });
+
+  if (!termination.rootExited || !termination.verified || termination.survivors.length > 0) {
+    throw new EngineProcessExitUnprovenError({
+      rootPid: process.pid,
+      rootExited: termination.rootExited,
+      remainingDescendantPids: termination.verified
+        ? termination.survivors.map((descendant) => descendant.pid)
+        : null,
+      captureComplete: termination.verified,
+    });
+  }
+  return { escalated: termination.forced, signalErrors };
+}
+
+export async function teardownChildProcessTree(
+  process: ProcessExitHandle,
+  teardownProcessTree: typeof teardownEngineProcessTree = teardownEngineProcessTree,
+  windowsOptions?: WindowsOwnedProcessTeardownOptions,
+): Promise<SupervisedProcessTeardownResult> {
+  if (process.pid === undefined) {
+    throw new Error("Cannot prove process exit because the spawned process has no PID.");
+  }
+  // The default supervised teardown captures descendants through the synchronous
+  // POSIX killer, which cannot snapshot the Windows process table; on win32 it
+  // would fail closed on every teardown and strand otherwise successful engine
+  // work (for example Claude cold model discovery) as unproven. Injected
+  // teardown doubles keep their own semantics.
+  const platform = windowsOptions?.platform ?? globalThis.process.platform;
+  if (platform === "win32" && teardownProcessTree === teardownEngineProcessTree) {
+    return teardownWindowsOwnedProcessTree(process, windowsOptions);
   }
   return teardownProcessTree({
     rootPid: process.pid,
