@@ -259,6 +259,70 @@ async function requestVoiceTranscriptionUpload(
 
 class VoiceUploadRouteUnavailableError extends Error {}
 
+// The Server's WS admission control caps engine model/agent discovery at two
+// concurrent requests per client (see wsRequestAdmission.ts). Picker surfaces
+// mount one models query per Engine at the same time, so an unbounded fan-out
+// is rejected wholesale with capacity errors that catalog queries deliberately
+// do not retry. Mirroring the lane here keeps every request admitted in FIFO
+// order instead of surfacing "model catalog unavailable" on a cold picker.
+const ENGINE_DISCOVERY_LANE_LIMIT = 2;
+
+function toAbortError(signal: AbortSignal | undefined): unknown {
+  return signal?.reason ?? new DOMException("Aborted", "AbortError");
+}
+
+function createEngineDiscoveryLane() {
+  let active = 0;
+  const queue: Array<{ started: boolean; readonly start: () => void }> = [];
+  const pump = () => {
+    while (active < ENGINE_DISCOVERY_LANE_LIMIT && queue.length > 0) {
+      const task = queue.shift();
+      if (!task || task.started) continue;
+      task.started = true;
+      active += 1;
+      task.start();
+    }
+  };
+  return {
+    run<T>(request: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+      if (signal?.aborted) {
+        return Promise.reject(toAbortError(signal));
+      }
+      return new Promise<T>((resolve, reject) => {
+        const task = {
+          started: false,
+          start: () => {
+            request().then(
+              (value) => {
+                active -= 1;
+                pump();
+                resolve(value);
+              },
+              (error) => {
+                active -= 1;
+                pump();
+                reject(error);
+              },
+            );
+          },
+        };
+        // Aborting after dispatch is owned by the transport's own signal wiring;
+        // the queue only drops requests that never left.
+        const onAbort = () => {
+          if (task.started) return;
+          const index = queue.indexOf(task);
+          if (index === -1) return;
+          queue.splice(index, 1);
+          reject(toAbortError(signal));
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
+        queue.push(task);
+        pump();
+      });
+    },
+  };
+}
+
 function createFallbackTab(url = "about:blank") {
   return {
     id: crypto.randomUUID(),
@@ -417,6 +481,7 @@ export function createWsNativeApi(): NativeApi {
   }
 
   const transport = new WsTransport();
+  const engineDiscoveryLane = createEngineDiscoveryLane();
   let unsubscribeDomainEventTransport: (() => void) | null = null;
   transport.onStateChange((state) => emitWsTransportState(state), {
     replayCurrent: true,
@@ -767,16 +832,24 @@ export function createWsNativeApi(): NativeApi {
       listPlugins: (input) => transport.request(WS_METHODS.engineListPlugins, input),
       readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
       listModels: (input, options) =>
-        transport.request(
-          WS_METHODS.engineListModels,
-          input,
-          options?.signal ? { signal: options.signal } : undefined,
+        engineDiscoveryLane.run(
+          () =>
+            transport.request(
+              WS_METHODS.engineListModels,
+              input,
+              options?.signal ? { signal: options.signal } : undefined,
+            ),
+          options?.signal,
         ),
       listAgents: (input, options) =>
-        transport.request(
-          WS_METHODS.engineListAgents,
-          input,
-          options?.signal ? { signal: options.signal } : undefined,
+        engineDiscoveryLane.run(
+          () =>
+            transport.request(
+              WS_METHODS.engineListAgents,
+              input,
+              options?.signal ? { signal: options.signal } : undefined,
+            ),
+          options?.signal,
         ),
     },
     oaModelServices: {

@@ -212,6 +212,107 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("queues engine model discovery at the Server admission lane limit", async () => {
+    const resolvers: Array<(value: unknown) => void> = [];
+    const resolveQueued = (index: number, value: unknown) => {
+      const resolve = resolvers[index];
+      if (!resolve) throw new Error(`missing resolver ${index}`);
+      resolve(value);
+    };
+    requestMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const first = api.engine.listModels({ engine: "oa" });
+    const second = api.engine.listModels({ engine: "claude" });
+    const third = api.engine.listModels({ engine: "codex" });
+    const fourth = api.engine.listAgents({ engine: "codex" });
+
+    expect(requestMock).toHaveBeenCalledTimes(2);
+
+    resolveQueued(0, "oa-catalog");
+    await expect(first).resolves.toBe("oa-catalog");
+    // The freed slot was handed to the next queued request in FIFO order.
+    expect(requestMock).toHaveBeenCalledTimes(3);
+    expect(requestMock.mock.calls[2]?.[0]).toBe(WS_METHODS.engineListModels);
+    expect(requestMock.mock.calls[2]?.[1]).toEqual({ engine: "codex" });
+
+    resolveQueued(1, "claude-catalog");
+    await second;
+    resolveQueued(2, "codex-catalog");
+    resolveQueued(3, "codex-agents");
+    await expect(second).resolves.toBe("claude-catalog");
+    await expect(third).resolves.toBe("codex-catalog");
+    await expect(fourth).resolves.toBe("codex-agents");
+  });
+
+  it("frees the lane slot when a dispatched request rejects", async () => {
+    const resolvers: Array<(value: unknown) => void> = [];
+    const resolveQueued = (index: number, value: unknown) => {
+      const resolve = resolvers[index];
+      if (!resolve) throw new Error(`missing resolver ${index}`);
+      resolve(value);
+    };
+    requestMock.mockImplementation((_method: unknown, input: unknown) => {
+      const { engine } = input as { engine: string };
+      if (engine === "oa") {
+        return Promise.reject(new Error("discovery failed"));
+      }
+      return new Promise((resolve) => {
+        resolvers.push(resolve);
+      });
+    });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const first = api.engine.listModels({ engine: "oa" });
+    const second = api.engine.listModels({ engine: "claude" });
+    const third = api.engine.listModels({ engine: "codex" });
+
+    await expect(first).rejects.toThrow("discovery failed");
+    expect(requestMock).toHaveBeenCalledTimes(3);
+    expect(requestMock.mock.calls[2]?.[1]).toEqual({ engine: "codex" });
+
+    resolveQueued(0, "claude-catalog");
+    resolveQueued(1, "codex-catalog");
+    await expect(second).resolves.toBe("claude-catalog");
+    await expect(third).resolves.toBe("codex-catalog");
+  });
+
+  it("drops queued engine discovery requests when their signal aborts", async () => {
+    requestMock.mockImplementation(() => new Promise(() => {}));
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    void api.engine.listModels({ engine: "oa" });
+    void api.engine.listModels({ engine: "claude" });
+    const controller = new AbortController();
+    const queued = api.engine.listModels({ engine: "codex" }, { signal: controller.signal });
+
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    controller.abort();
+
+    await expect(queued).rejects.toBe(controller.signal.reason);
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects engine discovery immediately when the signal is already aborted", async () => {
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      api.engine.listModels({ engine: "codex" }, { signal: controller.signal }),
+    ).rejects.toBe(controller.signal.reason);
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
   it("delivers and caches valid server.welcome payloads", async () => {
     const { createWsNativeApi, onServerWelcome } = await import("./wsNativeApi");
 
