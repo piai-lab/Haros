@@ -2891,7 +2891,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       this.scheduleDiscoverySessionIdleStop(normalizedCwd);
       return context;
     } catch (error) {
-      await this.stopDiscoverySession(normalizedCwd);
+      try {
+        await this.stopDiscoverySession(normalizedCwd);
+      } catch (cleanupError) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw combineCodexFailureWithCleanupError(message, error, cleanupError);
+      }
       throw error;
     }
   }
