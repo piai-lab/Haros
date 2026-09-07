@@ -122,12 +122,14 @@ export function parseWindowsProcessSnapshotLine(
   const fields = line.split("\t");
   if (fields.length !== 3 && fields.length !== 4) return null;
   const [pidRaw, ppidRaw] = fields;
+  if (!pidRaw?.trim() || !ppidRaw?.trim()) return null;
   const startedAtRaw = fields.length === 4 ? fields[2] : undefined;
   const encodedCommand = fields.at(-1);
   if (!encodedCommand) return null;
   const pid = Number(pidRaw);
   const ppid = Number(ppidRaw);
-  if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(ppid) || ppid < 0) return null;
+  if (!Number.isInteger(pid) || pid < 0 || !Number.isInteger(ppid) || ppid < 0) return null;
+  if (pid === 0 && ppid !== 0) return null;
   const command = decodeSnapshotCommand(encodedCommand);
   if (command === null) return null;
   const startedAt = startedAtRaw?.trim();
@@ -240,6 +242,10 @@ class PowerShellProcessSnapshotWorker implements ProcessChildrenSnapshotWorker {
       this.fail(new Error("Windows process snapshot contained a malformed process row."));
       return;
     }
+    // CIM includes System Idle Process (PID/PPID 0). It is a valid inventory
+    // record, but not a process we can track or terminate. Validate it above,
+    // then exclude it without discarding the rest of the snapshot.
+    if (process.pid === 0) return;
     const siblings = pending.childrenByParentPid.get(process.ppid) ?? [];
     siblings.push({
       pid: process.pid,
