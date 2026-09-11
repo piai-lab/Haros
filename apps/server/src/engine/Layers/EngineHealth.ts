@@ -1,4 +1,7 @@
-import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
+import {
+  ENGINE_DESCRIPTOR_BY_KIND,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "@harnessos/shared/engineMetadata";
 /**
  * EngineHealthLive - Cache-backed engine health service.
  *
@@ -98,6 +101,7 @@ import {
   type PackageManagedEngineMaintenanceDefinition,
 } from "../engineMaintenance";
 import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
+import { installManagedEngine } from "../managedEngineInstall";
 import {
   orderEngineStatuses,
   readEngineStatusCache,
@@ -2139,7 +2143,10 @@ export function projectEngineStatusesForSettings(
 
 // ── Layer ───────────────────────────────────────────────────────────
 
-export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?: number }) {
+export function makeEngineHealthLive(options?: {
+  readonly engineUpdateTimeoutMs?: number;
+  readonly managedInstall?: typeof installManagedEngine;
+}) {
   const engineUpdateTimeoutMs = options?.engineUpdateTimeoutMs ?? ENGINE_UPDATE_TIMEOUT_MS;
   return Layer.effect(
     EngineHealth,
@@ -2604,9 +2611,9 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
             shell: prepared.shell,
             ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
             env: updateEnv,
+            stdin: "ignore",
           }),
         );
-        yield* Effect.addFinalizer(() => child.kill().pipe(Effect.ignore));
         const [stdout, stderr, exitCode] = yield* Effect.all(
           [
             collectUint8StreamText({
@@ -2644,6 +2651,93 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           return yield* new ServerEngineUpdateError({
             engine,
             reason: "Engine is disabled in Haros settings.",
+          });
+        }
+        if (ENGINE_DESCRIPTOR_BY_KIND[engine].installation) {
+          return yield* commandCoordinator.withCommandLock({
+            targetKey: engine,
+            lockKey: `managed-install:${engine}`,
+            onQueued: setEngineUpdateState(
+              engine,
+              makeUpdateState({
+                status: "queued",
+                startedAt: null,
+                finishedAt: null,
+                message: "Waiting for engine installation.",
+              }),
+            ).pipe(Effect.asVoid),
+            run: Effect.gen(function* () {
+              const startedAt = yield* nowIso;
+              const result = yield* (options?.managedInstall ?? installManagedEngine)({
+                engine,
+                root: path.join(serverConfig.stateDir, "engines"),
+                ...(process.env.HARNESSOS_ENGINE_MIRROR_URL
+                  ? { mirrorUrl: process.env.HARNESSOS_ENGINE_MIRROR_URL }
+                  : {}),
+                run: (command, args) =>
+                  runUpdateCommand({ engine, command, args }).pipe(Effect.scoped),
+                progress: (message) =>
+                  setEngineUpdateState(
+                    engine,
+                    makeUpdateState({ status: "running", startedAt, finishedAt: null, message }),
+                  ).pipe(Effect.asVoid),
+              }).pipe(
+                Effect.scoped,
+                Effect.timeoutOrElse({
+                  duration: Duration.millis(options?.engineUpdateTimeoutMs ?? 30 * 60_000),
+                  onTimeout: () =>
+                    Effect.fail(
+                      new Error(
+                        `Installation timed out after ${formatEngineUpdateTimeout(options?.engineUpdateTimeoutMs ?? 30 * 60_000)}. The installation was stopped.`,
+                      ),
+                    ),
+                }),
+                Effect.result,
+              );
+              if (Result.isFailure(result)) {
+                const engines = yield* setEngineUpdateState(
+                  engine,
+                  makeUpdateState({
+                    status: "failed",
+                    startedAt,
+                    finishedAt: yield* nowIso,
+                    message: describeUpdateCommandError(result.failure),
+                  }),
+                );
+                return { engines };
+              }
+              yield* serverSettings
+                .updateSettings({
+                  engines: { [engine]: { binaryPath: result.success.binaryPath } },
+                })
+                .pipe(Effect.mapError(toUpdateError));
+              const statuses = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+              const installedStatus = statuses.find((status) => status.engine === engine);
+              const available = installedStatus?.available;
+              if (!available) {
+                yield* serverSettings
+                  .updateSettings({
+                    engines: {
+                      [engine]: { binaryPath: getEngineBinaryPath(engine, settings) ?? "" },
+                    },
+                  })
+                  .pipe(Effect.mapError(toUpdateError));
+                yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+              }
+              const engines = yield* setEngineUpdateState(
+                engine,
+                makeUpdateState({
+                  status: available ? "succeeded" : "failed",
+                  startedAt,
+                  finishedAt: yield* nowIso,
+                  message: available
+                    ? "Engine installed and verified."
+                    : `Executable installed, but the engine health check failed. Previous executable selection was restored. ${installedStatus?.message ?? ""}`,
+                  output: result.success.output,
+                }),
+              );
+              return { engines };
+            }),
           });
         }
         const capabilities = yield* getEngineMaintenanceCapabilities(engine).pipe(

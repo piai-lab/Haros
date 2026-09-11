@@ -1,6 +1,9 @@
 import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
+  "settings.engineBundledInstallation":
+    "Pi is included with Haros and is updated with the desktop application.",
+  "settings.engineInstalling": "Downloading, installing and verifying…",
   "settings.engines": "Agent engines",
   "settings.defaultEngine": "Default engine",
   "settings.defaultEngineDescription": "Choose the engine used for new chats.",
@@ -105,6 +108,8 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
+  "settings.engineBundledInstallation": "Pi 已随 Haros 内置安装，其版本随桌面应用更新。",
+  "settings.engineInstalling": "正在下载、安装并验证…",
   "settings.engines": "Agent 引擎",
   "settings.defaultEngine": "默认引擎",
   "settings.defaultEngineDescription": "选择新 Chat 默认使用的引擎。",

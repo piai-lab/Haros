@@ -26,11 +26,20 @@ import {
 } from "@harnessos/contracts";
 import {
   ENGINE_DISPLAY_NAMES,
+  ENGINE_DESCRIPTOR_BY_KIND,
   RUNNABLE_ENGINE_DESCRIPTORS,
 } from "@harnessos/shared/engineMetadata";
 import { deepMerge } from "@harnessos/shared/Struct";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
 import { sameEngineOrder } from "~/engineOrdering";
@@ -49,7 +58,6 @@ import {
   isEngineLatestVersionKnowable,
   isEngineUpdateActive,
   shouldOfferEngineUpdateAction,
-  shouldPromptEngineUpdate,
   shouldShowEngineUpdateStatus,
   withEngineUpdateTimeout,
 } from "~/engineUpdates";
@@ -728,24 +736,35 @@ function SortableEngineVisibilityRow(props: {
   );
 }
 
-function EngineDocsLinks({ docs }: { docs: EngineInstallSettings["docs"] }) {
+function EngineDocsLinks({
+  docs,
+  action,
+}: {
+  docs: EngineInstallSettings["docs"];
+  action: ReactNode;
+}) {
   const { t } = useI18n();
   return (
     <div className={cn(SETTINGS_OUTLINED_SURFACE_CLASS_NAME, "px-3 py-2.5")}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs font-medium text-foreground">{t("settings.cliDocs")}</span>
         <div className="flex flex-wrap gap-2">
-          {docs.map((doc) => (
-            <Button
-              key={`${doc.labelKey}:${doc.href}`}
-              variant="outline"
-              size="sm"
-              render={<a href={doc.href} target="_blank" rel="noreferrer" />}
-            >
-              <span>{t(doc.labelKey)}</span>
-              <ExternalLinkIcon className="size-3" />
-            </Button>
-          ))}
+          {action}
+          {docs
+            .filter(
+              (doc) => doc.labelKey !== "settings.install" && doc.labelKey !== "settings.update",
+            )
+            .map((doc) => (
+              <Button
+                key={`${doc.labelKey}:${doc.href}`}
+                variant="outline"
+                size="sm"
+                render={<a href={doc.href} target="_blank" rel="noreferrer" />}
+              >
+                <span>{t(doc.labelKey)}</span>
+                <ExternalLinkIcon className="size-3" />
+              </Button>
+            ))}
         </div>
       </div>
     </div>
@@ -782,7 +801,7 @@ export function engineUpdateFailureMessage(
   fallback: string,
 ): string | null {
   const state = engine?.updateState;
-  if (engine?.versionAdvisory?.status === "behind_latest") {
+  if (engine?.versionAdvisory?.status === "behind_latest" && state?.status !== "succeeded") {
     return state?.message?.trim() || fallback;
   }
   if (!state || (state.status !== "failed" && state.status !== "unchanged")) return null;
@@ -802,7 +821,7 @@ function EngineUpdateAction(props: {
   return (
     <Button
       type="button"
-      size="xs"
+      size="sm"
       variant="outline"
       disabled={props.disabled}
       title={
@@ -820,7 +839,9 @@ function EngineUpdateAction(props: {
       ) : (
         <DownloadIcon className="size-3.5" />
       )}
-      {props.active ? t("settings.updatingEngine") : t("settings.update")}
+      {props.active
+        ? t("settings.engineInstalling")
+        : t(props.engineStatus.available ? "settings.update" : "settings.install")}
     </Button>
   );
 }
@@ -1169,10 +1190,6 @@ function EngineToolRow(props: {
     (props.engineStatus && isEngineUpdateActive(props.engineStatus)) ||
     props.updatingEngines.has(props.config.engine),
   );
-  const showUpdateButton = props.engineStatus
-    ? shouldPromptEngineUpdate(props.engineStatus) &&
-      (showEngineUpdateStatus || updateAdvisory?.status === "unknown")
-    : false;
   // Self-updating CLIs never report a latest version, so the update stays available
   // inside the panel rather than as a header badge that can never be satisfied.
   const showSelfManagedUpdate = props.engineStatus
@@ -1211,21 +1228,51 @@ function EngineToolRow(props: {
               className="size-4 shrink-0 text-muted-foreground"
             />
           </CollapsibleTrigger>
-          {showUpdateButton && props.engineStatus ? (
-            <EngineUpdateAction
-              engineStatus={props.engineStatus}
-              active={updateActive}
-              disabled={updateActive}
-              onUpdate={props.onUpdate}
-            />
-          ) : null}
         </div>
 
         <CollapsiblePanel>
           <div className="border-t border-border/70 bg-muted/20 px-3 py-3">
             <div className="space-y-3">
-              <EngineDocsLinks docs={props.config.docs} />
-              {showEngineUpdateStatus && updateAdvisory?.status === "behind_latest" ? (
+              <EngineDocsLinks
+                docs={props.config.docs}
+                action={
+                  ENGINE_DESCRIPTOR_BY_KIND[props.config.engine].installation &&
+                  props.engineStatus ? (
+                    <EngineUpdateAction
+                      engineStatus={props.engineStatus}
+                      active={updateActive}
+                      disabled={updateActive}
+                      onUpdate={props.onUpdate}
+                    />
+                  ) : null
+                }
+              />
+              {props.config.engine === "pi" ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.engineBundledInstallation")}
+                </p>
+              ) : null}
+              {props.engineStatus?.updateState ? (
+                <div role="status" className="text-xs text-muted-foreground" aria-live="polite">
+                  {updateActive
+                    ? t("settings.engineInstalling")
+                    : engineUpdateStatusLabel(props.engineStatus, t)}
+                  {updateActive &&
+                  props.engineStatus.updateState.message?.startsWith("Downloading ") ? (
+                    <p className="mt-1">
+                      {props.engineStatus.updateState.message.replace(/^Downloading /, "")}
+                    </p>
+                  ) : null}
+                  {props.engineStatus.updateState.status === "failed" ? (
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {props.engineStatus.updateState.message}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {showEngineUpdateStatus &&
+              !ENGINE_DESCRIPTOR_BY_KIND[props.config.engine].installation &&
+              updateAdvisory?.status === "behind_latest" ? (
                 <div className="text-xs text-muted-foreground">
                   {updateAdvisory.canUpdate && updateAdvisory.updateCommand ? (
                     <>
@@ -1237,7 +1284,9 @@ function EngineToolRow(props: {
                   )}
                 </div>
               ) : null}
-              {showSelfManagedUpdate && props.engineStatus ? (
+              {showSelfManagedUpdate &&
+              !ENGINE_DESCRIPTOR_BY_KIND[props.config.engine].installation &&
+              props.engineStatus ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 text-xs text-muted-foreground">
                     {t("settings.selfManagedUpdate", { engine: title })}
@@ -1451,7 +1500,9 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             ? engineUpdateFailureMessage(refreshedEngine, t("settings.engineUpdateIncomplete"))
             : t("settings.engineUpdateIncomplete");
           if (failureMessage) {
-            const manualCommand = refreshedEngine?.versionAdvisory?.updateCommand?.trim();
+            const manualCommand = ENGINE_DESCRIPTOR_BY_KIND[engine].installation
+              ? undefined
+              : refreshedEngine?.versionAdvisory?.updateCommand?.trim();
             if (progressToastDismissed) return;
             toastManager.update(toastId, {
               type: "error",
@@ -1466,7 +1517,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                 onClose: dismissProgressToast,
                 ...(manualCommand ? { copyText: manualCommand } : {}),
               }),
-              timeout: 0,
+              timeout: 15_000,
             });
             return;
           }
@@ -1479,7 +1530,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
               stage: "success",
               onClose: dismissProgressToast,
             }),
-            timeout: 0,
+            timeout: 15_000,
           });
         })
         .catch((error: unknown) => {
@@ -1501,7 +1552,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
               stage: "error",
               onClose: dismissProgressToast,
             }),
-            timeout: 0,
+            timeout: 15_000,
           });
         })
         .finally(() => {
@@ -1602,6 +1653,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                       title={ENGINE_DISPLAY_NAMES[engineStatus.engine]}
                       description={updateLabel || undefined}
                       actions={
+                        ENGINE_DESCRIPTOR_BY_KIND[engineStatus.engine].installation ||
                         engineStatus.versionAdvisory?.canUpdate ? (
                           <EngineUpdateAction
                             engineStatus={engineStatus}

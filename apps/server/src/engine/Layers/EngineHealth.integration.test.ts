@@ -371,7 +371,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       });
     });
 
-    it.effect("stops a hung engine process and persists a failed update state", () =>
+    it.effect("stops a hung engine installation and persists a failed update state", () =>
       Effect.gen(function* () {
         let killed = false;
         const fileSystem = yield* FileSystem.FileSystem;
@@ -406,7 +406,17 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
             },
           },
         } satisfies typeof DEFAULT_SERVER_SETTINGS;
-        const layer = makeEngineHealthLive({ engineUpdateTimeoutMs: 20 }).pipe(
+        const layer = makeEngineHealthLive({
+          engineUpdateTimeoutMs: 20,
+          managedInstall: () =>
+            Effect.never.pipe(
+              Effect.onInterrupt(() =>
+                Effect.sync(() => {
+                  killed = true;
+                }),
+              ),
+            ),
+        }).pipe(
           Layer.provideMerge(ServerSettingsService.layerTest(settings)),
           Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
           Layer.provideMerge(
@@ -430,7 +440,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         assert.strictEqual(kilo?.updateState?.status, "failed");
         assert.strictEqual(
           kilo?.updateState?.message,
-          "Update timed out after 20 milliseconds. The engine process was stopped.",
+          "Installation timed out after 20 milliseconds. The installation was stopped.",
         );
       }),
     );
