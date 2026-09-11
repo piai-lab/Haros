@@ -2684,11 +2684,11 @@ export function makeEngineHealthLive(options?: {
               }).pipe(
                 Effect.scoped,
                 Effect.timeoutOrElse({
-                  duration: Duration.millis(options?.engineUpdateTimeoutMs ?? 30 * 60_000),
+                  duration: Duration.millis(options?.engineUpdateTimeoutMs ?? 60 * 60_000),
                   onTimeout: () =>
                     Effect.fail(
                       new Error(
-                        `Installation timed out after ${formatEngineUpdateTimeout(options?.engineUpdateTimeoutMs ?? 30 * 60_000)}. The installation was stopped.`,
+                        `Installation timed out after ${formatEngineUpdateTimeout(options?.engineUpdateTimeoutMs ?? 60 * 60_000)}. The installation was stopped.`,
                       ),
                     ),
                 }),
