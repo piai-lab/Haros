@@ -514,7 +514,7 @@ describe("ServerSettingsService", () => {
 
   it("persists an explicit runtime-catalog model selection exactly", async () => {
     const selection = {
-      engine: "oa" as const,
+      engine: "pi" as const,
       model: "deepseek/deepseek-v4-pro",
       options: { thinkingLevel: "high" as const },
     };
@@ -717,7 +717,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultEngine).toBe("oa");
+    expect(result.reset.defaultEngine).toBe("codex");
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);

@@ -12,8 +12,6 @@
  * @module EngineService
  */
 import type {
-  OAEcosystemReloadInput,
-  OAEcosystemReloadResult,
   EngineBackgroundTaskInput,
   EngineForkThreadInput,
   EngineForkThreadResult,
@@ -147,10 +145,13 @@ export interface EngineServiceShape {
    */
   readonly stopSession: (input: EngineStopSessionInput) => Effect.Effect<void, EngineServiceError>;
 
-  /** Reload resources only on the exact live Haros Agent session. */
-  readonly reloadSessionResources: (
-    input: OAEcosystemReloadInput,
-  ) => Effect.Effect<OAEcosystemReloadResult, EngineServiceError>;
+  /** Reload resources only on the exact live Pi session. */
+  readonly reloadSessionResources: (input: {
+    readonly threadId: ThreadId;
+  }) => Effect.Effect<
+    { readonly state: "reloaded" | "no_active_session" | "different_engine" | "busy" },
+    EngineServiceError
+  >;
 
   /**
    * Stop only the live adapter process/session while preserving the persisted

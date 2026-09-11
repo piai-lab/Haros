@@ -10,34 +10,33 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
-import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
 import serverPackageJson from "../apps/server/package.json" with { type: "json" };
+import rootPackageJson from "../package.json" with { type: "json" };
 
+import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
+import {
+  expectedPrimaryArtifactSuffix,
+  findPrimaryDesktopArtifacts,
+} from "./lib/desktop-artifact-output.ts";
 import {
   createDesktopPlatformBuildConfig,
   MAC_APPSNAP_HELPER_STAGE_PATH,
   MAC_DEVICE_HELPER_RESOURCE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
-import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { acquireElectronDistribution } from "./lib/electron-artifacts.ts";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
-import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeLegalMetadata } from "./lib/legal-metadata.ts";
+import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import {
-  HARNESSOS_OA_RUNTIME_PACKAGE_PATH,
   omitBundledServerWorkspaceDependencies,
   PACKAGED_LOCKFILE_PATH,
   PACKAGED_PATCHES_PATH,
   PACKAGED_WORKSPACE_MANIFEST_PATHS,
 } from "./lib/packaged-workspace-manifests.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
-import {
-  expectedPrimaryArtifactSuffix,
-  findPrimaryDesktopArtifacts,
-} from "./lib/desktop-artifact-output.ts";
-import { acquireElectronDistribution } from "./lib/electron-artifacts.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -625,14 +624,6 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
     path.join(repoRoot, PACKAGED_PATCHES_PATH),
     path.join(stageAppDir, PACKAGED_PATCHES_PATH),
   );
-  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH)), {
-    recursive: true,
-  });
-  yield* fs.copyFile(
-    path.join(repoRoot, HARNESSOS_OA_RUNTIME_PACKAGE_PATH),
-    path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH),
-  );
-
   yield* Effect.log(
     "[desktop-artifact] Installing staged production dependencies from the repository lockfile...",
   );
@@ -682,7 +673,6 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   }
   yield* fs.remove(path.join(stageAppDir, PACKAGED_LOCKFILE_PATH));
   yield* fs.remove(path.join(stageAppDir, PACKAGED_PATCHES_PATH), { recursive: true });
-  yield* fs.remove(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH));
 });
 
 function createBuildConfig(

@@ -2,7 +2,7 @@ import { assert, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
 import { ORCHESTRATION_WS_CHANNELS, ORCHESTRATION_WS_METHODS } from "./orchestration";
-import { WebSocketRequest, WsResponse, WS_CHANNELS, WS_METHODS } from "./ws";
+import { WebSocketRequest, WS_CHANNELS, WS_METHODS, WsResponse } from "./ws";
 
 const decode = <S extends Schema.Top>(
   schema: S,
@@ -110,68 +110,6 @@ it.effect("accepts bounded workspace content search requests", () =>
       assert.strictEqual(parsed.body.query, "needle");
       assert.strictEqual(parsed.body.limit, 80);
     }
-  }),
-);
-
-it.effect("accepts credential-blind Haros model-services requests", () =>
-  Effect.gen(function* () {
-    const list = yield* decode(WebSocketRequest, {
-      id: "req-model-services-list",
-      body: { _tag: WS_METHODS.oaModelServicesList },
-    });
-    const get = yield* decode(WebSocketRequest, {
-      id: "req-model-services-get",
-      body: {
-        _tag: WS_METHODS.oaModelServicesGet,
-        serviceId: "deepseek",
-      },
-    });
-    const reveal = yield* decode(WebSocketRequest, {
-      id: "req-model-services-reveal-key",
-      body: {
-        _tag: WS_METHODS.oaModelServicesRevealApiKey,
-        serviceId: "deepseek",
-      },
-    });
-
-    assert.strictEqual(list.body._tag, WS_METHODS.oaModelServicesList);
-    assert.strictEqual(get.body._tag, WS_METHODS.oaModelServicesGet);
-    assert.strictEqual(reveal.body._tag, WS_METHODS.oaModelServicesRevealApiKey);
-    if (get.body._tag === WS_METHODS.oaModelServicesGet) {
-      assert.deepStrictEqual(Object.keys(get.body).sort(), ["_tag", "serviceId"]);
-    }
-  }),
-);
-
-it.effect("accepts typed Haros model-service credential operations", () =>
-  Effect.gen(function* () {
-    const requestId = "00000000-0000-4000-8000-000000000031";
-    const promptId = "00000000-0000-4000-8000-000000000032";
-    const begin = yield* decode(WebSocketRequest, {
-      id: "req-model-services-login",
-      body: {
-        _tag: WS_METHODS.oaModelServicesBeginLogin,
-        serviceId: "deepseek",
-        authType: "api_key",
-      },
-    });
-    const answer = yield* decode(WebSocketRequest, {
-      id: "req-model-services-answer",
-      body: {
-        _tag: WS_METHODS.oaModelServicesAnswerLogin,
-        requestId,
-        promptId,
-        value: "test-secret",
-      },
-    });
-    const refresh = yield* decode(WebSocketRequest, {
-      id: "req-model-services-refresh",
-      body: { _tag: WS_METHODS.oaModelServicesRefresh, serviceId: "deepseek" },
-    });
-
-    assert.strictEqual(begin.body._tag, WS_METHODS.oaModelServicesBeginLogin);
-    assert.strictEqual(answer.body._tag, WS_METHODS.oaModelServicesAnswerLogin);
-    assert.strictEqual(refresh.body._tag, WS_METHODS.oaModelServicesRefresh);
   }),
 );
 

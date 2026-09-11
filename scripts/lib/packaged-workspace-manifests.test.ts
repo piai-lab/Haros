@@ -40,12 +40,11 @@ describe("packaged workspace manifests", () => {
     );
   });
 
-  it("keeps the Curator browser renderer on the package version that exports its local asset", async () => {
+  it("does not stage the retired OA runtime or web access", async () => {
     const server = await readPackage("apps/server/package.json");
-    const webAccess = await readPackage("packages/oa-web-access/package.json");
-
-    expect(server.dependencies?.marked).toBe(webAccess.dependencies?.marked);
-    expect(server.dependencies?.marked).toBe("15.0.12");
+    expect(server.dependencies?.["@harnessos/oa-runtime"]).toBeUndefined();
+    expect(server.dependencies?.["@harnessos/oa-web-access"]).toBeUndefined();
+    expect(PACKAGED_WORKSPACE_MANIFEST_PATHS).not.toContain("packages/oa-web-access/package.json");
   });
 
   it("ships the Ask fork through the Server bundle without creating a second Desktop dependency", async () => {
@@ -60,7 +59,6 @@ describe("packaged workspace manifests", () => {
     expect(
       omitBundledServerWorkspaceDependencies({
         "@harnessos/oa-ask": "workspace:*",
-        "@harnessos/oa-web-access": "workspace:*",
         marked: "15.0.12",
       }),
     ).toEqual({ marked: "15.0.12" });

@@ -23,7 +23,6 @@ const REQUIRED_LINEAGE_PACKAGES = [
   "@earendil-works/pi-protocol",
   "@earendil-works/pi-telemetry",
   "@earendil-works/pi-tui",
-  "@harnessos/oa-runtime",
 ] as const;
 
 function normalizedArchivePath(path: string): string {

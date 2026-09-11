@@ -259,7 +259,7 @@ describe("passive engine presence", () => {
       return command === "codex" ? "/test/bin/codex" : null;
     });
 
-    assert.deepStrictEqual(presence, ["oa", "codex", "pi"]);
+    assert.deepStrictEqual(presence, ["codex", "pi"]);
     assert.deepStrictEqual(observedCommands, [
       "codex",
       "claude",
@@ -456,7 +456,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       );
       const codex = statuses.find((status) => status.engine === "codex");
 
-      assert.strictEqual(statuses.length, 10);
+      assert.strictEqual(statuses.length, 9);
       assert.strictEqual(codex?.available, false);
       assert.strictEqual(codex?.message, "Engine is disabled in Haros settings.");
     });
@@ -591,7 +591,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         const engineHealth = yield* EngineHealth;
         const statuses = yield* engineHealth.refresh;
 
-        assert.strictEqual(statuses.length, 10);
+        assert.strictEqual(statuses.length, 9);
         for (const status of statuses) {
           assert.strictEqual(status.available, false);
           assert.strictEqual(status.message, "Engine is disabled in Haros settings.");

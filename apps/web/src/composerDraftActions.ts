@@ -1,3 +1,4 @@
+import { isRunnableEngine } from "@harnessos/shared/engineMetadata";
 // FILE: composerDraftActions.ts
 // Purpose: Constructs the ComposerDraftStoreState actions while preserving granular thread identity.
 // Exports: Zustand state creator consumed by the public facade.
@@ -520,7 +521,10 @@ export const createComposerDraftStoreState =
       }
       set((state) => {
         const stickyMap = state.stickyEngineSelectionByEngine;
-        const stickyActiveEngine = state.stickyActiveEngine;
+        const stickyActiveEngine =
+          state.stickyActiveEngine && isRunnableEngine(state.stickyActiveEngine)
+            ? state.stickyActiveEngine
+            : null;
         if (Object.keys(stickyMap).length === 0 && stickyActiveEngine === null) {
           return state;
         }
@@ -528,7 +532,7 @@ export const createComposerDraftStoreState =
         const base = existing ?? createEmptyThreadDraft();
         const nextMap = { ...base.engineSelectionByEngine };
         for (const [engine, selection] of Object.entries(stickyMap)) {
-          if (selection) {
+          if (selection && isRunnableEngine(engine as EngineKind)) {
             const current = nextMap[engine as EngineKind];
             nextMap[engine as EngineKind] =
               current && current.model !== selection.model ? current : selection;

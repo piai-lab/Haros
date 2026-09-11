@@ -2,8 +2,14 @@
 // Purpose: NativeApi implementation backed by the browser WebSocket RPC transport.
 // Layer: Web transport adapter
 // Exports: createWsNativeApi and event subscription helpers for server push channels.
-
 import {
+  DEVICE_WS_CHANNELS,
+  DEVICE_WS_METHODS,
+  ORCHESTRATION_WS_CHANNELS,
+  ORCHESTRATION_WS_METHODS,
+  ServerConfigUpdatedPayload,
+  WS_CHANNELS,
+  WS_METHODS,
   type AuthBearerBootstrapResult,
   type AuthBootstrapInput,
   type AuthBootstrapResult,
@@ -16,14 +22,16 @@ import {
   type AuthRevokePairingLinkInput,
   type AuthSessionState,
   type AuthWebSocketTokenResult,
+  type AutomationStreamEvent,
+  type ContextMenuItem,
+  type DeviceEvent,
   type ExternalMcpCreateIntegrationInput,
   type ExternalMcpRefreshPairingInput,
   type ExternalMcpRevokeIntegrationInput,
-  type ThreadId,
-  type ThreadBrowserState,
   type GitActionProgressEvent,
-  type GitWorktreeSetupProgressEvent,
   type GitHubProjectProvisionProgressEvent,
+  type GitWorktreeSetupProgressEvent,
+  type NativeApi,
   type OrchestrationEvent,
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
@@ -33,40 +41,31 @@ import {
   type ServerSettingsUpdatedPayload,
   type ServerVoiceTranscriptionResult,
   type TerminalEvent,
-  ORCHESTRATION_WS_CHANNELS,
-  ORCHESTRATION_WS_METHODS,
-  type ContextMenuItem,
-  type NativeApi,
-  ServerConfigUpdatedPayload,
-  WS_CHANNELS,
-  WS_METHODS,
-  type WsWelcomePayload,
+  type ThreadBrowserState,
+  type ThreadId,
   type WsBootstrapNegotiateResult,
-  type AutomationStreamEvent,
-  DEVICE_WS_CHANNELS,
-  DEVICE_WS_METHODS,
-  type DeviceEvent,
+  type WsWelcomePayload,
 } from "@harnessos/contracts";
 import { VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH } from "@harnessos/shared/binaryTransfer";
-
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
 import { showContextMenuFallback } from "./contextMenuFallback";
 import { requireHttpExternalUrl } from "./lib/externalUrl";
+import { resolveWsHttpUrl } from "./lib/wsHttpUrl";
 import { WsTransport, type WsThreadStreamFailure } from "./wsTransport";
 import { emitWsCompatibilityIssue, emitWsTransportState } from "./wsTransportEvents";
-import { resolveWsHttpUrl } from "./lib/wsHttpUrl";
-
 export type { WsThreadStreamFailure } from "./wsTransport";
-
-let instance: { api: NativeApi; transport: WsTransport } | null = null;
-
+let instance: {
+  api: NativeApi;
+  transport: WsTransport;
+} | null = null;
 export function readWsServerCapabilities(): ReadonlyArray<string> | null {
   return instance?.transport.getCompatibility()?.capabilities ?? null;
 }
-
 export function onWsServerCapabilitiesChange(
   listener: (capabilities: ReadonlyArray<string> | null) => void,
-  options?: { readonly replayCurrent?: boolean },
+  options?: {
+    readonly replayCurrent?: boolean;
+  },
 ): () => void {
   if (!instance) createWsNativeApi();
   const transport = instance?.transport;
@@ -80,7 +79,6 @@ export function onWsServerCapabilitiesChange(
     options,
   );
 }
-
 function createListenerRegistry<T>() {
   const listeners = new Set<(payload: T) => void>();
   return {
@@ -105,7 +103,6 @@ function createListenerRegistry<T>() {
     },
   };
 }
-
 function subscribeWithReplay<T>(input: {
   readonly registry: {
     subscribe: (listener: (payload: T) => void) => () => unknown;
@@ -123,7 +120,6 @@ function subscribeWithReplay<T>(input: {
   }
   return () => void unsubscribe();
 }
-
 const welcomeListeners = createListenerRegistry<WsWelcomePayload>();
 const serverConfigUpdatedListeners = createListenerRegistry<ServerConfigUpdatedPayload>();
 const serverEngineStatusesUpdatedListeners =
@@ -134,7 +130,6 @@ const gitActionProgressListeners = createListenerRegistry<GitActionProgressEvent
 const gitWorktreeSetupProgressListeners = createListenerRegistry<GitWorktreeSetupProgressEvent>();
 const projectProvisionProgressListeners =
   createListenerRegistry<GitHubProjectProvisionProgressEvent>();
-
 const terminalEventListeners = createListenerRegistry<TerminalEvent>();
 const projectDevServerEventListeners = createListenerRegistry<ProjectDevServerEvent>();
 const automationEventListeners = createListenerRegistry<AutomationStreamEvent>();
@@ -145,7 +140,6 @@ const orchestrationThreadEventListeners = createListenerRegistry<OrchestrationTh
 const threadStreamFailureListeners = createListenerRegistry<WsThreadStreamFailure>();
 const fallbackBrowserStateListeners = createListenerRegistry<ThreadBrowserState>();
 const fallbackBrowserStates = new Map<ThreadId, ThreadBrowserState>();
-
 function clearWsNativeApiListeners(): void {
   welcomeListeners.clear();
   serverConfigUpdatedListeners.clear();
@@ -165,7 +159,6 @@ function clearWsNativeApiListeners(): void {
   threadStreamFailureListeners.clear();
   fallbackBrowserStateListeners.clear();
 }
-
 function defaultBrowserState(threadId: ThreadId): ThreadBrowserState {
   return {
     threadId,
@@ -176,7 +169,6 @@ function defaultBrowserState(threadId: ThreadId): ThreadBrowserState {
     lastError: null,
   };
 }
-
 function defaultBrowserTitle(url: string): string {
   if (url === "about:blank") {
     return "New tab";
@@ -187,7 +179,6 @@ function defaultBrowserTitle(url: string): string {
     return url;
   }
 }
-
 async function requestAuthJson<T>(
   path: string,
   options: {
@@ -219,7 +210,6 @@ async function requestAuthJson<T>(
   }
   return payload as T;
 }
-
 async function requestVoiceTranscriptionUpload(
   input: Parameters<NativeApi["server"]["transcribeVoice"]>[0],
 ) {
@@ -242,7 +232,9 @@ async function requestVoiceTranscriptionUpload(
   );
   const payload = (await response.json().catch(() => null)) as
     | ServerVoiceTranscriptionResult
-    | { readonly error?: unknown }
+    | {
+        readonly error?: unknown;
+      }
     | null;
   if (response.status === 404 || response.status === 405) {
     throw new VoiceUploadRouteUnavailableError();
@@ -256,9 +248,7 @@ async function requestVoiceTranscriptionUpload(
   }
   return payload;
 }
-
 class VoiceUploadRouteUnavailableError extends Error {}
-
 function createFallbackTab(url = "about:blank") {
   return {
     id: crypto.randomUUID(),
@@ -273,14 +263,12 @@ function createFallbackTab(url = "about:blank") {
     lastError: null,
   };
 }
-
 function cloneBrowserState(state: ThreadBrowserState): ThreadBrowserState {
   return {
     ...state,
     tabs: state.tabs.map((tab) => ({ ...tab })),
   };
 }
-
 function getFallbackBrowserState(threadId: ThreadId): ThreadBrowserState {
   const existing = fallbackBrowserStates.get(threadId);
   if (existing) {
@@ -290,17 +278,14 @@ function getFallbackBrowserState(threadId: ThreadId): ThreadBrowserState {
   fallbackBrowserStates.set(threadId, initial);
   return initial;
 }
-
 function emitFallbackBrowserState(threadId: ThreadId): ThreadBrowserState {
   const state = cloneBrowserState(getFallbackBrowserState(threadId));
   fallbackBrowserStateListeners.emit(state);
   return state;
 }
-
 function markFallbackBrowserStateChanged(state: ThreadBrowserState): void {
   state.version += 1;
 }
-
 function ensureFallbackBrowserWorkspace(threadId: ThreadId): ThreadBrowserState {
   const state = getFallbackBrowserState(threadId);
   if (state.tabs.length === 0) {
@@ -311,7 +296,6 @@ function ensureFallbackBrowserWorkspace(threadId: ThreadId): ThreadBrowserState 
   state.open = true;
   return state;
 }
-
 function resolveFallbackBrowserTab(state: ThreadBrowserState, tabId?: string) {
   const existing =
     (tabId ? state.tabs.find((tab) => tab.id === tabId) : undefined) ??
@@ -326,7 +310,6 @@ function resolveFallbackBrowserTab(state: ThreadBrowserState, tabId?: string) {
   state.open = true;
   return tab;
 }
-
 /**
  * Subscribe to the server welcome message. If a welcome was already received
  * before this call, the listener fires synchronously with the cached payload.
@@ -340,7 +323,6 @@ export function onServerWelcome(listener: (payload: WsWelcomePayload) => void): 
     latest: latestWelcome,
   });
 }
-
 /**
  * Subscribe to server config update events. Replays the latest update for
  * late subscribers to avoid missing config validation feedback.
@@ -356,7 +338,6 @@ export function onServerConfigUpdated(
     latest: latestConfig,
   });
 }
-
 /**
  * Subscribe to engine status updates without forcing a full config reload.
  */
@@ -371,7 +352,6 @@ export function onServerEngineStatusesUpdated(
     latest: latestEngineStatuses,
   });
 }
-
 export function onServerMaintenanceUpdated(
   listener: (payload: ServerLifecycleStreamEvent) => void,
 ): () => void {
@@ -383,7 +363,6 @@ export function onServerMaintenanceUpdated(
     latest: latestMaintenance,
   });
 }
-
 export function onServerSettingsUpdated(
   listener: (payload: ServerSettingsUpdatedPayload) => void,
 ): () => void {
@@ -395,7 +374,6 @@ export function onServerSettingsUpdated(
     latest: latestSettings,
   });
 }
-
 /**
  * Subscribe to unrecoverable per-thread stream failures (retries and reconnect
  * exhausted). Lets thread-detail consumers surface a failed hydration state
@@ -407,7 +385,6 @@ export function onThreadStreamFailure(
   const unsubscribe = threadStreamFailureListeners.subscribe(listener);
   return () => void unsubscribe();
 }
-
 export function createWsNativeApi(): NativeApi {
   if (instance) {
     if (instance.transport.getState() !== "disposed") {
@@ -415,7 +392,6 @@ export function createWsNativeApi(): NativeApi {
     }
     instance = null;
   }
-
   const transport = new WsTransport();
   let unsubscribeDomainEventTransport: (() => void) | null = null;
   transport.onStateChange((state) => emitWsTransportState(state), {
@@ -424,7 +400,6 @@ export function createWsNativeApi(): NativeApi {
   transport.onCompatibilityIssue((issue) => emitWsCompatibilityIssue(issue), {
     replayCurrent: true,
   });
-
   transport.subscribe(WS_CHANNELS.serverWelcome, (message) => {
     welcomeListeners.emit(message.data);
   });
@@ -518,7 +493,7 @@ export function createWsNativeApi(): NativeApi {
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
       searchContent: (input, options) =>
         transport.request(WS_METHODS.projectsSearchContent, input, {
-          timeoutMs: 5_000,
+          timeoutMs: 5000,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       searchLocalEntries: (input) =>
@@ -565,7 +540,6 @@ export function createWsNativeApi(): NativeApi {
           }
           return;
         }
-
         // Some mobile browsers can return null here even when the tab opens.
         // Avoid false negatives and let the browser handle popup policy.
         window.open(externalUrl, "_blank", "noopener,noreferrer");
@@ -633,7 +607,10 @@ export function createWsNativeApi(): NativeApi {
     contextMenu: {
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],
-        position?: { x: number; y: number },
+        position?: {
+          x: number;
+          y: number;
+        },
       ): Promise<T | null> => {
         if (window.desktopBridge) {
           return window.desktopBridge.showContextMenu(items, position);
@@ -673,18 +650,24 @@ export function createWsNativeApi(): NativeApi {
       listAuthPairingLinks: () =>
         requestAuthJson<ReadonlyArray<AuthPairingLink>>("/api/auth/pairing-links"),
       revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) =>
-        requestAuthJson<{ revoked: boolean }>("/api/auth/pairing-links/revoke", {
+        requestAuthJson<{
+          revoked: boolean;
+        }>("/api/auth/pairing-links/revoke", {
           method: "POST",
           body: input,
         }),
       listAuthClients: () => requestAuthJson<ReadonlyArray<AuthClientSession>>("/api/auth/clients"),
       revokeAuthClient: (input: AuthRevokeClientSessionInput) =>
-        requestAuthJson<{ revoked: boolean }>("/api/auth/clients/revoke", {
+        requestAuthJson<{
+          revoked: boolean;
+        }>("/api/auth/clients/revoke", {
           method: "POST",
           body: input,
         }),
       revokeOtherAuthClients: () =>
-        requestAuthJson<{ revokedCount: number }>("/api/auth/clients/revoke-others", {
+        requestAuthJson<{
+          revokedCount: number;
+        }>("/api/auth/clients/revoke-others", {
           method: "POST",
         }),
       logoutAuthSession: async () => {
@@ -778,122 +761,6 @@ export function createWsNativeApi(): NativeApi {
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
-    },
-    oaModelServices: {
-      list: (input = {}, options) =>
-        transport.request(
-          WS_METHODS.oaModelServicesList,
-          input,
-          options?.signal ? { signal: options.signal } : undefined,
-        ),
-      get: (input, options) =>
-        transport.request(
-          WS_METHODS.oaModelServicesGet,
-          input,
-          options?.signal ? { signal: options.signal } : undefined,
-        ),
-      beginLogin: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesBeginLogin, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      pollLogin: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesPollLogin, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      answerLogin: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesAnswerLogin, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      cancelLogin: (input) => transport.request(WS_METHODS.oaModelServicesCancelLogin, input),
-      logout: (input) => transport.request(WS_METHODS.oaModelServicesLogout, input),
-      revealApiKey: (input, options) =>
-        transport.request(
-          WS_METHODS.oaModelServicesRevealApiKey,
-          input,
-          options?.signal ? { signal: options.signal } : undefined,
-        ),
-      refresh: (input, options) =>
-        transport.request(
-          WS_METHODS.oaModelServicesRefresh,
-          input,
-          options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
-        ),
-      discoverCustom: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesDiscoverCustom, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      testCustom: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesTestCustom, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      saveCustom: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesSaveCustom, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      removeCustom: (input, options) =>
-        transport.request(WS_METHODS.oaModelServicesRemoveCustom, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-    },
-    oaEcosystem: {
-      list: (input = {}) => transport.request(WS_METHODS.oaEcosystemList, input),
-      listResources: (input) => transport.request(WS_METHODS.oaEcosystemListResources, input),
-      install: (input) =>
-        transport.request(WS_METHODS.oaEcosystemInstall, input, {
-          timeoutMs: null,
-        }),
-      update: (input) =>
-        transport.request(WS_METHODS.oaEcosystemUpdate, input, {
-          timeoutMs: null,
-        }),
-      remove: (input) =>
-        transport.request(WS_METHODS.oaEcosystemRemove, input, {
-          timeoutMs: null,
-        }),
-      setResourceEnabled: (input) =>
-        transport.request(WS_METHODS.oaEcosystemSetResourceEnabled, input),
-      reload: (input) =>
-        transport.request(WS_METHODS.oaEcosystemReload, input, {
-          timeoutMs: null,
-        }),
-    },
-    oaAgentPrompts: {
-      getSnapshot: (input) => transport.request(WS_METHODS.oaAgentPromptsGetSnapshot, input),
-      mutate: (input) =>
-        transport.request(WS_METHODS.oaAgentPromptsMutate, input, {
-          timeoutMs: null,
-        }),
-    },
-    oaWebSearch: {
-      open: () => transport.request(WS_METHODS.oaWebSearchOpen, {}),
-      refresh: (input = {}) => transport.request(WS_METHODS.oaWebSearchRefresh, input),
-      mutate: (input) =>
-        transport.request(WS_METHODS.oaWebSearchMutate, input, {
-          timeoutMs: null,
-        }),
-      testProvider: (input, options) =>
-        transport.request(WS_METHODS.oaWebSearchTestProvider, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      recheck: (input, options) =>
-        transport.request(WS_METHODS.oaWebSearchRecheck, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
-      openConfig: (input) => transport.request(WS_METHODS.oaWebSearchOpenConfig, input),
-      diagnoseGemini: (input, options) =>
-        transport.request(WS_METHODS.oaWebSearchGeminiDiagnostic, input, {
-          timeoutMs: null,
-          ...(options?.signal ? { signal: options.signal } : {}),
-        }),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
@@ -1240,11 +1107,9 @@ export function createWsNativeApi(): NativeApi {
       },
     },
   };
-
   instance = { api, transport };
   return api;
 }
-
 // Browser-mode tests mount full app roots repeatedly in one page; reset the
 // singleton so each test gets a fresh WebSocket stream and cached push state.
 export async function resetWsNativeApiForTest(): Promise<void> {
@@ -1254,7 +1119,6 @@ export async function resetWsNativeApiForTest(): Promise<void> {
   fallbackBrowserStates.clear();
   await transport?.dispose();
 }
-
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     void instance?.transport.dispose();

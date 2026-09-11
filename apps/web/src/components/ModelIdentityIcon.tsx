@@ -3,9 +3,9 @@
 // Layer: Shared Web presentation
 
 import type {
-  ModelPresentationIdentity,
+  EngineModelDescriptor,
   EngineSelection,
-  OAModelServiceOrigin,
+  ModelPresentationIdentity,
 } from "@harnessos/contracts";
 
 import type { EngineModelOption } from "~/engineModelOptions";
@@ -14,7 +14,7 @@ import { ModelServiceIcon } from "./ModelServiceIcon";
 
 function originFromSource(
   source: ModelPresentationIdentity["source"],
-): OAModelServiceOrigin | undefined {
+): NonNullable<EngineModelDescriptor["upstreamProviderOrigin"]> | undefined {
   if (source === "user-configured") return "models_json";
   if (source === "extension") return "extension";
   if (source === "unknown") return "unknown";

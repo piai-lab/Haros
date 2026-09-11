@@ -1,8 +1,8 @@
 import { Schema } from "effect";
+import { BuiltInToolGroupOverrides } from "./agentTools";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { EngineSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
-import { BuiltInToolGroupOverrides } from "./agentTools";
+import { EngineKind, EngineSelection, ThreadEnvironmentMode } from "./orchestration";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -103,7 +103,7 @@ export const AgentToolsServerSettings = Schema.Struct({
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -138,7 +138,7 @@ const HarosServerEngineSettingsView = Schema.Struct({
 });
 
 export const ServerSettingsView = Schema.Struct({
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),

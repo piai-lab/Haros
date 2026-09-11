@@ -6,6 +6,7 @@ import type { EngineKind } from "@harnessos/contracts";
 export interface EngineDescriptor {
   readonly kind: EngineKind;
   readonly displayName: string;
+  readonly runnable?: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -24,6 +25,7 @@ function defineEngineDescriptors<const Descriptors extends readonly EngineDescri
 export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "oa",
+    runnable: false,
     displayName: "OA",
     usage: null,
   },
@@ -98,6 +100,15 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     usage: null,
   },
 ] as const satisfies readonly EngineDescriptor[]);
+
+export function isRunnableEngine(engine: EngineKind): boolean {
+  const descriptor = ENGINE_DESCRIPTORS.find((entry) => entry.kind === engine);
+  return descriptor !== undefined && (!("runnable" in descriptor) || descriptor.runnable !== false);
+}
+
+export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS.filter(
+  (descriptor) => !("runnable" in descriptor) || descriptor.runnable !== false,
+);
 
 export const ENGINE_DESCRIPTOR_BY_KIND = Object.fromEntries(
   ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),

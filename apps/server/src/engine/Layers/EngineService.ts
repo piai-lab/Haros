@@ -3379,7 +3379,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               ? yield* findLiveSessionAdapter(input.threadId, operation)
               : yield* registry.getByEngine(binding.engine);
           if (adapter === null) return { state: "no_active_session" as const };
-          if (adapter.engine !== "oa") {
+          if (adapter.engine !== "pi") {
             return { state: "different_engine" as const };
           }
           if (!(yield* adapter.hasSession(input.threadId))) {
@@ -3391,7 +3391,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           if (!adapter.reloadSessionResources) {
             return yield* toValidationError(
               operation,
-              "Haros Agent does not expose active-session resource reload.",
+              "Pi does not expose active-session resource reload.",
             );
           }
           return {

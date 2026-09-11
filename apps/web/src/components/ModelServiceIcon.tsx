@@ -2,34 +2,35 @@
 // Purpose: Resolves local, presentation-only model-service brand icons with safe fallbacks.
 // Layer: Shared Web presentation
 
-import anthropicIconUrl from "@lobehub/icons-static-svg/icons/anthropic.svg";
-import antGroupIconUrl from "@lobehub/icons-static-svg/icons/antgroup-brand-color.svg";
+import type { EngineModelDescriptor } from "@harnessos/contracts";
 import ai21IconUrl from "@lobehub/icons-static-svg/icons/ai21-brand-color.svg";
+import antGroupIconUrl from "@lobehub/icons-static-svg/icons/antgroup-brand-color.svg";
+import anthropicIconUrl from "@lobehub/icons-static-svg/icons/anthropic.svg";
 import azureIconUrl from "@lobehub/icons-static-svg/icons/azure-color.svg";
 import basetenIconUrl from "@lobehub/icons-static-svg/icons/baseten.svg";
 import bedrockIconUrl from "@lobehub/icons-static-svg/icons/bedrock-color.svg";
 import cerebrasIconUrl from "@lobehub/icons-static-svg/icons/cerebras-brand-color.svg";
+import glmIconUrl from "@lobehub/icons-static-svg/icons/chatglm-color.svg";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claude-color.svg";
 import cloudflareIconUrl from "@lobehub/icons-static-svg/icons/cloudflare-color.svg";
 import cohereIconUrl from "@lobehub/icons-static-svg/icons/cohere-color.svg";
 import deepSeekIconUrl from "@lobehub/icons-static-svg/icons/deepseek-color.svg";
 import fireworksIconUrl from "@lobehub/icons-static-svg/icons/fireworks-color.svg";
-import githubCopilotIconUrl from "@lobehub/icons-static-svg/icons/githubcopilot.svg";
-import glmIconUrl from "@lobehub/icons-static-svg/icons/chatglm-color.svg";
+import geminiIconUrl from "@lobehub/icons-static-svg/icons/gemini-color.svg";
 import gemmaIconUrl from "@lobehub/icons-static-svg/icons/gemma-color.svg";
+import githubCopilotIconUrl from "@lobehub/icons-static-svg/icons/githubcopilot.svg";
 import googleIconUrl from "@lobehub/icons-static-svg/icons/google-color.svg";
 import googleCloudIconUrl from "@lobehub/icons-static-svg/icons/googlecloud-color.svg";
-import geminiIconUrl from "@lobehub/icons-static-svg/icons/gemini-color.svg";
 import grokIconUrl from "@lobehub/icons-static-svg/icons/grok.svg";
 import groqIconUrl from "@lobehub/icons-static-svg/icons/groq.svg";
 import huggingFaceIconUrl from "@lobehub/icons-static-svg/icons/huggingface-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
-import minimaxIconUrl from "@lobehub/icons-static-svg/icons/minimax-color.svg";
 import metaIconUrl from "@lobehub/icons-static-svg/icons/meta-color.svg";
+import minimaxIconUrl from "@lobehub/icons-static-svg/icons/minimax-color.svg";
 import mistralIconUrl from "@lobehub/icons-static-svg/icons/mistral-color.svg";
 import moonshotIconUrl from "@lobehub/icons-static-svg/icons/moonshot.svg";
-import nvidiaIconUrl from "@lobehub/icons-static-svg/icons/nvidia-color.svg";
 import novaIconUrl from "@lobehub/icons-static-svg/icons/nova-color.svg";
+import nvidiaIconUrl from "@lobehub/icons-static-svg/icons/nvidia-color.svg";
 import ollamaIconUrl from "@lobehub/icons-static-svg/icons/ollama.svg";
 import openAIIconUrl from "@lobehub/icons-static-svg/icons/openai.svg";
 import openCodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
@@ -41,7 +42,6 @@ import xAIIconUrl from "@lobehub/icons-static-svg/icons/xai.svg";
 import xiaomiIconUrl from "@lobehub/icons-static-svg/icons/xiaomimimo.svg";
 import zaiIconUrl from "@lobehub/icons-static-svg/icons/zai.svg";
 import zhipuIconUrl from "@lobehub/icons-static-svg/icons/zhipu-color.svg";
-import type { OAModelServiceOrigin } from "@harnessos/contracts";
 
 import { BrainIcon, LinkIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -199,7 +199,7 @@ function resolveKnownBrandIcon(serviceId: string): string | null {
 export function resolveModelSpecificIcon(input: {
   readonly serviceId: string;
   readonly modelId: string;
-  readonly origin?: OAModelServiceOrigin;
+  readonly origin?: NonNullable<EngineModelDescriptor["upstreamProviderOrigin"]>;
 }): string | null {
   if (
     input.origin === "models_json" ||
@@ -222,7 +222,7 @@ export function resolveModelSpecificIcon(input: {
 
 export function resolveModelServiceIcon(input: {
   readonly serviceId: string;
-  readonly origin?: OAModelServiceOrigin;
+  readonly origin?: NonNullable<EngineModelDescriptor["upstreamProviderOrigin"]>;
 }): ModelServiceIconResolution {
   if (input.origin === "models_json") return { kind: "custom", src: null };
   if (input.origin === "extension") return { kind: "extension", src: null };
@@ -246,7 +246,7 @@ export function ModelServiceIcon({
 }: {
   readonly serviceId: string;
   readonly modelId?: string;
-  readonly origin?: OAModelServiceOrigin;
+  readonly origin?: NonNullable<EngineModelDescriptor["upstreamProviderOrigin"]>;
   readonly allowModelFamily?: boolean;
   readonly className?: string;
 }) {

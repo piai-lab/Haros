@@ -14,17 +14,17 @@ import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { getAppModelOptions, getCustomModelsByEngine } from "../engineSettings";
-import { useLocalPreferences } from "../localPreferences";
-import { useServerSettings } from "../serverSettings";
 import { resolveRuntimeModelDescriptor } from "../components/chat/runtimeModelCapabilities";
 import { collapseCursorModelVariants } from "../cursorModelVariants";
+import { mergeDynamicModelOptions, type EngineModelOption } from "../engineModelOptions";
+import { getAppModelOptions, getCustomModelsByEngine } from "../engineSettings";
 import {
-  isInitialModelDiscoveryPending,
   engineAgentsQueryOptions,
   engineModelsQueryOptions,
+  isInitialModelDiscoveryPending,
 } from "../lib/engineDiscoveryReactQuery";
-import { mergeDynamicModelOptions, type EngineModelOption } from "../engineModelOptions";
+import { useLocalPreferences } from "../localPreferences";
+import { useServerSettings } from "../serverSettings";
 
 export interface EngineModelCatalog {
   customModelsByEngine: ReturnType<typeof getCustomModelsByEngine>;
@@ -152,7 +152,6 @@ export function useEngineModelCatalog(input: {
     return prefetchEngineSet?.has(engine) ?? !hiddenEngineSet.has(engine);
   };
 
-  const oaModelDiscoveryEnabled = shouldDiscoverEngine("oa");
   const claudeModelDiscoveryEnabled = shouldDiscoverEngine("claude");
   const codexModelDiscoveryEnabled = shouldDiscoverEngine("codex");
   const cursorModelDiscoveryEnabled = shouldDiscoverEngine("cursor");
@@ -167,14 +166,6 @@ export function useEngineModelCatalog(input: {
     selectedEngine === "pi"
       ? shouldDiscoverEngine("pi", false)
       : input.piDiscoveryRequested === true && shouldDiscoverEngine("pi", true);
-
-  const oaDynamicModelsQuery = useQuery(
-    engineModelsQueryOptions({
-      engine: "oa",
-      cwd: discoveryCwd,
-      enabled: oaModelDiscoveryEnabled,
-    }),
-  );
 
   const claudeDynamicModelsQuery = useQuery(
     engineModelsQueryOptions({
@@ -306,7 +297,7 @@ export function useEngineModelCatalog(input: {
       ...staticOptions,
     };
     const dynamicSources: Partial<Record<EngineKind, typeof claudeDynamicModelsQuery.data>> = {
-      oa: oaDynamicModelsQuery.data,
+      oa: undefined,
       claude: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
       cursor:
@@ -343,7 +334,6 @@ export function useEngineModelCatalog(input: {
     kiloDynamicModelsQuery.data,
     modelHintByEngine,
     openCodeDynamicModelsQuery.data,
-    oaDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
   ]);
 
@@ -352,7 +342,7 @@ export function useEngineModelCatalog(input: {
   >(
     () => ({
       ...mapEngineDescriptors(() => [] as ReadonlyArray<EngineModelDescriptor>),
-      oa: oaDynamicModelsQuery.data?.models ?? [],
+      oa: [],
       claude: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
       cursor: cursorRuntimeModels,
@@ -372,7 +362,6 @@ export function useEngineModelCatalog(input: {
       grokDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
-      oaDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
     ],
   );
@@ -380,15 +369,7 @@ export function useEngineModelCatalog(input: {
   const catalogStateByEngine = useMemo<Record<EngineKind, EngineModelCatalogState>>(
     () => ({
       ...mapEngineDescriptors(() => "idle" as EngineModelCatalogState),
-      oa: deriveCatalogState({
-        enabled: oaModelDiscoveryEnabled,
-        hasSettledData:
-          oaDynamicModelsQuery.data !== undefined && !oaDynamicModelsQuery.isPlaceholderData,
-        isPending: oaDynamicModelsQuery.isPending,
-        isPlaceholderData: oaDynamicModelsQuery.isPlaceholderData,
-        isError: oaDynamicModelsQuery.isError,
-        modelCount: discoveredRuntimeModelsByEngine.oa.length,
-      }),
+      oa: "empty",
       codex: deriveCatalogState({
         enabled: codexModelDiscoveryEnabled,
         hasSettledData:
@@ -503,10 +484,6 @@ export function useEngineModelCatalog(input: {
       kiloDynamicModelsQuery.isPending,
       kiloDynamicModelsQuery.isPlaceholderData,
       kiloModelDiscoveryEnabled,
-      oaDynamicModelsQuery.isError,
-      oaDynamicModelsQuery.isPending,
-      oaDynamicModelsQuery.isPlaceholderData,
-      oaModelDiscoveryEnabled,
       openCodeDynamicModelsQuery.isError,
       openCodeDynamicModelsQuery.isPending,
       openCodeDynamicModelsQuery.isPlaceholderData,

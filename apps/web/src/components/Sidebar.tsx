@@ -3,8 +3,84 @@
 // Exports: Sidebar
 
 import {
+  closestCenter,
+  closestCorners,
+  DndContext,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragCancelEvent,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { autoAnimate } from "@formkit/auto-animate";
+import {
+  ProjectId,
+  SpaceId,
+  ThreadId,
+  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  type AutomationDefinition,
+  type AutomationListResult,
+  type DesktopUpdateState,
+  type EngineKind,
+  type OrchestrationShellSnapshot,
+  type ResolvedKeybindingsConfig,
+} from "@harnessos/contracts";
+import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
+import {
+  ENGINE_DISPLAY_NAMES,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "@harnessos/shared/engineMetadata";
+import { getDefaultModel } from "@harnessos/shared/model";
+import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import {
+  lazy,
+  startTransition,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentType,
+  type MouseEvent,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { FiGitBranch } from "react-icons/fi";
+import { GoRepoForked } from "react-icons/go";
+import { IoIosGitCompare } from "react-icons/io";
+import {
+  PR_STATE_PRESENTATION_ICONS,
+  resolvePrStatePresentation,
+  type PrStatePresentation,
+} from "~/components/pullRequest/pullRequestStatePresentation";
+import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
+import { DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS } from "~/hooks/useDesktopTopBarGutter";
+import { CentralIcon, createCentralIconComponent } from "~/lib/central-icons";
+import { createClientPointMenuAnchor } from "~/lib/clientPointMenuAnchor";
+import {
+  DISCLOSURE_INNER_CLASS,
+  disclosureContentClassName,
+  disclosureShellClassName,
+} from "~/lib/disclosureMotion";
+import {
   AddPlusIcon,
   ArchiveIcon,
+  BellIcon,
   BookIcon,
   ChatBubbleIcon,
   ChevronDownIcon,
@@ -15,8 +91,6 @@ import {
   FolderOpenIcon,
   KanbanIcon,
   KeyboardIcon,
-  BellIcon,
-  type LucideIcon,
   NewThreadIcon,
   PencilIcon,
   PinIcon,
@@ -32,112 +106,57 @@ import {
   TriangleAlertIcon,
   WorktreeIcon,
   XIcon,
+  type LucideIcon,
 } from "~/lib/icons";
-import { CentralIcon, createCentralIconComponent } from "~/lib/central-icons";
-import {
-  PR_STATE_PRESENTATION_ICONS,
-  resolvePrStatePresentation,
-  type PrStatePresentation,
-} from "~/components/pullRequest/pullRequestStatePresentation";
+import { openExternalLink } from "~/lib/linkChips";
 import { PinStatusIcon } from "~/lib/pin";
+import { resolveThreadModelSummary } from "~/lib/threadModelSummary";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
-import { autoAnimate } from "@formkit/auto-animate";
-import { FiGitBranch } from "react-icons/fi";
-import { IoIosGitCompare } from "react-icons/io";
-import { GoRepoForked } from "react-icons/go";
-import {
-  useCallback,
-  useEffect,
-  lazy,
-  startTransition,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-  Suspense,
-  useState,
-  type ComponentType,
-  type MouseEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from "react";
-import {
-  DndContext,
-  type DragCancelEvent,
-  type CollisionDetection,
-  PointerSensor,
-  type DragStartEvent,
-  closestCenter,
-  closestCorners,
-  pointerWithin,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { CSS } from "@dnd-kit/utilities";
-import {
-  type AutomationDefinition,
-  type AutomationListResult,
-  type DesktopUpdateState,
-  type OrchestrationShellSnapshot,
-  ProjectId,
-  SpaceId,
-  type EngineKind,
-  ThreadId,
-  type ResolvedKeybindingsConfig,
-  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
-} from "@harnessos/contracts";
-import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
-import { getDefaultModel } from "@harnessos/shared/model";
-import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
-import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import {
-  type SidebarProjectSortOrder,
-  type SidebarThreadSortOrder,
-  useLocalPreferences,
-} from "../localPreferences";
-import {
-  normalizeHiddenSidebarNavItems,
-  normalizeSidebarNavOrder,
-  type SidebarNavItemId,
-} from "../sidebarNavOrdering";
-import { useServerSettings } from "../serverSettings";
+import { resolvePublicSiteLink, type PublicSiteSurface } from "~/publicSurface";
+import type { LastThreadRoute } from "../chatRouteRestore";
+import { useComposerDraftStore } from "../composerDraftStore";
 import { isElectron } from "../env";
+import { useFeedbackDialogStore } from "../feedbackDialogStore";
+import { useFocusedChatContext } from "../focusedChatContext";
+import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
+import { useEngineStatusesForLocalConfig } from "../hooks/useEngineStatusesForLocalConfig";
+import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useSidebarProjectPinning } from "../hooks/useSidebarProjectPinning";
+import {
+  firstLocalServerUrl,
+  useSidebarProjectRunController,
+} from "../hooks/useSidebarProjectRunController";
+import { useSidebarThreadActions } from "../hooks/useSidebarThreadActions";
+import { useThreadActivationController } from "../hooks/useThreadActivationController";
+import { useThreadHandoff } from "../hooks/useThreadHandoff";
+import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThreadPullRequests";
 import { useI18n, type MessageKey } from "../i18n";
-import { formatRelativeTime } from "../lib/relativeTime";
-import { isMacPlatform, newCommandId, newProjectId, newThreadId, randomUUID } from "../lib/utils";
-import { isFolderBackedProject } from "../lib/projectClassification";
-import { expandProjectHomePath, joinProjectPath } from "../lib/projectPaths";
-import { reconcileDeletedThreadsFromClient } from "../lib/deletedThreadClientReconciliation";
-import { deleteProjectFromClient } from "../lib/projectDelete";
-import { persistAppStateNow, useStore } from "../store";
-import { getThreadFromState } from "../threadDerivation";
 import {
   resolveShortcutCommand,
   shortcutLabelForCommand,
-  splitShortcutLabel,
   shouldShowThreadJumpHints,
+  splitShortcutLabel,
   threadJumpCommandForIndex,
   threadJumpIndexFromCommand,
 } from "../keybindings";
+import { useLatestProjectStore } from "../latestProjectStore";
+import { prewarmHomeChatProject } from "../lib/chatProjects";
 import {
-  createAllThreadsSelector,
-  createProjectLastActivityAtSelector,
-  createSidebarDisplayThreadsSelector,
-  createSidebarThreadSummariesSelector,
-  createSidebarTreeThreadsSelector,
-} from "../storeSelectors";
-import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
-import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThreadPullRequests";
+  createConversationGroup,
+  deleteConversationGroup,
+  reorderConversationGroups,
+  updateConversationGroup,
+} from "../lib/conversationGroups";
+import { reconcileDeletedThreadsFromClient } from "../lib/deletedThreadClientReconciliation";
 import { engineComposerCapabilitiesQueryOptions } from "../lib/engineDiscoveryReactQuery";
+import { isFolderBackedProject } from "../lib/projectClassification";
+import { waitForRecoverableProjectInReadModel } from "../lib/projectCreateRecovery";
+import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
+import { deleteProjectFromClient } from "../lib/projectDelete";
+import { expandProjectHomePath, joinProjectPath } from "../lib/projectPaths";
 import {
   resolveCurrentProjectTargetId,
   resolveLatestProjectTargetIdWithFallback,
@@ -147,31 +166,32 @@ import {
   pullRequestQueryKeys,
   pullRequestReviewRequestCountQueryOptions,
 } from "../lib/pullRequestReactQuery";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { serverConfigQueryOptions, serverSettingsQueryOptions } from "../lib/serverReactQuery";
-import {
-  onNativeApiServerCapabilitiesChange,
-  readNativeApi,
-  readNativeApiServerCapability,
-} from "../nativeApi";
-import { prewarmHomeChatProject } from "../lib/chatProjects";
+import { quotePosixShellArgument } from "../lib/shellQuote";
 import {
   collectStudioProjectIds,
   isStudioContainerProject,
   prewarmStudioProject,
 } from "../lib/studioProjects";
-import { useComposerDraftStore } from "../composerDraftStore";
-import { useLatestProjectStore } from "../latestProjectStore";
-import { useRecentViewsStore } from "../recentViewsStore";
-import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
-import { dispatchThreadRename } from "../lib/threadRename";
+import { isTerminalFocused } from "../lib/terminalFocus";
 import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
-import { quotePosixShellArgument } from "../lib/shellQuote";
+import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
+import { canCreateThreadHandoff, resolveAvailableHandoffTargetEngines } from "../lib/threadHandoff";
+import { dispatchThreadRename } from "../lib/threadRename";
+import { isMacPlatform, newCommandId, newProjectId, newThreadId, randomUUID } from "../lib/utils";
 import {
-  DEFAULT_THREAD_TERMINAL_ID,
-  type SidebarThreadSummary,
-  type Space,
-  type Thread,
-} from "../types";
+  useLocalPreferences,
+  type SidebarProjectSortOrder,
+  type SidebarThreadSortOrder,
+} from "../localPreferences";
+import {
+  onNativeApiServerCapabilitiesChange,
+  readNativeApi,
+  readNativeApiServerCapability,
+} from "../nativeApi";
+import { useRecentViewsStore } from "../recentViewsStore";
+import { useRightDockStore } from "../rightDockStore";
 import {
   applyAutomationEvent,
   automationAttentionCount,
@@ -179,61 +199,146 @@ import {
   formatCadence,
   groupAutomationsByContinuedThread,
 } from "../routes/-automations.shared";
+import { useServerSettings } from "../serverSettings";
+import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
+import { normalizeSettingsSection } from "../settingsNavigation";
+import {
+  normalizeHiddenSidebarNavItems,
+  normalizeSidebarNavOrder,
+  type SidebarNavItemId,
+} from "../sidebarNavOrdering";
+import {
+  SIDEBAR_HEADER_ROW_CLASS_NAME,
+  SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
+  SIDEBAR_NESTED_LIST_OFFSET_CLASS_NAME,
+  SIDEBAR_ROW_ACTIVE_CLASS_NAME,
+  SIDEBAR_ROW_FOCUS_CLASS_NAME,
+  SIDEBAR_ROW_HOVER_CLASS_NAME,
+  SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
+  SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+  SIDEBAR_SECTION_LABEL_CLASS_NAME,
+  sidebarHoverRevealHideClassName,
+} from "../sidebarRowStyles";
+import {
+  resolveSplitViewFocusedPaneThreadId,
+  selectSplitView,
+  useSplitViewStore,
+} from "../splitViewStore";
+import { persistAppStateNow, useStore } from "../store";
+import {
+  createAllThreadsSelector,
+  createProjectLastActivityAtSelector,
+  createSidebarDisplayThreadsSelector,
+  createSidebarThreadSummariesSelector,
+  createSidebarTreeThreadsSelector,
+} from "../storeSelectors";
+import { useTemporaryThreadStore } from "../temporaryThreadStore";
+import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
+import { getThreadFromState } from "../threadDerivation";
+import { useThreadDetailPrewarm } from "../threadDetailPrewarm";
+import { hasThreadDetailResumeCursor } from "../threadDetailResumeCursors";
+import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
+import { useThreadSelectionStore } from "../threadSelectionStore";
+import {
+  DEFAULT_THREAD_TERMINAL_ID,
+  type SidebarThreadSummary,
+  type Space,
+  type Thread,
+} from "../types";
+import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { shouldRenderTerminalWorkspace } from "./ChatView.logic";
-import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
-import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
-import { ProjectSidebarIcon } from "./ProjectSidebarIcon";
-import { ThreadHoverCardContent } from "./ThreadHoverCardContent";
+import {
+  ConversationGroupPickerDialog,
+  type ConversationGroupPickerTarget,
+} from "./ConversationGroupPickerDialog";
+import {
+  CreateProjectDialog,
+  type CreateProjectSubmitOptions,
+  type CreateProjectSubmitValue,
+} from "./CreateProjectDialog";
+import { GroupEditorDialog } from "./GroupEditorDialog";
 import { ProjectHoverCardContent } from "./ProjectHoverCardContent";
-import {
-  SIDEBAR_HOVER_CARD_POPUP_PROPS,
-  SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME,
-  SIDEBAR_HOVER_CARD_TRIGGER_PROPS,
-} from "./sidebarHoverCardStyles";
-import {
-  abbreviateHomePath,
-  createProjectHoverCardAnchor,
-  createThreadHoverCardAnchor,
-} from "./sidebarHoverCardAnchors";
-import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "./ui/preview-card";
-import { hasUnreadActivity as hasUnreadActivityOutsideActiveThread } from "./SidebarActivityView.logic";
-import { SidebarActivityView } from "./SidebarActivityView";
-import { SidebarIconButton, sidebarIconButtonSlotClass } from "./SidebarIconButton";
-import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
-import { SidebarMetaChipStack } from "./SidebarMetaChip";
-import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
-import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
-import { SidebarGlyph, sidebarGlyphClass } from "./sidebarGlyphs";
-import { SidebarStatusTrailingGlyph } from "./SidebarStatusTrailingGlyph";
-import { ThreadArchiveActionButton } from "./ThreadArchiveActionButton";
-import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
-import {
-  SidebarThreadRowContent,
-  type SidebarThreadTerminalStatus,
-} from "./SidebarThreadRowContent";
+import { ProjectSidebarIcon } from "./ProjectSidebarIcon";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
+import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import {
-  SidebarSearchPalette,
-  type ImportEngineKind,
-  type SidebarSearchPaletteMode,
-} from "./SidebarSearchPalette";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useEngineStatusesForLocalConfig } from "../hooks/useEngineStatusesForLocalConfig";
-import { useThreadHandoff } from "../hooks/useThreadHandoff";
-import { useFeedbackDialogStore } from "../feedbackDialogStore";
-import { openExternalLink } from "~/lib/linkChips";
-import { resolvePublicSiteLink, type PublicSiteSurface } from "~/publicSurface";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
-import { toastManager } from "./ui/toast";
+  buildProjectThreadTree,
+  createSidebarThreadHoverAnchorId,
+  DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
+  derivePinnedProjectIdsForSidebar,
+  deriveSidebarImportEngines,
+  deriveSidebarProjectData,
+  findWorkspaceRootMatch,
+  getNextVisibleSidebarThreadId,
+  getPinnedThreadsForSidebar,
+  getSidebarThreadIdsToPrewarm,
+  getUnpinnedThreadsForSidebar,
+  groupSidebarThreadsByProjectId,
+  orderPinnedProjectsForSidebar,
+  partitionSidebarThreadsByProjectIds,
+  pruneProjectThreadListPagingForCollapsedProjects,
+  pullRequestRepositoryConfigFingerprint,
+  recoverExistingAddProjectTarget,
+  resolveNewProjectDefaultEngineSelection,
+  resolveProjectEmptyState,
+  resolvePullRequestReviewBadge,
+  resolveSettingsBackTarget,
+  resolveSidebarNewThreadEnvMode,
+  resolveThreadHoverCardMetadata,
+  resolveThreadProjectLabel,
+  resolveThreadRowClassName,
+  resolveThreadRowTrailingReserveClass,
+  resolveThreadStatusPill,
+  resolveThreadStatusTrailingIndicator,
+  runExclusiveProjectAddition,
+  runProjectProvisionWithCancellationRecovery,
+  shouldClearThreadSelectionOnMouseDown,
+  shouldPrunePinnedThreads,
+  shouldShowDebugFeatureFlagsMenu,
+  sortProjectsForSidebar,
+  sortThreadsForSidebar,
+  type SettingsBackTarget,
+  type SidebarActionBadge,
+  type SidebarDerivedProjectData,
+  type SidebarView,
+  type ThreadStatusPill,
+} from "./Sidebar.logic";
 import {
   normalizeSidebarProjectThreadListCwd,
   persistSidebarUiState,
   readSidebarUiState,
   subscribeSidebarUiState,
 } from "./Sidebar.uiState";
+import { SidebarActivityView } from "./SidebarActivityView";
+import { hasUnreadActivity as hasUnreadActivityOutsideActiveThread } from "./SidebarActivityView.logic";
+import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
+import { SidebarIconButton, sidebarIconButtonSlotClass } from "./SidebarIconButton";
+import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
+import { SidebarMetaChipStack } from "./SidebarMetaChip";
+import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
+import {
+  SidebarSearchPalette,
+  type ImportEngineKind,
+  type SidebarSearchPaletteMode,
+} from "./SidebarSearchPalette";
+import type {
+  SidebarSearchAction,
+  SidebarSearchProject,
+  SidebarSearchThread,
+} from "./SidebarSearchPalette.logic";
+import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
+import { SidebarStatusTrailingGlyph } from "./SidebarStatusTrailingGlyph";
+import {
+  SidebarThreadRowContent,
+  type SidebarThreadTerminalStatus,
+} from "./SidebarThreadRowContent";
+import { ThreadArchiveActionButton } from "./ThreadArchiveActionButton";
+import { ThreadHoverCardContent } from "./ThreadHoverCardContent";
+import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
+import { THREAD_DRAG_MIME } from "./chat-drop-overlay/ChatPaneDropOverlay";
+import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
+import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import {
   getArm64IntelBuildWarningDescription,
   getDesktopUpdateActionError,
@@ -250,11 +355,26 @@ import {
   shouldToastDesktopUpdateActionResult,
   type DesktopUpdateCopy,
 } from "./desktopUpdate.logic";
+import {
+  SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME,
+  SIDEBAR_CONTEXT_MENU_PANEL_CLASS_NAME,
+  SidebarContextMenuIcon,
+} from "./sidebarContextMenuStyles";
+import { SidebarGlyph, sidebarGlyphClass } from "./sidebarGlyphs";
+import {
+  abbreviateHomePath,
+  createProjectHoverCardAnchor,
+  createThreadHoverCardAnchor,
+} from "./sidebarHoverCardAnchors";
+import {
+  SIDEBAR_HOVER_CARD_POPUP_PROPS,
+  SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME,
+  SIDEBAR_HOVER_CARD_TRIGGER_PROPS,
+} from "./sidebarHoverCardStyles";
+import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { DisclosureChevron } from "./ui/DisclosureChevron";
-import { Input } from "./ui/input";
 import {
   Dialog,
   DialogDescription,
@@ -264,6 +384,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "./ui/dialog";
+import { Input } from "./ui/input";
 import { Kbd, KbdGroup } from "./ui/kbd";
 import {
   Menu,
@@ -274,7 +395,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "./ui/menu";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "./ui/preview-card";
 import {
   SidebarContent,
   SidebarFooter,
@@ -288,126 +409,8 @@ import {
   SidebarMenuSubItem,
   SidebarTrigger,
 } from "./ui/sidebar";
-import { useThreadSelectionStore } from "../threadSelectionStore";
-import {
-  buildProjectThreadTree,
-  derivePinnedProjectIdsForSidebar,
-  deriveSidebarProjectData,
-  deriveSidebarImportEngines,
-  createSidebarThreadHoverAnchorId,
-  findWorkspaceRootMatch,
-  getPinnedThreadsForSidebar,
-  getUnpinnedThreadsForSidebar,
-  orderPinnedProjectsForSidebar,
-  pullRequestRepositoryConfigFingerprint,
-  getNextVisibleSidebarThreadId,
-  getSidebarThreadIdsToPrewarm,
-  groupSidebarThreadsByProjectId,
-  partitionSidebarThreadsByProjectIds,
-  pruneProjectThreadListPagingForCollapsedProjects,
-  recoverExistingAddProjectTarget,
-  runExclusiveProjectAddition,
-  runProjectProvisionWithCancellationRecovery,
-  resolvePullRequestReviewBadge,
-  resolveNewProjectDefaultEngineSelection,
-  DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
-  resolveProjectEmptyState,
-  resolveSettingsBackTarget,
-  type SettingsBackTarget,
-  resolveSidebarNewThreadEnvMode,
-  resolveThreadHoverCardMetadata,
-  resolveThreadProjectLabel,
-  resolveThreadRowClassName,
-  resolveThreadRowTrailingReserveClass,
-  resolveThreadStatusPill,
-  resolveThreadStatusTrailingIndicator,
-  type ThreadStatusPill,
-  type SidebarDerivedProjectData,
-  type SidebarActionBadge,
-  type SidebarView,
-  shouldShowDebugFeatureFlagsMenu,
-  shouldPrunePinnedThreads,
-  shouldClearThreadSelectionOnMouseDown,
-  sortProjectsForSidebar,
-  sortThreadsForSidebar,
-} from "./Sidebar.logic";
-import type { LastThreadRoute } from "../chatRouteRestore";
-import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
-import { DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS } from "~/hooks/useDesktopTopBarGutter";
-import { cn } from "~/lib/utils";
-import {
-  disclosureContentClassName,
-  disclosureShellClassName,
-  DISCLOSURE_INNER_CLASS,
-} from "~/lib/disclosureMotion";
-import { createClientPointMenuAnchor } from "~/lib/clientPointMenuAnchor";
-import { resolveThreadModelSummary } from "~/lib/threadModelSummary";
-import { canCreateThreadHandoff, resolveAvailableHandoffTargetEngines } from "../lib/threadHandoff";
-import { isTerminalFocused } from "../lib/terminalFocus";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
-import { normalizeSettingsSection } from "../settingsNavigation";
-import {
-  sidebarHoverRevealHideClassName,
-  SIDEBAR_HEADER_ROW_CLASS_NAME,
-  SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
-  SIDEBAR_NESTED_LIST_OFFSET_CLASS_NAME,
-  SIDEBAR_ROW_ACTIVE_CLASS_NAME,
-  SIDEBAR_ROW_FOCUS_CLASS_NAME,
-  SIDEBAR_ROW_HOVER_CLASS_NAME,
-  SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
-  SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-  SIDEBAR_SECTION_LABEL_CLASS_NAME,
-} from "../sidebarRowStyles";
-import { SettingsSidebarNav } from "./SettingsSidebarNav";
-import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
-import {
-  resolveSplitViewFocusedPaneThreadId,
-  selectSplitView,
-  useSplitViewStore,
-} from "../splitViewStore";
-import { useRightDockStore } from "../rightDockStore";
-import { THREAD_DRAG_MIME } from "./chat-drop-overlay/ChatPaneDropOverlay";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
-import { useThreadActivationController } from "../hooks/useThreadActivationController";
-import {
-  firstLocalServerUrl,
-  useSidebarProjectRunController,
-} from "../hooks/useSidebarProjectRunController";
-import { useSidebarThreadActions } from "../hooks/useSidebarThreadActions";
-import { useSidebarProjectPinning } from "../hooks/useSidebarProjectPinning";
-import { useThreadDetailPrewarm } from "../threadDetailPrewarm";
-import { hasThreadDetailResumeCursor } from "../threadDetailResumeCursors";
-import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
-import { useWorkspacePathsStore } from "../workspacePathsStore";
-import type {
-  SidebarSearchAction,
-  SidebarSearchProject,
-  SidebarSearchThread,
-} from "./SidebarSearchPalette.logic";
-import { useFocusedChatContext } from "../focusedChatContext";
-import { waitForRecoverableProjectInReadModel } from "../lib/projectCreateRecovery";
-import { createOrRecoverProjectFromPath } from "../lib/projectCreation";
-import {
-  CreateProjectDialog,
-  type CreateProjectSubmitOptions,
-  type CreateProjectSubmitValue,
-} from "./CreateProjectDialog";
-import { GroupEditorDialog } from "./GroupEditorDialog";
-import {
-  ConversationGroupPickerDialog,
-  type ConversationGroupPickerTarget,
-} from "./ConversationGroupPickerDialog";
-import {
-  SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME,
-  SIDEBAR_CONTEXT_MENU_PANEL_CLASS_NAME,
-  SidebarContextMenuIcon,
-} from "./sidebarContextMenuStyles";
-import {
-  createConversationGroup,
-  deleteConversationGroup,
-  reorderConversationGroups,
-  updateConversationGroup,
-} from "../lib/conversationGroups";
+import { toastManager } from "./ui/toast";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 // Central glyphs for the sidebar section-header buttons (expand/collapse, sort, add).
 const ExpandAllIcon = createCentralIconComponent("expand-45");
@@ -5367,7 +5370,7 @@ export default function Sidebar() {
         "resume",
         "thread",
         "session",
-        ...ENGINE_DESCRIPTORS.flatMap((descriptor) => [
+        ...RUNNABLE_ENGINE_DESCRIPTORS.flatMap((descriptor) => [
           descriptor.kind,
           descriptor.displayName.toLowerCase(),
         ]),
@@ -6673,7 +6676,7 @@ function SidebarSearchPaletteController(props: {
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
   const importEngineCapabilityQueries = useQueries({
-    queries: ENGINE_DESCRIPTORS.map((descriptor) =>
+    queries: RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) =>
       engineComposerCapabilitiesQueryOptions(descriptor.kind),
     ),
   });
@@ -6683,7 +6686,7 @@ function SidebarSearchPaletteController(props: {
     (state) => state.terminalStateByThreadId,
   );
   const importEngines: ReadonlyArray<ImportEngineKind> = deriveSidebarImportEngines({
-    descriptors: ENGINE_DESCRIPTORS,
+    descriptors: RUNNABLE_ENGINE_DESCRIPTORS,
     capabilities: importEngineCapabilityQueries.map((query) => query.data),
   });
   const searchPaletteThreads = useMemo<SidebarSearchThread[]>(() => {
