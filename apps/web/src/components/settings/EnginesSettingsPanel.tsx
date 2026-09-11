@@ -31,15 +31,7 @@ import {
 } from "@harnessos/shared/engineMetadata";
 import { deepMerge } from "@harnessos/shared/Struct";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
 import { sameEngineOrder } from "~/engineOrdering";
@@ -736,20 +728,13 @@ function SortableEngineVisibilityRow(props: {
   );
 }
 
-function EngineDocsLinks({
-  docs,
-  action,
-}: {
-  docs: EngineInstallSettings["docs"];
-  action: ReactNode;
-}) {
+function EngineDocsLinks({ docs }: { docs: EngineInstallSettings["docs"] }) {
   const { t } = useI18n();
   return (
     <div className={cn(SETTINGS_OUTLINED_SURFACE_CLASS_NAME, "px-3 py-2.5")}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs font-medium text-foreground">{t("settings.cliDocs")}</span>
         <div className="flex flex-wrap gap-2">
-          {action}
           {docs
             .filter(
               (doc) => doc.labelKey !== "settings.install" && doc.labelKey !== "settings.update",
@@ -1223,30 +1208,28 @@ function EngineToolRow(props: {
                 {engineUpdateLabel}
               </span>
             ) : null}
-            <DisclosureChevron
-              open={props.open}
-              className="size-4 shrink-0 text-muted-foreground"
+          </CollapsibleTrigger>
+          {ENGINE_DESCRIPTOR_BY_KIND[props.config.engine].installation && props.engineStatus ? (
+            <EngineUpdateAction
+              engineStatus={props.engineStatus}
+              active={updateActive}
+              disabled={updateActive}
+              onUpdate={props.onUpdate}
             />
+          ) : null}
+          <CollapsibleTrigger
+            type="button"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground"
+            aria-label={props.open ? t("settings.collapse") : t("settings.expand")}
+          >
+            <DisclosureChevron open={props.open} className="size-4" />
           </CollapsibleTrigger>
         </div>
 
         <CollapsiblePanel>
           <div className="border-t border-border/70 bg-muted/20 px-3 py-3">
             <div className="space-y-3">
-              <EngineDocsLinks
-                docs={props.config.docs}
-                action={
-                  ENGINE_DESCRIPTOR_BY_KIND[props.config.engine].installation &&
-                  props.engineStatus ? (
-                    <EngineUpdateAction
-                      engineStatus={props.engineStatus}
-                      active={updateActive}
-                      disabled={updateActive}
-                      onUpdate={props.onUpdate}
-                    />
-                  ) : null
-                }
-              />
+              <EngineDocsLinks docs={props.config.docs} />
               {props.config.engine === "pi" ? (
                 <p className="text-xs text-muted-foreground">
                   {t("settings.engineBundledInstallation")}
