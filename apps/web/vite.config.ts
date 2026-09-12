@@ -3,14 +3,14 @@
 // Layer: Web build config
 // Depends on: Vite, Tailwind, React compiler, TanStack Router.
 
+import babel from "@rolldown/plugin-babel";
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import fs from "node:fs/promises";
 import path from "node:path";
-import zlib from "node:zlib";
 import { promisify } from "node:util";
-import tailwindcss from "@tailwindcss/vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import babel from "@rolldown/plugin-babel";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import zlib from "node:zlib";
 import type { Plugin } from "vite";
 import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
@@ -25,9 +25,6 @@ const buildSourcemap =
       ? "hidden"
       : false;
 
-const WEB_ACCESS_PROVIDER_ICON_DIR = "web-access/provider-icons";
-const WEB_ACCESS_PROVIDER_ICON_EXTENSIONS = new Set([".svg", ".png", ".ico"]);
-
 async function listFiles(root: string): Promise<string[]> {
   const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
   const result: string[] = [];
@@ -40,33 +37,6 @@ async function listFiles(root: string): Promise<string[]> {
     }
   }
   return result;
-}
-
-function webAccessProviderIconPlugin(): Plugin {
-  let resolvedOutDir = "dist";
-  return {
-    name: "harnessos-web-access-provider-icons",
-    apply: "build",
-    configResolved(config) {
-      resolvedOutDir = path.resolve(config.root, config.build.outDir);
-    },
-    async closeBundle() {
-      const sourceDir = path.resolve(
-        import.meta.dirname,
-        "../../packages/oa-web-access/assets/provider-icons",
-      );
-      const targetDir = path.join(resolvedOutDir, WEB_ACCESS_PROVIDER_ICON_DIR);
-      await fs.mkdir(targetDir, { recursive: true });
-      const assetNames = (await fs.readdir(sourceDir)).filter((name) =>
-        WEB_ACCESS_PROVIDER_ICON_EXTENSIONS.has(path.extname(name).toLowerCase()),
-      );
-      await Promise.all(
-        assetNames.map((name) =>
-          fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name)),
-        ),
-      );
-    },
-  };
 }
 
 const gzip = promisify(zlib.gzip);
@@ -174,7 +144,6 @@ export default defineConfig({
       presets: [reactCompilerPreset()],
     }),
     tailwindcss(),
-    webAccessProviderIconPlugin(),
     precompressPlugin(),
   ],
   optimizeDeps: {

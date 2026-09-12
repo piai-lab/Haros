@@ -22,7 +22,6 @@ const workspaceConsumers = {
     "scripts",
   ],
   "packages/oa-ask": ["packages/oa-ask", "apps/server"],
-  "packages/oa-web-access": ["packages/oa-web-access", "apps/server"],
   "packages/shared": ["packages/shared", "apps/desktop", "apps/server", "apps/web", "scripts"],
   scripts: ["scripts"],
 };
@@ -39,10 +38,9 @@ for (const absolutePath of requestedPaths) {
 
 const runTarget = (workspace) =>
   new Promise((resolve, reject) => {
-    const passPaths = workspace !== "packages/oa-web-access";
     const child = spawn(
       "bun",
-      ["run", "--cwd", workspace, "test:related", ...(passPaths ? ["--", ...requestedPaths] : [])],
+      ["run", "--cwd", workspace, "test:related", "--", ...requestedPaths],
       { cwd: repoRoot, stdio: "inherit" },
     );
     child.once("error", reject);

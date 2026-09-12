@@ -1,14 +1,15 @@
 import {
   BUILT_IN_TOOL_SURFACES,
   type BuiltInToolGroupOverrides,
-  type EngineSelection,
   type EngineKind,
+  type EngineSelection,
   type EngineStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
   type ServerSettingsView,
 } from "@harnessos/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
+import { isRunnableEngine } from "./engineMetadata";
 import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
 import { getDefaultModel } from "./model";
 
@@ -17,7 +18,7 @@ export function isServerEngineEnabled(
   engine: EngineKind,
 ): boolean {
   const engines = settings.engines as Partial<Record<EngineKind, { readonly enabled?: boolean }>>;
-  return engines[engine]?.enabled !== false;
+  return isRunnableEngine(engine) && engines[engine]?.enabled !== false;
 }
 
 function shouldReplaceTextGenerationEngineSelection(
@@ -30,6 +31,13 @@ export function validateServerSettingsPatch(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): string | null {
+  if (patch.defaultEngine !== undefined && !isRunnableEngine(patch.defaultEngine))
+    return "This engine has been removed / 此引擎已移除";
+  if (
+    patch.textGenerationEngineSelection?.engine !== undefined &&
+    !isRunnableEngine(patch.textGenerationEngineSelection.engine)
+  )
+    return "This engine has been removed / 此引擎已移除";
   const selectionPatch = patch.textGenerationEngineSelection;
   if (
     selectionPatch?.engine !== undefined &&
@@ -84,6 +92,7 @@ export function normalizeBuiltInGroupOverrides(
 export function normalizeServerSettings(settings: ServerSettings): ServerSettings {
   return {
     ...settings,
+    defaultEngine: isRunnableEngine(settings.defaultEngine) ? settings.defaultEngine : "codex",
     agentTools: {
       ...settings.agentTools,
       builtInGroupOverrides: normalizeBuiltInGroupOverrides(

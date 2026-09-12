@@ -3,20 +3,12 @@
 // Layer: Settings panel
 
 import {
-  type EngineKind,
-  type ServerEngineStatus,
-  type ServerSettingsPatch,
-  type ServerSettingsView,
-} from "@harnessos/contracts";
-import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
-import { deepMerge } from "@harnessos/shared/Struct";
-import {
   closestCenter,
   DndContext,
   PointerSensor,
-  type DragEndEvent,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -26,26 +18,48 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  type EngineKind,
+  type ServerEngineStatus,
+  type ServerSettingsPatch,
+  type ServerSettingsView,
+} from "@harnessos/contracts";
+import {
+  ENGINE_DISPLAY_NAMES,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "@harnessos/shared/engineMetadata";
+import { deepMerge } from "@harnessos/shared/Struct";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
+import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
+import { sameEngineOrder } from "~/engineOrdering";
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
-  MAX_CUSTOM_MODEL_LENGTH,
-  getCustomModelsForEngine,
   getCustomBinaryPathForEngine,
+  getCustomModelsForEngine,
   getDefaultCustomModelsForEngine,
+  MAX_CUSTOM_MODEL_LENGTH,
   patchCustomModels,
 } from "~/engineSettings";
-import { useLocalPreferences } from "~/localPreferences";
-import { useServerSettings } from "~/serverSettings";
+import {
+  createEngineUpdateToastData,
+  EngineUpdateTimeoutError,
+  getVisibleEngineUpdateStatuses,
+  isEngineLatestVersionKnowable,
+  isEngineUpdateActive,
+  shouldOfferEngineUpdateAction,
+  shouldPromptEngineUpdate,
+  shouldShowEngineUpdateStatus,
+  withEngineUpdateTimeout,
+} from "~/engineUpdates";
+import { useI18n, type MessageKey } from "~/i18n";
+import { CentralIcon } from "~/lib/central-icons";
 import {
   deriveEnginePickerAvailability,
   normalizeEngineStatusForLocalConfig,
   type EnginePickerAvailabilityState,
 } from "~/lib/engineAvailability";
-import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
-import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon, PlusIcon, XIcon } from "~/lib/icons";
 import {
   reconcileServerEngineStatuses,
@@ -53,19 +67,9 @@ import {
   serverQueryKeys,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
+import { useLocalPreferences } from "~/localPreferences";
 import { ensureNativeApi } from "~/nativeApi";
-import { sameEngineOrder } from "~/engineOrdering";
-import {
-  getVisibleEngineUpdateStatuses,
-  isEngineLatestVersionKnowable,
-  isEngineUpdateActive,
-  shouldOfferEngineUpdateAction,
-  shouldPromptEngineUpdate,
-  shouldShowEngineUpdateStatus,
-  EngineUpdateTimeoutError,
-  createEngineUpdateToastData,
-  withEngineUpdateTimeout,
-} from "~/engineUpdates";
+import { useServerSettings } from "~/serverSettings";
 import { ENGINES_SETTINGS_SEARCH } from "~/settingsMetadata/engineSettings";
 import {
   SETTINGS_INSET_LIST_CLASS_NAME,
@@ -74,15 +78,14 @@ import {
   SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
 } from "~/settingsPanelStyles";
 import { ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME } from "~/surfaceStyles";
-import { useI18n, type MessageKey } from "~/i18n";
 
+import { EngineIcon } from "../EngineIcon";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
-import { EngineIcon } from "../EngineIcon";
 import { SettingResetButton, useSettingsRestoreSignal } from "./SettingControls";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 
@@ -174,7 +177,7 @@ export function validateEngineCustomModelInput(input: {
 }
 
 const ENGINE_VISIBILITY_OPTIONS: ReadonlyArray<{ engine: EngineKind; title: string }> =
-  ENGINE_DESCRIPTORS.map((descriptor) => ({
+  RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => ({
     engine: descriptor.kind,
     title: descriptor.displayName,
   }));

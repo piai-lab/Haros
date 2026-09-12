@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -43,7 +43,6 @@ function fixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@harnessos/oa-runtime",
   ];
   let targetManifest = "";
   for (const name of piNames) {
@@ -272,7 +271,6 @@ describe("legal metadata", () => {
       "@earendil-works/pi-protocol",
       "@earendil-works/pi-telemetry",
       "@earendil-works/pi-tui",
-      "@harnessos/oa-runtime",
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }

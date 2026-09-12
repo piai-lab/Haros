@@ -4,9 +4,9 @@
 // Exports: default order, normalization, and order comparison helpers.
 
 import type { EngineKind } from "@harnessos/contracts";
-import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
+import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
-export const DEFAULT_PROVIDER_ORDER: readonly EngineKind[] = ENGINE_DESCRIPTORS.map(
+export const DEFAULT_PROVIDER_ORDER: readonly EngineKind[] = RUNNABLE_ENGINE_DESCRIPTORS.map(
   (descriptor) => descriptor.kind,
 );
 
@@ -71,10 +71,9 @@ export function filterEngineOptionsByVisibility<T extends { value: EngineKind }>
   hiddenEngines: ReadonlySet<EngineKind>,
   protectedEngines: ReadonlySet<EngineKind>,
 ): ReadonlyArray<T> {
-  if (hiddenEngines.size === 0) {
-    return options;
-  }
   return options.filter(
-    (option) => protectedEngines.has(option.value) || !hiddenEngines.has(option.value),
+    (option) =>
+      isEngineKind(option.value) &&
+      (protectedEngines.has(option.value) || !hiddenEngines.has(option.value)),
   );
 }

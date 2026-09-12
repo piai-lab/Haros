@@ -15,4 +15,4 @@ export const ENGINE_KINDS = [
 
 export const EngineKind = Schema.Literals(ENGINE_KINDS);
 export type EngineKind = typeof EngineKind.Type;
-export const DEFAULT_ENGINE_KIND: EngineKind = "oa";
+export const DEFAULT_ENGINE_KIND: EngineKind = "codex";

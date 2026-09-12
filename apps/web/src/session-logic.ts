@@ -1,12 +1,12 @@
 import {
+  type EngineKind,
   type OrchestrationLatestTurn,
   type OrchestrationProposedPlanId,
   type OrchestrationThreadActivity,
-  type EngineKind,
   type ThreadId,
   type TurnId,
 } from "@harnessos/contracts";
-import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
+import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
 import { orderedActivities, parseTaskListTasks } from "./workLog";
 
@@ -28,20 +28,20 @@ export {
 export {
   deriveTimelineEntries,
   deriveWorkLogEntries,
-  isFileChangeWorkLogEntry,
   isEngineFileEditWorkLogEntry,
+  isFileChangeWorkLogEntry,
   isRoutedSubagentWorkEntry,
   omitRoutedSubagentWorkEntries,
   orderedActivities,
   type TimelineEntry,
   type WorkLogAutomation,
   type WorkLogEntry,
+  type WorkLogHarosCreatedThread,
+  type WorkLogHarosThreadCreation,
   type WorkLogLiveActivity,
   type WorkLogLiveActivityState,
   type WorkLogSubagent,
   type WorkLogSubagentAction,
-  type WorkLogHarosCreatedThread,
-  type WorkLogHarosThreadCreation,
 } from "./workLog";
 
 export type EnginePickerKind = EngineKind;
@@ -49,7 +49,7 @@ export type EnginePickerKind = EngineKind;
 export const ENGINE_OPTIONS: Array<{
   value: EnginePickerKind;
   label: string;
-}> = ENGINE_DESCRIPTORS.map((descriptor) => ({
+}> = RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => ({
   value: descriptor.kind,
   label: descriptor.displayName,
 }));

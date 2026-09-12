@@ -503,7 +503,7 @@ const modelServiceAdmission = makeEngineServiceLayer(undefined, {
   includeHaros: true,
 });
 const ecosystemReloadRouting = makeEngineServiceLayer(undefined, {
-  includeHaros: true,
+  includePi: true,
 });
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
@@ -1534,21 +1534,21 @@ bindingRetryRouting.layer("EngineServiceLive binding settlement retry", (it) => 
 });
 
 ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) => {
-  it.effect("reloads only the exact live Haros Agent session", () =>
+  it.effect("reloads only the exact live Pi session", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-reload");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
 
       assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
         state: "reloaded",
       });
-      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, 1);
+      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, 1);
     }),
   );
 
@@ -1556,14 +1556,14 @@ ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-no-session");
-      const startCount = ecosystemReloadRouting.oa.startSession.mock.calls.length;
-      const reloadCount = ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length;
+      const startCount = ecosystemReloadRouting.pi.startSession.mock.calls.length;
+      const reloadCount = ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length;
 
       assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
         state: "no_active_session",
       });
-      assert.equal(ecosystemReloadRouting.oa.startSession.mock.calls.length, startCount);
-      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, reloadCount);
+      assert.equal(ecosystemReloadRouting.pi.startSession.mock.calls.length, startCount);
+      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, reloadCount);
     }),
   );
 

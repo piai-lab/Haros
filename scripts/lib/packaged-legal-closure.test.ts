@@ -1,5 +1,5 @@
 import { createPackage, extractFile } from "@electron/asar";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -47,7 +47,6 @@ async function archiveFixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@harnessos/oa-runtime",
   ];
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(
@@ -98,7 +97,7 @@ afterEach(() => {
 describe("packaged legal closure", () => {
   it("accepts an ASAR only when every packaged dependency is disclosed", async () => {
     const result = verifyPackagedLegalClosureArchive(await archiveFixture());
-    expect(result.componentCount).toBe(10);
+    expect(result.componentCount).toBe(9);
   });
 
   it("rejects an undisclosed dependency found in the actual ASAR", async () => {

@@ -1,5 +1,4 @@
 import { Schema } from "effect";
-
 import type {
   AuthBearerBootstrapResult,
   AuthBootstrapInput,
@@ -15,16 +14,9 @@ import type {
   AuthWebSocketTokenResult,
 } from "./auth";
 import type {
-  ExternalMcpCreateIntegrationInput,
-  ExternalMcpCreateIntegrationResult,
-  ExternalMcpIntegration,
-  ExternalMcpRefreshPairingInput,
-  ExternalMcpRevokeIntegrationInput,
-} from "./externalMcp";
-import type {
+  AutomationArchiveRunInput,
   AutomationCancelRunInput,
   AutomationCancelRunResult,
-  AutomationArchiveRunInput,
   AutomationCreateInput,
   AutomationDefinition,
   AutomationDeleteInput,
@@ -41,32 +33,97 @@ import type {
   AutomationStreamEvent,
   AutomationUpdateInput,
 } from "./automation";
+import type { ThreadId } from "./baseSchemas";
+import type { BrowserAnnotationMethods } from "./browserAnnotations";
 import type {
-  GitCheckoutInput,
+  DeviceAttachInput,
+  DeviceBootInput,
+  DeviceBootResult,
+  DeviceDescribeUiInput,
+  DeviceDescribeUiResult,
+  DeviceDetachInput,
+  DeviceEvent,
+  DeviceInstallAppInput,
+  DeviceInstallAppResult,
+  DeviceKeyEventInput,
+  DeviceLaunchAppInput,
+  DeviceLaunchAppResult,
+  DeviceListInput,
+  DeviceListResult,
+  DeviceOpenUrlInput,
+  DevicePressButtonInput,
+  DeviceScreenshotInput,
+  DeviceScreenshotResult,
+  DeviceScrollToElementInput,
+  DeviceScrollToElementResult,
+  DeviceShutdownInput,
+  DeviceStartRecordingInput,
+  DeviceStartRecordingResult,
+  DeviceStopRecordingInput,
+  DeviceStopRecordingResult,
+  DeviceSwipeInput,
+  DeviceTapInput,
+  DeviceThreadInput,
+  DeviceTypeTextInput,
+  ThreadDeviceState,
+} from "./device";
+import type { EditorId } from "./editor";
+import type { EngineCompactThreadInput } from "./engine";
+import type {
+  EngineComposerCapabilities,
+  EngineGetComposerCapabilitiesInput,
+  EngineListAgentsInput,
+  EngineListAgentsResult,
+  EngineListCommandsInput,
+  EngineListCommandsResult,
+  EngineListModelsInput,
+  EngineListModelsResult,
+  EngineListPluginsInput,
+  EngineListPluginsResult,
+  EngineListSkillsInput,
+  EngineListSkillsResult,
+  EngineReadPluginInput,
+  EngineReadPluginResult,
+  EngineSkillsCatalogInput,
+  EngineSkillsCatalogResult,
+} from "./engineDiscovery";
+import type {
+  EngineExecutionCapabilities,
+  EngineExecutionCapabilitiesInput,
+} from "./engineExecution";
+import type { EngineWebSurfaceThemeSnapshot } from "./engineWebSurfaceTheme";
+import type {
+  ExternalMcpCreateIntegrationInput,
+  ExternalMcpCreateIntegrationResult,
+  ExternalMcpIntegration,
+  ExternalMcpRefreshPairingInput,
+  ExternalMcpRevokeIntegrationInput,
+} from "./externalMcp";
+import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
+import type {
   GitActionProgressEvent,
-  GitWorktreeSetupProgressEvent,
+  GitCheckoutInput,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
-  GitHubRepositoryInput,
-  GitHubRepositoryResult,
-  GitHandoffThreadInput,
-  GitHandoffThreadResult,
-  GitPreparePullRequestThreadInput,
-  GitPreparePullRequestThreadResult,
-  GitPullRequestRefInput,
-  GitPullRequestSnapshotInput,
-  GitPullRequestSnapshotResult,
   GitCreateWorktreeInput,
   GitCreateWorktreeResult,
+  GitHandoffThreadInput,
+  GitHandoffThreadResult,
+  GitHubRepositoryInput,
+  GitHubRepositoryResult,
   GitInitInput,
   GitListBranchesInput,
   GitListBranchesResult,
+  GitPreparePullRequestThreadInput,
+  GitPreparePullRequestThreadResult,
   GitPullInput,
+  GitPullRequestRefInput,
+  GitPullRequestSnapshotInput,
+  GitPullRequestSnapshotResult,
   GitPullResult,
   GitReadWorkingTreeDiffInput,
   GitReadWorkingTreeDiffResult,
-  GitWorkingTreeDiffStatsResult,
   GitRemoveIndexLockInput,
   GitRemoveWorktreeInput,
   GitResolvePullRequestResult,
@@ -84,12 +141,69 @@ import type {
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
   GitUnstageFilesResult,
+  GitWorkingTreeDiffStatsResult,
+  GitWorktreeSetupProgressEvent,
 } from "./git";
 import type {
   GitHubProjectProvisionInput,
   GitHubProjectProvisionProgressEvent,
   GitHubProjectProvisionResult,
 } from "./githubProjectProvisioning";
+import type {
+  ClientOrchestrationCommand,
+  DispatchResult,
+  OrchestrationEvent,
+  OrchestrationGetFullThreadDiffInput,
+  OrchestrationGetFullThreadDiffResult,
+  OrchestrationGetThreadDetailSnapshotInput,
+  OrchestrationGetThreadDetailSnapshotResult,
+  OrchestrationGetTurnDiffInput,
+  OrchestrationGetTurnDiffResult,
+  OrchestrationImportThreadInput,
+  OrchestrationImportThreadResult,
+  OrchestrationListEngineDeliveryBlockersInput,
+  OrchestrationListEngineDeliveryBlockersResult,
+  OrchestrationReadModel,
+  OrchestrationReconcileEngineDeliveryInput,
+  OrchestrationReconcileEngineDeliveryResult,
+  OrchestrationShellSnapshot,
+  OrchestrationShellStreamItem,
+  OrchestrationSubscribeThreadInput,
+  OrchestrationThreadStreamItem,
+  OrchestrationUnsubscribeThreadInput,
+  OrchestrationUpdatePendingUserInputDraftInput,
+  OrchestrationUpdatePendingUserInputDraftResult,
+} from "./orchestration";
+import type {
+  ProjectCreateLocalFilePreviewGrantInput,
+  ProjectCreateLocalFilePreviewGrantResult,
+  ProjectDevServerEvent,
+  ProjectDiscoverScriptsInput,
+  ProjectDiscoverScriptsResult,
+  ProjectListDevServersResult,
+  ProjectListDirectoriesInput,
+  ProjectListDirectoriesResult,
+  ProjectPrewarmSearchIndexInput,
+  ProjectPrewarmSearchIndexResult,
+  ProjectReadFileInput,
+  ProjectReadFileResult,
+  ProjectResolveOutOfRootFileReferenceInput,
+  ProjectResolveOutOfRootFileReferenceResult,
+  ProjectResolveWorkspaceFileReferencesInput,
+  ProjectResolveWorkspaceFileReferencesResult,
+  ProjectRunDevServerInput,
+  ProjectRunDevServerResult,
+  ProjectSearchContentInput,
+  ProjectSearchContentResult,
+  ProjectSearchEntriesInput,
+  ProjectSearchEntriesResult,
+  ProjectSearchLocalEntriesInput,
+  ProjectSearchLocalEntriesResult,
+  ProjectStopDevServerInput,
+  ProjectStopDevServerResult,
+  ProjectWriteFileInput,
+  ProjectWriteFileResult,
+} from "./project";
 import type {
   PullRequestActionInput,
   PullRequestActionResult,
@@ -105,98 +219,33 @@ import type {
   PullRequestsListResult,
 } from "./pullRequests";
 import type {
-  ProjectCreateLocalFilePreviewGrantInput,
-  ProjectCreateLocalFilePreviewGrantResult,
-  ProjectDevServerEvent,
-  ProjectDiscoverScriptsInput,
-  ProjectDiscoverScriptsResult,
-  ProjectListDevServersResult,
-  ProjectListDirectoriesInput,
-  ProjectListDirectoriesResult,
-  ProjectPrewarmSearchIndexInput,
-  ProjectPrewarmSearchIndexResult,
-  ProjectReadFileInput,
-  ProjectReadFileResult,
-  ProjectResolveWorkspaceFileReferencesInput,
-  ProjectResolveWorkspaceFileReferencesResult,
-  ProjectResolveOutOfRootFileReferenceInput,
-  ProjectResolveOutOfRootFileReferenceResult,
-  ProjectRunDevServerInput,
-  ProjectRunDevServerResult,
-  ProjectSearchContentInput,
-  ProjectSearchContentResult,
-  ProjectSearchEntriesInput,
-  ProjectSearchEntriesResult,
-  ProjectSearchLocalEntriesInput,
-  ProjectSearchLocalEntriesResult,
-  ProjectStopDevServerInput,
-  ProjectStopDevServerResult,
-  ProjectWriteFileInput,
-  ProjectWriteFileResult,
-} from "./project";
-import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
-import type {
-  DeviceAttachInput,
-  DeviceBootInput,
-  DeviceBootResult,
-  DeviceDescribeUiInput,
-  DeviceScrollToElementInput,
-  DeviceScrollToElementResult,
-  DeviceDescribeUiResult,
-  DeviceDetachInput,
-  DeviceEvent,
-  DeviceInstallAppInput,
-  DeviceInstallAppResult,
-  DeviceKeyEventInput,
-  DeviceLaunchAppInput,
-  DeviceLaunchAppResult,
-  DeviceListInput,
-  DeviceListResult,
-  DeviceOpenUrlInput,
-  DevicePressButtonInput,
-  DeviceScreenshotInput,
-  DeviceScreenshotResult,
-  DeviceStartRecordingInput,
-  DeviceStartRecordingResult,
-  DeviceStopRecordingInput,
-  DeviceStopRecordingResult,
-  DeviceShutdownInput,
-  DeviceSwipeInput,
-  DeviceTapInput,
-  DeviceThreadInput,
-  DeviceTypeTextInput,
-  ThreadDeviceState,
-} from "./device";
-import type { EngineWebSurfaceThemeSnapshot } from "./engineWebSurfaceTheme";
-import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
-import type {
+  ServerCommandUsageHistoryInput,
+  ServerCommandUsageHistoryResult,
   ServerConfig,
   ServerDiagnosticsResult,
+  ServerEngineUpdateInput,
+  ServerEngineUpdateResult,
   ServerGenerateAutomationIntentInput,
   ServerGenerateAutomationIntentResult,
   ServerGenerateThreadRecapInput,
   ServerGenerateThreadRecapResult,
   ServerGetBuiltInToolGroupsResult,
   ServerGetEnvironmentResult,
+  ServerGetSettingsResult,
   ServerGetUsageHistoryInput,
   ServerGetUsageHistoryResult,
-  ServerCommandUsageHistoryInput,
-  ServerCommandUsageHistoryResult,
   ServerListEngineUsageInput,
   ServerListEngineUsageResult,
-  ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
-  ServerEngineUpdateInput,
-  ServerEngineUpdateResult,
   ServerRefreshEnginesResult,
   ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-  ServerUpdateSettingsInput,
-  ServerUpdateSettingsResult,
   ServerUpdateEngineCredentialInput,
   ServerUpdateEngineCredentialResult,
+  ServerUpdateSettingsInput,
+  ServerUpdateSettingsResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
   ServerVoicePrewarmInput,
@@ -204,6 +253,13 @@ import type {
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
 } from "./server";
+import type {
+  StatsGetProfileStatsInput,
+  StatsGetProfileStatsResult,
+  StatsGetProfileTokenStatsInput,
+  StatsGetProfileTokenStatsResult,
+} from "./stats";
+import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import type {
   TerminalAckOutputInput,
   TerminalClearInput,
@@ -215,119 +271,7 @@ import type {
   TerminalSessionSnapshot,
   TerminalWriteInput,
 } from "./terminal";
-import type {
-  ClientOrchestrationCommand,
-  DispatchResult,
-  OrchestrationGetFullThreadDiffInput,
-  OrchestrationGetFullThreadDiffResult,
-  OrchestrationGetThreadDetailSnapshotInput,
-  OrchestrationGetThreadDetailSnapshotResult,
-  OrchestrationUpdatePendingUserInputDraftInput,
-  OrchestrationUpdatePendingUserInputDraftResult,
-  OrchestrationImportThreadInput,
-  OrchestrationImportThreadResult,
-  OrchestrationListEngineDeliveryBlockersInput,
-  OrchestrationListEngineDeliveryBlockersResult,
-  OrchestrationReconcileEngineDeliveryInput,
-  OrchestrationReconcileEngineDeliveryResult,
-  OrchestrationGetTurnDiffInput,
-  OrchestrationGetTurnDiffResult,
-  OrchestrationEvent,
-  OrchestrationReadModel,
-  OrchestrationShellSnapshot,
-  OrchestrationShellStreamItem,
-  OrchestrationSubscribeThreadInput,
-  OrchestrationThreadStreamItem,
-  OrchestrationUnsubscribeThreadInput,
-} from "./orchestration";
-import type { EditorId } from "./editor";
-import type { ThreadId } from "./baseSchemas";
-import type {
-  EngineComposerCapabilities,
-  EngineGetComposerCapabilitiesInput,
-  EngineListAgentsInput,
-  EngineListAgentsResult,
-  EngineListCommandsInput,
-  EngineListCommandsResult,
-  EngineListModelsInput,
-  EngineListModelsResult,
-  EngineListPluginsInput,
-  EngineListPluginsResult,
-  EngineListSkillsInput,
-  EngineListSkillsResult,
-  EngineSkillsCatalogInput,
-  EngineSkillsCatalogResult,
-  EngineReadPluginInput,
-  EngineReadPluginResult,
-} from "./engineDiscovery";
-import type {
-  EngineExecutionCapabilities,
-  EngineExecutionCapabilitiesInput,
-} from "./engineExecution";
-import type { EngineCompactThreadInput } from "./engine";
 import type { ToolResultFullReadResult, ToolResultReadInput } from "./toolResults";
-import type {
-  HarosCustomModelServiceRemoveInput,
-  HarosCustomModelServiceRemoveResult,
-  HarosCustomModelServiceDiscoverInput,
-  HarosCustomModelServiceDiscoverResult,
-  HarosCustomModelServiceSaveInput,
-  HarosCustomModelServiceSaveResult,
-  HarosCustomModelServiceTestInput,
-  HarosCustomModelServiceTestResult,
-  OAModelServiceAnswerLoginInput,
-  OAModelServiceAuthResult,
-  OAModelServiceBeginLoginInput,
-  OAModelServiceCancelLoginInput,
-  OAModelServicePollLoginInput,
-  OAModelServiceLogoutInput,
-  OAModelServiceLogoutResult,
-  OAModelServiceRevealApiKeyInput,
-  OAModelServiceRevealApiKeyResult,
-  OAModelServiceRefreshInput,
-  OAModelServiceRefreshResult,
-  OAModelServicesGetInput,
-  OAModelServicesGetResult,
-  OAModelServicesListInput,
-  OAModelServicesListResult,
-} from "./oaModelServices";
-import type {
-  OAEcosystemInstallInput,
-  OAEcosystemListInput,
-  OAEcosystemListResourcesResult,
-  OAEcosystemMutationResult,
-  OAEcosystemPackageInput,
-  OAEcosystemReloadInput,
-  OAEcosystemReloadResult,
-  OAEcosystemResourceToggleInput,
-  OAEcosystemSnapshot,
-} from "./oaEcosystem";
-import type {
-  OAAgentPromptGetSnapshotInput,
-  OAAgentPromptMutationInput,
-  OAAgentPromptMutationResult,
-  OAAgentPromptSnapshot,
-} from "./oaAgentPrompts";
-import type {
-  OAWebSearchGeminiDiagnosticInput,
-  OAWebSearchGeminiDiagnosticResult,
-  OAWebSearchMutationInput,
-  OAWebSearchMutationResult,
-  OAWebSearchOpenConfigInput,
-  OAWebSearchProbeResult,
-  OAWebSearchProviderTestInput,
-  OAWebSearchReadResult,
-  OAWebSearchRecheckInput,
-  OAWebSearchRefreshInput,
-} from "./oaWebSearch";
-import type {
-  StatsGetProfileStatsInput,
-  StatsGetProfileStatsResult,
-  StatsGetProfileTokenStatsInput,
-  StatsGetProfileTokenStatsResult,
-} from "./stats";
-import type { BrowserAnnotationMethods } from "./browserAnnotations";
-
 export interface ContextMenuItem<T extends string = string> {
   id: T;
   label: string;
@@ -335,7 +279,6 @@ export interface ContextMenuItem<T extends string = string> {
   separatorBefore?: boolean;
   destructive?: boolean;
 }
-
 export type DesktopUpdateStatus =
   | "disabled"
   | "idle"
@@ -345,16 +288,13 @@ export type DesktopUpdateStatus =
   | "downloading"
   | "downloaded"
   | "error";
-
 export type DesktopRuntimeArch = "arm64" | "x64" | "other";
 export type DesktopTheme = "light" | "dark" | "system";
-
 export interface DesktopRuntimeInfo {
   hostArch: DesktopRuntimeArch;
   appArch: DesktopRuntimeArch;
   runningUnderArm64Translation: boolean;
 }
-
 export interface DesktopUpdateState {
   enabled: boolean;
   status: DesktopUpdateStatus;
@@ -376,13 +316,11 @@ export interface DesktopUpdateState {
   // update source is configured.
   releaseUrl: string | null;
 }
-
 export interface DesktopUpdateActionResult {
   accepted: boolean;
   completed: boolean;
   state: DesktopUpdateState;
 }
-
 export interface BrowserTabState {
   id: string;
   url: string;
@@ -412,7 +350,6 @@ export interface BrowserTabState {
     internalOnly: true;
   };
 }
-
 export interface ThreadBrowserState {
   threadId: ThreadId;
   version: number;
@@ -421,33 +358,27 @@ export interface ThreadBrowserState {
   tabs: BrowserTabState[];
   lastError: string | null;
 }
-
 export interface BrowserOpenInput {
   threadId: ThreadId;
   initialUrl?: string;
 }
-
 export interface BrowserThreadInput {
   threadId: ThreadId;
 }
-
 export interface BrowserTabInput {
   threadId: ThreadId;
   tabId: string;
 }
-
 export interface BrowserNavigateInput {
   threadId: ThreadId;
   tabId?: string;
   url: string;
 }
-
 export interface BrowserNewTabInput {
   threadId: ThreadId;
   url?: string;
   activate?: boolean;
 }
-
 export interface EngineWebSurfacePresentationContext {
   locale: "en" | "zh-CN";
   theme: "light" | "dark";
@@ -459,42 +390,34 @@ export interface EngineWebSurfacePresentationContext {
    */
   themeSnapshot?: EngineWebSurfaceThemeSnapshot;
 }
-
 export interface BrowserSetEngineWebSurfaceContextInput extends EngineWebSurfacePresentationContext {}
-
 export interface BrowserReopenEngineWebSurfaceInput {
   threadId: ThreadId;
   surfaceId: string;
 }
-
 export interface BrowserPanelBounds {
   x: number;
   y: number;
   width: number;
   height: number;
 }
-
 export interface BrowserSetPanelBoundsInput {
   threadId: ThreadId;
   bounds: BrowserPanelBounds | null;
   surface?: "native" | "renderer";
 }
-
 export interface BrowserAttachWebviewInput extends BrowserTabInput {
   webContentsId: number;
 }
-
 export interface BrowserDetachWebviewInput extends BrowserTabInput {
   webContentsId: number;
 }
-
 export interface BrowserCaptureScreenshotResult {
   name: string;
   mimeType: "image/png";
   sizeBytes: number;
   bytes: Uint8Array;
 }
-
 export type DesktopAppSnapPlatform = "macos" | "windows" | "linux" | "other";
 export type DesktopAppSnapPermission =
   | "granted"
@@ -509,28 +432,26 @@ export type DesktopAppSnapStatus =
   | "starting"
   | "ready"
   | "error";
-
 export type DesktopAppSnapShortcutModifier = "command" | "control" | "option" | "shift";
-
 export interface DesktopAppSnapKeyChord {
   kind: "key-chord";
   modifier: DesktopAppSnapShortcutModifier;
   /** A physical DOM KeyboardEvent.code, such as `KeyS` or `Space`. */
   key: string;
 }
-
-export type DesktopAppSnapShortcut = { kind: "both-option-keys" } | DesktopAppSnapKeyChord;
-
+export type DesktopAppSnapShortcut =
+  | {
+      kind: "both-option-keys";
+    }
+  | DesktopAppSnapKeyChord;
 export interface DesktopAppSnapShortcutAvailability {
   available: boolean;
   reason: string | null;
 }
-
 export interface DesktopAppSnapShortcutUpdateResult {
   state: DesktopAppSnapState;
   availability: DesktopAppSnapShortcutAvailability;
 }
-
 export interface DesktopAppSnapState {
   platform: DesktopAppSnapPlatform;
   supported: boolean;
@@ -541,7 +462,6 @@ export interface DesktopAppSnapState {
   screenRecordingPermission: DesktopAppSnapPermission;
   message: string | null;
 }
-
 export interface DesktopAppSnapCapture {
   id: string;
   capturedAt: string;
@@ -554,20 +474,17 @@ export interface DesktopAppSnapCapture {
   sourceAppIconDataUrl: string | null;
   sourceWindowTitle: string | null;
 }
-
 export interface DesktopAppSnapErrorEvent {
   code: string;
   message: string;
   capturedAt: string;
 }
-
 // Pushed from the desktop main process when the in-app browser copy-link chord fires
 // while the native page (not the React chrome) holds keyboard focus.
 export interface BrowserCopyLinkEvent {
   threadId: ThreadId;
   url: string;
 }
-
 // Pushed after the desktop browser host has accepted an agent request. Keeping
 // the requested thread in the event prevents whichever chat happens to be
 // visible from stealing the browser session.
@@ -578,42 +495,40 @@ export interface BrowserUseOpenPanelRequest {
   surfaceId: string | null;
   tabId: string;
 }
-
 export interface EngineWebSurfacePresentationRelease {
   presentationId: string;
   threadId: ThreadId;
   disposition: "restore" | "preserve";
   suppressedByUser: boolean;
 }
-
 export interface EngineWebSurfacePresentationSuppression {
   presentationId: string;
   threadId: ThreadId;
 }
-
 export interface EngineWebSurfacePresentationSuppressionRequest {
   threadIds: ReadonlyArray<ThreadId>;
 }
-
 export interface EngineWebSurfacePresentationSuppressionAck {
   status: "acknowledged";
   presentations: ReadonlyArray<EngineWebSurfacePresentationSuppression>;
 }
-
 export type EngineWebSurfacePresentationReleaseAck = Pick<
   EngineWebSurfacePresentationRelease,
   "presentationId" | "threadId"
 >;
-
 export type BrowserPanelRevealResult =
-  | { readonly status: "visible" }
-  | { readonly status: "background" }
-  | { readonly status: "unavailable" };
-
+  | {
+      readonly status: "visible";
+    }
+  | {
+      readonly status: "background";
+    }
+  | {
+      readonly status: "unavailable";
+    };
 export type BrowserUseOpenPanelResponse = BrowserPanelRevealResult & {
   readonly requestId: string;
 };
-
 interface BrowserControlMethods {
   open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;
   close: (input: BrowserThreadInput) => Promise<ThreadBrowserState>;
@@ -650,7 +565,6 @@ interface BrowserControlMethods {
   openDevTools: (input: BrowserTabInput) => Promise<void>;
   onState: (listener: (state: ThreadBrowserState) => void) => () => void;
 }
-
 export interface DesktopNotificationInput {
   title: string;
   body?: string;
@@ -658,22 +572,18 @@ export interface DesktopNotificationInput {
   suppressWhenForeground?: boolean;
   threadId?: ThreadId;
 }
-
 export interface DesktopWindowState {
   isMaximized: boolean;
   isFullscreen: boolean;
 }
-
 /** Main → renderer: request a bounded in-app decision for a normal desktop quit. */
 export interface DesktopQuitConfirmationRequest {
   readonly requestId: string;
 }
-
 export interface DesktopQuitConfirmationThread {
   readonly id: string;
   readonly title: string;
 }
-
 /**
  * Renderer first reports the current eligible task snapshot, then replies with
  * the user's decision. The continuation prompt is localized by the renderer but
@@ -693,7 +603,6 @@ export type DesktopQuitConfirmationResponse =
       readonly resume: boolean;
       readonly continuationPrompt: string;
     };
-
 /** Windows/Linux frameless title bar preference vs the live BrowserWindow frame. */
 export interface DesktopCustomTitleBarState {
   supported: boolean;
@@ -701,10 +610,8 @@ export interface DesktopCustomTitleBarState {
   active: boolean;
   restartRequired: boolean;
 }
-
 export const DesktopAppIcon = Schema.Literals(["default", "icon", "dark"]);
 export type DesktopAppIcon = typeof DesktopAppIcon.Type;
-
 export interface DesktopBridge {
   /** Full only for the first renderer window in this Desktop process; later windows skip it. */
   readonly startupPresentation?: "full" | "none";
@@ -730,7 +637,10 @@ export interface DesktopBridge {
   setAppIcon: (icon: DesktopAppIcon) => Promise<void>;
   showContextMenu: <T extends string>(
     items: readonly ContextMenuItem<T>[],
-    position?: { x: number; y: number },
+    position?: {
+      x: number;
+      y: number;
+    },
   ) => Promise<T | null>;
   openExternal: (url: string) => Promise<boolean>;
   showInFolder: (path: string) => Promise<void>;
@@ -803,7 +713,6 @@ export interface DesktopBridge {
     onBrowserCopyLink: (listener: (event: BrowserCopyLinkEvent) => void) => () => void;
   };
 }
-
 export interface NativeApi {
   dialogs: {
     pickFolder: () => Promise<string | null>;
@@ -834,7 +743,9 @@ export interface NativeApi {
     searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
     searchContent: (
       input: ProjectSearchContentInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<ProjectSearchContentResult>;
     searchLocalEntries: (
       input: ProjectSearchLocalEntriesInput,
@@ -844,7 +755,9 @@ export interface NativeApi {
     ) => Promise<ProjectPrewarmSearchIndexResult>;
     readFile: (
       input: ProjectReadFileInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<ProjectReadFileResult>;
     resolveWorkspaceFileReferences: (
       input: ProjectResolveWorkspaceFileReferencesInput,
@@ -862,7 +775,9 @@ export interface NativeApi {
     onDevServerEvent: (callback: (event: ProjectDevServerEvent) => void) => () => void;
     provisionFromGitHub: (
       input: GitHubProjectProvisionInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<GitHubProjectProvisionResult>;
     onProvisionProgress: (
       callback: (event: GitHubProjectProvisionProgressEvent) => void,
@@ -937,7 +852,10 @@ export interface NativeApi {
   contextMenu: {
     show: <T extends string>(
       items: readonly ContextMenuItem<T>[],
-      position?: { x: number; y: number },
+      position?: {
+        x: number;
+        y: number;
+      },
     ) => Promise<T | null>;
   };
   server: {
@@ -958,18 +876,24 @@ export interface NativeApi {
       input?: AuthCreatePairingCredentialInput,
     ) => Promise<AuthPairingCredentialResult>;
     listAuthPairingLinks: () => Promise<ReadonlyArray<AuthPairingLink>>;
-    revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) => Promise<{ revoked: boolean }>;
+    revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) => Promise<{
+      revoked: boolean;
+    }>;
     listAuthClients: () => Promise<ReadonlyArray<AuthClientSession>>;
-    revokeAuthClient: (input: AuthRevokeClientSessionInput) => Promise<{ revoked: boolean }>;
-    revokeOtherAuthClients: () => Promise<{ revokedCount: number }>;
+    revokeAuthClient: (input: AuthRevokeClientSessionInput) => Promise<{
+      revoked: boolean;
+    }>;
+    revokeOtherAuthClients: () => Promise<{
+      revokedCount: number;
+    }>;
     logoutAuthSession: () => Promise<AuthLogoutResult>;
     listExternalMcpIntegrations: () => Promise<ReadonlyArray<ExternalMcpIntegration>>;
     createExternalMcpIntegration: (
       input: ExternalMcpCreateIntegrationInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
-    revokeExternalMcpIntegration: (
-      input: ExternalMcpRevokeIntegrationInput,
-    ) => Promise<{ revoked: boolean }>;
+    revokeExternalMcpIntegration: (input: ExternalMcpRevokeIntegrationInput) => Promise<{
+      revoked: boolean;
+    }>;
     refreshExternalMcpPairing: (
       input: ExternalMcpRefreshPairingInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
@@ -1012,7 +936,9 @@ export interface NativeApi {
     compactThread: (input: EngineCompactThreadInput) => Promise<void>;
     readToolResult: (
       input: ToolResultReadInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<ToolResultFullReadResult>;
     listCommands: (input: EngineListCommandsInput) => Promise<EngineListCommandsResult>;
     listSkills: (input: EngineListSkillsInput) => Promise<EngineListSkillsResult>;
@@ -1021,93 +947,16 @@ export interface NativeApi {
     readPlugin: (input: EngineReadPluginInput) => Promise<EngineReadPluginResult>;
     listModels: (
       input: EngineListModelsInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<EngineListModelsResult>;
     listAgents: (
       input: EngineListAgentsInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<EngineListAgentsResult>;
-  };
-  oaModelServices: {
-    list: (
-      input?: OAModelServicesListInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServicesListResult>;
-    get: (
-      input: OAModelServicesGetInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServicesGetResult>;
-    beginLogin: (
-      input: OAModelServiceBeginLoginInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServiceAuthResult>;
-    pollLogin: (
-      input: OAModelServicePollLoginInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServiceAuthResult>;
-    answerLogin: (
-      input: OAModelServiceAnswerLoginInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServiceAuthResult>;
-    cancelLogin: (input: OAModelServiceCancelLoginInput) => Promise<OAModelServiceAuthResult>;
-    logout: (input: OAModelServiceLogoutInput) => Promise<OAModelServiceLogoutResult>;
-    revealApiKey: (
-      input: OAModelServiceRevealApiKeyInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServiceRevealApiKeyResult>;
-    refresh: (
-      input: OAModelServiceRefreshInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAModelServiceRefreshResult>;
-    testCustom: (
-      input: HarosCustomModelServiceTestInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarosCustomModelServiceTestResult>;
-    discoverCustom: (
-      input: HarosCustomModelServiceDiscoverInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarosCustomModelServiceDiscoverResult>;
-    saveCustom: (
-      input: HarosCustomModelServiceSaveInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarosCustomModelServiceSaveResult>;
-    removeCustom: (
-      input: HarosCustomModelServiceRemoveInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<HarosCustomModelServiceRemoveResult>;
-  };
-  oaEcosystem: {
-    list: (input?: OAEcosystemListInput) => Promise<OAEcosystemSnapshot>;
-    listResources: (input: OAEcosystemPackageInput) => Promise<OAEcosystemListResourcesResult>;
-    install: (input: OAEcosystemInstallInput) => Promise<OAEcosystemMutationResult>;
-    update: (input: OAEcosystemPackageInput) => Promise<OAEcosystemMutationResult>;
-    remove: (input: OAEcosystemPackageInput) => Promise<OAEcosystemMutationResult>;
-    setResourceEnabled: (
-      input: OAEcosystemResourceToggleInput,
-    ) => Promise<OAEcosystemMutationResult>;
-    reload: (input: OAEcosystemReloadInput) => Promise<OAEcosystemReloadResult>;
-  };
-  oaAgentPrompts: {
-    getSnapshot: (input: OAAgentPromptGetSnapshotInput) => Promise<OAAgentPromptSnapshot>;
-    mutate: (input: OAAgentPromptMutationInput) => Promise<OAAgentPromptMutationResult>;
-  };
-  oaWebSearch: {
-    open: () => Promise<OAWebSearchReadResult>;
-    refresh: (input?: OAWebSearchRefreshInput) => Promise<OAWebSearchReadResult>;
-    mutate: (input: OAWebSearchMutationInput) => Promise<OAWebSearchMutationResult>;
-    testProvider: (
-      input: OAWebSearchProviderTestInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAWebSearchProbeResult>;
-    recheck: (
-      input: OAWebSearchRecheckInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAWebSearchProbeResult>;
-    openConfig: (input: OAWebSearchOpenConfigInput) => Promise<void>;
-    diagnoseGemini: (
-      input: OAWebSearchGeminiDiagnosticInput,
-      options?: { readonly signal?: AbortSignal },
-    ) => Promise<OAWebSearchGeminiDiagnosticResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;
@@ -1125,11 +974,15 @@ export interface NativeApi {
     repairState: () => Promise<OrchestrationReadModel>;
     getTurnDiff: (
       input: OrchestrationGetTurnDiffInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<OrchestrationGetTurnDiffResult>;
     getFullThreadDiff: (
       input: OrchestrationGetFullThreadDiffInput,
-      options?: { readonly signal?: AbortSignal },
+      options?: {
+        readonly signal?: AbortSignal;
+      },
     ) => Promise<OrchestrationGetFullThreadDiffResult>;
     replayEvents: (
       fromSequenceExclusive: number,

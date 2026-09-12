@@ -1,3 +1,4 @@
+import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 /**
  * EngineHealthLive - Cache-backed engine health service.
  *
@@ -8,20 +9,20 @@
  *
  * @module EngineHealthLive
  */
-import * as OS from "node:os";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type {
   EngineKind,
-  ServerSettings,
   ServerEngineAuthStatus,
   ServerEngineStatus,
   ServerEngineStatusState,
   ServerEngineUpdateState,
+  ServerSettings,
 } from "@harnessos/contracts";
 import { ENGINE_KINDS, ServerEngineUpdateError } from "@harnessos/contracts";
 import { parseCodexConfigModelProvider } from "@harnessos/shared/codexConfig";
 import { decodeJsonResult } from "@harnessos/shared/schemaJson";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,
   Cache,
@@ -42,21 +43,15 @@ import {
   Stream,
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
+import * as OS from "node:os";
 
 import { resolveExecutable } from "../../executableLookup.ts";
 
-import {
-  compareCodexCliVersions,
-  formatCodexCliUpgradeMessage,
-  isCodexCliVersionSupported,
-  MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
-  parseCodexCliVersion,
-} from "../codexCliVersion";
+import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
 import { ServerConfig } from "../../config";
-import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
 import { ServerSettingsService } from "../../serverSettings";
 import { isWindowsShellCommandMissingResult } from "../../shell-command-detection";
+import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
 import {
   buildCursorAgentCommand,
   buildCursorAgentHeadlessEnv,
@@ -65,45 +60,51 @@ import {
 } from "../acp/CursorAcpCommand";
 import { hasDroidApiKeyEnv, resolveDroidCliBinaryPath } from "../acp/DroidAcpSupport";
 import { hasGrokApiKeyEnv } from "../acp/GrokAcpSupport";
+import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import {
   claudeAuthMetadata,
   isStructuredClaudeAuthFalseNegativeCandidate,
   parseClaudeAuthStatusFromOutput,
 } from "../claudeAuthStatus";
 import { acquireClaudeAuthStatusLock } from "../claudeAuthStatusLock";
-import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
+import { isClaudeAutoModeCliVersionSupported } from "../claudeCliVersion.ts";
 import { buildClaudeProcessEnv, readClaudeCliCredentialsSummary } from "../claudeProcessEnv";
 import {
+  compareCodexCliVersions,
+  formatCodexCliUpgradeMessage,
+  isCodexCliVersionSupported,
+  MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
+  parseCodexCliVersion,
+} from "../codexCliVersion";
+import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
+import {
   detailFromResult,
+  ENGINE_COMMAND_TIMEOUT_DETAIL,
   extractAuthBoolean,
   extractAuthMethod,
   makeCommandMissingCause,
   nonEmptyTrimmed,
-  ENGINE_COMMAND_TIMEOUT_DETAIL,
   toTitleCaseWords,
   type CommandResult,
 } from "../engineCliOutput";
 import { probeEngineCliVersion } from "../engineCliVersionProbe";
-import { EngineHealth, type EngineHealthShape } from "../Services/EngineHealth";
 import {
-  orderEngineStatuses,
-  readEngineStatusCache,
-  resolveEngineStatusCachePath,
-  writeEngineStatusCache,
-} from "../engineStatusCache";
-import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
-import {
-  enrichEngineStatusWithVersionAdvisory,
   compareSemverVersions,
+  enrichEngineStatusWithVersionAdvisory,
   makeEngineMaintenanceCapabilities,
   normalizeCommandPath,
   parseGenericCliVersion,
   resolveEngineMaintenanceCapabilitiesEffect,
   type PackageManagedEngineMaintenanceDefinition,
 } from "../engineMaintenance";
-import { isClaudeAutoModeCliVersionSupported } from "../claudeCliVersion.ts";
-import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
-import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
+import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
+import {
+  orderEngineStatuses,
+  readEngineStatusCache,
+  resolveEngineStatusCachePath,
+  writeEngineStatusCache,
+} from "../engineStatusCache";
+import { EngineHealth, type EngineHealthShape } from "../Services/EngineHealth";
 
 export { parseClaudeAuthStatusFromOutput } from "../claudeAuthStatus";
 export type { CommandResult } from "../engineCliOutput";
@@ -122,12 +123,12 @@ const KILO_ENGINE = "kilo" as const;
 const OPENCODE_ENGINE = "opencode" as const;
 const PI_ENGINE = "pi" as const;
 const OA_ENGINE = "oa" as const;
-const BUNDLED_OA_RUNTIME_VERSION = "0.84.4";
+const BUNDLED_PI_RUNTIME_VERSION = "0.84.4";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
 const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in Haros settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
-const ENGINES = ENGINE_KINDS;
+const ENGINES = RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
 
 const engineCommandEnv = (engine: EngineKind): NodeJS.ProcessEnv =>
   buildEngineChildEnvironment({ engine });
@@ -1569,24 +1570,10 @@ export const checkPiEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
         status: "ready",
         available: true,
         authStatus: "unknown",
-        version: BUNDLED_OA_RUNTIME_VERSION,
+        version: BUNDLED_PI_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
         message:
           "Pi 0.84.4 is bundled. Native Pi discovery and state access begin only after you select Pi.",
-      }) satisfies ServerEngineStatus,
-  );
-
-export const checkOAAgentEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
-  Effect.sync(
-    () =>
-      ({
-        engine: OA_ENGINE,
-        status: "ready",
-        available: true,
-        authStatus: "unknown",
-        version: BUNDLED_OA_RUNTIME_VERSION,
-        checkedAt: new Date().toISOString(),
-        message: "Haros is bundled and ready. Add engine credentials before sending.",
       }) satisfies ServerEngineStatus,
   );
 
@@ -2413,7 +2400,6 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           Effect.flatMap((settings) =>
             Effect.all(
               [
-                checkProviderWhenEnabled(settings, OA_ENGINE, checkOAAgentEngineStatus()),
                 checkProviderWhenEnabled(
                   settings,
                   CODEX_ENGINE,
