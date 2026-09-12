@@ -7,6 +7,7 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   firstRunnableEngine,
+  isFrozenRetiredEngineSelection,
   isRunnableEngine,
   RUNNABLE_ENGINE_DESCRIPTORS,
 } from "./engineMetadata";
@@ -44,6 +45,9 @@ describe("retired OA Engine", () => {
     expect(firstRunnableEngine("oa", "codex")).toBe("codex");
     expect(firstRunnableEngine("oa", null, "claude")).toBe("claude");
     expect(firstRunnableEngine("oa")).toBeNull();
+    expect(isFrozenRetiredEngineSelection({ engine: "oa", hasExecutedWork: true })).toBe(true);
+    expect(isFrozenRetiredEngineSelection({ engine: "oa", hasExecutedWork: false })).toBe(false);
+    expect(isFrozenRetiredEngineSelection({ engine: "codex", hasExecutedWork: true })).toBe(false);
   });
   it("normalizes an obsolete default but preserves other explicit defaults", () => {
     const prior = { ...DEFAULT_SERVER_SETTINGS, defaultEngine: "oa" as const };

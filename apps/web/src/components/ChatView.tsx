@@ -47,7 +47,11 @@ import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
-import { firstRunnableEngine, mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
+import {
+  firstRunnableEngine,
+  isFrozenRetiredEngineSelection,
+  mapEngineDescriptors,
+} from "@harnessos/shared/engineMetadata";
 import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
 import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import {
@@ -2431,16 +2435,24 @@ export default function ChatView({
   ]);
 
   const selectedEngineByThreadId = composerDraft.activeEngine ?? null;
-  // Existing OA threads stay on OA so history remains readable and send stays refused.
-  // New composer work skips retired engines and lands on the first runnable default.
+  const hasExecutedThreadWork =
+    (serverThread?.messages.length ?? 0) > 0 ||
+    serverThread?.latestTurn != null ||
+    serverThread?.session != null;
+  // Existing OA threads with history stay on OA so send stays refused. Empty
+  // leftovers that still record OA as the thread default are new composer work.
   const selectedEngine: EngineKind =
-    serverThread?.engineSelection.engine ??
-    firstRunnableEngine(
-      selectedEngineByThreadId,
-      activeProject?.defaultEngineSelection?.engine,
-      serverSettingsSnapshot.defaultEngine,
-    ) ??
-    "codex";
+    serverThread &&
+    isFrozenRetiredEngineSelection({
+      engine: serverThread.engineSelection.engine,
+      hasExecutedWork: hasExecutedThreadWork,
+    })
+      ? serverThread.engineSelection.engine
+      : (firstRunnableEngine(
+          selectedEngineByThreadId,
+          activeProject?.defaultEngineSelection?.engine,
+          serverSettingsSnapshot.defaultEngine,
+        ) ?? "codex");
   const hasActiveEngineDiscoverySession = isEngineDiscoverySessionActive({
     engine: selectedEngine,
     session: activeThread?.session,

@@ -18,7 +18,11 @@ import {
 } from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
 
-import { firstRunnableEngine, isRunnableEngine } from "@harnessos/shared/engineMetadata";
+import {
+  firstRunnableEngine,
+  isFrozenRetiredEngineSelection,
+  isRunnableEngine,
+} from "@harnessos/shared/engineMetadata";
 import {
   getDefaultModel,
   normalizeGrokModelOptions,
@@ -772,6 +776,7 @@ export function resolvePreferredComposerEngineSelection(input: {
   threadEngineSelection: EngineSelection | null | undefined;
   projectEngineSelection: EngineSelection | null | undefined;
   defaultEngine?: EngineKind | null | undefined;
+  hasExecutedWork?: boolean;
 }): EngineSelection | null {
   const selectionFor = (engine: EngineKind): EngineSelection | null =>
     input.draft?.engineSelectionByEngine?.[engine] ??
@@ -782,10 +787,15 @@ export function resolvePreferredComposerEngineSelection(input: {
       return model ? { engine, model } : null;
     })();
 
-  // Frozen OA threads stay on OA so send remains refused. New composer work has
-  // no thread selection and falls through to the first runnable default.
-  if (input.threadEngineSelection && !isRunnableEngine(input.threadEngineSelection.engine)) {
-    return input.threadEngineSelection;
+  // Only freeze OA on threads that already ran it. Empty leftovers with an OA
+  // default must not keep the composer on a removed engine.
+  if (
+    isFrozenRetiredEngineSelection({
+      engine: input.threadEngineSelection?.engine,
+      hasExecutedWork: input.hasExecutedWork === true,
+    })
+  ) {
+    return input.threadEngineSelection ?? null;
   }
 
   const draftActiveEngine = input.draft?.activeEngine ?? null;

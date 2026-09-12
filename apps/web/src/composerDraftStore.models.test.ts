@@ -107,8 +107,24 @@ describe("resolvePreferredComposerEngineSelection", () => {
         threadEngineSelection: engineSelection("oa", "provider/original-model"),
         projectEngineSelection: null,
         defaultEngine: "codex",
+        hasExecutedWork: true,
       }),
     ).toEqual(engineSelection("oa", "provider/original-model"));
+  });
+
+  it("does not freeze an empty thread that still records OA as its default", () => {
+    expect(
+      resolvePreferredComposerEngineSelection({
+        draft: {
+          engineSelectionByEngine: {},
+          activeEngine: null,
+        },
+        threadEngineSelection: engineSelection("oa", "provider/original-model"),
+        projectEngineSelection: null,
+        defaultEngine: "codex",
+        hasExecutedWork: false,
+      }),
+    ).toEqual(engineSelection("codex", "gpt-5.5"));
   });
 });
 

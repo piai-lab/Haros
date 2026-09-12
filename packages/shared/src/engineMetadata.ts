@@ -115,6 +115,13 @@ export function firstRunnableEngine(
   return null;
 }
 
+export function isFrozenRetiredEngineSelection(input: {
+  readonly engine: EngineKind | null | undefined;
+  readonly hasExecutedWork: boolean;
+}): boolean {
+  return Boolean(input.engine && !isRunnableEngine(input.engine) && input.hasExecutedWork);
+}
+
 export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS.filter(
   (descriptor) => !("runnable" in descriptor) || descriptor.runnable !== false,
 );
