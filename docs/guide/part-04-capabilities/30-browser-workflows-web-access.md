@@ -8,7 +8,7 @@ edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 source_anchors:
   - apps/server/src/browserAutomation/Layers/BrowserAutomationHost.ts
   - packages/shared/src/browserAutomationCatalogue.ts
-  - packages/oa-web-access/README.md
+  - docs/architecture.md#retired-oa-engine
 ---
 
 # Chapter 30 — Browser Workflows and Web Access {#chapter-30}
@@ -34,7 +34,7 @@ _Product capture — The real browser tab strip exposes thread-local interactive
 | Path                | Best for                                      | Owner                               | Useful evidence                         | Does not imply            |
 | ------------------- | --------------------------------------------- | ----------------------------------- | --------------------------------------- | ------------------------- |
 | Interactive browser | Signed-in UI, dynamic page, local Web testing | Browser Automation Host             | Page state, action outcome, screenshot  | Search index access       |
-| Agent web search    | Finding and opening public sources            | Web-access package/service          | Result URL, retrieved content, citation | Control of user's browser |
+| Agent web search    | Finding and opening public sources            | The selected Engine's own search or an explicit connector | Result URL, retrieved content, citation | Control of user's browser |
 | External network    | API, Git, package, command-specific traffic   | Calling service plus network policy | Protocol response/receipt               | Browser permission        |
 
 Choosing the path is part of the task. “Find the official documentation” is search and retrieval.
@@ -76,9 +76,11 @@ themselves. Open the relevant result, prefer primary sources, confirm dates for 
 place citations next to the claim they support. A snippet can be stale, truncated, or assembled by
 the search engine.
 
-Agent web access is bounded and credential-blind. It should not borrow browser cookies without an
-explicit connector designed for that purpose. When a source cannot be retrieved, state the gap.
-Do not cite a search-result page as if it directly supports a technical claim.
+Agent web search is not a Haros-owned package after OA retirement. If the selected Engine or an
+explicit connector offers search, that path stays bounded and credential-blind. It should not
+borrow browser cookies without a connector designed for that purpose. When a source cannot be
+retrieved, state the gap. Do not cite a search-result page as if it directly supports a technical
+claim.
 
 ## External network access
 
@@ -330,7 +332,7 @@ the result into one Web-success status.
 - `apps/server/src/browserAutomation/Layers/BrowserAutomationHost.ts` owns interactive browser lifecycle and actions.
 - `packages/shared/src/browserAutomationCatalogue.ts` defines the browser tool catalogue presented through HostGateway.
 - `packages/shared/src/browserAnnotations.ts` defines bounded annotations derived from page evidence.
-- `packages/oa-web-access/README.md` documents the separate bundled Web-access path.
+- `docs/architecture.md` records that bundled OA web access is removed; public search now belongs to the selected Engine or an explicit connector, not a Haros-owned web-access package.
 
 <!-- guide-navigation:start -->
 

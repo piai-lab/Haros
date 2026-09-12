@@ -51,6 +51,7 @@ import {
   legacyToEngineSelectionByEngine,
   normalizeEngineSelection,
   normalizeEngineKind,
+  normalizeRunnableEngineKind,
   normalizeEngineModelOptions,
   sanitizeStickyEngineSelectionMap,
 } from "./composerDraftModels";
@@ -1010,7 +1011,7 @@ function normalizePersistedDraftsByThreadId(
       engineSelectionByEngine = draftCandidate.engineSelectionByEngine as Partial<
         Record<EngineKind, EngineSelection>
       >;
-      activeEngine = normalizeEngineKind(draftCandidate.activeEngine);
+      activeEngine = normalizeRunnableEngineKind(draftCandidate.activeEngine);
     } else {
       // v2 or legacy format: migrate
       const normalizedModelOptions =
@@ -1040,7 +1041,7 @@ function normalizePersistedDraftsByThreadId(
         engineSelection,
         mergedModelOptions,
       );
-      activeEngine = engineSelection?.engine ?? null;
+      activeEngine = normalizeRunnableEngineKind(engineSelection?.engine);
     }
 
     const normalizedQueuedTurns = queuedTurns ?? [];
@@ -1496,7 +1497,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
       normalizedPersistedState.stickyEngineSelectionByEngine as Partial<
         Record<EngineKind, EngineSelection>
       >;
-    stickyActiveEngine = normalizeEngineKind(normalizedPersistedState.stickyActiveEngine);
+    stickyActiveEngine = normalizeRunnableEngineKind(normalizedPersistedState.stickyActiveEngine);
   } else {
     // Legacy migration path
     const stickyModelOptions =
@@ -1521,7 +1522,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
       stickyEngineSelection,
       nextStickyModelOptions,
     );
-    stickyActiveEngine = normalizeEngineKind(normalizedPersistedState.stickyProvider);
+    stickyActiveEngine = normalizeRunnableEngineKind(normalizedPersistedState.stickyProvider);
   }
 
   return {
@@ -1640,7 +1641,7 @@ export function toHydratedThreadDraft(
   // The persisted draft is already in v3 shape (migration handles older formats)
   const engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>> =
     persistedDraft.engineSelectionByEngine ?? {};
-  const activeEngine = normalizeEngineKind(persistedDraft.activeEngine) ?? null;
+  const activeEngine = normalizeRunnableEngineKind(persistedDraft.activeEngine);
 
   return {
     prompt: persistedDraft.prompt,

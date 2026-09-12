@@ -47,7 +47,7 @@ import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
-import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
+import { firstRunnableEngine, mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
 import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import {
@@ -2019,9 +2019,11 @@ export default function ChatView({
   const localDraftThread = useMemo(() => {
     if (!draftThread) return undefined;
     const desiredEngine =
-      composerDraft.activeEngine ??
-      fallbackDraftProject?.defaultEngineSelection?.engine ??
-      serverSettingsSnapshot.defaultEngine;
+      firstRunnableEngine(
+        composerDraft.activeEngine,
+        fallbackDraftProject?.defaultEngineSelection?.engine,
+        serverSettingsSnapshot.defaultEngine,
+      ) ?? "codex";
     const desiredEngineSelection =
       composerDraft.engineSelectionByEngine[desiredEngine] ??
       (fallbackDraftProject?.defaultEngineSelection?.engine === desiredEngine
@@ -2429,10 +2431,16 @@ export default function ChatView({
   ]);
 
   const selectedEngineByThreadId = composerDraft.activeEngine ?? null;
-  const threadEngine =
-    serverThread?.engineSelection.engine ?? activeProject?.defaultEngineSelection?.engine ?? null;
+  // Existing OA threads stay on OA so history remains readable and send stays refused.
+  // New composer work skips retired engines and lands on the first runnable default.
   const selectedEngine: EngineKind =
-    selectedEngineByThreadId ?? threadEngine ?? serverSettingsSnapshot.defaultEngine;
+    serverThread?.engineSelection.engine ??
+    firstRunnableEngine(
+      selectedEngineByThreadId,
+      activeProject?.defaultEngineSelection?.engine,
+      serverSettingsSnapshot.defaultEngine,
+    ) ??
+    "codex";
   const hasActiveEngineDiscoverySession = isEngineDiscoverySessionActive({
     engine: selectedEngine,
     session: activeThread?.session,

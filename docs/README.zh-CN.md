@@ -64,6 +64,8 @@ bun run dev
 Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
 本机配置。本机构建成功仍然只是未签名的源码软件，不代表正式发行。
 
+首次启动直接进入工作台，默认选择 Codex。发送前请在设置中配置所选引擎。内置 OA、它的模型服务和内置网页搜索已移除；旧 OA 历史仍可查看，但不能继续执行，请使用其他引擎新建任务。AppSnap 欢迎介绍及其手动设置入口保留。
+
 ## 继续了解
 
 - 从 [Haros Guidebook（英文）](guide/README.md) 开始，完整了解产品与架构。
@@ -100,5 +102,3 @@ docs/          Guidebook、架构与贡献者文档
 
 Haros 使用 [Apache License 2.0](../LICENSE)。第三方代码与资产保留原始许可证及必要
 归属，详见 [NOTICE](../NOTICE) 与 [source-adoptions.json](../source-adoptions.json)。
-
-首次启动直接进入工作台，默认选择 Codex。发送前请在设置中配置所选引擎。内置 OA、它的模型服务和内置网页搜索已移除；旧 OA 历史仍可查看，但不能继续执行，请使用其他引擎新建任务。AppSnap 欢迎介绍及其手动设置入口保留。

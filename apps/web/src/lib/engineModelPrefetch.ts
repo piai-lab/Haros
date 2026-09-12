@@ -7,6 +7,7 @@
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
 import type { EngineKind, ServerSettingsView } from "@harnessos/contracts";
+import { firstRunnableEngine } from "@harnessos/shared/engineMetadata";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { resolveEngineDiscoveryCwd } from "./engineDiscovery";
@@ -27,11 +28,13 @@ export function resolveNewThreadModelPrefetchEngine(input: {
   defaultEngine: EngineKind;
 }): EngineKind {
   return (
-    input.engineOverride ??
-    input.draftActiveEngine ??
-    input.stickyActiveEngine ??
-    input.projectDefaultEngine ??
-    input.defaultEngine
+    firstRunnableEngine(
+      input.engineOverride,
+      input.draftActiveEngine,
+      input.stickyActiveEngine,
+      input.projectDefaultEngine,
+      input.defaultEngine,
+    ) ?? "codex"
   );
 }
 

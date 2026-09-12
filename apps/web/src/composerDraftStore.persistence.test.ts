@@ -215,6 +215,23 @@ describe("composerDraftStore persisted-state hydration", () => {
     expect(hydrated.draftThreadsByThreadId[threadId]?.title).toBe("Local Pi terminal");
   });
 
+  it("clears a retired OA sticky engine so new composer work does not reopen it", () => {
+    const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
+      draftsByThreadId: {},
+      draftThreadsByThreadId: {},
+      projectDraftThreadIdByProjectId: {},
+      stickyActiveEngine: "oa",
+      stickyEngineSelectionByEngine: {
+        oa: engineSelection("oa", "provider/original-model"),
+      },
+    });
+
+    expect(hydrated.stickyActiveEngine).toBeNull();
+    expect(hydrated.stickyEngineSelectionByEngine.oa).toEqual(
+      engineSelection("oa", "provider/original-model"),
+    );
+  });
+
   it("preserves Debug mode in composer and draft-thread state during hydration", () => {
     const projectId = ProjectId.makeUnsafe("project-debug-mode");
     const threadId = ThreadId.makeUnsafe("thread-debug-mode");

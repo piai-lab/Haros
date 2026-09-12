@@ -33,7 +33,9 @@ and receipts. Engine adapters do not duplicate those responsibilities.
 
 The OA runtime, model-service APIs, package management, and bundled web access are removed. Independent Pi retains its own SDK, resource discovery, and shared user-input bridge. No replacement Engine is silently selected for an existing OA task.
 
-首次设置向导和 OA 运行能力已移除。工作台直接启动；旧 OA 记录只保留读取能力，独立 Pi、外部引擎及共享工作台继续使用原有边界。
+The first-run setup wizard is also removed. The workbench opens directly; existing OA records remain readable only. Independent Pi, external Engines, and the shared workbench keep their existing boundaries. AppSnap welcome is a separate optional overlay, not Engine setup.
+
+首次设置向导和 OA 运行能力已移除。工作台直接启动；旧 OA 记录只保留读取能力，独立 Pi、外部引擎及共享工作台继续使用原有边界。AppSnap 欢迎介绍不是引擎设置。
 
 ## State boundaries
 

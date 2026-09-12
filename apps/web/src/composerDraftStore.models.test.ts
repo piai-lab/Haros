@@ -81,18 +81,34 @@ describe("resolvePreferredComposerEngineSelection", () => {
     ).toBeNull();
   });
 
-  it("keeps an unbound Haros intent fail-closed until its runtime catalog provides a model", () => {
+  it("does not keep a retired OA draft as the current composer engine", () => {
     expect(
       resolvePreferredComposerEngineSelection({
         draft: {
-          engineSelectionByEngine: {},
+          engineSelectionByEngine: {
+            oa: engineSelection("oa", "provider/original-model"),
+          },
           activeEngine: "oa",
         },
         threadEngineSelection: null,
         projectEngineSelection: null,
         defaultEngine: "codex",
       }),
-    ).toBeNull();
+    ).toEqual(engineSelection("codex", "gpt-5.5"));
+  });
+
+  it("keeps an existing OA thread frozen so send stays refused", () => {
+    expect(
+      resolvePreferredComposerEngineSelection({
+        draft: {
+          engineSelectionByEngine: {},
+          activeEngine: "oa",
+        },
+        threadEngineSelection: engineSelection("oa", "provider/original-model"),
+        projectEngineSelection: null,
+        defaultEngine: "codex",
+      }),
+    ).toEqual(engineSelection("oa", "provider/original-model"));
   });
 });
 

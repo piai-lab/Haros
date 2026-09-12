@@ -15,6 +15,7 @@ import serverPackageJson from "../apps/server/package.json" with { type: "json" 
 import rootPackageJson from "../package.json" with { type: "json" };
 
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { isPackagedAppVersion, resolvePackagedAppVersion } from "./lib/app-version.ts";
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
 import {
   expectedPrimaryArtifactSuffix,
@@ -149,6 +150,22 @@ class BuildScriptError extends Data.TaggedError("BuildScriptError")<{
   readonly message: string;
   readonly cause?: unknown;
 }> {}
+
+function resolveExactHeadVersionTags(repoRoot: string): ReadonlyArray<string> {
+  const result = spawnSync("git", ["tag", "--points-at", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `Unable to list version tags on HEAD: ${result.stderr.trim() || "git failed"}.`,
+    );
+  }
+  return result.stdout
+    .split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
 
 function resolveGitCommitHash(repoRoot: string): string | undefined {
   const result = spawnSync("git", ["rev-parse", "HEAD"], {
@@ -297,6 +314,11 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   );
   const arch = mergeOptions(input.arch, env.arch, getDefaultArch(platform));
   const version = mergeOptions(input.buildVersion, env.version, undefined);
+  if (version !== undefined && !isPackagedAppVersion(version)) {
+    return yield* new BuildScriptError({
+      message: `Expected a semver packaged version such as 0.1.0-alpha.1, got '${version}'.`,
+    });
+  }
   const sourceCommit = mergeOptions(
     input.sourceCommit,
     env.sourceCommit,
@@ -893,7 +915,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       }),
   });
 
-  const appVersion = options.version ?? serverPackageJson.version;
   if (options.localApp && (options.platform !== "mac" || options.target !== "dir")) {
     return yield* new BuildScriptError({
       message: "--local-app is restricted to the unsigned macOS dir target.",
@@ -923,10 +944,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       message: "Desktop candidate builds require --source-commit with the exact full Git SHA.",
     });
   }
-  if (hasLockfileSha256 && (!hasSourceCommit || !options.version)) {
+  if (hasLockfileSha256 && !hasSourceCommit) {
     return yield* new BuildScriptError({
       message:
-        "Exact packaged provenance requires an explicit build version, source commit, and lockfile SHA-256 together.",
+        "Exact packaged provenance requires a source commit and lockfile SHA-256 together with the packaged version.",
     });
   }
 
@@ -969,6 +990,26 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       });
     }
   }
+  const appVersion = yield* Effect.try({
+    try: () =>
+      resolvePackagedAppVersion({
+        explicitVersion: options.version,
+        headTags:
+          options.version !== undefined || options.localApp
+            ? []
+            : resolveExactHeadVersionTags(repoRoot),
+        allowPackageFallback: options.localApp,
+        packageVersion: serverPackageJson.version,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Could not resolve a packaged desktop version from HEAD tags.",
+        cause,
+      }),
+  });
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
     prefix: `harnessos-desktop-${options.platform}-stage-`,
@@ -988,6 +1029,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     yield* runCommand(
       ChildProcess.make({
         cwd: repoRoot,
+        env: {
+          ...process.env,
+          HARNESSOS_APP_VERSION: appVersion,
+        },
         ...commandOutputOptions(options.verbose),
         // Windows needs shell mode to resolve .cmd shims (e.g. bun.cmd).
         shell: process.platform === "win32",
@@ -1249,7 +1294,9 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
   buildVersion: Flag.string("build-version").pipe(
-    Flag.withDescription("Artifact version metadata (env: HARNESSOS_DESKTOP_VERSION)."),
+    Flag.withDescription(
+      "Artifact version metadata. Candidate builds default to the unique v* tag on HEAD (env: HARNESSOS_DESKTOP_VERSION).",
+    ),
     Flag.optional,
   ),
   sourceCommit: Flag.string("source-commit").pipe(

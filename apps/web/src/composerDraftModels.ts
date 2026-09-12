@@ -18,6 +18,7 @@ import {
 } from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
 
+import { firstRunnableEngine, isRunnableEngine } from "@harnessos/shared/engineMetadata";
 import {
   getDefaultModel,
   normalizeGrokModelOptions,
@@ -100,6 +101,11 @@ export function normalizeEngineKind(value: unknown): EngineKind | null {
     return "antigravity";
   }
   return isEngineKind(value) ? value : null;
+}
+
+export function normalizeRunnableEngineKind(value: unknown): EngineKind | null {
+  const engine = normalizeEngineKind(value);
+  return engine && isRunnableEngine(engine) ? engine : null;
 }
 
 function trimStringOrUndefined(value: unknown): string | undefined {
@@ -767,28 +773,38 @@ export function resolvePreferredComposerEngineSelection(input: {
   projectEngineSelection: EngineSelection | null | undefined;
   defaultEngine?: EngineKind | null | undefined;
 }): EngineSelection | null {
-  const draftProviderWithSelection =
-    ENGINE_KINDS.find((engine) => input.draft?.engineSelectionByEngine?.[engine] !== undefined) ??
-    null;
-  const preferredEngine =
-    input.draft?.activeEngine ??
-    draftProviderWithSelection ??
-    input.threadEngineSelection?.engine ??
-    input.projectEngineSelection?.engine ??
-    input.defaultEngine ??
-    "codex";
-
-  return (
-    input.draft?.engineSelectionByEngine?.[preferredEngine] ??
-    (input.threadEngineSelection?.engine === preferredEngine
-      ? input.threadEngineSelection
-      : null) ??
-    (input.projectEngineSelection?.engine === preferredEngine
-      ? input.projectEngineSelection
-      : null) ??
+  const selectionFor = (engine: EngineKind): EngineSelection | null =>
+    input.draft?.engineSelectionByEngine?.[engine] ??
+    (input.threadEngineSelection?.engine === engine ? input.threadEngineSelection : null) ??
+    (input.projectEngineSelection?.engine === engine ? input.projectEngineSelection : null) ??
     (() => {
-      const model = getDefaultModel(preferredEngine);
-      return model ? { engine: preferredEngine, model } : null;
-    })()
-  );
+      const model = getDefaultModel(engine);
+      return model ? { engine, model } : null;
+    })();
+
+  // Frozen OA threads stay on OA so send remains refused. New composer work has
+  // no thread selection and falls through to the first runnable default.
+  if (input.threadEngineSelection && !isRunnableEngine(input.threadEngineSelection.engine)) {
+    return input.threadEngineSelection;
+  }
+
+  const draftActiveEngine = input.draft?.activeEngine ?? null;
+  if (draftActiveEngine && isRunnableEngine(draftActiveEngine)) {
+    return selectionFor(draftActiveEngine);
+  }
+
+  const draftProviderWithSelection =
+    ENGINE_KINDS.find(
+      (engine) =>
+        isRunnableEngine(engine) && input.draft?.engineSelectionByEngine?.[engine] !== undefined,
+    ) ?? null;
+  const preferredEngine =
+    firstRunnableEngine(
+      draftProviderWithSelection,
+      input.threadEngineSelection?.engine,
+      input.projectEngineSelection?.engine,
+      input.defaultEngine,
+    ) ?? "codex";
+
+  return selectionFor(preferredEngine);
 }

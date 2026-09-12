@@ -121,6 +121,17 @@ describe("resolveNewThreadModelPrefetchEngine", () => {
       }),
     ).toBe("claude");
   });
+
+  it("skips retired OA when resolving a new-thread prefetch engine", () => {
+    expect(
+      resolveNewThreadModelPrefetchEngine({
+        draftActiveEngine: "oa",
+        stickyActiveEngine: "oa",
+        projectDefaultEngine: "oa",
+        defaultEngine: "codex",
+      }),
+    ).toBe("codex");
+  });
 });
 
 describe("resolveNewThreadModelPrefetchCwd", () => {

@@ -14,8 +14,7 @@
     "bun.lock",
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
-    "apps/web/public/mockServiceWorker.js",
-    "packages/oa-web-access"
+    "apps/web/public/mockServiceWorker.js"
   ],
   "sortPackageJson": {}
 }

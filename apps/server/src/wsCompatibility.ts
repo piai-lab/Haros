@@ -14,8 +14,9 @@ import {
 } from "@harnessos/contracts";
 import { Effect } from "effect";
 
-import { version as serverBuild } from "../package.json" with { type: "json" };
+import { version as packageVersion } from "../package.json" with { type: "json" };
 
+const serverBuild = process.env.HARNESSOS_APP_VERSION?.trim() || packageVersion;
 const serverInstanceId = randomUUID();
 
 function incompatibility(

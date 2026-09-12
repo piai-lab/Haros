@@ -61,7 +61,7 @@ They should not leak into a universal untyped bag that every UI consumer interpr
 ## One identity owner
 
 `ENGINE_DESCRIPTORS` exhaustively maps `EngineKind` to credential-blind display identity and narrow
-usage help. Onboarding, Sidebar, Settings, ordering, and discovery project from that owner. Adding an
+usage help. Sidebar, Settings, ordering, and discovery project from that owner. Adding an
 Engine may require a descriptor, adapter, assets/copy, and focused tests; it must not require new
 lists in every screen.
 
@@ -71,7 +71,7 @@ presentation. It does not persist discovery as a second registry.
 
 | Fact                     | Sole owner                        | Typical consumer                | Forbidden duplicate        |
 | ------------------------ | --------------------------------- | ------------------------------- | -------------------------- |
-| Engine kind/display name | `ENGINE_DESCRIPTORS`              | Settings, onboarding, selectors | component arrays           |
+| Engine kind/display name | `ENGINE_DESCRIPTORS`              | Settings, Composer, selectors   | component arrays           |
 | Adapter registration     | Engine adapter registry           | server runtime                  | Web registry               |
 | Model catalog            | selected Engine discovery/service | Composer                        | global handwritten catalog |
 | Exact selection          | `EngineSelection`                 | admission, provenance           | display caption only       |

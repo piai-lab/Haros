@@ -73,7 +73,7 @@ export const makeServerEnvironment = Effect.fn(function* () {
       os: platformOs(),
       arch: platformArch(),
     },
-    serverVersion: packageJson.version,
+    serverVersion: process.env.HARNESSOS_APP_VERSION?.trim() || packageJson.version,
     capabilities: {
       repositoryIdentity: true,
     },

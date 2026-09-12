@@ -106,6 +106,15 @@ export function isRunnableEngine(engine: EngineKind): boolean {
   return descriptor !== undefined && (!("runnable" in descriptor) || descriptor.runnable !== false);
 }
 
+export function firstRunnableEngine(
+  ...candidates: ReadonlyArray<EngineKind | null | undefined>
+): EngineKind | null {
+  for (const candidate of candidates) {
+    if (candidate && isRunnableEngine(candidate)) return candidate;
+  }
+  return null;
+}
+
 export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS.filter(
   (descriptor) => !("runnable" in descriptor) || descriptor.runnable !== false,
 );

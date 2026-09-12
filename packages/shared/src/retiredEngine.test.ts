@@ -5,7 +5,11 @@ import {
 } from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { isRunnableEngine, RUNNABLE_ENGINE_DESCRIPTORS } from "./engineMetadata";
+import {
+  firstRunnableEngine,
+  isRunnableEngine,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "./engineMetadata";
 import {
   isServerEngineEnabled,
   normalizeServerSettings,
@@ -37,6 +41,9 @@ describe("retired OA Engine", () => {
     ]);
     expect(DEFAULT_ENGINE_KIND).toBe("codex");
     expect(DEFAULT_SERVER_SETTINGS.defaultEngine).toBe("codex");
+    expect(firstRunnableEngine("oa", "codex")).toBe("codex");
+    expect(firstRunnableEngine("oa", null, "claude")).toBe("claude");
+    expect(firstRunnableEngine("oa")).toBeNull();
   });
   it("normalizes an obsolete default but preserves other explicit defaults", () => {
     const prior = { ...DEFAULT_SERVER_SETTINGS, defaultEngine: "oa" as const };
