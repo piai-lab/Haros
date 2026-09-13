@@ -215,7 +215,7 @@ describe("composerDraftStore persisted-state hydration", () => {
     expect(hydrated.draftThreadsByThreadId[threadId]?.title).toBe("Local Pi terminal");
   });
 
-  it("clears a retired OA sticky engine so new composer work does not reopen it", () => {
+  it("keeps a live Pi sticky engine after hydration", () => {
     const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
@@ -226,7 +226,7 @@ describe("composerDraftStore persisted-state hydration", () => {
       },
     });
 
-    expect(hydrated.stickyActiveEngine).toBeNull();
+    expect(hydrated.stickyActiveEngine).toBe("pi");
     expect(hydrated.stickyEngineSelectionByEngine?.pi).toEqual(
       engineSelection("pi", "provider/original-model"),
     );

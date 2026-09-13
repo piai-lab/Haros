@@ -16,7 +16,7 @@ import {
   validateServerSettingsPatch,
 } from "./serverSettings";
 
-describe("retired OA Engine", () => {
+describe("engine identity", () => {
   it("exposes ten runnable engines including independent Pi and DeepSeek, and defaults new work to Codex", () => {
     expect(RUNNABLE_ENGINE_DESCRIPTORS.map((x) => x.kind)).toEqual([
       "codex",
