@@ -49,6 +49,7 @@ import {
   modelServicesListQueryOptions,
 } from "~/lib/modelServicesReactQuery";
 import { engineDiscoveryQueryKeys } from "~/lib/engineDiscoveryReactQuery";
+import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";
 import { useStore } from "~/store";
@@ -75,6 +76,7 @@ import {
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
+import { Switch } from "../ui/switch";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ArrowLeftIcon, ChevronRightIcon, EyeIcon, PlusIcon } from "~/lib/icons";
@@ -849,6 +851,16 @@ function ActiveModelsSettingsPanel({
   const modelServiceApiKeyControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
   const customDiscoveryControllerRef = useRef<AbortController | null>(null);
+  const modelTrialControllerRef = useRef<AbortController | null>(null);
+  const [modelTrial, setModelTrial] = useState<{
+    modelId: string;
+    message: string;
+    reply: string;
+    api: string;
+    busy: boolean;
+    failed: boolean;
+  } | null>(null);
+  const [verifiedModels, setVerifiedModels] = useState<ReadonlySet<string>>(new Set());
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
@@ -933,6 +945,28 @@ function ActiveModelsSettingsPanel({
       enabled: active && modelServicesCapability === true,
     }),
   );
+  const modelServiceSettingsQuery = useQuery({
+    ...serverSettingsQueryOptions(),
+    enabled: active && modelServicesCapability === true,
+  });
+  const updateModelServicePreference = async (
+    serviceId: string,
+    field: "autoSync" | "added",
+    value: boolean,
+  ) => {
+    setModelServiceMutation(`preferences:${serviceId}`);
+    try {
+      const settings = await ensureNativeApi().server.updateSettings({
+        modelServices: { [field]: { [serviceId]: value } },
+      });
+      queryClient.setQueryData(serverQueryKeys.settings(), settings);
+      await queryClient.invalidateQueries({ queryKey: modelServicesQueryKeys.all });
+    } catch {
+      setModelServiceNotice({ tone: "error", text: t("settings.modelServicePreferenceFailed") });
+    } finally {
+      setModelServiceMutation(null);
+    }
+  };
   const addModelServicesQuery = useQuery(
     modelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true && modelServiceBrowserOpen,
@@ -1120,6 +1154,48 @@ function ActiveModelsSettingsPanel({
     setModelServiceNotice(null);
   });
   const selectedModelService = modelServiceDetailQuery.data?.service ?? null;
+  useEffect(() => {
+    setModelTrial(null);
+    setVerifiedModels(new Set());
+    return () => {
+      modelTrialControllerRef.current?.abort();
+      modelTrialControllerRef.current = null;
+    };
+  }, [selectedModelServiceId, active]);
+  const runModelTrial = async () => {
+    if (!modelTrial || !selectedModelService) return;
+    modelTrialControllerRef.current?.abort();
+    const controller = new AbortController();
+    modelTrialControllerRef.current = controller;
+    const trial = modelTrial;
+    const service = selectedModelService;
+    setModelTrial({ ...trial, busy: true, failed: false, reply: "" });
+    try {
+      const result = await ensureNativeApi().modelServices.testModel(
+        {
+          serviceId: service.serviceId,
+          modelId: trial.modelId,
+          message: trial.message,
+          ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+        },
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      setModelTrial({
+        ...trial,
+        busy: false,
+        failed: result.state !== "success",
+        reply: result.text,
+        api: result.api,
+      });
+      if (result.state === "success")
+        setVerifiedModels(
+          (current) => new Set([...current, `${service.serviceId}\0${trial.modelId}`]),
+        );
+    } catch {
+      if (!controller.signal.aborted) setModelTrial({ ...trial, busy: false, failed: true });
+    }
+  };
   const selectedCustomConfig =
     modelServiceDetailQuery.data?.state === "ready"
       ? modelServiceDetailQuery.data.customConfig
@@ -2142,7 +2218,12 @@ function ActiveModelsSettingsPanel({
     addModelServicesQuery.data?.services,
     modelServicesQuery.data?.connectableServices,
   ]);
-  const configuredModelServices = modelServicesQuery.data?.services ?? [];
+  const configuredModelServices = (modelServicesQuery.data?.services ?? []).toSorted(
+    (left, right) => Number(right.serviceId === "deepseek") - Number(left.serviceId === "deepseek"),
+  );
+  const quickDeepSeek = connectableModelServices.find(
+    (service) => service.serviceId === "deepseek",
+  );
   const customApiCapability =
     modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty"
       ? modelServicesQuery.data.customApiConfiguration
@@ -2392,9 +2473,9 @@ function ActiveModelsSettingsPanel({
                   </Button>
                 </div>
               </SettingsEmptyState>
-            ) : modelServicesQuery.data?.services.length ? (
+            ) : configuredModelServices.length ? (
               <SettingsCard>
-                {modelServicesQuery.data.services.map((service) => {
+                {configuredModelServices.map((service) => {
                   const detailOpen = selectedModelServiceId === service.serviceId;
                   const instanceLabel = modelServiceInstanceLabel(service);
                   return (
@@ -2451,6 +2532,18 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState>
                 <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
                 <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
+                {quickDeepSeek ? (
+                  <Button
+                    className="mt-4 mr-2"
+                    onClick={() => {
+                      openModelServiceDetails(quickDeepSeek.serviceId, "browser");
+                      void beginModelServiceLogin(quickDeepSeek, "api_key");
+                    }}
+                  >
+                    <ModelServiceIcon serviceId="deepseek" origin="builtin" className="size-4" />
+                    {t("settings.addDeepSeek")}
+                  </Button>
+                ) : null}
                 {canAddModelService ? (
                   <Button
                     ref={addModelServiceButtonRef}
@@ -2495,7 +2588,10 @@ function ActiveModelsSettingsPanel({
             >
               <div>
                 <p className="mb-3 text-sm text-muted-foreground">
-                  {t("settings.chooseModelServiceDescription")}
+                  {t("settings.chooseModelServiceDescription")}{" "}
+                  {t("settings.modelServiceDirectoryCount", {
+                    count: connectableModelServices.length,
+                  })}
                 </p>
                 <SearchInput
                   ref={modelServiceSearchInputRef}
@@ -2595,6 +2691,11 @@ function ActiveModelsSettingsPanel({
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
                                 {instanceLabel}
+                                {service.serviceId === "deepseek" ? (
+                                  <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                                    {t("settings.modelServiceCommon")}
+                                  </span>
+                                ) : null}
                               </span>
                               <span className="mt-0.5 block truncate text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground">
                                 {modelServiceAuthMethodsLabel(service)}
@@ -4000,6 +4101,31 @@ function ActiveModelsSettingsPanel({
                   </div>
                 ) : null}
                 <SettingsCard>
+                  {selectedModelService.authState === "configured" &&
+                  selectedModelService.storedCredentialType === null &&
+                  !configuredModelServices.some(
+                    (service) => service.serviceId === selectedModelService.serviceId,
+                  ) ? (
+                    <SettingsListRow
+                      title={t("settings.modelServiceDetectedCredentials")}
+                      description={modelServiceCredentialSourceLabel(selectedModelService)}
+                      actions={
+                        <Button
+                          size="sm"
+                          disabled={modelServiceMutation !== null}
+                          onClick={() =>
+                            void updateModelServicePreference(
+                              selectedModelService.serviceId,
+                              "added",
+                              true,
+                            )
+                          }
+                        >
+                          {t("settings.modelServiceUseDetected")}
+                        </Button>
+                      }
+                    />
+                  ) : null}
                   <SettingsListRow
                     title={t("settings.modelServiceAuthentication")}
                     description={modelServiceAuthLabel(selectedModelService)}
@@ -4155,6 +4281,34 @@ function ActiveModelsSettingsPanel({
                       </div>
                     }
                   />
+                  {selectedModelService.supportsNetworkRefresh &&
+                  selectedModelService.origin === "builtin" &&
+                  selectedModelService.authState === "configured" ? (
+                    <SettingsListRow
+                      title={t("settings.modelServiceAutoSync")}
+                      description={t("settings.modelServiceAutoSyncDescription")}
+                      actions={
+                        <Switch
+                          aria-label={t("settings.modelServiceAutoSync")}
+                          checked={
+                            modelServiceSettingsQuery.data?.modelServices?.autoSync[
+                              selectedModelService.serviceId
+                            ] !== false
+                          }
+                          disabled={
+                            modelServiceMutation !== null || !modelServiceSettingsQuery.data
+                          }
+                          onCheckedChange={(value) =>
+                            void updateModelServicePreference(
+                              selectedModelService.serviceId,
+                              "autoSync",
+                              value,
+                            )
+                          }
+                        />
+                      }
+                    />
+                  ) : null}
                   <SettingsListRow
                     title={t("settings.modelServiceSource")}
                     description={modelServiceOriginLabel(selectedModelService)}
@@ -4216,6 +4370,12 @@ function ActiveModelsSettingsPanel({
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-foreground">
                               {model.displayName}
+                              {model.discoveredAt &&
+                              Date.now() - model.discoveredAt < 7 * 24 * 60 * 60 * 1_000 ? (
+                                <span className="ml-2 rounded border border-border px-1.5 text-[10px] font-normal">
+                                  {t("settings.modelServiceNewModel")}
+                                </span>
+                              ) : null}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">
                               {model.modelId}
@@ -4229,7 +4389,11 @@ function ActiveModelsSettingsPanel({
                               )}
                             >
                               {model.available
-                                ? t("settings.modelServiceModelAvailable")
+                                ? verifiedModels.has(
+                                    `${selectedModelService.serviceId}\0${model.modelId}`,
+                                  )
+                                  ? t("settings.modelServiceChatVerified")
+                                  : t("settings.modelServiceNotVerified")
                                 : t("settings.modelServiceModelNeedsAuth")}
                             </span>
                             {model.reasoning ? (
@@ -4242,6 +4406,27 @@ function ActiveModelsSettingsPanel({
                               <span>{modelContextLabel(model)}</span>
                             ) : null}
                           </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!model.available || modelServiceMutation !== null}
+                            aria-label={t("settings.modelServiceTryNamed", {
+                              name: model.displayName,
+                            })}
+                            onClick={() => {
+                              modelTrialControllerRef.current?.abort();
+                              setModelTrial({
+                                modelId: model.modelId,
+                                message: t("settings.modelServiceTrialPrompt"),
+                                reply: "",
+                                api: "",
+                                busy: false,
+                                failed: false,
+                              });
+                            }}
+                          >
+                            {t("settings.modelServiceTry")}
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -4261,6 +4446,67 @@ function ActiveModelsSettingsPanel({
         </div>
       ) : null}
 
+      <Dialog
+        open={modelTrial !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            modelTrialControllerRef.current?.abort();
+            setModelTrial(null);
+          }
+        }}
+      >
+        <DialogPopup>
+          <DialogHeader>
+            <DialogTitle>
+              {t("settings.modelServiceTry")} · {modelTrial?.modelId}
+            </DialogTitle>
+            <DialogDescription>{t("settings.modelServiceTrialDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogPanel className="space-y-3">
+            <label className="block space-y-2 text-sm">
+              <span>{t("settings.modelServiceTrialMessage")}</span>
+              <Textarea
+                autoFocus
+                value={modelTrial?.message ?? ""}
+                disabled={modelTrial?.busy}
+                maxLength={2_000}
+                onChange={(event) =>
+                  setModelTrial((current) =>
+                    current ? { ...current, message: event.target.value } : current,
+                  )
+                }
+              />
+            </label>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.modelServiceAutomaticProtocol")}
+              {modelTrial?.api ? ` · ${modelTrial.api}` : ""}
+            </p>
+            {modelTrial?.failed ? (
+              <p role="alert" className="text-sm text-destructive">
+                {t("settings.modelServiceTrialFailed")}
+              </p>
+            ) : null}
+            {modelTrial?.reply ? (
+              <p
+                role="status"
+                className="whitespace-pre-wrap break-words rounded-lg border border-border p-3 text-sm"
+              >
+                {modelTrial.reply}
+              </p>
+            ) : null}
+          </DialogPanel>
+          <DialogFooter>
+            <Button
+              disabled={modelTrial?.busy || !modelTrial?.message.trim()}
+              onClick={() => void runModelTrial()}
+            >
+              {modelTrial?.busy
+                ? t("settings.modelServiceTrialRunning")
+                : t("settings.modelServiceTrialSend")}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
       <Dialog
         open={authDialog !== null}
         onOpenChange={(open) => {

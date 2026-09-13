@@ -477,6 +477,7 @@ describe("wsNativeApi", () => {
 
     const payload = {
       settings: {
+        modelServices: { autoSync: {}, added: {} },
         defaultEngine: "oa",
         enableAssistantStreaming: true,
         enableEngineUpdateChecks: true,

@@ -5,6 +5,7 @@
 import "../../index.css";
 
 import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
   ThreadId,
   type NativeApi,
   type EngineSelection,
@@ -113,6 +114,7 @@ function setNativeApi(input: {
   readonly logout?: NativeApi["modelServices"]["logout"];
   readonly revealApiKey?: NativeApi["modelServices"]["revealApiKey"];
   readonly refresh?: NativeApi["modelServices"]["refresh"];
+  readonly testModel?: NativeApi["modelServices"]["testModel"];
   readonly discoverCustom?: NativeApi["modelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["modelServices"]["testCustom"];
   readonly saveCustom?: NativeApi["modelServices"]["saveCustom"];
@@ -155,6 +157,11 @@ function setNativeApi(input: {
   const refresh = vi.fn(
     input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
   );
+  const testModel = vi.fn(
+    input.testModel ??
+      (async () => ({ state: "success", text: "ready", api: "openai-completions" }) as const),
+  );
+  const getSettings = vi.fn(async () => DEFAULT_SERVER_SETTINGS_VIEW);
   const discoverCustom = vi.fn(
     input.discoverCustom ??
       (async () =>
@@ -192,7 +199,7 @@ function setNativeApi(input: {
   );
   const openExternal = vi.fn(input.openExternal ?? (async () => {}));
   window.nativeApi = {
-    server: { getConfig },
+    server: { getConfig, getSettings, updateSettings: getSettings },
     shell: { openExternal },
     ...(input.supported === false
       ? {}
@@ -207,6 +214,7 @@ function setNativeApi(input: {
             logout,
             revealApiKey,
             refresh,
+            testModel,
             discoverCustom,
             testCustom,
             saveCustom,
@@ -225,6 +233,7 @@ function setNativeApi(input: {
     logout,
     revealApiKey,
     refresh,
+    testModel,
     discoverCustom,
     testCustom,
     saveCustom,
@@ -256,6 +265,7 @@ async function renderPanel(input: {
   readonly logout?: NativeApi["modelServices"]["logout"];
   readonly revealApiKey?: NativeApi["modelServices"]["revealApiKey"];
   readonly refresh?: NativeApi["modelServices"]["refresh"];
+  readonly testModel?: NativeApi["modelServices"]["testModel"];
   readonly discoverCustom?: NativeApi["modelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["modelServices"]["testCustom"];
   readonly saveCustom?: NativeApi["modelServices"]["saveCustom"];

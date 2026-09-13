@@ -91,6 +91,7 @@ function serverSettings(
   };
 
   return {
+    modelServices: { autoSync: {}, added: {} },
     defaultEngine: "oa",
     enableAssistantStreaming: false,
     enableEngineUpdateChecks: true,

@@ -836,6 +836,11 @@ export function createWsNativeApi(): NativeApi {
           input,
           options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
         ),
+      testModel: (input, options) =>
+        transport.request(WS_METHODS.modelServicesTestModel, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
       discoverCustom: (input, options) =>
         transport.request(WS_METHODS.modelServicesDiscoverCustom, input, {
           timeoutMs: null,
