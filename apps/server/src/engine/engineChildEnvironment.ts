@@ -4,7 +4,7 @@
 
 import type { EngineKind } from "@harnessos/contracts";
 
-type EngineChildKind = Exclude<EngineKind, "oa"> | "acp";
+type EngineChildKind = EngineKind | "acp";
 
 const ENGINE_CREDENTIAL_KEYS = new Set([
   "ANTHROPIC_API_KEY",
@@ -21,6 +21,8 @@ const ENGINE_CREDENTIAL_KEYS = new Set([
   "GROK_CODE_XAI_API_KEY",
   "FACTORY_API_KEY",
   "CURSOR_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "DEEPSEEK_BASE_URL",
   "DOCKER_AUTH_CONFIG",
 ]);
 
@@ -55,6 +57,7 @@ const ENGINE_CREDENTIAL_GRANTS: Record<EngineChildKind, "all" | ReadonlySet<stri
   kilo: "all",
   opencode: "all",
   pi: "all",
+  deepseek: new Set(["DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL"]),
 };
 
 const INHERITED_NATIVE_CAPABILITY_KEYS = new Set([
@@ -81,7 +84,7 @@ export function buildEngineChildEnvironment(input: {
   };
   const allowedHarosKeys = new Set(input.inheritedHarosKeys ?? []);
   const allowedNativeCapabilities = new Set(input.inheritedNativeCapabilityKeys ?? []);
-  const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine === "oa" ? "pi" : input.engine];
+  const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine];
   const childEnv: NodeJS.ProcessEnv = {};
 
   for (const [key, value] of Object.entries(baseEnv)) {

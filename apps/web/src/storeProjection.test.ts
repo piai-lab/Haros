@@ -784,13 +784,13 @@ describe("store projection", () => {
     const readModel = makeReadModel(
       makeReadModelThread({
         engineSelection: {
-          engine: "oa",
+          engine: "pi",
           model: "deepseek/deepseek-chat",
         },
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          engine: "oa",
+          engine: "pi",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: "Haros Agent credentials are not configured.",

@@ -1107,7 +1107,9 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               const engine =
                 sessionEngine !== undefined && Schema.is(EngineKind)(sessionEngine)
                   ? sessionEngine
-                  : (thread?.engineSelection.engine ?? turnCommand.engineSelection?.engine ?? "oa");
+                  : (thread?.engineSelection.engine ??
+                    turnCommand.engineSelection?.engine ??
+                    "codex");
               return {
                 engine,
                 supportsNativeTurnSteering: engineExecutionStructure(engine).supportsTurnSteering,

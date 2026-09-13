@@ -8,7 +8,7 @@ import type { Project } from "../types";
 import { resolveFirstSendTarget } from "./chatFirstSend";
 
 const defaultEngineSelection = {
-  engine: "oa" as const,
+  engine: "pi" as const,
   model: "deepseek/deepseek-chat",
 };
 

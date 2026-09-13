@@ -20,8 +20,10 @@ import {
   type HarosCustomModelHeaderMetadata,
   type HarosCustomModelHeaderMutation,
   type HarosCustomModelServiceModelInput,
+  type EngineKind,
   type EngineSelection,
 } from "@harnessos/contracts";
+import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import {
@@ -394,15 +396,32 @@ function engineSelectionUsesCustomService(
   selection: EngineSelection | null | undefined,
   serviceId: string,
 ): boolean {
-  return selection?.engine === "pi" && selection.model.startsWith(`${serviceId}/`);
+  return (
+    selection !== null &&
+    selection !== undefined &&
+    engineOwnsProviderModelServices(selection.engine) &&
+    selection.model.startsWith(`${serviceId}/`)
+  );
+}
+
+function countEngineScopedCustomServiceReferences(
+  selections: Partial<Record<EngineKind, EngineSelection | null | undefined>>,
+  serviceId: string,
+): number {
+  return Object.values(selections).filter((selection) =>
+    engineSelectionUsesCustomService(selection, serviceId),
+  ).length;
 }
 
 function countCustomServiceReferences(serviceId: string): number {
   const composerState = useComposerDraftStore.getState();
   const appState = useStore.getState();
-  const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
-    engineSelectionUsesCustomService(draft.engineSelectionByEngine.oa, serviceId),
-  ).length;
+  const draftReferences = Object.values(composerState.draftsByThreadId).reduce(
+    (count, draft) =>
+      count +
+      countEngineScopedCustomServiceReferences(draft.engineSelectionByEngine, serviceId),
+    0,
+  );
   const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(
     (count, draft) =>
       count +
@@ -411,12 +430,10 @@ function countCustomServiceReferences(serviceId: string): number {
       ).length,
     0,
   );
-  const stickyReference = engineSelectionUsesCustomService(
-    composerState.stickyEngineSelectionByEngine.oa,
+  const stickyReference = countEngineScopedCustomServiceReferences(
+    composerState.stickyEngineSelectionByEngine,
     serviceId,
-  )
-    ? 1
-    : 0;
+  );
   const projectReferences = appState.projects.filter((project) =>
     engineSelectionUsesCustomService(project.defaultEngineSelection, serviceId),
   ).length;
@@ -1181,6 +1198,10 @@ function ActiveModelsSettingsPanel({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
+      if (result.state === "cancelled") {
+        setModelTrial({ ...trial, busy: false, failed: false, reply: "" });
+        return;
+      }
       setModelTrial({
         ...trial,
         busy: false,
@@ -1887,6 +1908,15 @@ function ActiveModelsSettingsPanel({
         },
         { signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
+      if (result.state === "cancelled") {
+        setCustomServiceEditor((current) =>
+          current && customModelServiceFingerprint(current) === fingerprint
+            ? { ...current, testState: "idle", testedFingerprint: null }
+            : current,
+        );
+        return;
+      }
       if (result.state === "success") {
         setCustomServiceEditor((current) =>
           current && customModelServiceFingerprint(current) === fingerprint

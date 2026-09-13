@@ -48,8 +48,7 @@ import {
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
 import {
-  firstRunnableEngine,
-  isFrozenRetiredEngineSelection,
+  engineOwnsProviderModelServices,
   mapEngineDescriptors,
 } from "@harnessos/shared/engineMetadata";
 import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
@@ -190,6 +189,8 @@ import {
 } from "../composer-logic";
 import {
   captureComposerPromptHistorySavedDraft,
+  resolvePreferredComposerEngine,
+  resolvePreferredComposerEngineSelection,
   useComposerDraftStore,
   useComposerThreadDraft,
   useEffectiveComposerModelState,
@@ -1102,8 +1103,6 @@ function getEngineStartOptionsCustomBinaryPath(
   engine: EngineKind,
 ): string | null {
   switch (engine) {
-    case "oa":
-      return null;
     case "codex":
       return normalizeCustomBinaryPath(engineOptions?.codex?.binaryPath);
     case "claude":
@@ -1122,6 +1121,8 @@ function getEngineStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(engineOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(engineOptions?.pi?.binaryPath);
+    case "deepseek":
+      return normalizeCustomBinaryPath(engineOptions?.deepseek?.binaryPath);
     default:
       return null;
   }
@@ -2022,21 +2023,22 @@ export default function ChatView({
   const localDraftError = serverThread ? null : (localDraftErrorsByThreadId[threadId] ?? null);
   const localDraftThread = useMemo(() => {
     if (!draftThread) return undefined;
-    const desiredEngine =
-      firstRunnableEngine(
-        composerDraft.activeEngine,
-        fallbackDraftProject?.defaultEngineSelection?.engine,
-        serverSettingsSnapshot.defaultEngine,
-      ) ?? "codex";
-    const desiredEngineSelection =
-      composerDraft.engineSelectionByEngine[desiredEngine] ??
-      (fallbackDraftProject?.defaultEngineSelection?.engine === desiredEngine
-        ? fallbackDraftProject.defaultEngineSelection
-        : null);
+    const preferredSelection = resolvePreferredComposerEngineSelection({
+      draft: composerDraft,
+      threadEngineSelection: null,
+      projectEngineSelection: fallbackDraftProject?.defaultEngineSelection,
+      defaultEngine: serverSettingsSnapshot.defaultEngine,
+    });
+    const desiredEngine = resolvePreferredComposerEngine({
+      draft: composerDraft,
+      threadEngineSelection: null,
+      projectEngineSelection: fallbackDraftProject?.defaultEngineSelection,
+      defaultEngine: serverSettingsSnapshot.defaultEngine,
+    });
     return buildLocalDraftThread(
       threadId,
       draftThread,
-      desiredEngineSelection ?? {
+      preferredSelection ?? {
         engine: desiredEngine,
         model: getDefaultModel(desiredEngine) ?? "",
       },
@@ -2434,25 +2436,17 @@ export default function ChatView({
     markThreadVisited,
   ]);
 
-  const selectedEngineByThreadId = composerDraft.activeEngine ?? null;
   const hasExecutedThreadWork =
     (serverThread?.messages.length ?? 0) > 0 ||
     serverThread?.latestTurn != null ||
     serverThread?.session != null;
-  // Existing OA threads with history stay on OA so send stays refused. Empty
-  // leftovers that still record OA as the thread default are new composer work.
-  const selectedEngine: EngineKind =
-    serverThread &&
-    isFrozenRetiredEngineSelection({
-      engine: serverThread.engineSelection.engine,
-      hasExecutedWork: hasExecutedThreadWork,
-    })
-      ? serverThread.engineSelection.engine
-      : (firstRunnableEngine(
-          selectedEngineByThreadId,
-          activeProject?.defaultEngineSelection?.engine,
-          serverSettingsSnapshot.defaultEngine,
-        ) ?? "codex");
+  const selectedEngine: EngineKind = resolvePreferredComposerEngine({
+    draft: composerDraft,
+    threadEngineSelection: serverThread?.engineSelection,
+    projectEngineSelection: activeProject?.defaultEngineSelection,
+    defaultEngine: serverSettingsSnapshot.defaultEngine,
+    hasExecutedWork: hasExecutedThreadWork,
+  });
   const hasActiveEngineDiscoverySession = isEngineDiscoverySessionActive({
     engine: selectedEngine,
     session: activeThread?.session,
@@ -9911,7 +9905,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: selectedEngine === "oa" ? "models" : "engines",
+        section: engineOwnsProviderModelServices(selectedEngine) ? "models" : "engines",
       },
     });
   }, [navigate, selectedEngine]);

@@ -14,6 +14,7 @@ import { DroidAdapter, DroidAdapterShape } from "../Services/DroidAdapter.ts";
 import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
 import { GrokAdapter, GrokAdapterShape } from "../Services/GrokAdapter.ts";
 import { KiloAdapter, KiloAdapterShape } from "../Services/KiloAdapter.ts";
+import { DeepSeekAdapter, DeepSeekAdapterShape } from "../Services/DeepSeekAdapter.ts";
 import { OpenCodeAdapter, OpenCodeAdapterShape } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter, PiAdapterShape } from "../Services/PiAdapter.ts";
 import { EngineAdapterRegistryLive } from "./EngineAdapterRegistry.ts";
@@ -158,6 +159,23 @@ const fakePiAdapter: PiAdapterShape = {
   streamEvents: Stream.empty,
 };
 
+const fakeDeepSeekAdapter: DeepSeekAdapterShape = {
+  engine: "deepseek",
+  capabilities: { sessionModelSwitch: "restart-session" },
+  startSession: vi.fn(),
+  sendTurn: vi.fn(),
+  interruptTurn: vi.fn(),
+  respondToRequest: vi.fn(),
+  respondToUserInput: vi.fn(),
+  stopSession: vi.fn(),
+  listSessions: vi.fn(),
+  hasSession: vi.fn(),
+  readThread: vi.fn(),
+  rollbackThread: vi.fn(),
+  stopAll: vi.fn(),
+  streamEvents: Stream.empty,
+};
+
 const fakeAntigravityAdapter: AntigravityAdapterShape = {
   engine: "antigravity",
   capabilities: { sessionModelSwitch: "restart-session" },
@@ -189,6 +207,7 @@ const layer = it.layer(
         Layer.succeed(KiloAdapter, fakeKiloAdapter),
         Layer.succeed(OpenCodeAdapter, fakeOpenCodeAdapter),
         Layer.succeed(PiAdapter, fakePiAdapter),
+        Layer.succeed(DeepSeekAdapter, fakeDeepSeekAdapter),
       ),
     ),
     NodeServices.layer,
@@ -208,6 +227,7 @@ layer("EngineAdapterRegistryLive", (it) => {
       const kilo = yield* registry.getByEngine("kilo");
       const opencode = yield* registry.getByEngine("opencode");
       const pi = yield* registry.getByEngine("pi");
+      const deepseek = yield* registry.getByEngine("deepseek");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
       assert.equal(cursor, fakeCursorAdapter);
@@ -217,20 +237,10 @@ layer("EngineAdapterRegistryLive", (it) => {
       assert.equal(kilo, fakeKiloAdapter);
       assert.equal(opencode, fakeOpenCodeAdapter);
       assert.equal(pi, fakePiAdapter);
+      assert.equal(deepseek, fakeDeepSeekAdapter);
 
       const engines = yield* registry.listEngines();
-      assert.deepEqual(
-        engines,
-        ENGINE_KINDS.filter((engine) => engine !== "oa"),
-      );
-    }),
-  );
-
-  it.effect("refuses retired OA without registering or loading it", () =>
-    Effect.gen(function* () {
-      const registry = yield* EngineAdapterRegistry;
-      const result = yield* registry.getByEngine("oa").pipe(Effect.result);
-      assertFailure(result, new EngineUnsupportedError({ engine: "oa" }));
+      assert.deepEqual(engines, ENGINE_KINDS);
     }),
   );
 

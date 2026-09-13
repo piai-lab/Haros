@@ -18,6 +18,7 @@ import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
 import { makeClaudeAdapterLive } from "./Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./Layers/CodexAdapter";
 import { makeCursorAdapterLive } from "./Layers/CursorAdapter";
+import { makeDeepSeekAdapterLive } from "./Layers/DeepSeekAdapter";
 import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
@@ -87,6 +88,7 @@ export function makeServerEngineLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(hostGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
+    const deepSeekAdapterLayer = makeDeepSeekAdapterLive();
     const adapterRegistryLayer = EngineAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -97,6 +99,7 @@ export function makeServerEngineLayer(
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
       Layer.provide(piAdapterLayer),
+      Layer.provide(deepSeekAdapterLayer),
       Layer.provideMerge(engineSessionDirectoryLayer),
     );
     const engineServiceLayer = makeDurableEngineServiceLive(

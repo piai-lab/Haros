@@ -417,7 +417,7 @@ describe("useEngineModelCatalog", () => {
   });
 
   it("does not surface an unavailable exact Haros binding as a static model option", () => {
-    modelQueries.set("oa", {
+    modelQueries.set("pi", {
       data: {
         models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
         source: "pi.sdk",
@@ -430,17 +430,32 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedEngine: "oa",
-      discoveryEnabled: true,
-      modelHintByEngine: { oa: "legacy/engine-model" },
+      selectedEngine: "pi",
+      discoveryEnabled: false,
+      modelHintByEngine: { pi: "legacy/engine-model" },
     }).at(-1);
 
-    expect(catalog?.modelOptionsByEngine.oa.map((model) => model.slug)).not.toContain(
+    expect(catalog?.modelOptionsByEngine.pi.map((model) => model.slug)).toContain(
       "legacy/engine-model",
     );
-    expect(catalog?.selectableModelOptionsByEngine.oa.map((model) => model.slug)).toEqual([
+    expect(catalog?.selectableModelOptionsByEngine.pi.map((model) => model.slug)).toEqual([
       "deepseek/deepseek-chat",
     ]);
+  });
+
+  it("exposes DeepSeek's static catalog without a runtime model list", () => {
+    const catalog = readCatalogRenders({
+      selectedEngine: "deepseek",
+      discoveryEnabled: false,
+    }).at(-1);
+
+    expect(catalog?.catalogStateByEngine.deepseek).toBe("ready");
+    expect(catalog?.loadingEngineModels.deepseek).toBe(false);
+    expect(catalog?.selectableModelOptionsByEngine.deepseek.map((model) => model.slug)).toEqual([
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
+    ]);
+    expect(readModelQueryEnabled("deepseek")).toBeUndefined();
   });
 
   it("distinguishes a cold catalog check from a failed refresh with last-good models", () => {

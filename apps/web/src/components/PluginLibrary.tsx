@@ -382,10 +382,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   );
   const contextThread = activeThread ?? sourceThread ?? null;
   const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
-  const preferredEngine =
-    contextThread?.engineSelection.engine === "oa"
-      ? "codex"
-      : (contextThread?.engineSelection.engine ?? "codex");
+  const preferredEngine = contextThread?.engineSelection.engine ?? "codex";
   const [selectedEngine, setSelectedEngine] = useState<EngineKind>(preferredEngine);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");

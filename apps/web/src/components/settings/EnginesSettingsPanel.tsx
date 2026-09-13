@@ -103,7 +103,9 @@ type EngineInstallTextKey =
   | "openCodeBinaryPath"
   | "openCodeServerUrl"
   | "piBinaryPath"
-  | "piAgentDir";
+  | "piAgentDir"
+  | "deepseekBinaryPath"
+  | "deepseekHomePath";
 type EngineInstallPasswordKey = "kiloServerPassword" | "openCodeServerPassword";
 type EngineInstallPasswordConfiguredKey =
   | "kiloServerPasswordConfigured"
@@ -425,6 +427,34 @@ const ENGINE_INSTALL_SETTINGS: readonly EngineInstallSettings[] = [
       },
     ],
   },
+  {
+    engine: "deepseek",
+    docs: [
+      { labelKey: "settings.install", href: "https://github.com/deepseek-ai/deepseek-harness" },
+      {
+        labelKey: "settings.config",
+        href: "https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/README.md",
+      },
+    ],
+    fields: [
+      {
+        kind: "text",
+        settingsKey: "deepseekBinaryPath",
+        labelKey: "settings.binaryPath",
+        labelParams: { engine: "DeepSeek" },
+        placeholderKey: "settings.binaryPath",
+        descriptionKey: "settings.binaryPathDescription",
+        descriptionParams: { command: "dsh" },
+      },
+      {
+        kind: "text",
+        settingsKey: "deepseekHomePath",
+        labelKey: "settings.deepseekHomePath",
+        placeholder: "DSH_HOME",
+        descriptionKey: "settings.deepseekHomeDescription",
+      },
+    ],
+  },
 ];
 
 function readEngineInstallField(
@@ -466,6 +496,10 @@ function readEngineInstallField(
       return settings.engines.pi.binaryPath;
     case "piAgentDir":
       return settings.engines.pi.agentDir;
+    case "deepseekBinaryPath":
+      return settings.engines.deepseek.binaryPath;
+    case "deepseekHomePath":
+      return settings.engines.deepseek.homePath;
   }
 }
 
@@ -504,6 +538,10 @@ function engineInstallFieldPatch(
       return { engines: { pi: { binaryPath: String(value) } } };
     case "piAgentDir":
       return { engines: { pi: { agentDir: String(value) } } };
+    case "deepseekBinaryPath":
+      return { engines: { deepseek: { binaryPath: String(value) } } };
+    case "deepseekHomePath":
+      return { engines: { deepseek: { homePath: String(value) } } };
   }
 }
 
@@ -629,6 +667,10 @@ export function createEngineInstallResetPatch(defaults: ServerSettingsView): Ser
       pi: {
         binaryPath: defaults.engines.pi.binaryPath,
         agentDir: defaults.engines.pi.agentDir,
+      },
+      deepseek: {
+        binaryPath: defaults.engines.deepseek.binaryPath,
+        homePath: defaults.engines.deepseek.homePath,
       },
     },
   };

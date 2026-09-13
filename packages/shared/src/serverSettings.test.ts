@@ -121,9 +121,6 @@ describe("engineStartOptionsFromServerSettings", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       engines: {
-        oa: {
-          ...DEFAULT_SERVER_SETTINGS.engines.oa,
-        },
         codex: {
           ...DEFAULT_SERVER_SETTINGS.engines.codex,
           binaryPath: "",
@@ -165,6 +162,11 @@ describe("engineStartOptionsFromServerSettings", () => {
           binaryPath: "",
           agentDir: "",
         },
+        deepseek: {
+          ...DEFAULT_SERVER_SETTINGS.engines.deepseek,
+          binaryPath: "",
+          homePath: "",
+        },
       },
     };
 
@@ -192,6 +194,7 @@ describe("engineStartOptionsFromServerSettings", () => {
     expect(engineOptions.kilo).toEqual({});
     expect(engineOptions.opencode).toEqual({ experimentalWebSockets: false });
     expect(engineOptions.pi).toEqual({});
+    expect(engineOptions.deepseek).toEqual({});
   });
 
   it("preserves configured launch settings", () => {

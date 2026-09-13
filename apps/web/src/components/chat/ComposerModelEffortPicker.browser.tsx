@@ -31,7 +31,6 @@ describe("ComposerModelEffortPicker", () => {
         model={firstModel}
         catalogState="ready"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [
@@ -43,7 +42,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         onEngineModelChange={onEngineModelChange}
         onRefreshModels={vi.fn()}
@@ -84,7 +82,6 @@ describe("ComposerModelEffortPicker", () => {
         model={GROK_4_6}
         catalogState="ready"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [],
@@ -93,7 +90,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         hideStatusLabel
         onEngineModelChange={vi.fn()}
@@ -131,7 +127,6 @@ describe("ComposerModelEffortPicker", () => {
         model={model}
         catalogState="ready"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [{ slug: model, name: "GPT-5.4" }],
           cursor: [],
@@ -140,7 +135,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
@@ -180,7 +174,6 @@ describe("ComposerModelEffortPicker", () => {
       onPromptChange: vi.fn(),
     };
     const modelOptionsByEngine = {
-      oa: [],
       claude: [],
       codex: [],
       cursor: [],
@@ -189,11 +182,10 @@ describe("ComposerModelEffortPicker", () => {
       droid: [],
       kilo: [],
       opencode: [],
-      pi: [],
     };
     const emptyScreen = await render(
       <ComposerModelEffortPicker
-        engine="oa"
+        engine="pi"
         model={null}
         catalogState="empty"
         modelOptionsByEngine={modelOptionsByEngine}
@@ -214,7 +206,7 @@ describe("ComposerModelEffortPicker", () => {
 
     const errorScreen = await render(
       <ComposerModelEffortPicker
-        engine="oa"
+        engine="pi"
         model={null}
         catalogState="error"
         modelOptionsByEngine={modelOptionsByEngine}
@@ -244,11 +236,10 @@ describe("ComposerModelEffortPicker", () => {
   it("does not present an idle catalog as an empty catalog", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
-        engine="oa"
+        engine="pi"
         model={null}
         catalogState="idle"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [],
@@ -257,7 +248,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
@@ -285,7 +275,6 @@ describe("ComposerModelEffortPicker", () => {
       onPromptChange: vi.fn(),
     };
     const emptyOptions = {
-      oa: [],
       claude: [],
       codex: [],
       cursor: [],
@@ -298,7 +287,7 @@ describe("ComposerModelEffortPicker", () => {
     };
     const checkingScreen = await render(
       <ComposerModelEffortPicker
-        engine="oa"
+        engine="pi"
         model={null}
         catalogState="checking"
         modelOptionsByEngine={emptyOptions}
@@ -357,7 +346,6 @@ describe("ComposerModelEffortPicker", () => {
         model={null}
         catalogState="idle"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [],
@@ -366,7 +354,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
@@ -408,7 +395,6 @@ describe("ComposerModelEffortPicker", () => {
         model={customModel}
         catalogState="error"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [],
@@ -417,7 +403,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [],
-          pi: [],
         }}
         onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
@@ -453,7 +438,6 @@ describe("ComposerModelEffortPicker", () => {
         model={model}
         catalogState="ready"
         modelOptionsByEngine={{
-          oa: [],
           claude: [],
           codex: [],
           cursor: [],
@@ -462,7 +446,6 @@ describe("ComposerModelEffortPicker", () => {
           droid: [],
           kilo: [],
           opencode: [{ slug: model, name: "GPT-5.4" }],
-          pi: [],
         }}
         onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
@@ -504,7 +487,6 @@ describe("ComposerModelEffortPicker", () => {
         model={model}
         catalogState="ready"
         modelOptionsByEngine={{
-          oa: [],
           claude: [{ slug: model, name: "Claude Opus 4.6" }],
           codex: [],
           cursor: [],
@@ -539,11 +521,10 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          engine="oa"
+          engine="pi"
           model={null}
           catalogState="empty"
           modelOptionsByEngine={{
-            oa: [],
             claude: [],
             codex: [],
             cursor: [],
@@ -552,7 +533,6 @@ describe("ComposerModelEffortPicker", () => {
             droid: [],
             kilo: [],
             opencode: [],
-            pi: [],
           }}
           onEngineModelChange={vi.fn()}
           onRefreshModels={vi.fn()}
@@ -583,11 +563,10 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          engine="oa"
+          engine="pi"
           model={null}
           catalogState="checking"
           modelOptionsByEngine={{
-            oa: [],
             claude: [],
             codex: [],
             cursor: [],

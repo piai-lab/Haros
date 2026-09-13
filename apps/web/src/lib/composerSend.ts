@@ -211,8 +211,6 @@ export function resolvePromptEffortFromEngineSelection(
   engineSelection: EngineSelection,
 ): string | null {
   switch (engineSelection.engine) {
-    case "oa":
-      return engineSelection.options?.thinkingLevel ?? null;
     case "antigravity":
       return null;
     case "codex":
@@ -226,6 +224,8 @@ export function resolvePromptEffortFromEngineSelection(
       return engineSelection.options?.reasoningEffort ?? null;
     case "pi":
       return engineSelection.options?.thinkingLevel ?? null;
+    case "deepseek":
+      return engineSelection.options?.reasoningEffort ?? null;
     case "kilo":
     case "opencode":
       return null;

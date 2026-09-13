@@ -17,10 +17,10 @@ import {
   normalizeEngineOrder,
 } from "./engineOrdering";
 
-const ALL_ENGINE_KINDS: readonly EngineKind[] = ENGINE_KINDS.filter((engine) => engine !== "oa");
+const ALL_ENGINE_KINDS: readonly EngineKind[] = ENGINE_KINDS;
 
 describe("engineOrdering", () => {
-  it("drops retired OA from persisted picker order without hiding Pi", () => {
+  it("drops unknown engines from persisted picker order without hiding Pi", () => {
     expect(isEngineKind("oa")).toBe(false);
     expect(normalizeEngineOrder(["oa", "pi", "codex"])).not.toContain("oa");
     expect(normalizeEngineOrder(["oa", "pi", "codex"])[0]).toBe("pi");

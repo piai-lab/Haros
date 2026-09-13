@@ -48,6 +48,7 @@ import {
   Scope,
   Stream,
 } from "effect";
+import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
 import { nonEmptyTrimmed } from "@harnessos/shared/text";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
@@ -284,7 +285,7 @@ function readPersistedEngineSelection(
 }
 
 function modelServiceIdFromSelection(selection: EngineSelection | undefined): string | undefined {
-  if (selection?.engine !== "pi") return undefined;
+  if (!selection || !engineOwnsProviderModelServices(selection.engine)) return undefined;
   const separatorIndex = selection.model.indexOf("/");
   return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
 }

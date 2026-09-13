@@ -1,7 +1,6 @@
 import { Schema } from "effect";
 
 export const ENGINE_KINDS = [
-  "oa",
   "codex",
   "claude",
   "cursor",
@@ -11,6 +10,7 @@ export const ENGINE_KINDS = [
   "kilo",
   "opencode",
   "pi",
+  "deepseek",
 ] as const;
 
 export const EngineKind = Schema.Literals(ENGINE_KINDS);

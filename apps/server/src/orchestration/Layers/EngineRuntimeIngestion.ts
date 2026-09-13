@@ -344,7 +344,7 @@ function reasoningSummaryBufferKey(
 }
 
 function supportsReadableReasoningProjection(engine: EngineKind): boolean {
-  return engine === "codex" || engine === "antigravity" || engine === "oa" || engine === "pi";
+  return engine === "codex" || engine === "antigravity" || engine === "pi";
 }
 
 function isReadableReasoningDelta(engine: EngineKind, streamKind: string): boolean {

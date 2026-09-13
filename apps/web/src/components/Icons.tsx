@@ -265,6 +265,15 @@ export const GrokIcon: Icon = (props) => (
   </svg>
 );
 
+export const DeepSeekIcon: Icon = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="currentColor"
+      d="M12.04 2.16c.86 1.3 1.3 2.86 1.3 4.5 0 1.72-.48 3.32-1.34 4.64 2.7.18 5.12 1.4 6.74 3.3-1.7 2.4-4.5 3.96-7.64 3.96-3.18 0-6-1.58-7.7-4.02 1.64-1.88 4.08-3.08 6.8-3.24A8.3 8.3 0 0 1 9.2 6.66c0-1.64.46-3.18 1.3-4.5h1.54ZM6.3 19.4c1.66 1.02 3.6 1.6 5.66 1.6s4-.58 5.66-1.6c-.9 1.86-2.78 3.16-5.66 3.16s-4.76-1.3-5.66-3.16Z"
+    />
+  </svg>
+);
+
 export const PiIcon: Icon = (props) => (
   <svg {...props} viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

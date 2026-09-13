@@ -2079,7 +2079,7 @@ describe("ModelsSettingsPanel model services", () => {
     useComposerDraftStore.setState((state) => ({
       stickyEngineSelectionByEngine: {
         ...state.stickyEngineSelectionByEngine,
-        oa: referencedSelection,
+        pi: referencedSelection,
       },
     }));
     useComposerDraftStore.getState().enqueueQueuedTurn(ThreadId.makeUnsafe("queued-reference"), {
@@ -2106,7 +2106,7 @@ describe("ModelsSettingsPanel model services", () => {
       .click();
     await expect.poll(() => removeCustom).toHaveBeenCalledTimes(2);
     expect(removeCustom).toHaveBeenLastCalledWith({ serviceId: "saved-custom" });
-    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.oa).toEqual(
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.pi).toEqual(
       referencedSelection,
     );
 

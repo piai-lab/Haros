@@ -24,6 +24,7 @@ import {
 } from "../Services/EngineAdapterRegistry.ts";
 import { GrokAdapter } from "../Services/GrokAdapter.ts";
 import { KiloAdapter } from "../Services/KiloAdapter.ts";
+import { DeepSeekAdapter } from "../Services/DeepSeekAdapter.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 
@@ -46,6 +47,7 @@ const makeEngineAdapterRegistry = (options?: EngineAdapterRegistryLiveOptions) =
             yield* KiloAdapter,
             yield* OpenCodeAdapter,
             yield* PiAdapter,
+            yield* DeepSeekAdapter,
           ];
 
     for (const adapter of adapters) {

@@ -473,7 +473,6 @@ const SKILL_ORIGIN_ROOTS = {
 } as const satisfies Record<SkillsHomeOrigin, SkillOriginRootSpec>;
 
 const ENGINE_SKILL_ORIGIN_PREFERENCES = {
-  oa: ["oa", "agents"],
   codex: ["codex", "agents"],
   claude: ["claude"],
   cursor: ["cursor", "agents", "claude", "codex"],
@@ -483,6 +482,7 @@ const ENGINE_SKILL_ORIGIN_PREFERENCES = {
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
+  deepseek: [],
 } as const satisfies Partial<Record<EngineKind, readonly SkillsHomeOrigin[]>>;
 
 function homeRootsForOrigin(

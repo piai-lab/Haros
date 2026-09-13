@@ -79,8 +79,6 @@ export function engineModelsPrefetchQueryOptions(input: {
   const cwd = input.cwd ?? null;
 
   switch (engine) {
-    case "oa":
-      return engineModelsQueryOptions({ engine: "oa", cwd });
     case "claude":
       return engineModelsQueryOptions({
         engine: "claude",
@@ -129,6 +127,11 @@ export function engineModelsPrefetchQueryOptions(input: {
         binaryPath: settings.engines.pi.binaryPath || null,
         agentDir: settings.engines.pi.agentDir || null,
         cwd,
+      });
+    case "deepseek":
+      return engineModelsQueryOptions({
+        engine: "deepseek",
+        binaryPath: settings.engines.deepseek.binaryPath || null,
       });
     default:
       return null;

@@ -122,7 +122,7 @@ const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
   Effect.gen(function* () {
     const createdAt = nowIso();
     const engine = harness.adapterHarness?.engine ?? "codex";
-    if (engine === "pi" || engine === "oa") {
+    if (engine === "pi") {
       throw new Error("Pi-family integration tests require an explicit model selection.");
     }
     const defaultModel = DEFAULT_MODEL_BY_ENGINE[engine];

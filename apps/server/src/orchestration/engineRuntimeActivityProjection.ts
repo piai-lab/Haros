@@ -566,7 +566,6 @@ export function projectProviderRuntimeActivities(
   if (
     (event.engine === "codex" ||
       event.engine === "antigravity" ||
-      event.engine === "oa" ||
       event.engine === "pi") &&
     (event.type === "item.updated" || event.type === "item.completed") &&
     event.payload.itemType === "reasoning" &&

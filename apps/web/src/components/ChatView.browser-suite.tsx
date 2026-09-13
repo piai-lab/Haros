@@ -5399,7 +5399,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "first model frame baseline",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByEngine.oa = {
+        nextFixture.providerModelsByEngine.pi = {
           source: "browser.fixture",
           models: [
             {
@@ -5412,9 +5412,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
           engines: [
-            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "oa"),
+            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "pi"),
             {
-              engine: "oa",
+              engine: "pi",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5429,7 +5429,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await waitForServerConfigToApply();
       useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
-        engine: "oa",
+        engine: "pi",
         model: "deepseek/deepseek-v4-flash",
       });
       useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
@@ -7219,7 +7219,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           engines: [
             ...nextFixture.serverConfig.engines,
             {
-              engine: "oa",
+              engine: "pi",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -10357,7 +10357,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it.each(["oa", "pi"] as const)(
+  it.each(["pi", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
     async (defaultEngine) => {
       const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultEngine}`);

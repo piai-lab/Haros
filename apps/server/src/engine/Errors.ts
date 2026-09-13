@@ -112,9 +112,7 @@ export class EngineUnsupportedError extends Schema.TaggedErrorClass<EngineUnsupp
   },
 ) {
   override get message(): string {
-    return this.engine === "oa"
-      ? "OA has been removed. History remains available; choose another engine for a new task. / OA 已移除。历史记录仍可查看，请选择其他引擎新建任务。"
-      : `Engine '${this.engine}' is not implemented`;
+    return `Engine '${this.engine}' is not implemented`;
   }
 }
 

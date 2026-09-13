@@ -212,10 +212,6 @@ const ENGINE_TARGET_OPTION_RULES = {
     primaryOptionKey: "thinkingLevel",
     options: { thinkingLevel: engineOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
-  oa: defineEngineOptionConfig<"oa">({
-    primaryOptionKey: "thinkingLevel",
-    options: { thinkingLevel: engineOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
-  }),
   antigravity: defineEngineOptionConfig<"antigravity">({
     primaryOptionKey: "reasoningEffort",
     options: { reasoningEffort: engineOptionRule("string", [], "model-discovery") },

@@ -152,7 +152,6 @@ function hangingSpawnerLayer(input: {
 
 const allProvidersDisabledSettings = {
   engines: {
-    oa: { enabled: false },
     codex: { enabled: false },
     claude: { enabled: false },
     cursor: { enabled: false },
@@ -162,13 +161,13 @@ const allProvidersDisabledSettings = {
     kilo: { enabled: false },
     opencode: { enabled: false },
     pi: { enabled: false },
+    deepseek: { enabled: false },
   },
 } as const;
 
 const allProvidersDisabledServerSettings = {
   ...DEFAULT_SERVER_SETTINGS,
   engines: {
-    oa: { ...DEFAULT_SERVER_SETTINGS.engines.oa, enabled: false },
     codex: { ...DEFAULT_SERVER_SETTINGS.engines.codex, enabled: false },
     claude: { ...DEFAULT_SERVER_SETTINGS.engines.claude, enabled: false },
     cursor: { ...DEFAULT_SERVER_SETTINGS.engines.cursor, enabled: false },
@@ -178,6 +177,7 @@ const allProvidersDisabledServerSettings = {
     kilo: { ...DEFAULT_SERVER_SETTINGS.engines.kilo, enabled: false },
     opencode: { ...DEFAULT_SERVER_SETTINGS.engines.opencode, enabled: false },
     pi: { ...DEFAULT_SERVER_SETTINGS.engines.pi, enabled: false },
+    deepseek: { ...DEFAULT_SERVER_SETTINGS.engines.deepseek, enabled: false },
   },
 } satisfies typeof DEFAULT_SERVER_SETTINGS;
 
@@ -269,6 +269,7 @@ describe("passive engine presence", () => {
       "droid",
       "kilo",
       "opencode",
+      "dsh",
     ]);
   });
 
@@ -456,7 +457,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       );
       const codex = statuses.find((status) => status.engine === "codex");
 
-      assert.strictEqual(statuses.length, 9);
+      assert.strictEqual(statuses.length, 10);
       assert.strictEqual(codex?.available, false);
       assert.strictEqual(codex?.message, "Engine is disabled in Haros settings.");
     });
@@ -591,7 +592,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         const engineHealth = yield* EngineHealth;
         const statuses = yield* engineHealth.refresh;
 
-        assert.strictEqual(statuses.length, 9);
+        assert.strictEqual(statuses.length, 10);
         for (const status of statuses) {
           assert.strictEqual(status.available, false);
           assert.strictEqual(status.message, "Engine is disabled in Haros settings.");

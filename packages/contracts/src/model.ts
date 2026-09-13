@@ -47,12 +47,15 @@ export const DROID_REASONING_EFFORT_OPTIONS = [
 // Droid exposes effort values dynamically over ACP; keep the static list only
 // as an offline fallback so newly added values survive transport and drafts.
 export type DroidReasoningEffort = string;
+export const DEEPSEEK_REASONING_EFFORT_OPTIONS = ["low", "medium", "high"] as const;
+export type DeepSeekReasoningEffort = (typeof DEEPSEEK_REASONING_EFFORT_OPTIONS)[number];
 export type EngineReasoningEffort =
   | CodexReasoningEffort
   | ClaudeCodeEffort
   | PiThinkingLevel
   | GrokReasoningEffort
-  | DroidReasoningEffort;
+  | DroidReasoningEffort
+  | DeepSeekReasoningEffort;
 
 export const EngineOptionChoice = Schema.Struct({
   id: TrimmedNonEmptyString,
@@ -150,8 +153,12 @@ export const DroidModelOptions = Schema.Struct({
 });
 export type DroidModelOptions = typeof DroidModelOptions.Type;
 
+export const DeepSeekModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(DEEPSEEK_REASONING_EFFORT_OPTIONS)),
+});
+export type DeepSeekModelOptions = typeof DeepSeekModelOptions.Type;
+
 export const EngineModelOptions = Schema.Struct({
-  oa: Schema.optional(PiModelOptions),
   codex: Schema.optional(CodexModelOptions),
   claude: Schema.optional(ClaudeModelOptions),
   cursor: Schema.optional(CursorModelOptions),
@@ -161,6 +168,7 @@ export const EngineModelOptions = Schema.Struct({
   kilo: Schema.optional(OpenCodeModelOptions),
   opencode: Schema.optional(OpenCodeModelOptions),
   pi: Schema.optional(PiModelOptions),
+  deepseek: Schema.optional(DeepSeekModelOptions),
 });
 type SpecializedEngineModelOptions = typeof EngineModelOptions.Type;
 export type EngineModelOptions = SpecializedEngineModelOptions &
@@ -542,7 +550,6 @@ type ModelDefinition = {
  * Runtime discovery remains authoritative when an Engine supplies it.
  */
 export const MODEL_OPTIONS_BY_ENGINE = {
-  oa: [],
   codex: [
     {
       slug: "gpt-5.5",
@@ -867,6 +874,26 @@ export const MODEL_OPTIONS_BY_ENGINE = {
   ],
   // Pi discovery owns the live catalog, including auth-gated Anthropic models.
   pi: [],
+  deepseek: [
+    {
+      slug: "deepseek-v4-flash",
+      name: "DeepSeek V4 Flash",
+      capabilities: grokCapabilities([
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium", isDefault: true },
+        { value: "high", label: "High" },
+      ]),
+    },
+    {
+      slug: "deepseek-v4-pro",
+      name: "DeepSeek V4 Pro",
+      capabilities: grokCapabilities([
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High", isDefault: true },
+      ]),
+    },
+  ],
   cursor: [
     {
       // Cursor exposes auto as the `default` model id over ACP; the adapter maps it.
@@ -1081,6 +1108,7 @@ export const DEFAULT_MODEL_BY_ENGINE = {
   droid: "claude-opus-4-8",
   kilo: "kilo/kilo-auto/free",
   opencode: "openai/gpt-5",
+  deepseek: "deepseek-v4-flash",
 } as const satisfies Partial<Record<EngineKind, ModelSlug>>;
 export type EngineWithDefaultModel = keyof typeof DEFAULT_MODEL_BY_ENGINE;
 
@@ -1088,7 +1116,6 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.6-luna" as const;
 export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 
 export const MODEL_SLUG_ALIASES_BY_ENGINE = {
-  oa: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1221,6 +1248,14 @@ export const MODEL_SLUG_ALIASES_BY_ENGINE = {
   kilo: {},
   opencode: {},
   pi: {},
+  deepseek: {
+    flash: "deepseek-v4-flash",
+    "v4-flash": "deepseek-v4-flash",
+    "deepseek-v4-flash": "deepseek-v4-flash",
+    pro: "deepseek-v4-pro",
+    "v4-pro": "deepseek-v4-pro",
+    "deepseek-v4-pro": "deepseek-v4-pro",
+  },
 } as const satisfies Partial<Record<EngineKind, Record<string, ModelSlug>>>;
 
 // ── Agent mention aliases ─────────────────────────────────────────────

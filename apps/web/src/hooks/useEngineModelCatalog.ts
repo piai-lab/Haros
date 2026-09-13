@@ -65,8 +65,13 @@ function ownsIndependentCustomModelSlugs(engine: EngineKind): boolean {
     engine === "antigravity" ||
     engine === "grok" ||
     engine === "kilo" ||
-    engine === "opencode"
+    engine === "opencode" ||
+    engine === "deepseek"
   );
+}
+
+function usesStaticModelCatalog(engine: EngineKind): boolean {
+  return engine === "deepseek";
 }
 
 function deriveCatalogState(input: {
@@ -290,14 +295,13 @@ export function useEngineModelCatalog(input: {
       getAppModelOptions(
         kind,
         customModelsByEngine[kind],
-        kind === "oa" ? undefined : modelHintByEngine?.[kind],
+        modelHintByEngine?.[kind],
       ),
     );
     const result: Record<EngineKind, ReadonlyArray<EngineModelOption & { isCustom?: boolean }>> = {
       ...staticOptions,
     };
     const dynamicSources: Partial<Record<EngineKind, typeof claudeDynamicModelsQuery.data>> = {
-      oa: undefined,
       claude: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
       cursor:
@@ -342,7 +346,6 @@ export function useEngineModelCatalog(input: {
   >(
     () => ({
       ...mapEngineDescriptors(() => [] as ReadonlyArray<EngineModelDescriptor>),
-      oa: [],
       claude: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
       cursor: cursorRuntimeModels,
@@ -369,7 +372,6 @@ export function useEngineModelCatalog(input: {
   const catalogStateByEngine = useMemo<Record<EngineKind, EngineModelCatalogState>>(
     () => ({
       ...mapEngineDescriptors(() => "idle" as EngineModelCatalogState),
-      oa: "empty",
       codex: deriveCatalogState({
         enabled: codexModelDiscoveryEnabled,
         hasSettledData:
@@ -454,8 +456,11 @@ export function useEngineModelCatalog(input: {
         isError: piDynamicModelsQuery.isError,
         modelCount: discoveredRuntimeModelsByEngine.pi.length,
       }),
+      // SDK has no model-list RPC. The static fallback catalog is the sendable list.
+      deepseek: serverSettings?.engines.deepseek?.enabled === false ? "idle" : "ready",
     }),
     [
+      serverSettings?.engines.deepseek?.enabled,
       antigravityModelDiscoveryEnabled,
       antigravityModelsQuery.isError,
       antigravityModelsQuery.isPending,
@@ -543,6 +548,9 @@ export function useEngineModelCatalog(input: {
         ) {
           return true;
         }
+        if (usesStaticModelCatalog(engine)) {
+          return true;
+        }
         return Boolean(
           resolveRuntimeModelDescriptor({
             engine,
@@ -553,7 +561,12 @@ export function useEngineModelCatalog(input: {
       });
     }
     return result;
-  }, [configuredCustomModelSlugsByEngine, modelOptionsByEngine, runtimeModelsByEngine]);
+  }, [
+    catalogStateByEngine,
+    configuredCustomModelSlugsByEngine,
+    modelOptionsByEngine,
+    runtimeModelsByEngine,
+  ]);
 
   const selectedRuntimeModel = useMemo(
     () =>

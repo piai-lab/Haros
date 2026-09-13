@@ -154,11 +154,6 @@ describe("ServerSettingsService", () => {
               enableEngineUpdateChecks: false,
               addProjectBaseDirectory: "/tmp/harnessos-projects",
               engines: {
-                oa: {
-                  enabled: false,
-                  [retiredKey]: ["legacy/provider-model"],
-                  defaultPrompt: "retired private prompt",
-                },
                 codex: { customModels: ["custom/codex-model"] },
               },
               agentTools: { builtInGroupOverrides: {} },
@@ -176,7 +171,6 @@ describe("ServerSettingsService", () => {
           migrationVersion: number;
           settings: Record<string, unknown> & {
             engines: Record<string, unknown> & {
-              oa: Record<string, unknown>;
               codex: { customModels: string[] };
             };
           };
@@ -185,9 +179,6 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
-    expect(result.view.engines.oa).toEqual({ enabled: false });
-    expect(result.internal.engines.oa).toEqual({ enabled: false });
     expect(result.persisted).toMatchObject({
       revision: 5,
       migrationVersion: 4,
@@ -196,13 +187,12 @@ describe("ServerSettingsService", () => {
         enableEngineUpdateChecks: false,
         addProjectBaseDirectory: "/tmp/harnessos-projects",
         engines: {
-          oa: { enabled: false },
           codex: { customModels: ["custom/codex-model"] },
         },
         agentTools: { builtInGroupOverrides: {} },
       },
     });
-    expect(result.persisted.settings.engines.oa).not.toHaveProperty(retiredKey);
+    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
   });
 
   it.each([
@@ -469,7 +459,7 @@ describe("ServerSettingsService", () => {
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationEngineSelection: { engine: "oa" },
+            textGenerationEngineSelection: { engine: "pi" },
           }),
         );
         return {

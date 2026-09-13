@@ -185,7 +185,7 @@ describe("MessagesTimeline", () => {
             pendingMessageId,
             turnId,
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-08-27T02:21:00.000Z",

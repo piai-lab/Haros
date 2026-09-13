@@ -478,14 +478,13 @@ describe("wsNativeApi", () => {
     const payload = {
       settings: {
         modelServices: { autoSync: {}, added: {} },
-        defaultEngine: "oa",
+        defaultEngine: "codex",
         enableAssistantStreaming: true,
         enableEngineUpdateChecks: true,
         defaultThreadEnvMode: "local",
         addProjectBaseDirectory: "",
         textGenerationEngineSelection: { engine: "codex", model: "gpt-5.4-mini" },
         engines: {
-          oa: { enabled: true },
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
           claude: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
           cursor: { enabled: false, binaryPath: "agent", apiEndpoint: "", customModels: [] },
@@ -508,6 +507,7 @@ describe("wsNativeApi", () => {
             customModels: [],
           },
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
+          deepseek: { enabled: true, binaryPath: "dsh", homePath: "", customModels: [] },
         },
         skills: { disabled: [] },
         agentTools: { builtInGroupOverrides: {} },

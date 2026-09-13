@@ -545,7 +545,7 @@ describe("store event reducer", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId,
         engineSelection: {
-          engine: "oa",
+          engine: "pi",
           model: "deepseek/deepseek-v4-pro",
         },
         modelPresentationIdentity: {
@@ -566,7 +566,7 @@ describe("store event reducer", () => {
         pendingMessageId: messageId,
         turnId: null,
         engineSelection: {
-          engine: "oa",
+          engine: "pi",
           model: "deepseek/deepseek-v4-pro",
         },
         modelPresentationIdentity: {
@@ -1200,7 +1200,7 @@ describe("store event reducer", () => {
             pendingMessageId: MessageId.makeUnsafe("user-2"),
             turnId: TurnId.makeUnsafe("turn-2"),
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-02-27T00:01:00.000Z",
@@ -1338,7 +1338,7 @@ describe("store event reducer", () => {
             pendingMessageId: MessageId.makeUnsafe("user-2"),
             turnId: TurnId.makeUnsafe("turn-2"),
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-02-27T00:01:00.000Z",

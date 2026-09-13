@@ -6,7 +6,10 @@ import type { EngineKind } from "@harnessos/contracts";
 export interface EngineDescriptor {
   readonly kind: EngineKind;
   readonly displayName: string;
-  readonly runnable?: boolean;
+  /** Passive listModels is global-only; project cwd must not enter the query identity. */
+  readonly globalOnlyModelCatalog?: boolean;
+  /** Composer/model slugs are `serviceId/modelId` owned by Haros model services. */
+  readonly ownsProviderModelServices?: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -23,12 +26,6 @@ function defineEngineDescriptors<const Descriptors extends readonly EngineDescri
 }
 
 export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
-  {
-    kind: "oa",
-    runnable: false,
-    displayName: "OA",
-    usage: null,
-  },
   {
     kind: "codex",
     displayName: "Codex",
@@ -96,14 +93,23 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "pi",
     displayName: "Pi",
+    globalOnlyModelCatalog: true,
+    ownsProviderModelServices: true,
     // This independent Engine does not opt into background usage discovery.
+    usage: null,
+  },
+  {
+    kind: "deepseek",
+    displayName: "DeepSeek",
+    // SDK has no model-list RPC; the static catalog is global and sendable.
+    globalOnlyModelCatalog: true,
+    // No live account-usage API; health infers auth from DEEPSEEK_API_KEY.
     usage: null,
   },
 ] as const satisfies readonly EngineDescriptor[]);
 
 export function isRunnableEngine(engine: EngineKind): boolean {
-  const descriptor = ENGINE_DESCRIPTORS.find((entry) => entry.kind === engine);
-  return descriptor !== undefined && (!("runnable" in descriptor) || descriptor.runnable !== false);
+  return ENGINE_DESCRIPTOR_BY_KIND[engine] !== undefined;
 }
 
 export function firstRunnableEngine(
@@ -115,16 +121,17 @@ export function firstRunnableEngine(
   return null;
 }
 
-export function isFrozenRetiredEngineSelection(input: {
-  readonly engine: EngineKind | null | undefined;
-  readonly hasExecutedWork: boolean;
-}): boolean {
-  return Boolean(input.engine && !isRunnableEngine(input.engine) && input.hasExecutedWork);
+export function engineHasGlobalOnlyModelCatalog(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.globalOnlyModelCatalog === true;
 }
 
-export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS.filter(
-  (descriptor) => !("runnable" in descriptor) || descriptor.runnable !== false,
-);
+export function engineOwnsProviderModelServices(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.ownsProviderModelServices === true;
+}
+
+export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS;
 
 export const ENGINE_DESCRIPTOR_BY_KIND = Object.fromEntries(
   ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),

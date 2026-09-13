@@ -2825,7 +2825,6 @@ describe("EngineRuntimeIngestion", () => {
   it.each([
     ["codex", "reasoning_summary_text"],
     ["antigravity", "reasoning_text"],
-    ["oa", "reasoning_text"],
     ["pi", "reasoning_text"],
   ] as const)(
     "publishes the first %s reasoning delta immediately and completes the growing row in place",
@@ -3278,7 +3277,7 @@ describe("EngineRuntimeIngestion", () => {
     });
   });
 
-  it.each(["oa", "pi"] as const)(
+  it.each(["pi"] as const)(
     "buffers %s native reasoning text into one completed activity",
     async (engine) => {
       const harness = await createHarness();

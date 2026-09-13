@@ -139,7 +139,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       const threadId = ThreadId.makeUnsafe("thread-runtime-replace");
 
       yield* directory.upsert({
-        engine: "oa",
+        engine: "pi",
         threadId,
         status: "starting",
         lifecycleGeneration: "failed-target-generation",
@@ -149,7 +149,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         },
       });
       yield* directory.replace({
-        engine: "oa",
+        engine: "pi",
         threadId,
         status: "starting",
         lifecycleGeneration: "restore-generation",

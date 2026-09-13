@@ -67,7 +67,7 @@ function makePendingDirectTurnRecovery(
       interactionMode: "default",
     },
     targetBinding: {
-      engineSelection: engineSelection("oa", "gateway/model"),
+      engineSelection: engineSelection("pi", "gateway/model"),
       runtimeMode: "auto",
       interactionMode: "plan",
     },
@@ -220,15 +220,15 @@ describe("composerDraftStore persisted-state hydration", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyActiveEngine: "oa",
+      stickyActiveEngine: "pi",
       stickyEngineSelectionByEngine: {
-        oa: engineSelection("oa", "provider/original-model"),
+        pi: engineSelection("pi", "provider/original-model"),
       },
     });
 
     expect(hydrated.stickyActiveEngine).toBeNull();
-    expect(hydrated.stickyEngineSelectionByEngine?.oa).toEqual(
-      engineSelection("oa", "provider/original-model"),
+    expect(hydrated.stickyEngineSelectionByEngine?.pi).toEqual(
+      engineSelection("pi", "provider/original-model"),
     );
   });
 

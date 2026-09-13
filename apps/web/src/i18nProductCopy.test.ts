@@ -261,6 +261,7 @@ const RAW_FACT_ALLOWLIST = [
   "ThemePackEditor.tsx:text:Aa",
   'ThemePackEditor.tsx:attribute:harnessos-theme-v1:{"presetId":"linear",...}',
   "EnginesSettingsPanel.tsx:property:CODEX_HOME",
+  "EnginesSettingsPanel.tsx:property:DSH_HOME",
   "EnginesSettingsPanel.tsx:property:https://api2.cursor.sh",
   "EnginesSettingsPanel.tsx:property:droid",
   "EnginesSettingsPanel.tsx:property:http://127.0.0.1:4096",

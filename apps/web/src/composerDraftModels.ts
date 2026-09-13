@@ -3,6 +3,7 @@
 // Exports: Model state helpers used by persistence, actions, and the public facade.
 
 import {
+  DEEPSEEK_REASONING_EFFORT_OPTIONS,
   GROK_REASONING_EFFORT_OPTIONS,
   ENGINE_KINDS,
   EngineKind,
@@ -10,6 +11,7 @@ import {
   type CodexReasoningEffort,
   type CursorModelOptions,
   type DroidReasoningEffort,
+  type DeepSeekReasoningEffort,
   type GrokReasoningEffort,
   type EngineSelection,
   type ModelSlug,
@@ -19,12 +21,13 @@ import {
 import * as Schema from "effect/Schema";
 
 import {
+  engineOwnsProviderModelServices,
   firstRunnableEngine,
-  isFrozenRetiredEngineSelection,
   isRunnableEngine,
 } from "@harnessos/shared/engineMetadata";
 import {
   getDefaultModel,
+  normalizeDeepSeekModelOptions,
   normalizeGrokModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
@@ -36,6 +39,7 @@ import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffo
 const isEngineKind = Schema.is(EngineKind);
 
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);
+const DEEPSEEK_REASONING_EFFORT_SET = new Set<string>(DEEPSEEK_REASONING_EFFORT_OPTIONS);
 
 export const LegacyCodexFields = Schema.Struct({
   effort: Schema.optionalKey(Schema.String),
@@ -131,14 +135,6 @@ export function makeEngineSelection(
   supportsAutoMode?: boolean,
 ): EngineSelection {
   switch (engine) {
-    case "oa":
-      return {
-        engine,
-        model,
-        ...(options
-          ? { options: options as Extract<EngineSelection, { engine: "oa" }>["options"] }
-          : {}),
-      };
     case "antigravity":
       return {
         engine,
@@ -216,6 +212,14 @@ export function makeEngineSelection(
           ? { options: options as Extract<EngineSelection, { engine: "pi" }>["options"] }
           : {}),
       };
+    case "deepseek":
+      return {
+        engine,
+        model,
+        ...(options
+          ? { options: options as Extract<EngineSelection, { engine: "deepseek" }>["options"] }
+          : {}),
+      };
     default:
       return { engine, model };
   }
@@ -263,9 +267,9 @@ export function normalizeEngineModelOptions(
     candidate?.pi && typeof candidate.pi === "object"
       ? (candidate.pi as Record<string, unknown>)
       : null;
-  const oaCandidate =
-    candidate?.oa && typeof candidate.oa === "object"
-      ? (candidate.oa as Record<string, unknown>)
+  const deepseekCandidate =
+    candidate?.deepseek && typeof candidate.deepseek === "object"
+      ? (candidate.deepseek as Record<string, unknown>)
       : null;
 
   const codexReasoningEffort: CodexReasoningEffort | undefined =
@@ -403,19 +407,14 @@ export function normalizeEngineModelOptions(
       ? piCandidate.thinkingLevel
       : undefined;
   const pi = piThinkingLevel !== undefined ? { thinkingLevel: piThinkingLevel } : undefined;
-  const oaThinkingLevel: PiThinkingLevel | undefined =
-    oaCandidate?.thinkingLevel === "off" ||
-    oaCandidate?.thinkingLevel === "minimal" ||
-    oaCandidate?.thinkingLevel === "low" ||
-    oaCandidate?.thinkingLevel === "medium" ||
-    oaCandidate?.thinkingLevel === "high" ||
-    oaCandidate?.thinkingLevel === "xhigh" ||
-    oaCandidate?.thinkingLevel === "max"
-      ? oaCandidate.thinkingLevel
+  const deepseekReasoningEffort: DeepSeekReasoningEffort | undefined =
+    typeof deepseekCandidate?.reasoningEffort === "string" &&
+    DEEPSEEK_REASONING_EFFORT_SET.has(deepseekCandidate.reasoningEffort)
+      ? (deepseekCandidate.reasoningEffort as DeepSeekReasoningEffort)
       : undefined;
-  const oa = oaThinkingLevel !== undefined ? { thinkingLevel: oaThinkingLevel } : undefined;
+  const deepseek =
+    deepseekReasoningEffort !== undefined ? { reasoningEffort: deepseekReasoningEffort } : undefined;
   if (
-    !oa &&
     !codex &&
     !claude &&
     !cursor &&
@@ -424,12 +423,12 @@ export function normalizeEngineModelOptions(
     !droid &&
     !kilo &&
     !opencode &&
-    !pi
+    !pi &&
+    !deepseek
   ) {
     return null;
   }
   return {
-    ...(oa ? { oa } : {}),
     ...(codex ? { codex } : {}),
     ...(claude ? { claude: claude } : {}),
     ...(cursor ? { cursor } : {}),
@@ -439,6 +438,7 @@ export function normalizeEngineModelOptions(
     ...(kilo ? { kilo } : {}),
     ...(opencode ? { opencode } : {}),
     ...(pi ? { pi } : {}),
+    ...(deepseek ? { deepseek } : {}),
   };
 }
 
@@ -510,10 +510,10 @@ export function normalizeEngineSelection(
                   ? modelOptions?.cursor
                   : engine === "opencode"
                     ? modelOptions?.opencode
-                    : engine === "oa"
-                      ? modelOptions?.oa
-                      : engine === "pi"
-                        ? modelOptions?.pi
+                    : engine === "pi"
+                      ? modelOptions?.pi
+                      : engine === "deepseek"
+                        ? normalizeDeepSeekModelOptions(model, modelOptions?.deepseek)
                         : undefined;
   const normalizedOptions =
     engine === "antigravity" && hasLegacyAntigravityEffort
@@ -744,8 +744,9 @@ export function deriveEffectiveComposerModelState(input: {
   const hasRememberedExactSelection = selectionCandidates.some(
     (candidate) => candidate !== null && candidate !== undefined,
   );
-  const requiresExactRuntimeCatalogSelection =
-    input.selectedEngine === "oa" || input.selectedEngine === "pi";
+  const requiresExactRuntimeCatalogSelection = engineOwnsProviderModelServices(
+    input.selectedEngine,
+  );
   if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
     selectedModel ??=
       input.runtimeCatalogFallbackModel !== undefined
@@ -787,17 +788,6 @@ export function resolvePreferredComposerEngineSelection(input: {
       return model ? { engine, model } : null;
     })();
 
-  // Only freeze OA on threads that already ran it. Empty leftovers with an OA
-  // default must not keep the composer on a removed engine.
-  if (
-    isFrozenRetiredEngineSelection({
-      engine: input.threadEngineSelection?.engine,
-      hasExecutedWork: input.hasExecutedWork === true,
-    })
-  ) {
-    return input.threadEngineSelection ?? null;
-  }
-
   const draftActiveEngine = input.draft?.activeEngine ?? null;
   if (draftActiveEngine && isRunnableEngine(draftActiveEngine)) {
     return selectionFor(draftActiveEngine);
@@ -817,4 +807,27 @@ export function resolvePreferredComposerEngineSelection(input: {
     ) ?? "codex";
 
   return selectionFor(preferredEngine);
+}
+
+export function resolvePreferredComposerEngine(input: {
+  draft:
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeEngine">
+    | null
+    | undefined;
+  threadEngineSelection: EngineSelection | null | undefined;
+  projectEngineSelection: EngineSelection | null | undefined;
+  defaultEngine?: EngineKind | null | undefined;
+  hasExecutedWork?: boolean;
+}): EngineKind {
+  const selection = resolvePreferredComposerEngineSelection(input);
+  if (selection) return selection.engine;
+  const draftActiveEngine = input.draft?.activeEngine ?? null;
+  if (draftActiveEngine && isRunnableEngine(draftActiveEngine)) return draftActiveEngine;
+  return (
+    firstRunnableEngine(
+      input.threadEngineSelection?.engine,
+      input.projectEngineSelection?.engine,
+      input.defaultEngine,
+    ) ?? "codex"
+  );
 }

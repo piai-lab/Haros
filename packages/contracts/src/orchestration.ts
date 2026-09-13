@@ -4,6 +4,7 @@ import {
   ClaudeModelOptions,
   CodexModelOptions,
   CursorModelOptions,
+  DeepSeekModelOptions,
   DroidModelOptions,
   GrokModelOptions,
   OpenCodeModelOptions,
@@ -75,13 +76,6 @@ export const EngineSandboxMode = Schema.Literals([
 ]);
 export type EngineSandboxMode = typeof EngineSandboxMode.Type;
 
-export const OAEngineSelection = Schema.Struct({
-  engine: Schema.Literal("oa"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(PiModelOptions),
-});
-export type OAEngineSelection = typeof OAEngineSelection.Type;
-
 export const CodexEngineSelection = Schema.Struct({
   engine: Schema.Literal("codex"),
   model: TrimmedNonEmptyString,
@@ -146,8 +140,14 @@ export const PiEngineSelection = Schema.Struct({
 });
 export type PiEngineSelection = typeof PiEngineSelection.Type;
 
+export const DeepSeekEngineSelection = Schema.Struct({
+  engine: Schema.Literal("deepseek"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(DeepSeekModelOptions),
+});
+export type DeepSeekEngineSelection = typeof DeepSeekEngineSelection.Type;
+
 type SpecializedEngineSelection =
-  | OAEngineSelection
   | CodexEngineSelection
   | ClaudeEngineSelection
   | CursorEngineSelection
@@ -156,7 +156,8 @@ type SpecializedEngineSelection =
   | DroidEngineSelection
   | KiloEngineSelection
   | OpenCodeEngineSelection
-  | PiEngineSelection;
+  | PiEngineSelection
+  | DeepSeekEngineSelection;
 
 type BasicEngineSelection = {
   readonly [Kind in Exclude<EngineKind, SpecializedEngineSelection["engine"]>]: {
@@ -170,7 +171,6 @@ type BasicEngineSelection = {
 export type EngineSelection = SpecializedEngineSelection | BasicEngineSelection;
 
 const SPECIALIZED_ENGINE_SELECTION_SCHEMA_BY_KIND: Partial<Record<EngineKind, Schema.Top>> = {
-  oa: OAEngineSelection,
   codex: CodexEngineSelection,
   claude: ClaudeEngineSelection,
   cursor: CursorEngineSelection,
@@ -180,6 +180,7 @@ const SPECIALIZED_ENGINE_SELECTION_SCHEMA_BY_KIND: Partial<Record<EngineKind, Sc
   kilo: KiloEngineSelection,
   opencode: OpenCodeEngineSelection,
   pi: PiEngineSelection,
+  deepseek: DeepSeekEngineSelection,
 };
 
 const engineSelectionMembers = ENGINE_KINDS.map(
@@ -239,8 +240,12 @@ export const PiEngineStartOptions = Schema.Struct({
   agentDir: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const DeepSeekEngineStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  homePath: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const EngineStartOptions = Schema.Struct({
-  oa: Schema.optional(Schema.Struct({})),
   codex: Schema.optional(CodexEngineStartOptions),
   claude: Schema.optional(ClaudeEngineStartOptions),
   cursor: Schema.optional(CursorEngineStartOptions),
@@ -250,6 +255,7 @@ export const EngineStartOptions = Schema.Struct({
   kilo: Schema.optional(KiloEngineStartOptions),
   opencode: Schema.optional(OpenCodeEngineStartOptions),
   pi: Schema.optional(PiEngineStartOptions),
+  deepseek: Schema.optional(DeepSeekEngineStartOptions),
 });
 export type EngineStartOptions = typeof EngineStartOptions.Type;
 

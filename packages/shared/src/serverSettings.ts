@@ -158,7 +158,6 @@ export function engineStartOptionsFromServerSettings(
 ): EngineStartOptions {
   const { engines } = settings;
   return {
-    oa: {},
     codex: {
       ...(engines.codex.binaryPath ? { binaryPath: engines.codex.binaryPath } : {}),
       ...(engines.codex.homePath ? { homePath: engines.codex.homePath } : {}),
@@ -191,6 +190,10 @@ export function engineStartOptionsFromServerSettings(
     pi: {
       ...(engines.pi.binaryPath ? { binaryPath: engines.pi.binaryPath } : {}),
       ...(engines.pi.agentDir ? { agentDir: engines.pi.agentDir } : {}),
+    },
+    deepseek: {
+      ...(engines.deepseek.binaryPath ? { binaryPath: engines.deepseek.binaryPath } : {}),
+      ...(engines.deepseek.homePath ? { homePath: engines.deepseek.homePath } : {}),
     },
   };
 }

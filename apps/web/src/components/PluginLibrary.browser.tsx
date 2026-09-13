@@ -186,8 +186,8 @@ describe("PluginLibrary Haros Agent packages", () => {
       id: threadId,
       projectId: "project-1",
       worktreePath: "/workspace",
-      engineSelection: { engine: "oa", model: "deepseek/model" },
-      session: { engine: "oa", status: "ready" },
+      engineSelection: { engine: "pi", model: "deepseek/model" },
+      session: { engine: "pi", status: "ready" },
     };
     fixture.sourceProject = { id: "project-1", cwd: "/workspace" };
     fixture.reload.mockResolvedValue({ state: "reloaded" });
@@ -201,7 +201,7 @@ describe("PluginLibrary Haros Agent packages", () => {
     await expect.poll(() => fixture.reload.mock.calls.length).toBe(1);
     expect(fixture.reload).toHaveBeenCalledWith({ threadId });
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
+      queryKey: engineDiscoveryQueryKeys.modelsForEngine("pi"),
     });
     await expect
       .poll(() => document.body.textContent)

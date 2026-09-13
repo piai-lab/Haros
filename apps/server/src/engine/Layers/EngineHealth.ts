@@ -60,6 +60,7 @@ import {
 } from "../acp/CursorAcpCommand";
 import { hasDroidApiKeyEnv, resolveDroidCliBinaryPath } from "../acp/DroidAcpSupport";
 import { hasGrokApiKeyEnv } from "../acp/GrokAcpSupport";
+import { hasDeepSeekApiKeyEnv } from "./DeepSeekAdapter";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import {
   claudeAuthMetadata,
@@ -122,7 +123,7 @@ const DROID_ENGINE = "droid" as const;
 const KILO_ENGINE = "kilo" as const;
 const OPENCODE_ENGINE = "opencode" as const;
 const PI_ENGINE = "pi" as const;
-const OA_ENGINE = "oa" as const;
+const DEEPSEEK_ENGINE = "deepseek" as const;
 const BUNDLED_PI_RUNTIME_VERSION = "0.84.4";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
 const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in Haros settings.";
@@ -715,6 +716,15 @@ const runClaudeCommand = (
 
 const runGrokCommand = (args: ReadonlyArray<string>, executable = "grok") =>
   runEngineCommand(executable, args, engineCommandEnv(GROK_ENGINE)).pipe(
+    Effect.flatMap((result) =>
+      isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
+        ? Effect.fail(makeCommandMissingCause(executable))
+        : Effect.succeed(result),
+    ),
+  );
+
+const runDeepSeekCommand = (args: ReadonlyArray<string>, executable = "dsh") =>
+  runEngineCommand(executable, args, engineCommandEnv(DEEPSEEK_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -1322,6 +1332,85 @@ export const makeCheckGrokEngineStatus = (
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "grok"));
 
 export const checkGrokEngineStatus = makeCheckGrokEngineStatus();
+
+// ── DeepSeek health check ─────────────────────────────────────────
+
+export const makeCheckDeepSeekEngineStatus = (
+  binaryPath?: string,
+): Effect.Effect<ServerEngineStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
+  Effect.gen(function* () {
+    const checkedAt = new Date().toISOString();
+    const executable = nonEmptyTrimmed(binaryPath) ?? "dsh";
+
+    const versionProbe = yield* probeEngineCliVersion(
+      runDeepSeekCommand(["--version"], executable),
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
+      const error = versionProbe.cause;
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
+        checkedAt,
+        message:
+          versionProbe.outcome === "missing"
+            ? "DeepSeek Harness (`dsh`) is not installed or not on PATH."
+            : `Failed to execute DeepSeek Harness health check: ${error instanceof Error ? error.message : String(error)}.`,
+      } satisfies ServerEngineStatus;
+    }
+
+    if (versionProbe.outcome === "timeout") {
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        checkedAt,
+        message: "DeepSeek Harness is installed but failed to run. Timed out while running command.",
+      } satisfies ServerEngineStatus;
+    }
+
+    if (versionProbe.outcome === "nonzero") {
+      const version = versionProbe.result;
+      const detail = detailFromResult(version);
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        checkedAt,
+        message: detail
+          ? `DeepSeek Harness is installed but failed to run. ${detail}`
+          : "DeepSeek Harness is installed but failed to run.",
+      } satisfies ServerEngineStatus;
+    }
+    const version = versionProbe.result;
+    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+    const hasApiKey = hasDeepSeekApiKeyEnv();
+
+    return {
+      engine: DEEPSEEK_ENGINE,
+      status: "ready" as const,
+      available: true,
+      authStatus: hasApiKey ? ("authenticated" as const) : ("unknown" as const),
+      version: parsedVersion,
+      checkedAt,
+      ...(hasApiKey
+        ? { authType: "apiKey", authLabel: "DeepSeek API Key" }
+        : {
+            message:
+              "DeepSeek Harness is installed. Set DEEPSEEK_API_KEY before starting a session.",
+          }),
+    } satisfies ServerEngineStatus;
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "dsh"));
+
+export const checkDeepSeekEngineStatus = makeCheckDeepSeekEngineStatus();
 
 // ── Droid health check ─────────────────────────────────────────────
 
@@ -1991,7 +2080,7 @@ export function resolvePassiveProviderPresence(
   const recoverable: EngineKind[] = [];
   for (const engine of ENGINES) {
     if (!isProviderEnabledForSettings(engine, settings)) continue;
-    if (engine === OA_ENGINE || engine === PI_ENGINE) {
+    if (engine === PI_ENGINE) {
       recoverable.push(engine);
       continue;
     }
@@ -2039,6 +2128,11 @@ export function resolvePassiveProviderPresence(
             settings.engines.opencode.customModels.length > 0 ||
             settings.engines.opencode.serverUrl.trim().length > 0 ||
             resolveCommand(settings.engines.opencode.binaryPath) !== null
+          );
+        case DEEPSEEK_ENGINE:
+          return (
+            settings.engines.deepseek.customModels.length > 0 ||
+            resolveCommand(settings.engines.deepseek.binaryPath) !== null
           );
       }
     })();
@@ -2215,8 +2309,6 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
 
       const getEngineBinaryPath = (engine: EngineKind, settings: ServerSettings) => {
         switch (engine) {
-          case "oa":
-            return null;
           case "codex":
             return settings.engines.codex.binaryPath;
           case "claude":
@@ -2235,6 +2327,8 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
             return settings.engines.opencode.binaryPath;
           case "pi":
             return settings.engines.pi.binaryPath;
+          case "deepseek":
+            return settings.engines.deepseek.binaryPath;
         }
       };
 
@@ -2448,6 +2542,11 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
                   makeCheckOpenCodeEngineStatus(settings.engines.opencode.binaryPath),
                 ),
                 checkProviderWhenEnabled(settings, PI_ENGINE, checkPiEngineStatus()),
+                checkProviderWhenEnabled(
+                  settings,
+                  DEEPSEEK_ENGINE,
+                  makeCheckDeepSeekEngineStatus(settings.engines.deepseek.binaryPath),
+                ),
               ],
               {
                 concurrency: "unbounded",

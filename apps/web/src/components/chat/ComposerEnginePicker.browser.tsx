@@ -242,7 +242,7 @@ describe("ComposerEnginePicker", () => {
   });
 
   it("names OA explicitly in the trigger and tooltip", async () => {
-    const mounted = await mountPicker({ engine: "oa" });
+    const mounted = await mountPicker({ engine: "pi" });
     try {
       const trigger = page.getByRole("button", { name: "Change engine. Current: OA" });
       await expect.element(trigger).toBeVisible();

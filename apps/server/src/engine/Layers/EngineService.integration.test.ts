@@ -441,7 +441,6 @@ function makeEngineServiceLayer(
     conversationRollback: "restart-session",
   });
   const pi = makeFakeCodexAdapter("pi");
-  const oa = makeFakeCodexAdapter("oa");
   const registry: typeof EngineAdapterRegistry.Service = {
     getByEngine: (engine) =>
       engine === "codex"
@@ -452,19 +451,16 @@ function makeEngineServiceLayer(
             ? Effect.succeed(antigravity.adapter)
             : engine === "droid" && engines?.includeRestartRollbackDroid === true
               ? Effect.succeed(droid.adapter)
-              : engine === "pi" && engines?.includePi === true
+              : engine === "pi" && (engines?.includePi === true || engines?.includeHaros === true)
                 ? Effect.succeed(pi.adapter)
-                : engine === "oa" && engines?.includeHaros === true
-                  ? Effect.succeed(oa.adapter)
-                  : Effect.fail(new EngineUnsupportedError({ engine })),
+                : Effect.fail(new EngineUnsupportedError({ engine })),
     listEngines: () =>
       Effect.succeed([
         "codex",
         "claude",
         "antigravity",
         ...(engines?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
-        ...(engines?.includePi === true ? (["pi"] as const) : []),
-        ...(engines?.includeHaros === true ? (["oa"] as const) : []),
+        ...(engines?.includePi === true || engines?.includeHaros === true ? (["pi"] as const) : []),
       ] as const),
   };
 
@@ -492,7 +488,6 @@ function makeEngineServiceLayer(
     antigravity,
     droid,
     pi,
-    oa,
     layer,
     rawLayer,
   };
@@ -2223,7 +2218,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         runtimeMode: "full-access",
       });
       yield* startTestEngineSession(engine, oaThreadId, {
-        engine: "oa",
+        engine: "pi",
         threadId: oaThreadId,
         runtimeMode: "full-access",
       });
@@ -2261,7 +2256,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         interactionMode: "plan",
       });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
-      assert.equal(routing.oa.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
+      assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
       yield* engine.stopSession({ threadId: oaThreadId });
@@ -2384,7 +2379,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-harnessos-work-surface-recovery");
 
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
         cwd: "/tmp/project/packages/app",
         admission: {
@@ -2402,10 +2397,10 @@ routing.layer("EngineServiceLive routing", (it) => {
       });
 
       yield* engine.stopRuntimeSession!({ threadId });
-      routing.oa.startSession.mockClear();
+      routing.pi.startSession.mockClear();
       yield* engine.sendTurn({ threadId, input: "resume", attachments: [] });
 
-      const recoveredInput = routing.oa.startSession.mock.calls[0]?.[0];
+      const recoveredInput = routing.pi.startSession.mock.calls[0]?.[0];
       assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
       assert.deepEqual(recoveredInput?.admission, {
         productSurface: "agent",
@@ -3096,11 +3091,11 @@ routing.layer("EngineServiceLive routing", (it) => {
         const directory = yield* EngineSessionDirectory;
         const threadId = asThreadId("thread-same-engine-start-persistence-failure");
         const previousEngineSelection = {
-          engine: "oa" as const,
+          engine: "pi" as const,
           model: "local/stable-model",
         };
         yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
           cwd: "/tmp/same-engine-persistence-failure",
           admission: {
@@ -3122,11 +3117,11 @@ routing.layer("EngineServiceLive routing", (it) => {
           .spyOn(directory, "upsert")
           .mockImplementationOnce((binding) => originalUpsert(binding))
           .mockImplementationOnce(() => Effect.fail(persistenceFailure));
-        const stopCount = routing.oa.stopSession.mock.calls.length;
+        const stopCount = routing.pi.stopSession.mock.calls.length;
 
         const result = yield* Effect.result(
           startTestEngineSession(engine, threadId, {
-            engine: "oa",
+            engine: "pi",
             threadId,
             cwd: "/tmp/same-engine-persistence-failure-new",
             admission: {
@@ -3136,7 +3131,7 @@ routing.layer("EngineServiceLive routing", (it) => {
             },
             runtimeMode: "full-access",
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "local/new-model",
             },
           }),
@@ -3147,8 +3142,8 @@ routing.layer("EngineServiceLive routing", (it) => {
         // Stop-first retires the old incarnation, cleanup retires the failed
         // target, then the exact old binding is restored as a fresh physical
         // incarnation under a third generation.
-        assert.equal(routing.oa.stopSession.mock.calls.length, stopCount + 2);
-        assert.equal(yield* routing.oa.hasSession(threadId), true);
+        assert.equal(routing.pi.stopSession.mock.calls.length, stopCount + 2);
+        assert.equal(yield* routing.pi.hasSession(threadId), true);
         const restoredBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(restoredBinding?.engine, previousBinding.engine);
         assert.notEqual(restoredBinding?.lifecycleGeneration, previousBinding.lifecycleGeneration);
@@ -3162,7 +3157,7 @@ routing.layer("EngineServiceLive routing", (it) => {
           workSurface: "agent",
           projectContextRoot: "/tmp/same-engine-persistence-failure",
         });
-        const restoredStartInput = routing.oa.startSession.mock.calls.at(-1)?.[0];
+        const restoredStartInput = routing.pi.startSession.mock.calls.at(-1)?.[0];
         assert.deepEqual(restoredStartInput?.admission, {
           productSurface: "agent",
           workSurface: "agent",

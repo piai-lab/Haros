@@ -15,11 +15,6 @@ const EngineSettingsBase = {
   customModels: CustomModels,
 };
 
-export const HarosServerEngineSettings = Schema.Struct({
-  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-});
-export type HarosServerEngineSettings = typeof HarosServerEngineSettings.Type;
-
 export const CodexServerEngineSettings = Schema.Struct({
   ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codex")),
@@ -85,6 +80,13 @@ export const PiServerEngineSettings = Schema.Struct({
 });
 export type PiServerEngineSettings = typeof PiServerEngineSettings.Type;
 
+export const DeepSeekServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "dsh")),
+  homePath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
+});
+export type DeepSeekServerEngineSettings = typeof DeepSeekServerEngineSettings.Type;
+
 const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
   Schema.withDecodingDefault(() => []),
 );
@@ -130,7 +132,6 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarosServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -140,6 +141,7 @@ export const ServerSettings = Schema.Struct({
     kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    deepseek: DeepSeekServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -147,10 +149,6 @@ export const ServerSettings = Schema.Struct({
 export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
-
-const HarosServerEngineSettingsView = Schema.Struct({
-  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-});
 
 export const ServerSettingsView = Schema.Struct({
   modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -166,7 +164,6 @@ export const ServerSettingsView = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarosServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -176,6 +173,7 @@ export const ServerSettingsView = Schema.Struct({
     kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    deepseek: DeepSeekServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -213,11 +211,6 @@ export const ServerSettingsPatch = Schema.Struct({
   textGenerationEngineSelection: Schema.optionalKey(EngineSelectionPatch),
   engines: Schema.optionalKey(
     Schema.Struct({
-      oa: Schema.optionalKey(
-        Schema.Struct({
-          enabled: Schema.optionalKey(Schema.Boolean),
-        }),
-      ),
       codex: Schema.optionalKey(
         Schema.Struct({
           ...EngineSettingsBasePatch,
@@ -259,6 +252,12 @@ export const ServerSettingsPatch = Schema.Struct({
           ...EngineSettingsBasePatch,
           binaryPath: Schema.optionalKey(StringSetting),
           agentDir: Schema.optionalKey(StringSetting),
+        }),
+      ),
+      deepseek: Schema.optionalKey(
+        Schema.Struct({
+          ...EngineSettingsBasePatch,
+          homePath: Schema.optionalKey(StringSetting),
         }),
       ),
     }),

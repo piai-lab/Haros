@@ -337,7 +337,7 @@ describe("MessagesTimeline turn process approval cases", () => {
         pendingMessageId,
         turnId: TURN_ID,
         engineSelection: {
-          engine: "oa" as const,
+          engine: "pi" as const,
           model: "deepseek/deepseek-v4-pro",
         },
         requestedAt: STARTED_AT,
@@ -430,7 +430,7 @@ describe("MessagesTimeline turn process approval cases", () => {
             pendingMessageId,
             turnId: null,
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "deepseek/deepseek-v4-pro",
             },
             modelPresentationIdentity: {
