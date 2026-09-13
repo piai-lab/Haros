@@ -63,6 +63,10 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.engineListSkillsCatalog,
   WS_METHODS.engineListPlugins,
   WS_METHODS.providerReadPlugin,
+  WS_METHODS.modelServicesList,
+  WS_METHODS.modelServicesGet,
+  WS_METHODS.modelServicesDiscoverCustom,
+  WS_METHODS.modelServicesTestCustom,
 ]);
 export function classifyWsRequest(method: string): WsRequestClass {
   if (CONTROL_METHODS.has(method)) return "control";

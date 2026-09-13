@@ -794,6 +794,69 @@ export function createWsNativeApi(): NativeApi {
       getProfileTokenStats: (input) =>
         transport.request(WS_METHODS.statsGetProfileTokenStats, input),
     },
+    modelServices: {
+      list: (input = {}, options) =>
+        transport.request(
+          WS_METHODS.modelServicesList,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      get: (input, options) =>
+        transport.request(
+          WS_METHODS.modelServicesGet,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      beginLogin: (input, options) =>
+        transport.request(WS_METHODS.modelServicesBeginLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      pollLogin: (input, options) =>
+        transport.request(WS_METHODS.modelServicesPollLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      answerLogin: (input, options) =>
+        transport.request(WS_METHODS.modelServicesAnswerLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      cancelLogin: (input) => transport.request(WS_METHODS.modelServicesCancelLogin, input),
+      logout: (input) => transport.request(WS_METHODS.modelServicesLogout, input),
+      revealApiKey: (input, options) =>
+        transport.request(
+          WS_METHODS.modelServicesRevealApiKey,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      refresh: (input, options) =>
+        transport.request(
+          WS_METHODS.modelServicesRefresh,
+          input,
+          options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
+        ),
+      discoverCustom: (input, options) =>
+        transport.request(WS_METHODS.modelServicesDiscoverCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      testCustom: (input, options) =>
+        transport.request(WS_METHODS.modelServicesTestCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      saveCustom: (input, options) =>
+        transport.request(WS_METHODS.modelServicesSaveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      removeCustom: (input, options) =>
+        transport.request(WS_METHODS.modelServicesRemoveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+    },
     engine: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.engineGetComposerCapabilities, input),

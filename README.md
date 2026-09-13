@@ -64,7 +64,7 @@ bun run dev
 Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching CLI, account, and
 local setup. A successful local build is unsigned source software, not an official release.
 
-Fresh installs open the workbench directly and default to Codex. Configure the selected Engine in Settings before sending. The bundled OA Engine, its model services, and bundled web search have been removed. Existing OA history remains readable but cannot execute; create a new task with another Engine.
+Fresh installs open the workbench directly and default to Codex. Configure the selected Engine in Settings before sending. The bundled OA Engine and bundled web search have been removed. Settings → Model services configures credentials and custom models for the independent Pi Engine; other Engines retain their native configuration. Existing OA history remains readable but cannot execute; create a new task with another Engine.
 
 ## Go deeper
 

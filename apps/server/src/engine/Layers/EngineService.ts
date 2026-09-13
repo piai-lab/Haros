@@ -284,7 +284,7 @@ function readPersistedEngineSelection(
 }
 
 function modelServiceIdFromSelection(selection: EngineSelection | undefined): string | undefined {
-  if (selection?.engine !== "oa") return undefined;
+  if (selection?.engine !== "pi") return undefined;
   const separatorIndex = selection.model.indexOf("/");
   return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
 }

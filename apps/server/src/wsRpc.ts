@@ -1,3 +1,5 @@
+import { HarosModelServices } from "./engine/Services/HarosModelServices";
+
 import { execFile } from "node:child_process";
 
 import {
@@ -383,6 +385,7 @@ const makeWsRpcHandlersLayer = () =>
       const engineDiscoveryService = yield* EngineDiscoveryService;
       const engineHealth = yield* EngineHealth;
       const engineService = yield* EngineService;
+      const modelServices = yield* HarosModelServices;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
@@ -2107,6 +2110,71 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(engineDiscoveryService.listPlugins(input), "Failed to list plugins"),
         [WS_METHODS.providerReadPlugin]: (input) =>
           rpcEffect(engineDiscoveryService.readPlugin(input), "Failed to read plugin"),
+        [WS_METHODS.modelServicesList]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.list(input))),
+            "Failed to list Haros model services",
+          ),
+        [WS_METHODS.modelServicesGet]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.get(input))),
+            "Failed to read an Haros model service",
+          ),
+        [WS_METHODS.modelServicesBeginLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.beginLogin(clientId, input))),
+            "Failed to begin Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesPollLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.pollLogin(clientId, input))),
+            "Failed to poll Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesAnswerLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.answerLogin(clientId, input))),
+            "Failed to continue Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesCancelLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.cancelLogin(clientId, input))),
+            "Failed to cancel Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesLogout]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.logout(input))),
+            "Failed to remove Haros model-service credentials",
+          ),
+        [WS_METHODS.modelServicesRevealApiKey]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.revealApiKey(input))),
+            "Failed to reveal an Haros model-service API key",
+          ),
+        [WS_METHODS.modelServicesRefresh]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.refresh(input))),
+            "Failed to refresh an Haros model service",
+          ),
+        [WS_METHODS.modelServicesDiscoverCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.discoverCustom(input))),
+            "Failed to discover models for an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesTestCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.testCustom(input))),
+            "Failed to test an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesSaveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.saveCustom(input))),
+            "Failed to save an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesRemoveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.removeCustom(input))),
+            "Failed to remove an Haros custom model service",
+          ),
         [WS_METHODS.engineListModels]: (input) =>
           engineDiscoveryService.listModels(input).pipe(
             Effect.catch((cause) =>

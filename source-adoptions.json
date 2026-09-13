@@ -729,6 +729,36 @@
       "mode": "copied-adapted",
       "changes": "Haros retains the synchronous pre-bundle DOM, 64-dot golden-angle swarm, breathe and light rotation, particle scatter exit, content-visibility isolation, theme-first background and reduced-motion structure. Product identity, theme tokens and once-per-process timing are adapted locally: only the first product window in a new Desktop process plays the splash, while windows restored in the same process skip it. The donor's decorative horizontal sweep, persistent sonar rings, radial exit waves and slow-start status copy are omitted because they carry no authoritative progress and compete with the particle composition. Percho's Promise.allSettled readiness and unconditional maximum display timeout are explicitly rejected: the splash exits only from Haros's existing transport, Settings/Engine snapshot and focused Composer catalog owners, or into deterministic recovery. The copied layer is presentation-only, leaves retries in React Query and creates no second BrowserWindow, store or persisted state.",
       "updatePolicy": "Pinned exact revision and donor digests. Do not retune or rewrite the particle geometry from memory. Any source, identity, timing, lifecycle, rights or readiness change requires exact upstream comparison plus first-frame, theme, reduced-motion, cleanup, focused Composer recovery and packaged Electron revalidation. The adoption can be removed by deleting the three copied presentation files and their bootstrap/readiness wiring without changing Engine or Product State owners."
+    },
+    {
+      "id": "pi-model-service-configuration",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "b8b873b9872db04a938fb4357b5e8e824ddc051c",
+      "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.4",
+      "upstreamPackageIntegrity": "sha512-jmOlrqUmvhh/siNWFRXjYLJzhKFIHNsAQaysRwzQPQFnPAaV/vhqHsLH/MBsIISA1Rjj7WTUFR3nJrpXoLx39w==",
+      "paths": [
+        "patches/@earendil-works%2Fpi-coding-agent@0.84.4.patch",
+        "apps/server/src/engine/modelServicesRuntime.ts",
+        "apps/server/src/engine/modelRuntimeMutation.ts",
+        "apps/server/src/engine/Layers/HarosModelServices.ts",
+        "apps/server/src/engine/Layers/HarosModelServices.integration.test.ts",
+        "apps/server/src/engine/Layers/PiAdapter.ts",
+        "apps/server/src/engine/Layers/PiAdapter.integration.test.ts",
+        "packages/contracts/src/modelServices.ts",
+        "packages/contracts/src/modelServices.test.ts",
+        "apps/web/src/components/settings/ModelsSettingsPanel.tsx",
+        "apps/web/src/components/settings/ModelsSettingsPanel.browser.tsx"
+      ],
+      "mode": "adapt",
+      "rights": "The pinned Pi coding-agent package is MIT-licensed and retains its exact upstream LICENSE. No OA runtime archive or separate package is distributed.",
+      "patchSha256": "eb68d3b1b7aef75fe7e14c49976c1402bfec82ba2a33b926b8b0c823324aad7f",
+      "sourceLineage": {
+        "repositoryCommit": "e5619a1e74004c60538eb5cfbaabfb820afb43cf",
+        "archiveGitObject": "c0690c304dd71621986e7c7fbd34234ed21608e6",
+        "scope": "Only the previously adopted model-config and model-runtime reader, provenance, mutation and discovery seams are retained on the existing Pi dependency. ResourceLoader forwards an explicit missing-package policy. Existing prompt-outcome patches remain intact."
+      },
+      "changes": "Haros restores model-service Settings and credential-blind APIs independently of Engine registration. The existing Pi package gains typed model config reader, provider/header metadata, lossless validated mutation and explicit discovery exports, plus request-scoped missing-package handling. These use Pi native auth.json, models.json and models-store.json under its selected agent directory. Operations freeze that directory, refuse retired OA state, preserve live-session admission fences and invalidate Pi model snapshots. OAuth, custom model protocols, credentials, cost/compat editing and model discovery retain focused tests. The OA package, Engine, onboarding, prompt extensions, package management UI and web search are not restored.",
+      "updatePolicy": "Pinned source and npm integrity. Verify this patch digest, retain the model-service integration/browser tests and Pi lifecycle suites on updates, and remove these model-only seams when upstream publishes equivalent stable APIs. Bun must apply the patch cleanly on frozen-lockfile install. No second model registry, persisted store or Engine registration is introduced."
     }
   ]
 }

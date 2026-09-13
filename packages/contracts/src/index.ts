@@ -43,3 +43,5 @@ export * from "./terminal";
 export * from "./toolResults";
 export * from "./ws";
 export * from "./wsCompatibility";
+
+export * from "./modelServices";

@@ -1,3 +1,4 @@
+import { publishHarosModelRuntimeMutation } from "../modelRuntimeMutation";
 // FILE: PiAdapter.test.ts
 // Purpose: Verifies Pi adapter model discovery respects auth and SDK-supported thinking levels.
 // Layer: Engine adapter tests
@@ -816,6 +817,8 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("includes custom-engine models authenticated through auth.json semantics", async () => {
+    for (const name of Object.keys(process.env).filter((name) => name.startsWith("ANTHROPIC_")))
+      vi.stubEnv(name, "");
     const agentDir = mkdtempSync(path.join(tmpdir(), "harnessos-pi-models-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
@@ -853,6 +856,7 @@ describe("getPiDiscoverableModels", () => {
       );
       expect(models.some((model) => model.provider === "anthropic")).toBe(false);
     } finally {
+      vi.unstubAllEnvs();
       rmSync(agentDir, { recursive: true, force: true });
     }
   });
@@ -1164,4 +1168,218 @@ describe("Pi extension UI helpers", () => {
     expect(PLAIN_PI_EXTENSION_THEME.bold("done")).toBe("done");
     expect(PLAIN_PI_EXTENSION_THEME.getThinkingBorderColor("medium")("thinking")).toBe("thinking");
   });
+});
+
+it("reconciles an existing Pi Session on the next send after credential mutation", async () => {
+  const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-credential-reconcile-"));
+  const agentDir = path.join(serverRoot, "pi-agent");
+  const cwd = path.join(serverRoot, "workspace");
+  const threadId = ThreadId.makeUnsafe("harnessos-credential-reconcile-thread");
+  mkdirSync(agentDir, { recursive: true });
+  mkdirSync(cwd, { recursive: true });
+  writeFileSync(
+    path.join(agentDir, "models.json"),
+    JSON.stringify({
+      providers: {
+        local: {
+          api: "openai-completions",
+          baseUrl: "https://local-model.example.test/v1",
+          models: [{ id: "safe-model" }],
+        },
+      },
+    }),
+  );
+  const requests: string[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (request) => {
+    requests.push(request instanceof Request ? request.url : String(request));
+    return new Response(
+      [
+        'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+        'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+        "data: [DONE]",
+        "",
+      ].join("\n\n"),
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  });
+
+  try {
+    const layer = makePiAdapterLive().pipe(
+      Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* PiAdapter;
+          yield* adapter.startSession({
+            engine: "pi",
+            threadId,
+            cwd,
+            engineOptions: { pi: { agentDir } },
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: cwd,
+            },
+            engineSelection: { engine: "pi", model: "local/safe-model" },
+            runtimeMode: "full-access",
+          });
+          const before = yield* Effect.exit(
+            adapter.sendTurn({
+              threadId,
+              input: "before credential mutation",
+              attachments: [],
+              engineSelection: { engine: "pi", model: "local/safe-model" },
+            }),
+          );
+          yield* Effect.sync(() => {
+            writeFileSync(
+              path.join(agentDir, "auth.json"),
+              JSON.stringify({ local: { type: "api_key", key: "test-only-api-key" } }),
+            );
+            publishHarosModelRuntimeMutation(agentDir);
+          });
+          const after = yield* adapter.sendTurn({
+            threadId,
+            input: "after credential mutation",
+            attachments: [],
+            engineSelection: { engine: "pi", model: "local/safe-model" },
+          });
+          yield* Effect.sleep("50 millis");
+          yield* adapter.stopSession(threadId);
+          return { before, after };
+        }).pipe(Effect.provide(layer)),
+      ),
+    );
+
+    expect(result.before._tag).toBe("Failure");
+    expect(result.after.turnId).toBeDefined();
+    expect(requests).toHaveLength(1);
+    expect(new URL(requests[0]!).pathname).toBe("/v1/chat/completions");
+  } finally {
+    vi.restoreAllMocks();
+    rmSync(serverRoot, { recursive: true, force: true });
+  }
+});
+it("keeps an active Pi turn on its original credentials and reconciles only the next send", async () => {
+  const serverRoot = mkdtempSync(
+    path.join(tmpdir(), "harnessos-agent-active-credential-reconcile-"),
+  );
+  const agentDir = path.join(serverRoot, "pi-agent");
+  const cwd = path.join(serverRoot, "workspace");
+  const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000043");
+  mkdirSync(agentDir, { recursive: true });
+  mkdirSync(cwd, { recursive: true });
+  writeFileSync(
+    path.join(agentDir, "models.json"),
+    JSON.stringify({
+      providers: {
+        local: {
+          api: "openai-completions",
+          baseUrl: "https://local-model.example.test/v1",
+          models: [{ id: "safe-model" }],
+        },
+      },
+    }),
+  );
+  writeFileSync(
+    path.join(agentDir, "auth.json"),
+    JSON.stringify({ local: { type: "api_key", key: "test-old-key" } }),
+  );
+  const authorizationHeaders: Array<string | null> = [];
+  let releaseFirstRequest!: () => void;
+  const firstRequestGate = new Promise<void>((resolve) => {
+    releaseFirstRequest = resolve;
+  });
+  let requestCount = 0;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+    requestCount += 1;
+    authorizationHeaders.push(
+      new Headers(request instanceof Request ? request.headers : init?.headers).get(
+        "authorization",
+      ),
+    );
+    if (requestCount === 1) await firstRequestGate;
+    return new Response(
+      [
+        'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+        'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+        "data: [DONE]",
+        "",
+      ].join("\n\n"),
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  });
+
+  try {
+    const layer = makePiAdapterLive().pipe(
+      Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+      Layer.provideMerge(NodeServices.layer),
+    );
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const adapter = yield* PiAdapter;
+          yield* adapter.startSession({
+            engine: "pi",
+            threadId,
+            cwd,
+            engineOptions: { pi: { agentDir } },
+            admission: {
+              productSurface: "agent",
+              workSurface: "agent",
+              projectContextRoot: cwd,
+            },
+            engineSelection: { engine: "pi", model: "local/safe-model" },
+            runtimeMode: "full-access",
+          });
+          const first = yield* adapter.sendTurn({
+            threadId,
+            input: "active turn",
+            attachments: [],
+            engineSelection: { engine: "pi", model: "local/safe-model" },
+          });
+          yield* Effect.sleep("20 millis");
+          const reloadWhileActive = yield* adapter.reloadSessionResources!(threadId);
+          yield* Effect.sync(() => {
+            writeFileSync(
+              path.join(agentDir, "auth.json"),
+              JSON.stringify({ local: { type: "api_key", key: "test-new-key" } }),
+            );
+            publishHarosModelRuntimeMutation(agentDir);
+          });
+          const overlapping = yield* Effect.exit(
+            adapter.sendTurn({
+              threadId,
+              input: "must not hot-switch",
+              attachments: [],
+              engineSelection: { engine: "pi", model: "local/safe-model" },
+            }),
+          );
+          yield* Effect.sync(releaseFirstRequest);
+          yield* Effect.sleep("50 millis");
+          const next = yield* adapter.sendTurn({
+            threadId,
+            input: "next turn",
+            attachments: [],
+            engineSelection: { engine: "pi", model: "local/safe-model" },
+          });
+          yield* Effect.sleep("50 millis");
+          yield* adapter.stopSession(threadId);
+          return { first, overlapping, reloadWhileActive, next };
+        }).pipe(Effect.provide(layer)),
+      ),
+    );
+
+    expect(result.first.turnId).toBeDefined();
+    expect(result.overlapping._tag).toBe("Failure");
+    expect(result.reloadWhileActive).toBe("busy");
+    expect(result.next.turnId).toBeDefined();
+    expect(authorizationHeaders).toEqual(["Bearer test-old-key", "Bearer test-new-key"]);
+  } finally {
+    releaseFirstRequest();
+    vi.restoreAllMocks();
+    rmSync(serverRoot, { recursive: true, force: true });
+  }
 });

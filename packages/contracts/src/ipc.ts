@@ -1,3 +1,28 @@
+import type {
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceTestInput,
+  HarosCustomModelServiceTestResult,
+  HarosModelServiceAnswerLoginInput,
+  HarosModelServiceAuthResult,
+  HarosModelServiceBeginLoginInput,
+  HarosModelServiceCancelLoginInput,
+  HarosModelServicePollLoginInput,
+  HarosModelServiceLogoutInput,
+  HarosModelServiceLogoutResult,
+  HarosModelServiceRevealApiKeyInput,
+  HarosModelServiceRevealApiKeyResult,
+  HarosModelServiceRefreshInput,
+  HarosModelServiceRefreshResult,
+  HarosModelServicesGetInput,
+  HarosModelServicesGetResult,
+  HarosModelServicesListInput,
+  HarosModelServicesListResult,
+} from "./modelServices";
 import { Schema } from "effect";
 import type {
   AuthBearerBootstrapResult,
@@ -714,6 +739,54 @@ export interface DesktopBridge {
   };
 }
 export interface NativeApi {
+  modelServices: {
+    list: (
+      input?: HarosModelServicesListInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServicesListResult>;
+    get: (
+      input: HarosModelServicesGetInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServicesGetResult>;
+    beginLogin: (
+      input: HarosModelServiceBeginLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceAuthResult>;
+    pollLogin: (
+      input: HarosModelServicePollLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceAuthResult>;
+    answerLogin: (
+      input: HarosModelServiceAnswerLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceAuthResult>;
+    cancelLogin: (input: HarosModelServiceCancelLoginInput) => Promise<HarosModelServiceAuthResult>;
+    logout: (input: HarosModelServiceLogoutInput) => Promise<HarosModelServiceLogoutResult>;
+    revealApiKey: (
+      input: HarosModelServiceRevealApiKeyInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceRevealApiKeyResult>;
+    refresh: (
+      input: HarosModelServiceRefreshInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceRefreshResult>;
+    testCustom: (
+      input: HarosCustomModelServiceTestInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosCustomModelServiceTestResult>;
+    discoverCustom: (
+      input: HarosCustomModelServiceDiscoverInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosCustomModelServiceDiscoverResult>;
+    saveCustom: (
+      input: HarosCustomModelServiceSaveInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosCustomModelServiceSaveResult>;
+    removeCustom: (
+      input: HarosCustomModelServiceRemoveInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosCustomModelServiceRemoveResult>;
+  };
   dialogs: {
     pickFolder: () => Promise<string | null>;
     pickFile?: () => Promise<string | null>;

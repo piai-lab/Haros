@@ -1,3 +1,28 @@
+import {
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceRemoveResult,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceSaveResult,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceDiscoverResult,
+  HarosCustomModelServiceTestInput,
+  HarosCustomModelServiceTestResult,
+  HarosModelServiceAnswerLoginInput,
+  HarosModelServiceAuthResult,
+  HarosModelServiceBeginLoginInput,
+  HarosModelServiceCancelLoginInput,
+  HarosModelServicePollLoginInput,
+  HarosModelServiceLogoutInput,
+  HarosModelServiceLogoutResult,
+  HarosModelServiceRevealApiKeyInput,
+  HarosModelServiceRevealApiKeyResult,
+  HarosModelServiceRefreshInput,
+  HarosModelServiceRefreshResult,
+  HarosModelServicesGetInput,
+  HarosModelServicesGetResult,
+  HarosModelServicesListInput,
+  HarosModelServicesListResult,
+} from "./modelServices";
 import { Schema } from "effect";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
@@ -1248,7 +1273,88 @@ const WsServerAndEngineRpcGroup = RpcGroup.make(
   WsEngineListModelsRpc,
   WsEngineListAgentsRpc,
 );
+export const WsHarosModelServicesListRpc = Rpc.make(WS_METHODS.modelServicesList, {
+  payload: HarosModelServicesListInput,
+  success: HarosModelServicesListResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesGetRpc = Rpc.make(WS_METHODS.modelServicesGet, {
+  payload: HarosModelServicesGetInput,
+  success: HarosModelServicesGetResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesBeginLoginRpc = Rpc.make(WS_METHODS.modelServicesBeginLogin, {
+  payload: HarosModelServiceBeginLoginInput,
+  success: HarosModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesPollLoginRpc = Rpc.make(WS_METHODS.modelServicesPollLogin, {
+  payload: HarosModelServicePollLoginInput,
+  success: HarosModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesAnswerLoginRpc = Rpc.make(WS_METHODS.modelServicesAnswerLogin, {
+  payload: HarosModelServiceAnswerLoginInput,
+  success: HarosModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesCancelLoginRpc = Rpc.make(WS_METHODS.modelServicesCancelLogin, {
+  payload: HarosModelServiceCancelLoginInput,
+  success: HarosModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesLogoutRpc = Rpc.make(WS_METHODS.modelServicesLogout, {
+  payload: HarosModelServiceLogoutInput,
+  success: HarosModelServiceLogoutResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesRevealApiKeyRpc = Rpc.make(WS_METHODS.modelServicesRevealApiKey, {
+  payload: HarosModelServiceRevealApiKeyInput,
+  success: HarosModelServiceRevealApiKeyResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesRefreshRpc = Rpc.make(WS_METHODS.modelServicesRefresh, {
+  payload: HarosModelServiceRefreshInput,
+  success: HarosModelServiceRefreshResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesDiscoverCustomRpc = Rpc.make(
+  WS_METHODS.modelServicesDiscoverCustom,
+  {
+    payload: HarosCustomModelServiceDiscoverInput,
+    success: HarosCustomModelServiceDiscoverResult,
+    error: WsRpcError,
+  },
+);
+export const WsHarosModelServicesTestCustomRpc = Rpc.make(WS_METHODS.modelServicesTestCustom, {
+  payload: HarosCustomModelServiceTestInput,
+  success: HarosCustomModelServiceTestResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesSaveCustomRpc = Rpc.make(WS_METHODS.modelServicesSaveCustom, {
+  payload: HarosCustomModelServiceSaveInput,
+  success: HarosCustomModelServiceSaveResult,
+  error: WsRpcError,
+});
+export const WsHarosModelServicesRemoveCustomRpc = Rpc.make(WS_METHODS.modelServicesRemoveCustom, {
+  payload: HarosCustomModelServiceRemoveInput,
+  success: HarosCustomModelServiceRemoveResult,
+  error: WsRpcError,
+});
 const WsHarosAndAutomationRpcGroup = RpcGroup.make(
+  WsHarosModelServicesListRpc,
+  WsHarosModelServicesGetRpc,
+  WsHarosModelServicesBeginLoginRpc,
+  WsHarosModelServicesPollLoginRpc,
+  WsHarosModelServicesAnswerLoginRpc,
+  WsHarosModelServicesCancelLoginRpc,
+  WsHarosModelServicesLogoutRpc,
+  WsHarosModelServicesRevealApiKeyRpc,
+  WsHarosModelServicesRefreshRpc,
+  WsHarosModelServicesDiscoverCustomRpc,
+  WsHarosModelServicesTestCustomRpc,
+  WsHarosModelServicesSaveCustomRpc,
+  WsHarosModelServicesRemoveCustomRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

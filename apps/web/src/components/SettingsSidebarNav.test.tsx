@@ -63,16 +63,20 @@ describe("rankSettingsSearchEntries", () => {
 
   it("excludes removed OA settings from navigation and search in both languages", () => {
     for (const section of SETTINGS_NAV_ITEMS) {
-      expect(["models", "prompts", "web-search"]).not.toContain(section.id);
+      expect(["prompts", "web-search"]).not.toContain(section.id);
     }
     for (const translate of [translateEn, translateZh]) {
       for (const query of ["Model services", "模型服务", "Personal Strategy", "Web Search"]) {
         const results = rankSettingsSearchEntries(query, SETTINGS_SEARCH_RECORDS.length, translate);
-        expect(
-          results.every((entry) => !["models", "prompts", "web-search"].includes(entry.section)),
-        ).toBe(true);
+        expect(results.every((entry) => !["prompts", "web-search"].includes(entry.section))).toBe(
+          true,
+        );
       }
     }
+  });
+
+  it("keeps model services discoverable after OA retirement", () => {
+    expect(SETTINGS_NAV_ITEMS.map((item) => item.id)).toContain("models");
   });
 
   it("indexes the system UI font row", () => {

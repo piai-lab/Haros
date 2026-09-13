@@ -1,3 +1,18 @@
+import {
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceTestInput,
+  HarosModelServiceAnswerLoginInput,
+  HarosModelServiceBeginLoginInput,
+  HarosModelServiceCancelLoginInput,
+  HarosModelServicePollLoginInput,
+  HarosModelServiceLogoutInput,
+  HarosModelServiceRevealApiKeyInput,
+  HarosModelServiceRefreshInput,
+  HarosModelServicesGetInput,
+  HarosModelServicesListInput,
+} from "./modelServices";
 import { Schema, Struct } from "effect";
 import {
   AutomationArchiveRunInput,
@@ -164,6 +179,19 @@ import {
 import { ToolResultReadInput } from "./toolResults";
 // ── WebSocket RPC Method Names ───────────────────────────────────────
 export const WS_METHODS = {
+  modelServicesList: "modelServices.list",
+  modelServicesGet: "modelServices.get",
+  modelServicesBeginLogin: "modelServices.beginLogin",
+  modelServicesPollLogin: "modelServices.pollLogin",
+  modelServicesAnswerLogin: "modelServices.answerLogin",
+  modelServicesCancelLogin: "modelServices.cancelLogin",
+  modelServicesLogout: "modelServices.logout",
+  modelServicesRevealApiKey: "modelServices.revealApiKey",
+  modelServicesRefresh: "modelServices.refresh",
+  modelServicesDiscoverCustom: "modelServices.discoverCustom",
+  modelServicesTestCustom: "modelServices.testCustom",
+  modelServicesSaveCustom: "modelServices.saveCustom",
+  modelServicesRemoveCustom: "modelServices.removeCustom",
   // Project registry methods
   projectsDiscoverScripts: "projects.discoverScripts",
   projectsListDirectories: "projects.listDirectories",
@@ -474,6 +502,19 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerReadPlugin, EngineReadPluginInput),
   tagRequestBody(WS_METHODS.engineListModels, EngineListModelsInput),
   tagRequestBody(WS_METHODS.engineListAgents, EngineListAgentsInput),
+  tagRequestBody(WS_METHODS.modelServicesList, HarosModelServicesListInput),
+  tagRequestBody(WS_METHODS.modelServicesGet, HarosModelServicesGetInput),
+  tagRequestBody(WS_METHODS.modelServicesBeginLogin, HarosModelServiceBeginLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesPollLogin, HarosModelServicePollLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesAnswerLogin, HarosModelServiceAnswerLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesCancelLogin, HarosModelServiceCancelLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesLogout, HarosModelServiceLogoutInput),
+  tagRequestBody(WS_METHODS.modelServicesRevealApiKey, HarosModelServiceRevealApiKeyInput),
+  tagRequestBody(WS_METHODS.modelServicesRefresh, HarosModelServiceRefreshInput),
+  tagRequestBody(WS_METHODS.modelServicesDiscoverCustom, HarosCustomModelServiceDiscoverInput),
+  tagRequestBody(WS_METHODS.modelServicesTestCustom, HarosCustomModelServiceTestInput),
+  tagRequestBody(WS_METHODS.modelServicesSaveCustom, HarosCustomModelServiceSaveInput),
+  tagRequestBody(WS_METHODS.modelServicesRemoveCustom, HarosCustomModelServiceRemoveInput),
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),
   tagRequestBody(WS_METHODS.automationGetMemory, AutomationGetMemoryInput),

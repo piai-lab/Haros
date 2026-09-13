@@ -34,7 +34,7 @@ export const WS_NEGOTIATE_QUERY = {
 } as const;
 
 export const WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY = "projects.github-provisioning";
-export const WS_HARNESSOS_MODEL_SERVICES_CAPABILITY = "harnessos.model-services";
+export const WS_HARNESSOS_MODEL_SERVICES_CAPABILITY = "harnessos.model-services.v2";
 export const WS_HARNESSOS_ECOSYSTEM_CAPABILITY = "harnessos.ecosystem";
 export const WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY = "harnessos.agent-prompts";
 
@@ -57,6 +57,7 @@ export const WS_SERVER_CAPABILITIES = [
   // Optional feature capability: older servers may omit it without making the
   // rest of a newer client unusable during a staggered rollout.
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
   // Single-handshake connect: negotiation is available over plain HTTP at
   // WS_NEGOTIATE_HTTP_PATH, so a connect costs exactly one WebSocket upgrade.
   "transport.http-negotiate",

@@ -1,3 +1,4 @@
+import { getHarosModelRuntimeMutationRevision } from "../modelRuntimeMutation";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model } from "@earendil-works/pi-ai";
 import type {
@@ -369,6 +370,7 @@ const STOCK_PI_FAMILY = {
     createPiModelRuntime(agentDir, await loadPiCodingAgentModule()),
 } satisfies PiFamilyAdapterConfig<"pi">;
 interface PiSessionContext {
+  appliedModelRuntimeMutationRevision: number;
   readonly agentDir: string;
   readonly workSurface?: EngineWorkSurface;
   /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
@@ -2005,6 +2007,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             : {}),
           runtime,
           agentDir,
+          appliedModelRuntimeMutationRevision: getHarosModelRuntimeMutationRevision(agentDir),
           workSurface,
           resourceScopeIdentity: piResourceScopeIdentity(
             workSurface === "chat"
@@ -2207,6 +2210,34 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               issue: `A ${displayName} turn is already active for this thread.`,
             });
           }
+          const currentRevision = getHarosModelRuntimeMutationRevision(context.agentDir);
+          if (currentRevision > context.appliedModelRuntimeMutationRevision) {
+            yield* Effect.tryPromise({
+              try: async () => {
+                await context.runtime.services.modelRuntime.refresh({
+                  allowNetwork: false,
+                });
+                const configurationError = context.runtime.services.modelRuntime.getError();
+                if (configurationError !== undefined) {
+                  throw new Error("Haros model-service state could not be reconciled.");
+                }
+                const piSdk = await family.loadModule();
+                context.modelRegistry = modelRegistryFacade(
+                  context.runtime.services.modelRuntime,
+                  piSdk,
+                );
+                context.appliedModelRuntimeMutationRevision = currentRevision;
+              },
+              catch: (cause) =>
+                new EngineAdapterRequestError({
+                  engine,
+                  method: "model-services/reconcile",
+                  detail: "Haros model-service changes could not be applied to this session.",
+                  cause,
+                }),
+            });
+          }
+
           if (input.engineSelection?.engine === engine) {
             const model = findModelInRegistry(context.modelRegistry, input.engineSelection.model);
             if (!model) {

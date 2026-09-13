@@ -1,3 +1,4 @@
+import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 // FILE: _chat.settings.tsx
 // Purpose: Render the dedicated settings experience with its own section sidebar and grouped panels.
 // Layer: Route screen
@@ -1578,6 +1579,7 @@ function SettingsRouteView() {
                 <AppSnapSettingsPanel active={activeSection === "appsnap"} />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
+                <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
 
                 <EnginesSettingsPanel
                   active={activeSection === "engines"}

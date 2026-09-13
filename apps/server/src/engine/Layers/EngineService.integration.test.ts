@@ -500,7 +500,7 @@ function makeEngineServiceLayer(
 
 const routing = makeEngineServiceLayer(undefined, { includePi: true, includeHaros: true });
 const modelServiceAdmission = makeEngineServiceLayer(undefined, {
-  includeHaros: true,
+  includePi: true,
 });
 const ecosystemReloadRouting = makeEngineServiceLayer(undefined, {
   includePi: true,
@@ -1840,22 +1840,22 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-start-first");
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseStart = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
       );
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       }).pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "Haros custom-service start",
@@ -1892,20 +1892,20 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(mutationEntered);
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       }).pipe(Effect.forkChild);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseMutation, undefined);
       yield* Fiber.join(mutationFiber);
       yield* Fiber.join(startFiber);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
       yield* engine.stopSession({ threadId });
     }),
   );
@@ -1915,25 +1915,25 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-recovery-first");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
       yield* engine.stopRuntimeSession!({ threadId });
 
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseRecovery = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
       );
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const recoveryFiber = yield* engine
         .sendTurn({ threadId, input: "recover", attachments: [] })
         .pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "Haros custom-service recovery",
@@ -1961,21 +1961,21 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         const engine = yield* EngineService;
         const threadId = asThreadId("thread-model-service-replacement-restore");
         yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
-          engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+          engineSelection: { engine: "pi", model: "gateway-a/model-one" },
           runtimeMode: "full-access",
         });
 
-        const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+        const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
         if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
         const replacementFailure = new EngineAdapterSessionNotFoundError({
-          engine: "oa",
+          engine: "pi",
           threadId,
         });
         const restoreEntered = yield* Deferred.make<void>();
         const releaseRestore = yield* Deferred.make<void>();
-        modelServiceAdmission.oa.startSession
+        modelServiceAdmission.pi.startSession
           .mockImplementationOnce(() => Effect.fail(replacementFailure))
           .mockImplementationOnce((input) =>
             Deferred.succeed(restoreEntered, undefined).pipe(
@@ -1985,9 +1985,9 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
           );
 
         const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
-          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
           runtimeMode: "full-access",
         }).pipe(Effect.result, Effect.forkChild);
         yield* Deferred.await(restoreEntered);
@@ -2013,17 +2013,17 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-turn-persistence-fence");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
 
-      const defaultHasSession = modelServiceAdmission.oa.hasSession.getMockImplementation();
+      const defaultHasSession = modelServiceAdmission.pi.hasSession.getMockImplementation();
       if (!defaultHasSession) assert.fail("Expected the fake Haros session probe");
       const lifecycleEntered = yield* Deferred.make<void>();
       const releaseLifecycle = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.hasSession.mockImplementationOnce((probedThreadId) =>
+      modelServiceAdmission.pi.hasSession.mockImplementationOnce((probedThreadId) =>
         Deferred.succeed(lifecycleEntered, undefined).pipe(
           Effect.andThen(Deferred.await(releaseLifecycle)),
           Effect.andThen(defaultHasSession(probedThreadId)),
@@ -2037,19 +2037,19 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(lifecycleEntered);
 
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const replacementFailure = new EngineAdapterSessionNotFoundError({
-        engine: "oa",
+        engine: "pi",
         threadId,
       });
-      modelServiceAdmission.oa.startSession
+      modelServiceAdmission.pi.startSession
         .mockImplementationOnce(() => Effect.fail(replacementFailure))
         .mockImplementationOnce(defaultStart);
       const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         runtimeMode: "full-access",
       }).pipe(Effect.result, Effect.forkChild);
       yield* sleep(25);
@@ -2067,7 +2067,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
           threadId,
           input: "persist model C",
           attachments: [],
-          engineSelection: { engine: "oa", model: "gateway-c/model-three" },
+          engineSelection: { engine: "pi", model: "gateway-c/model-three" },
         })
         .pipe(Effect.forkChild);
       yield* sleep(25);
@@ -2087,7 +2087,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
       yield* Fiber.join(sendFiber);
 
-      const restoreCall = modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0];
+      const restoreCall = modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0];
       assert.equal(restoreCall?.engineSelection?.model, "gateway-a/model-one");
       yield* engine.stopSession({ threadId });
     }),
@@ -2099,9 +2099,9 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-recovery-current-binding");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* engine.stopRuntimeSession!({ threadId });
@@ -2116,7 +2116,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(aEntered);
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const recoveryFiber = yield* engine
         .sendTurn({ threadId, input: "recover current binding", attachments: [] })
         .pipe(Effect.forkChild);
@@ -2128,7 +2128,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         ...binding,
         runtimePayload: {
           ...asRuntimePayloadRecord(binding.runtimePayload),
-          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         },
       });
 
@@ -2145,14 +2145,14 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* Deferred.succeed(releaseA, undefined);
       yield* Fiber.join(aFenceFiber);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseB, undefined);
       yield* Fiber.join(bFenceFiber);
       yield* Fiber.join(recoveryFiber);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
       assert.equal(
-        modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0].engineSelection?.model,
+        modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0].engineSelection?.model,
         "gateway-b/model-two",
       );
       yield* engine.stopSession({ threadId });
@@ -2165,30 +2165,30 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const aThreadId = asThreadId("thread-model-service-a-to-b");
       const bThreadId = asThreadId("thread-model-service-b-to-a");
       yield* startTestEngineSession(engine, aThreadId, {
-        engine: "oa",
+        engine: "pi",
         threadId: aThreadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* startTestEngineSession(engine, bThreadId, {
-        engine: "oa",
+        engine: "pi",
         threadId: bThreadId,
-        engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         runtimeMode: "full-access",
       });
 
       const replacements = yield* Effect.all(
         [
           startTestEngineSession(engine, aThreadId, {
-            engine: "oa",
+            engine: "pi",
             threadId: aThreadId,
-            engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+            engineSelection: { engine: "pi", model: "gateway-b/model-two" },
             runtimeMode: "full-access",
           }),
           startTestEngineSession(engine, bThreadId, {
-            engine: "oa",
+            engine: "pi",
             threadId: bThreadId,
-            engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+            engineSelection: { engine: "pi", model: "gateway-a/model-one" },
             runtimeMode: "full-access",
           }),
         ],

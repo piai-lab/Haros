@@ -156,6 +156,21 @@ export const SETTINGS_NAV_ITEMS = [
     searchRecords: Object.values(ENGINES_SETTINGS_SEARCH),
   },
   {
+    id: "models",
+    group: "coding",
+    labelKey: "settings.models",
+    descriptionKey: "settings.modelsDescription",
+    icon: "brain",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "models:model-services",
+        titleKey: "settings.models",
+        keywords:
+          "model services credentials authentication available models catalog API key OAuth Pi",
+      }),
+    ],
+  },
+  {
     id: "skills",
     group: "coding",
     labelKey: "settings.skills",

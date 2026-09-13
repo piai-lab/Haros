@@ -2,8 +2,10 @@ import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
   "settings.models": "Model services",
+  "settings.modelServicesAvailable": "Currently available",
+  "settings.modelServiceCount": "{count} services",
   "settings.modelsDescription":
-    "Configure the model services, credentials, and available models Haros uses.",
+    "Configure model services, credentials, and available models for the Pi Engine. Other Engines use their own native configuration.",
   "settings.configuredModelServices": "Connected",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
@@ -435,7 +437,10 @@ const EN_MESSAGES = {
 
 const ZH_CN_MESSAGES = {
   "settings.models": "模型服务",
-  "settings.modelsDescription": "配置 Haros 使用的模型服务、凭据与可用模型。",
+  "settings.modelServicesAvailable": "当前提供",
+  "settings.modelServiceCount": "{count} 个服务",
+  "settings.modelsDescription":
+    "配置 Pi 引擎使用的模型服务、凭据与可用模型。其他引擎使用各自的原生配置。",
   "settings.configuredModelServices": "已连接",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",

@@ -227,7 +227,7 @@ describe("composerDraftStore persisted-state hydration", () => {
     });
 
     expect(hydrated.stickyActiveEngine).toBeNull();
-    expect(hydrated.stickyEngineSelectionByEngine.oa).toEqual(
+    expect(hydrated.stickyEngineSelectionByEngine?.oa).toEqual(
       engineSelection("oa", "provider/original-model"),
     );
   });

@@ -37,7 +37,8 @@ describe("WebSocket compatibility bootstrap", () => {
     expect(result.capabilities).toContain("orchestration.cursor-safe-streams");
     expect(result.capabilities).toContain("orchestration.thread-detail-snapshot");
     expect(result.capabilities).toContain("projects.github-provisioning");
-    expect(result.capabilities).not.toContain(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
+    expect(result.capabilities).toContain(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
+    expect(result.capabilities).not.toContain("harnessos.model-services");
     expect(result.capabilities).not.toContain(WS_HARNESSOS_ECOSYSTEM_CAPABILITY);
     expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain("projects.github-provisioning");
     expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);

@@ -1,4 +1,8 @@
-import { WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY, type NativeApi } from "@harnessos/contracts";
+import {
+  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
+  type NativeApi,
+} from "@harnessos/contracts";
 import {
   createWsNativeApi,
   onWsServerCapabilitiesChange,
@@ -29,6 +33,8 @@ export function ensureNativeApi(): NativeApi {
 export function readNativeApiServerCapabilityState(capability: string): boolean | null {
   if (typeof window === "undefined") return null;
   if (window.nativeApi) {
+    if (capability === WS_HARNESSOS_MODEL_SERVICES_CAPABILITY)
+      return typeof window.nativeApi.modelServices?.list === "function";
     if (capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY) {
       return typeof window.nativeApi.projects?.provisionFromGitHub === "function";
     }

@@ -1,3 +1,4 @@
+import { HarosModelServicesLive } from "./Layers/HarosModelServices";
 import { Effect, Layer } from "effect";
 
 import { BrowserAutomationHostLive } from "../browserAutomation/Layers/BrowserAutomationHost";
@@ -111,7 +112,12 @@ export function makeServerEngineLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
+    const modelServicesLayer = HarosModelServicesLive.pipe(
+      Layer.provide(engineServiceLayer),
+      Layer.provide(ServerSettingsLive),
+    );
     return Layer.mergeAll(
+      modelServicesLayer,
       engineServiceLayer,
       engineDiscoveryLayer,
       adapterRegistryLayer,
