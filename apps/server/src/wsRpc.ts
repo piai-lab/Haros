@@ -2155,6 +2155,11 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(Effect.andThen(modelServices.refresh(input))),
             "Failed to refresh an Haros model service",
           ),
+        [WS_METHODS.modelServicesTestModel]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.testModel(input))),
+            "Failed to test model",
+          ),
         [WS_METHODS.modelServicesDiscoverCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(modelServices.discoverCustom(input))),

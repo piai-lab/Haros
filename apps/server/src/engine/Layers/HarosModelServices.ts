@@ -66,6 +66,7 @@ import {
   createHarosOAuthPageRenderer,
   loadHarosOAuthLogoDataUrl,
 } from "../harnessosOAuthCallbackPage.ts";
+import { installOfficialModelCatalog, modelDiscoveredAt } from "../officialModelCatalog.ts";
 import { publishHarosModelRuntimeMutation } from "../modelRuntimeMutation.ts";
 import {
   HarosModelServices,
@@ -849,6 +850,8 @@ async function projectModelServices(input: {
   readonly intent?: HarosModelServicesProjectionIntent;
   readonly preparedRuntime?: HarosModelRuntime;
   readonly preparedExtensionProjectionState?: HarosModelServicesExtensionProjectionState;
+  readonly addedServices?: Readonly<Record<string, boolean>>;
+  readonly failedRefreshServices?: ReadonlySet<string>;
 }): Promise<{
   readonly all: ReadonlyArray<HarosModelServiceDescriptor>;
   readonly listed: ReadonlyArray<HarosModelServiceDescriptor>;
@@ -904,6 +907,9 @@ async function projectModelServices(input: {
       allowModelNetwork: false,
       refreshOnCreate: false,
       signal: input.signal,
+    }).then((runtime) => {
+      installOfficialModelCatalog(runtime);
+      return runtime;
     });
   const refreshProjectionRuntime = async (
     runtime: Awaited<ReturnType<typeof createProjectionRuntime>>,
@@ -997,12 +1003,15 @@ async function projectModelServices(input: {
             input: model.input.filter(
               (kind): kind is "text" | "image" => kind === "text" || kind === "image",
             ),
-            contextWindow: Number.isFinite(model.contextWindow)
-              ? Math.max(0, Math.trunc(model.contextWindow))
-              : 0,
-            maxTokens: Number.isFinite(model.maxTokens)
-              ? Math.max(0, Math.trunc(model.maxTokens))
-              : 0,
+            contextWindow:
+              !modelDiscoveredAt(model) && Number.isFinite(model.contextWindow)
+                ? Math.max(0, Math.trunc(model.contextWindow))
+                : 0,
+            maxTokens:
+              !modelDiscoveredAt(model) && Number.isFinite(model.maxTokens)
+                ? Math.max(0, Math.trunc(model.maxTokens))
+                : 0,
+            ...(modelDiscoveredAt(model) ? { discoveredAt: modelDiscoveredAt(model) } : {}),
           },
         ];
       });
@@ -1026,7 +1035,8 @@ async function projectModelServices(input: {
         : ("setup_required" as const);
     const availableModelCount =
       authState === "refresh_required" ? 0 : (availableCounts.get(provider.id) ?? 0);
-    const hasCatalogError = refresh.errors.has(provider.id);
+    const hasCatalogError =
+      refresh.errors.has(provider.id) || input.failedRefreshServices?.has(provider.id) === true;
     const origin = registeredProviderIds.has(provider.id)
       ? ("extension" as const)
       : modelConfigProviderIds.has(provider.id)
@@ -1103,17 +1113,20 @@ async function projectModelServices(input: {
     all: sorted,
     listed: sorted.filter(
       (service) =>
-        service.authState === "configured" ||
-        service.authState === "refresh_required" ||
-        service.availableModelCount > 0 ||
+        service.storedCredentialType !== null ||
+        (service.origin === "extension" && service.authState === "configured") ||
+        input.addedServices?.[service.serviceId] === true ||
         service.origin === "models_json" ||
         service.origin === "unknown",
     ),
     connectable: sorted.filter(
       (service) =>
         (service.origin === "builtin" || service.origin === "extension") &&
-        service.authState === "setup_required" &&
-        service.authMethods.some((method) => method.canLogin),
+        service.storedCredentialType === null &&
+        input.addedServices?.[service.serviceId] !== true &&
+        (service.origin === "builtin" ||
+          (service.authState === "setup_required" &&
+            service.authMethods.some((method) => method.canLogin))),
     ),
     modelsByServiceId,
     customConfigsByServiceId,
@@ -1161,15 +1174,18 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
           );
         });
       const authRequests = new Map<string, ModelServiceAuthRequest>();
+      const failedRefreshServices = new Set<string>();
       const oauthLogoDataUrl = loadHarosOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
-      const project = (signal: AbortSignal, intent?: HarosModelServicesProjectionIntent) =>
+      const project = async (signal: AbortSignal, intent?: HarosModelServicesProjectionIntent) =>
         projectModelServices({
           agentDir: currentAgentDir(),
           loadModule: options.loadModule ?? loadModelServicesSdk,
           ...(options.readTextFile ? { readTextFile: options.readTextFile } : {}),
           signal,
           ...(intent ? { intent } : {}),
+          addedServices: (await Effect.runPromise(serverSettings.getSettings)).modelServices.added,
+          failedRefreshServices,
         });
 
       const serializeMutation = <A>(operation: () => Promise<A>): Promise<A> => {
@@ -1225,6 +1241,9 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
           if (!mutationRuntime.runtime.getProvider(serviceId)) {
             throw new Error("Model service is unavailable");
           }
+          // Overlay registrations can replace DeepSeek. Install the official catalog
+          // only after that, so a colliding Extension keeps its own refresh owner.
+          installOfficialModelCatalog(mutationRuntime.runtime);
           return await operation({
             ...mutationRuntime,
             extensionLoaded: extensionServices !== undefined,
@@ -1247,6 +1266,8 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
           signal: input.signal,
           preparedRuntime: input.runtime,
           ...(input.extensionLoaded ? { preparedExtensionProjectionState: "ready" } : {}),
+          addedServices: (await Effect.runPromise(serverSettings.getSettings)).modelServices.added,
+          failedRefreshServices,
         });
         const service = projection.all.find((entry) => entry.serviceId === input.serviceId);
         if (!service) throw new Error("Model service is unavailable");
@@ -1812,10 +1833,7 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
         refresh: (input) =>
           Effect.promise(async (requestSignal) => {
             const previous = await getProjectedService(input.serviceId, requestSignal);
-            const timeoutSignal = AbortSignal.timeout(
-              options.modelServiceRefreshTimeoutMs ?? MODEL_SERVICE_REFRESH_TIMEOUT_MS,
-            );
-            const signal = AbortSignal.any([requestSignal, timeoutSignal]);
+            const signal = requestSignal;
             try {
               return await serializeMutation(() =>
                 withMutationRuntimeForService(
@@ -1826,21 +1844,30 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
                     if (!runtime.getProvider(input.serviceId)?.refreshModels) {
                       return { state: "unsupported", service: previous } as const;
                     }
+                    const refreshSignal = AbortSignal.any([
+                      signal,
+                      AbortSignal.timeout(
+                        options.modelServiceRefreshTimeoutMs ?? MODEL_SERVICE_REFRESH_TIMEOUT_MS,
+                      ),
+                    ]);
                     const refreshed = await runtime.refresh({
                       providers: [input.serviceId],
                       allowNetwork: true,
-                      force: true,
-                      signal,
+                      force: input.force ?? true,
+                      signal: refreshSignal,
                     });
                     if (refreshed.aborted) {
+                      if (!requestSignal.aborted) failedRefreshServices.add(input.serviceId);
                       return {
                         state: requestSignal.aborted ? "cancelled" : "failed",
                         service: previous,
                       } as const;
                     }
                     if (refreshed.errors.has(input.serviceId)) {
+                      failedRefreshServices.add(input.serviceId);
                       return { state: "failed", service: previous } as const;
                     }
+                    failedRefreshServices.delete(input.serviceId);
                     publishHarosModelRuntimeMutation(agentDir);
                     return {
                       state: "success",
@@ -1861,6 +1888,44 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
                   service: previous,
                 } as const;
               throw error;
+            }
+          }),
+        testModel: (input) =>
+          Effect.promise(async (requestSignal) => {
+            const signal = AbortSignal.any([requestSignal, AbortSignal.timeout(30_000)]);
+            let api = "";
+            try {
+              return await withMutationRuntimeForService(
+                input.serviceId,
+                input.origin,
+                signal,
+                async ({ runtime }) => {
+                  const model = runtime.getModel(input.serviceId, input.modelId);
+                  if (!model) return { state: "failed", text: "", api } as const;
+                  api = model.api;
+                  const response = await runtime.complete(
+                    model,
+                    {
+                      messages: [{ role: "user", content: input.message, timestamp: Date.now() }],
+                    },
+                    { signal, maxTokens: 256 },
+                  );
+                  signal.throwIfAborted();
+                  if (response.stopReason === "error" || response.stopReason === "aborted")
+                    return { state: "failed", text: "", api } as const;
+                  const text = response.content
+                    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+                    .join("\n")
+                    .slice(0, 8_000);
+                  return { state: text.trim() ? "success" : "failed", text, api } as const;
+                },
+              );
+            } catch {
+              return {
+                state: requestSignal.aborted ? "cancelled" : "failed",
+                text: "",
+                api,
+              } as const;
             }
           }),
         discoverCustom: (input) =>
@@ -2272,6 +2337,8 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
           scoped(service.revealApiKey(...args)),
         refresh: (...args: Parameters<HarosModelServicesShape["refresh"]>) =>
           scoped(service.refresh(...args)),
+        testModel: (...args: Parameters<HarosModelServicesShape["testModel"]>) =>
+          scoped(service.testModel(...args)),
         testCustom: (...args: Parameters<HarosModelServicesShape["testCustom"]>) =>
           scoped(service.testCustom(...args)),
         discoverCustom: (...args: Parameters<HarosModelServicesShape["discoverCustom"]>) =>

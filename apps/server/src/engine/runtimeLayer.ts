@@ -1,3 +1,4 @@
+import { HarosModelCatalogSyncLive } from "./Layers/HarosModelCatalogSync";
 import { HarosModelServicesLive } from "./Layers/HarosModelServices";
 import { Effect, Layer } from "effect";
 
@@ -118,6 +119,10 @@ export function makeServerEngineLayer(
     );
     return Layer.mergeAll(
       modelServicesLayer,
+      HarosModelCatalogSyncLive.pipe(
+        Layer.provide(modelServicesLayer),
+        Layer.provide(ServerSettingsLive),
+      ),
       engineServiceLayer,
       engineDiscoveryLayer,
       adapterRegistryLayer,

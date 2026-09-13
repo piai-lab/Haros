@@ -967,8 +967,9 @@ describe("HarosModelServicesLive", () => {
     process.env.DEEPSEEK_API_KEY = "ambient-test-secret";
 
     const result = await loadService({ root });
-    const deepseek = result.list.services.find((entry) => entry.serviceId === "deepseek");
+    const deepseek = result.deepseek.state === "ready" ? result.deepseek.service : undefined;
 
+    expect(result.list.services.find((entry) => entry.serviceId === "deepseek")).toBeUndefined();
     expect(deepseek).toMatchObject({
       authState: "configured",
       authSource: "environment",

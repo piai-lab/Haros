@@ -730,10 +730,13 @@ export async function createPiModelRuntime(
   agentDir: string,
   piSdk: Pick<PiCodingAgentModule, "ModelRuntime">,
 ): Promise<ModelRuntime> {
-  return piSdk.ModelRuntime.create({
+  const runtime = await piSdk.ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
   });
+  const { installOfficialModelCatalog } = await import("../officialModelCatalog.ts");
+  installOfficialModelCatalog(runtime);
+  return runtime;
 }
 function modelRegistryFacade(
   modelRuntime: ModelRuntime,

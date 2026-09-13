@@ -22,6 +22,8 @@ import type {
   HarosModelServiceRevealApiKeyResult,
   HarosModelServiceRefreshInput,
   HarosModelServiceRefreshResult,
+  HarosModelServiceTestInput,
+  HarosModelServiceTestResult,
   HarosModelServicesGetInput,
   HarosModelServicesGetResult,
   HarosModelServicesListInput,
@@ -60,6 +62,9 @@ export interface HarosModelServicesShape {
   readonly refresh: (
     input: HarosModelServiceRefreshInput,
   ) => Effect.Effect<HarosModelServiceRefreshResult>;
+  readonly testModel: (
+    input: HarosModelServiceTestInput,
+  ) => Effect.Effect<HarosModelServiceTestResult>;
   readonly testCustom: (
     input: HarosCustomModelServiceTestInput,
   ) => Effect.Effect<HarosCustomModelServiceTestResult>;
