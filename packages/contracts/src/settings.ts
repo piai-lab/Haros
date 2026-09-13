@@ -102,7 +102,22 @@ export const AgentToolsServerSettings = Schema.Struct({
 });
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
+const ModelServiceFlags = Schema.Record(
+  Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256)),
+  Schema.Boolean,
+).check(
+  Schema.makeFilter((value) => Object.keys(value).length <= 512, {
+    message: "Model service settings must contain at most 512 services",
+  }),
+);
+export const ModelServicesServerSettings = Schema.Struct({
+  autoSync: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
+  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
+});
+export type ModelServicesServerSettings = typeof ModelServicesServerSettings.Type;
+
 export const ServerSettings = Schema.Struct({
+  modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -138,6 +153,7 @@ const HarosServerEngineSettingsView = Schema.Struct({
 });
 
 export const ServerSettingsView = Schema.Struct({
+  modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -183,6 +199,12 @@ const EngineSettingsBasePatch = {
 };
 
 export const ServerSettingsPatch = Schema.Struct({
+  modelServices: Schema.optionalKey(
+    Schema.Struct({
+      autoSync: Schema.optionalKey(ModelServiceFlags),
+      added: Schema.optionalKey(ModelServiceFlags),
+    }),
+  ),
   defaultEngine: Schema.optionalKey(EngineKind),
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableEngineUpdateChecks: Schema.optionalKey(Schema.Boolean),

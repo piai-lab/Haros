@@ -18,6 +18,8 @@ import type {
   HarosModelServiceRevealApiKeyResult,
   HarosModelServiceRefreshInput,
   HarosModelServiceRefreshResult,
+  HarosModelServiceTestInput,
+  HarosModelServiceTestResult,
   HarosModelServicesGetInput,
   HarosModelServicesGetResult,
   HarosModelServicesListInput,
@@ -770,6 +772,10 @@ export interface NativeApi {
       input: HarosModelServiceRefreshInput,
       options?: { readonly signal?: AbortSignal },
     ) => Promise<HarosModelServiceRefreshResult>;
+    testModel: (
+      input: HarosModelServiceTestInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<HarosModelServiceTestResult>;
     testCustom: (
       input: HarosCustomModelServiceTestInput,
       options?: { readonly signal?: AbortSignal },

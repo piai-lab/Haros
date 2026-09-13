@@ -18,6 +18,8 @@ import {
   HarosModelServiceRevealApiKeyResult,
   HarosModelServiceRefreshInput,
   HarosModelServiceRefreshResult,
+  HarosModelServiceTestInput,
+  HarosModelServiceTestResult,
   HarosModelServicesGetInput,
   HarosModelServicesGetResult,
   HarosModelServicesListInput,
@@ -1318,6 +1320,11 @@ export const WsHarosModelServicesRefreshRpc = Rpc.make(WS_METHODS.modelServicesR
   success: HarosModelServiceRefreshResult,
   error: WsRpcError,
 });
+export const WsHarosModelServicesTestModelRpc = Rpc.make(WS_METHODS.modelServicesTestModel, {
+  payload: HarosModelServiceTestInput,
+  success: HarosModelServiceTestResult,
+  error: WsRpcError,
+});
 export const WsHarosModelServicesDiscoverCustomRpc = Rpc.make(
   WS_METHODS.modelServicesDiscoverCustom,
   {
@@ -1351,6 +1358,7 @@ const WsHarosAndAutomationRpcGroup = RpcGroup.make(
   WsHarosModelServicesLogoutRpc,
   WsHarosModelServicesRevealApiKeyRpc,
   WsHarosModelServicesRefreshRpc,
+  WsHarosModelServicesTestModelRpc,
   WsHarosModelServicesDiscoverCustomRpc,
   WsHarosModelServicesTestCustomRpc,
   WsHarosModelServicesSaveCustomRpc,

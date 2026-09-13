@@ -41,6 +41,7 @@ export const HarosModelServiceModel = Schema.Struct({
   input: Schema.Array(Schema.Literals(["text", "image"])).check(Schema.isMaxLength(2)),
   contextWindow: NonNegativeInt,
   maxTokens: NonNegativeInt,
+  discoveredAt: Schema.optional(NonNegativeInt),
 });
 export type HarosModelServiceModel = typeof HarosModelServiceModel.Type;
 
@@ -536,6 +537,7 @@ export type HarosModelServiceRevealApiKeyResult = typeof HarosModelServiceReveal
 export const HarosModelServiceRefreshInput = Schema.Struct({
   serviceId: BoundedIdentifier,
   origin: Schema.optional(Schema.Literal("extension")),
+  force: Schema.optional(Schema.Boolean),
 });
 export type HarosModelServiceRefreshInput = typeof HarosModelServiceRefreshInput.Type;
 export const HarosModelServiceRefreshResult = Schema.Struct({
@@ -543,6 +545,20 @@ export const HarosModelServiceRefreshResult = Schema.Struct({
   service: HarosModelServiceDescriptor,
 });
 export type HarosModelServiceRefreshResult = typeof HarosModelServiceRefreshResult.Type;
+
+export const HarosModelServiceTestInput = Schema.Struct({
+  serviceId: BoundedIdentifier,
+  modelId: BoundedModelId,
+  origin: Schema.optional(Schema.Literal("extension")),
+  message: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2_000)),
+});
+export type HarosModelServiceTestInput = typeof HarosModelServiceTestInput.Type;
+export const HarosModelServiceTestResult = Schema.Struct({
+  state: Schema.Literals(["success", "failed", "cancelled"]),
+  text: Schema.String.check(Schema.isMaxLength(8_000)),
+  api: Schema.String,
+});
+export type HarosModelServiceTestResult = typeof HarosModelServiceTestResult.Type;
 
 const CredentialCommand = Schema.String.check(
   Schema.isMinLength(1),

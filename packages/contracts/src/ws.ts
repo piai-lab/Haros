@@ -10,6 +10,7 @@ import {
   HarosModelServiceLogoutInput,
   HarosModelServiceRevealApiKeyInput,
   HarosModelServiceRefreshInput,
+  HarosModelServiceTestInput,
   HarosModelServicesGetInput,
   HarosModelServicesListInput,
 } from "./modelServices";
@@ -188,6 +189,7 @@ export const WS_METHODS = {
   modelServicesLogout: "modelServices.logout",
   modelServicesRevealApiKey: "modelServices.revealApiKey",
   modelServicesRefresh: "modelServices.refresh",
+  modelServicesTestModel: "modelServices.testModel",
   modelServicesDiscoverCustom: "modelServices.discoverCustom",
   modelServicesTestCustom: "modelServices.testCustom",
   modelServicesSaveCustom: "modelServices.saveCustom",
@@ -511,6 +513,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.modelServicesLogout, HarosModelServiceLogoutInput),
   tagRequestBody(WS_METHODS.modelServicesRevealApiKey, HarosModelServiceRevealApiKeyInput),
   tagRequestBody(WS_METHODS.modelServicesRefresh, HarosModelServiceRefreshInput),
+  tagRequestBody(WS_METHODS.modelServicesTestModel, HarosModelServiceTestInput),
   tagRequestBody(WS_METHODS.modelServicesDiscoverCustom, HarosCustomModelServiceDiscoverInput),
   tagRequestBody(WS_METHODS.modelServicesTestCustom, HarosCustomModelServiceTestInput),
   tagRequestBody(WS_METHODS.modelServicesSaveCustom, HarosCustomModelServiceSaveInput),
