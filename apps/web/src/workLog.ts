@@ -5,7 +5,8 @@ import {
   type OrchestrationThreadActivity,
   EngineTurnStartFailureReason,
   type EngineTurnStartFailureReason as EngineTurnStartFailureReasonValue,
-  EngineKind,
+  type EngineKind,
+  decodePersistedEngineKind,
   type ToolLifecycleItemType,
   type TurnId,
 } from "@harnessos/contracts";
@@ -458,7 +459,7 @@ function extractWorkLogHarosThreadCreation(
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
-    const engineKind = engine !== null && Schema.is(EngineKind)(engine) ? engine : null;
+    const engineKind = decodePersistedEngineKind(engine);
     if (
       !threadId ||
       !title ||

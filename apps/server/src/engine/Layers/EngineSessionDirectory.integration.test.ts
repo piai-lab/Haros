@@ -268,6 +268,34 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       fs.rmSync(tempDir, { recursive: true, force: true });
     }));
 
+  it("maps retired OA session bindings onto Pi", () =>
+    Effect.gen(function* () {
+      const directory = yield* EngineSessionDirectory;
+      const runtimeRepository = yield* EngineSessionRuntimeRepository;
+      const threadId = ThreadId.makeUnsafe("thread-retired-oa");
+
+      yield* runtimeRepository.upsert({
+        threadId,
+        engine: "oa",
+        adapterKey: "oa",
+        runtimeMode: "full-access",
+        status: "running",
+        lifecycleGeneration: "legacy-test-oa",
+        lastSeenAt: new Date().toISOString(),
+        admission: null,
+        resumeCursor: null,
+        runtimePayload: null,
+      });
+
+      const engine = yield* directory.getEngine(threadId);
+      assert.equal(engine, "pi");
+      const binding = yield* directory.getBinding(threadId);
+      assertSome(binding, {
+        threadId,
+        engine: "pi",
+      });
+    }));
+
   it("skips legacy bindings with unknown engine names when listing all bindings", () =>
     Effect.gen(function* () {
       const directory = yield* EngineSessionDirectory;
@@ -278,11 +306,11 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
       yield* runtimeRepository.upsert({
         threadId: legacyThreadId,
-        engine: "kilo",
-        adapterKey: "kilo",
+        engine: "unknown-legacy-engine",
+        adapterKey: "unknown-legacy-engine",
         runtimeMode: "full-access",
         status: "running",
-        lifecycleGeneration: "legacy-test-kilo",
+        lifecycleGeneration: "legacy-test-unknown",
         lastSeenAt: new Date().toISOString(),
         admission: null,
         resumeCursor: null,

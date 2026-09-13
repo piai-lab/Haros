@@ -13,6 +13,7 @@ import {
   DEFAULT_SERVER_SETTINGS,
   type EngineSelection,
   type EngineWithDefaultModel,
+  migrateRetiredEngineKind,
   ServerSettings,
   ServerSettingsError,
   type ServerSettingsPatch,
@@ -368,6 +369,29 @@ function migrateLegacyBuiltInGroupIntent(
   };
 }
 
+function migrateRetiredEngineSettings(settings: unknown): {
+  readonly settings: unknown;
+  readonly migrated: boolean;
+} {
+  if (!isRecord(settings)) return { settings, migrated: false };
+  let migrated = false;
+  let next: Record<string, unknown> = settings;
+
+  const defaultEngine = migrateRetiredEngineKind(settings.defaultEngine);
+  if (defaultEngine !== settings.defaultEngine) {
+    next = { ...next, defaultEngine };
+    migrated = true;
+  }
+
+  if (isRecord(settings.engines) && Object.hasOwn(settings.engines, "oa")) {
+    const { oa: _retiredOa, ...retainedEngines } = settings.engines;
+    next = { ...next, engines: retainedEngines };
+    migrated = true;
+  }
+
+  return { settings: next, migrated };
+}
+
 function decodeSettingsFromJson(settingsPath: string, raw: string) {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -383,7 +407,8 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
       envelope?.settings ?? parsed,
       migrationVersion,
     );
-    const decoded = Schema.decodeUnknownExit(ServerSettings)(legacyBuiltInGroupIntent.settings);
+    const retiredEngineSettings = migrateRetiredEngineSettings(legacyBuiltInGroupIntent.settings);
+    const decoded = Schema.decodeUnknownExit(ServerSettings)(retiredEngineSettings.settings);
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };
     }
@@ -396,7 +421,8 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
           : 0,
       migrationVersion,
       legacyFormat: envelope === null,
-      builtInGroupIntentMigrated: legacyBuiltInGroupIntent.migrated,
+      builtInGroupIntentMigrated:
+        legacyBuiltInGroupIntent.migrated || retiredEngineSettings.migrated,
     };
   } catch (cause) {
     const error = new ServerSettingsError({

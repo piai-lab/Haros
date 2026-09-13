@@ -195,6 +195,45 @@ describe("ServerSettingsService", () => {
     expect(result.persisted.settings.engines).not.toHaveProperty("oa");
   });
 
+  it("migrates a retired OA default engine onto Pi and drops the OA engine block", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 2,
+            migrationVersion: 4,
+            settings: {
+              defaultEngine: "oa",
+              engines: {
+                oa: { enabled: true },
+                pi: { enabled: true, binaryPath: "pi", customModels: [], agentDir: "" },
+              },
+            },
+          }),
+        );
+        yield* service.start;
+        const settings = yield* service.getSettings;
+        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          settings: {
+            defaultEngine: string;
+            engines: Record<string, unknown>;
+          };
+        };
+        return { settings, persisted };
+      }),
+    );
+
+    expect(result.settings.defaultEngine).toBe("pi");
+    expect(result.settings.engines).not.toHaveProperty("oa");
+    expect(result.persisted.settings.defaultEngine).toBe("pi");
+    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
+  });
+
   it.each([
     {
       name: "an explicit legacy Device-on choice",

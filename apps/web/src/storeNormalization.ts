@@ -9,11 +9,11 @@ import {
   type OrchestrationSessionStatus,
   type OrchestrationShellSnapshot,
   type OrchestrationThreadActivity,
-  EngineKind,
+  type EngineKind,
+  decodePersistedEngineKind,
   ThreadId,
   type TurnId,
 } from "@harnessos/contracts";
-import { Schema } from "effect";
 import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
 import { normalizeModelSlug } from "@harnessos/shared/model";
 import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
@@ -1963,10 +1963,7 @@ function toLegacySessionStatus(
 }
 
 function toLegacyEngine(engine: string | null): EngineKind {
-  if (Schema.is(EngineKind)(engine)) {
-    return engine;
-  }
-  return "codex";
+  return decodePersistedEngineKind(engine) ?? "codex";
 }
 
 function attachmentPreviewRoutePath(attachmentId: string): string {

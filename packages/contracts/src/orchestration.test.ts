@@ -225,6 +225,29 @@ it.effect("preserves Pi model selections when decoding model selections", () =>
   }),
 );
 
+it.effect("migrates retired OA model selections onto Pi without rewriting Pi as OA", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeEngineSelection({
+      engine: "oa",
+      model: "openai/gpt-5.6-terra",
+      options: { thinkingLevel: "xhigh" },
+    });
+
+    assert.deepStrictEqual(parsed, {
+      engine: "pi",
+      model: "openai/gpt-5.6-terra",
+      options: { thinkingLevel: "xhigh" },
+    });
+
+    const encoded = yield* Schema.encodeUnknownEffect(EngineSelection)(parsed);
+    assert.deepStrictEqual(encoded, {
+      engine: "pi",
+      model: "openai/gpt-5.6-terra",
+      options: { thinkingLevel: "xhigh" },
+    });
+  }),
+);
+
 it.effect("preserves Antigravity effort options separately from the model", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeEngineSelection({

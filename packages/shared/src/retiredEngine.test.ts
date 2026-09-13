@@ -1,6 +1,7 @@
 import {
   DEFAULT_ENGINE_KIND,
   DEFAULT_SERVER_SETTINGS,
+  decodePersistedEngineKind,
 } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import {
@@ -39,6 +40,9 @@ describe("engine identity", () => {
     expect(firstRunnableEngine()).toBeNull();
     expect(isRunnableEngine("codex")).toBe(true);
     expect(isRunnableEngine("deepseek")).toBe(true);
+    expect(decodePersistedEngineKind("oa")).toBe("pi");
+    expect(decodePersistedEngineKind("pi")).toBe("pi");
+    expect(decodePersistedEngineKind("unknown")).toBeNull();
   });
   it("marks Haros provider-model engines as global-only catalog owners", () => {
     expect(engineHasGlobalOnlyModelCatalog("pi")).toBe(true);

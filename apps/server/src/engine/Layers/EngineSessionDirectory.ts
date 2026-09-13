@@ -1,5 +1,5 @@
-import { EngineKind, type ThreadId } from "@harnessos/contracts";
-import { Effect, Layer, Option, Schema } from "effect";
+import { decodePersistedEngineKind, type EngineKind, type ThreadId } from "@harnessos/contracts";
+import { Effect, Layer, Option } from "effect";
 
 import { EngineSessionRuntimeRepository } from "../../persistence/Services/EngineSessionRuntime.ts";
 import { EngineSessionDirectoryPersistenceError, EngineValidationError } from "../Errors.ts";
@@ -22,8 +22,9 @@ function decodeEngineKind(
   engine: string,
   operation: string,
 ): Effect.Effect<EngineKind, EngineSessionDirectoryPersistenceError> {
-  if (Schema.is(EngineKind)(engine)) {
-    return Effect.succeed(engine);
+  const migrated = decodePersistedEngineKind(engine);
+  if (migrated !== null) {
+    return Effect.succeed(migrated);
   }
   return Effect.fail(
     new EngineSessionDirectoryPersistenceError({

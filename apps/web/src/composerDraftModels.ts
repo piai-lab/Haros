@@ -6,7 +6,8 @@ import {
   DEEPSEEK_REASONING_EFFORT_OPTIONS,
   GROK_REASONING_EFFORT_OPTIONS,
   ENGINE_KINDS,
-  EngineKind,
+  type EngineKind,
+  decodePersistedEngineKind,
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
   type CursorModelOptions,
@@ -35,8 +36,6 @@ import {
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import type { EngineOptions } from "./engineModelOptions";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
-
-const isEngineKind = Schema.is(EngineKind);
 
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);
 const DEEPSEEK_REASONING_EFFORT_SET = new Set<string>(DEEPSEEK_REASONING_EFFORT_OPTIONS);
@@ -108,7 +107,7 @@ export function normalizeEngineKind(value: unknown): EngineKind | null {
   if (value === "gemini") {
     return "antigravity";
   }
-  return isEngineKind(value) ? value : null;
+  return decodePersistedEngineKind(value);
 }
 
 export function normalizeRunnableEngineKind(value: unknown): EngineKind | null {
