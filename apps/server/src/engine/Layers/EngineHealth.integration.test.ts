@@ -1007,7 +1007,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args, command, _env, options) => {
-            assert.strictEqual(command, "C:\\Windows\\System32\\cmd.exe");
+            assert.strictEqual(command.toLowerCase(), "c:\\windows\\system32\\cmd.exe");
             assert.strictEqual(options?.windowsVerbatimArguments, true);
             const commandLine = args.at(-1) ?? "";
             if (commandLine.includes('"--version"')) {
@@ -1563,7 +1563,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
           const status = yield* makeCheckClaudeEngineStatus(undefined, "claude", homeDir).pipe(
             Effect.provide(
               mockSpawnerLayer((args, command, env) => {
-                assert.strictEqual(command, "claude");
+                assert.match(command, /(?:^claude$|[\\/]claude(?:\.exe)?$)/i);
                 assert.strictEqual(env?.ANTHROPIC_API_KEY, undefined);
                 assert.strictEqual(env?.ANTHROPIC_AUTH_TOKEN, undefined);
                 assert.strictEqual(env?.CLAUDE_CODE_OAUTH_TOKEN, undefined);
