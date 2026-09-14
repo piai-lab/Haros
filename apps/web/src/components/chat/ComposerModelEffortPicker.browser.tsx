@@ -377,7 +377,7 @@ describe("ComposerModelEffortPicker", () => {
         )
         .toBeVisible();
       await expect
-        .element(page.getByRole("menuitem", { name: "Open engine settings" }))
+        .element(page.getByRole("menuitem", { name: "Open Model services" }))
         .toBeVisible();
       await expect
         .element(page.getByRole("menuitem", { name: "Refresh models" }))

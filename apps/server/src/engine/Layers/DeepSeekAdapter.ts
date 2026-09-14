@@ -15,12 +15,17 @@ import {
   TurnId,
 } from "@harnessos/contracts";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
-import { Effect, Layer, Queue, Stream } from "effect";
+import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
+import {
+  loadHarosModelServiceChildEnv,
+  resolveHarosModelServicesAgentDir,
+} from "../modelServiceChildEnv.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import {
   compactEngineRuntimeEventForIngress,
@@ -105,6 +110,7 @@ export interface DeepSeekAdapterLiveOptions {
     readonly env: NodeJS.ProcessEnv;
   }) => ChildProcessWithoutNullStreams;
   readonly teardownProcess?: (child: ChildProcessWithoutNullStreams) => Promise<void>;
+  readonly resolveModelServiceEnv?: (processEnv: NodeJS.ProcessEnv) => Promise<NodeJS.ProcessEnv>;
 }
 
 function trim(value: string | undefined | null): string | undefined {
@@ -204,7 +210,27 @@ export function hasDeepSeekApiKeyEnv(env: NodeJS.ProcessEnv = process.env): bool
 const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
+    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
     const spawnProcess = options.spawnProcess ?? spawnDeepSeekSdk;
+    const resolveModelServiceEnv =
+      options.resolveModelServiceEnv ??
+      (async (processEnv: NodeJS.ProcessEnv) => {
+        if (!serverSettings) return {};
+        try {
+          const settings = await Effect.runPromise(serverSettings.getSettings);
+          const agentDir = await resolveHarosModelServicesAgentDir({
+            requestedAgentDir: settings.engines.pi.agentDir,
+            serverBaseDir: serverConfig.baseDir,
+          });
+          return await loadHarosModelServiceChildEnv({
+            engine: ENGINE,
+            agentDir,
+            processEnv,
+          });
+        } catch {
+          return {};
+        }
+      });
     const teardownProcess =
       options.teardownProcess ?? ((child: ChildProcessWithoutNullStreams) => teardownChildProcessTree(child));
     const eventQueue = yield* Queue.bounded<EngineRuntimeEvent>(
@@ -548,9 +574,13 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         const model = engineSelection?.model ?? resume?.model ?? DEFAULT_MODEL;
         const provider = resume?.provider ?? DEFAULT_PROVIDER;
         const reasoningEffort = trim(engineSelection?.options?.reasoningEffort);
+        const modelServiceEnv = yield* Effect.promise(() => resolveModelServiceEnv(process.env));
         const env = buildEngineChildEnvironment({
           engine: ENGINE,
-          ...(homePath ? { overrides: { DSH_HOME: homePath } } : {}),
+          overrides: {
+            ...modelServiceEnv,
+            ...(homePath ? { DSH_HOME: homePath } : {}),
+          },
         });
         const child = yield* Effect.try({
           try: () =>

@@ -61,6 +61,11 @@ import {
 import { hasDroidApiKeyEnv, resolveDroidCliBinaryPath } from "../acp/DroidAcpSupport";
 import { hasGrokApiKeyEnv } from "../acp/GrokAcpSupport";
 import { hasDeepSeekApiKeyEnv } from "./DeepSeekAdapter";
+import {
+  hasStoredDeepSeekModelServiceKey,
+  loadHarosModelServiceSnapshot,
+  resolveHarosModelServicesAgentDir,
+} from "../modelServiceChildEnv.ts";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import {
   claudeAuthMetadata,
@@ -1337,6 +1342,7 @@ export const checkGrokEngineStatus = makeCheckGrokEngineStatus();
 
 export const makeCheckDeepSeekEngineStatus = (
   binaryPath?: string,
+  options: { readonly storedKeyAvailable?: boolean } = {},
 ): Effect.Effect<ServerEngineStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
@@ -1392,7 +1398,7 @@ export const makeCheckDeepSeekEngineStatus = (
     }
     const version = versionProbe.result;
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
-    const hasApiKey = hasDeepSeekApiKeyEnv();
+    const hasApiKey = hasDeepSeekApiKeyEnv() || options.storedKeyAvailable === true;
 
     return {
       engine: DEEPSEEK_ENGINE,
@@ -1405,7 +1411,7 @@ export const makeCheckDeepSeekEngineStatus = (
         ? { authType: "apiKey", authLabel: "DeepSeek API Key" }
         : {
             message:
-              "DeepSeek Harness is installed. Set DEEPSEEK_API_KEY before starting a session.",
+              "DeepSeek Harness is installed. Add a DeepSeek key in Model services, or set DEEPSEEK_API_KEY.",
           }),
     } satisfies ServerEngineStatus;
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "dsh"));
@@ -2545,7 +2551,24 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
                 checkProviderWhenEnabled(
                   settings,
                   DEEPSEEK_ENGINE,
-                  makeCheckDeepSeekEngineStatus(settings.engines.deepseek.binaryPath),
+                  Effect.gen(function* () {
+                    const storedKeyAvailable = yield* Effect.promise(async () => {
+                      try {
+                        const agentDir = await resolveHarosModelServicesAgentDir({
+                          requestedAgentDir: settings.engines.pi.agentDir,
+                          serverBaseDir: serverConfig.baseDir,
+                        });
+                        const snapshot = await loadHarosModelServiceSnapshot({ agentDir });
+                        return hasStoredDeepSeekModelServiceKey(snapshot);
+                      } catch {
+                        return false;
+                      }
+                    });
+                    return yield* makeCheckDeepSeekEngineStatus(
+                      settings.engines.deepseek.binaryPath,
+                      { storedKeyAvailable },
+                    );
+                  }),
                 ),
               ],
               {

@@ -38,7 +38,13 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import { NetService, type NetServiceShape } from "@harnessos/shared/Net";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
+import { ServerConfig } from "../config.ts";
+import { ServerSettingsService } from "../serverSettings.ts";
 import { buildEngineChildEnvironment } from "./engineChildEnvironment.ts";
+import {
+  loadHarosModelServiceChildEnv,
+  resolveHarosModelServicesAgentDir,
+} from "./modelServiceChildEnv.ts";
 import {
   readOpenCodeAuthFileUtf8,
   resolveOpenCodeCompatibleAuthPaths,
@@ -818,12 +824,16 @@ export function buildOpenCodeServerProcessEnv(input: {
   readonly cliSpec?: OpenCodeCompatibleCliSpec;
   readonly experimentalWebSockets?: boolean;
   readonly baseEnv?: NodeJS.ProcessEnv;
+  readonly modelServiceEnv?: NodeJS.ProcessEnv;
 }): NodeJS.ProcessEnv {
   return buildEngineChildEnvironment({
     engine:
       input.cliSpec?.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName ? "kilo" : "opencode",
     baseEnv: input.baseEnv ?? process.env,
-    overrides: input.experimentalWebSockets ? { OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true" } : {},
+    overrides: {
+      ...(input.modelServiceEnv ?? {}),
+      ...(input.experimentalWebSockets ? { OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true" } : {}),
+    },
   });
 }
 
@@ -887,6 +897,26 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const netService = yield* NetService;
+    const serverConfig = Option.getOrUndefined(yield* Effect.serviceOption(ServerConfig));
+    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
+    const loadModelServiceEnv = (engine: "opencode" | "kilo", processEnv: NodeJS.ProcessEnv) =>
+      Effect.promise(async () => {
+        if (!serverConfig || !serverSettings) return {};
+        try {
+          const settings = await Effect.runPromise(serverSettings.getSettings);
+          const agentDir = await resolveHarosModelServicesAgentDir({
+            requestedAgentDir: settings.engines.pi.agentDir,
+            serverBaseDir: serverConfig.baseDir,
+          });
+          return await loadHarosModelServiceChildEnv({
+            engine,
+            agentDir,
+            processEnv,
+          });
+        } catch {
+          return {};
+        }
+      });
     const pooledServerScope = yield* Effect.acquireRelease(Scope.make(), (scope) =>
       Scope.close(scope, Exit.void),
     );
@@ -895,8 +925,12 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
 
     const runOpenCodeCommand: OpenCodeRuntimeShape["runOpenCodeCommand"] = (input) =>
       Effect.gen(function* () {
+        const engine =
+          input.cliSpec?.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName ? "kilo" : "opencode";
+        const modelServiceEnv = yield* loadModelServiceEnv(engine, process.env);
         const childEnv = buildOpenCodeServerProcessEnv({
           ...(input.cliSpec ? { cliSpec: input.cliSpec } : {}),
+          modelServiceEnv,
         });
         const prepared = prepareWindowsSafeProcess(input.binaryPath, input.args, {
           cwd: input.cwd,
@@ -963,8 +997,12 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
           ));
         const timeoutMs = input.timeoutMs ?? DEFAULT_OPENCODE_SERVER_TIMEOUT_MS;
         const args = ["serve", "--hostname", hostname, "--port", String(port)];
+        const engine =
+          cliSpec.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName ? "kilo" : "opencode";
+        const modelServiceEnv = yield* loadModelServiceEnv(engine, process.env);
         const childEnv = buildOpenCodeServerProcessEnv({
           cliSpec,
+          modelServiceEnv,
           ...(input.experimentalWebSockets !== undefined
             ? { experimentalWebSockets: input.experimentalWebSockets }
             : {}),

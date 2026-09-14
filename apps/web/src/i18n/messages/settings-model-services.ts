@@ -29,7 +29,7 @@ const EN_MESSAGES = {
   "settings.modelServicesAvailable": "Currently available",
   "settings.modelServiceCount": "{count} services",
   "settings.modelsDescription":
-    "Configure model services, credentials, and available models for the Pi Engine. Other Engines use their own native configuration.",
+    "Configure model services, credentials, and catalogs used by API engines (Pi, DeepSeek, OpenCode, Kilo). Sign in, save an API key, or connect a custom endpoint. Codex and Claude keep their native sign-in.",
   "settings.configuredModelServices": "Added services",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
@@ -489,7 +489,7 @@ const ZH_CN_MESSAGES = {
   "settings.modelServicesAvailable": "当前提供",
   "settings.modelServiceCount": "{count} 个服务",
   "settings.modelsDescription":
-    "配置 Pi 引擎使用的模型服务、凭据与可用模型。其他引擎使用各自的原生配置。",
+    "配置 API 引擎（Pi、DeepSeek、OpenCode、Kilo）共用的模型服务、凭据与目录。可登录、填入 Key，或连接自定义中转。Codex 与 Claude 仍使用各自的原生登录。",
   "settings.configuredModelServices": "已添加",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",

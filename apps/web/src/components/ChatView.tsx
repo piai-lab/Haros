@@ -48,7 +48,7 @@ import {
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
 import {
-  engineOwnsProviderModelServices,
+  engineOpensModelServicesSettings,
   mapEngineDescriptors,
 } from "@harnessos/shared/engineMetadata";
 import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
@@ -9905,7 +9905,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: engineOwnsProviderModelServices(selectedEngine) ? "models" : "engines",
+        section: engineOpensModelServicesSettings(selectedEngine) ? "models" : "engines",
       },
     });
   }, [navigate, selectedEngine]);

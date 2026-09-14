@@ -214,6 +214,44 @@ describe("DeepSeekAdapter", () => {
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 
+  it("injects stored DeepSeek model-service credentials into the child env", async () => {
+    const child = new FakeDeepSeekProcess();
+    let spawnedEnv: NodeJS.ProcessEnv | undefined;
+    const layer = makeDeepSeekAdapterLive({
+      spawnProcess: (input) => {
+        spawnedEnv = input.env;
+        return child as never;
+      },
+      teardownProcess: async (process) => {
+        process.kill();
+      },
+      resolveModelServiceEnv: async () => ({
+        DEEPSEEK_API_KEY: "sk-from-model-services",
+        DEEPSEEK_BASE_URL: "https://gateway.example.test/v1",
+      }),
+    }).pipe(
+      Layer.provide(Layer.succeed(ServerConfig, serverConfig)),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.gen(function* () {
+      const adapter = yield* DeepSeekAdapter;
+      yield* adapter.startSession({
+        threadId: ThreadId.makeUnsafe("thread-deepseek-env"),
+        cwd: "/tmp/project",
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/project",
+        },
+        runtimeMode: "full-access",
+        engineSelection: { engine: "deepseek", model: "deepseek-v4-flash" },
+      });
+      expect(spawnedEnv?.DEEPSEEK_API_KEY).toBe("sk-from-model-services");
+      expect(spawnedEnv?.DEEPSEEK_BASE_URL).toBe("https://gateway.example.test/v1");
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
   it("rejects runtime modes other than full-access", async () => {
     const child = new FakeDeepSeekProcess();
     const layer = makeDeepSeekAdapterLive({

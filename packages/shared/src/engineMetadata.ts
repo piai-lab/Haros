@@ -10,6 +10,8 @@ export interface EngineDescriptor {
   readonly globalOnlyModelCatalog?: boolean;
   /** Composer/model slugs are `serviceId/modelId` owned by Haros model services. */
   readonly ownsProviderModelServices?: boolean;
+  /** Spawn/auth may use the Haros model-service store without owning picker slugs. */
+  readonly consumesHarosModelServiceCredentials?: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -77,6 +79,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "kilo",
     displayName: "Kilo",
+    consumesHarosModelServiceCredentials: true,
     usage: {
       signInCommand: "kilo",
       learnMoreHref: "https://kilo.ai",
@@ -85,6 +88,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "opencode",
     displayName: "OpenCode",
+    consumesHarosModelServiceCredentials: true,
     usage: {
       signInCommand: "opencode auth login",
       learnMoreHref: "https://opencode.ai",
@@ -103,7 +107,9 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     displayName: "DeepSeek",
     // SDK has no model-list RPC; the static catalog is global and sendable.
     globalOnlyModelCatalog: true,
-    // No live account-usage API; health infers auth from DEEPSEEK_API_KEY.
+    consumesHarosModelServiceCredentials: true,
+    // No live account-usage API; health infers auth from DEEPSEEK_API_KEY
+    // or a stored DeepSeek model-service key.
     usage: null,
   },
 ] as const satisfies readonly EngineDescriptor[]);
@@ -129,6 +135,17 @@ export function engineHasGlobalOnlyModelCatalog(engine: EngineKind): boolean {
 export function engineOwnsProviderModelServices(engine: EngineKind): boolean {
   const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
   return descriptor.ownsProviderModelServices === true;
+}
+
+export function engineConsumesHarosModelServiceCredentials(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.consumesHarosModelServiceCredentials === true;
+}
+
+export function engineOpensModelServicesSettings(engine: EngineKind): boolean {
+  return (
+    engineOwnsProviderModelServices(engine) || engineConsumesHarosModelServiceCredentials(engine)
+  );
 }
 
 export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS;

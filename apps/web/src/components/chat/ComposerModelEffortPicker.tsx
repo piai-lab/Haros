@@ -9,7 +9,7 @@ import {
   type EngineModelDescriptor,
   type ThreadId,
 } from "@harnessos/contracts";
-import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
+import { engineOpensModelServicesSettings } from "@harnessos/shared/engineMetadata";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";
@@ -253,7 +253,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     }}
                   >
                     <SettingsIcon aria-hidden="true" className="size-3.5" />
-                    {engineOwnsProviderModelServices(props.engine)
+                    {engineOpensModelServicesSettings(props.engine)
                       ? t("composer.openModelServices")
                       : t("composer.openEngineSettings")}
                   </MenuItem>
@@ -358,7 +358,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   }}
                 >
                   <SettingsIcon aria-hidden="true" className="size-3.5" />
-                  {engineOwnsProviderModelServices(props.engine)
+                  {engineOpensModelServicesSettings(props.engine)
                     ? t("composer.openModelServices")
                     : t("composer.openEngineSettings")}
                 </MenuItem>

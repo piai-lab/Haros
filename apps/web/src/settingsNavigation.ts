@@ -166,7 +166,7 @@ export const SETTINGS_NAV_ITEMS = [
         id: "models:model-services",
         titleKey: "settings.models",
         keywords:
-          "model services credentials authentication available models catalog API key OAuth Pi",
+          "model services credentials authentication available models catalog API key OAuth login gateway DeepSeek OpenCode Kilo Pi",
       }),
     ],
   },
