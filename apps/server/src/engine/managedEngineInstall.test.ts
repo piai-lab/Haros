@@ -5,11 +5,57 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installManagedEngine, resolveEngineArchiveExtractCommand } from "./managedEngineInstall";
+import {
+  engineArtifactChecksumMatches,
+  installManagedEngine,
+  npmRegistryPackageUrl,
+  resolveEngineArchiveExtractCommand,
+} from "./managedEngineInstall";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("managed Engine installation helpers", () => {
+  it("encodes scoped npm package names in registry URLs", () => {
+    expect(npmRegistryPackageUrl("@deepseek-ai/dsh")).toBe(
+      "https://registry.npmjs.org/%40deepseek-ai%2Fdsh/latest",
+    );
+    expect(npmRegistryPackageUrl("opencode-ai", "1.2.3")).toBe(
+      "https://registry.npmjs.org/opencode-ai/1.2.3",
+    );
+  });
+
+  it("accepts the matching SRI algorithm instead of assuming sha512", () => {
+    const payload = Buffer.from("unit-test binary payload");
+    const sha256Hex = createHash("sha256").update(payload).digest("hex");
+    const sriDigests = {
+      sha1: createHash("sha1").update(payload).digest("base64"),
+      sha256: createHash("sha256").update(payload).digest("base64"),
+      sha384: createHash("sha384").update(payload).digest("base64"),
+      sha512: createHash("sha512").update(payload).digest("base64"),
+    };
+    expect(
+      engineArtifactChecksumMatches({
+        sha256Hex,
+        sriDigests,
+        integrity: `sha256-${sriDigests.sha256}`,
+      }),
+    ).toBe(true);
+    expect(
+      engineArtifactChecksumMatches({
+        sha256Hex,
+        sriDigests,
+        integrity: `sha512-${sriDigests.sha512}`,
+      }),
+    ).toBe(true);
+    expect(
+      engineArtifactChecksumMatches({
+        sha256Hex,
+        sriDigests,
+        integrity: `sha256-${sriDigests.sha512}`,
+      }),
+    ).toBe(false);
+  });
+
   it("extracts Windows zip archives with System32 tar.exe", () => {
     expect(
       resolveEngineArchiveExtractCommand({

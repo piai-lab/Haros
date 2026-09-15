@@ -35,6 +35,39 @@ function checkedUrl(value: string): string {
   return url.href;
 }
 
+const SRI_ALGORITHM_PATTERN = /^(sha1|sha256|sha384|sha512)-([A-Za-z0-9+/]+=*)$/;
+type SriAlgorithm = "sha1" | "sha256" | "sha384" | "sha512";
+
+export function npmRegistryPackageUrl(name: string, version = "latest"): string {
+  const encodedName = name.includes("/") ? encodeURIComponent(name) : name;
+  return `https://registry.npmjs.org/${encodedName}/${encodeURIComponent(version)}`;
+}
+
+export function parseSubresourceIntegrity(value: string): {
+  readonly algorithm: SriAlgorithm;
+  readonly digest: string;
+} | null {
+  const match = SRI_ALGORITHM_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { algorithm: match[1] as SriAlgorithm, digest: match[2]! };
+}
+
+export function engineArtifactChecksumMatches(input: {
+  readonly sha256Hex: string;
+  readonly sriDigests: Readonly<Record<SriAlgorithm, string>>;
+  readonly sha256?: string;
+  readonly integrity?: string;
+}): boolean {
+  if (input.sha256 && input.sha256Hex !== input.sha256.toLowerCase()) return false;
+  if (!input.integrity) return true;
+  const entries = input.integrity.trim().split(/\s+/).filter(Boolean);
+  if (entries.length === 0) return false;
+  return entries.some((entry) => {
+    const parsed = parseSubresourceIntegrity(entry);
+    return parsed !== null && input.sriDigests[parsed.algorithm] === parsed.digest;
+  });
+}
+
 export function resolveEngineArchiveExtractCommand(input: {
   readonly format: "tar.gz" | "zip";
   readonly archivePath: string;
@@ -101,7 +134,7 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
       version: Schema.String,
       optionalDependencies: Schema.Record(Schema.String, Schema.String),
     });
-    const metadata = yield* readJson(`https://registry.npmjs.org/${installation.npm}/latest`).pipe(
+    const metadata = yield* readJson(npmRegistryPackageUrl(installation.npm)).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Metadata)),
     );
     const platformNames = process.platform === "win32" ? ["win32", "windows"] : [process.platform];
@@ -122,7 +155,7 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
     const Distribution = Schema.Struct({
       dist: Schema.Struct({ tarball: Schema.String, integrity: Schema.String }),
     });
-    const native = yield* readJson(`https://registry.npmjs.org/${name}/${version}`).pipe(
+    const native = yield* readJson(npmRegistryPackageUrl(name, version)).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Distribution)),
     );
     artifact = {
@@ -218,14 +251,18 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Download failed: HTTP ${response.status}`);
+    const sha1 = createHash("sha1");
     const sha256 = createHash("sha256");
+    const sha384 = createHash("sha384");
     const sha512 = createHash("sha512");
     let downloaded = 0;
     let lastProgress = 0;
     const total = Number(response.headers.get("content-length"));
     const hashStream = new Transform({
       transform(chunk: Buffer, _encoding, callback) {
+        sha1.update(chunk);
         sha256.update(chunk);
+        sha384.update(chunk);
         sha512.update(chunk);
         downloaded += chunk.length;
         if (Date.now() - lastProgress < 1000) {
@@ -247,10 +284,18 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
       { signal },
     );
     const digest256 = sha256.digest("hex");
-    const digest512 = `sha512-${sha512.digest("base64")}`;
     if (
-      (artifact.sha256 && digest256 !== artifact.sha256.toLowerCase()) ||
-      (artifact.integrity && digest512 !== artifact.integrity)
+      !engineArtifactChecksumMatches({
+        sha256Hex: digest256,
+        sriDigests: {
+          sha1: sha1.digest("base64"),
+          sha256: Buffer.from(digest256, "hex").toString("base64"),
+          sha384: sha384.digest("base64"),
+          sha512: sha512.digest("base64"),
+        },
+        ...(artifact.sha256 ? { sha256: artifact.sha256 } : {}),
+        ...(artifact.integrity ? { integrity: artifact.integrity } : {}),
+      })
     ) {
       throw new Error("Engine download checksum mismatch. Installation was not activated.");
     }
