@@ -20,10 +20,14 @@ class FakeDeepSeekProcess extends EventEmitter {
   signalCode: NodeJS.Signals | null = null;
   readonly frames: unknown[] = [];
   private readonly settlePrompt: boolean;
+  private readonly initializeError: unknown | undefined;
 
-  constructor(options: { readonly settlePrompt?: boolean } = {}) {
+  constructor(
+    options: { readonly settlePrompt?: boolean; readonly initializeError?: unknown } = {},
+  ) {
     super();
     this.settlePrompt = options.settlePrompt !== false;
+    this.initializeError = options.initializeError;
     this.stdin.on("data", (chunk: Buffer) => {
       for (const line of chunk.toString("utf8").split("\n")) {
         if (!line.trim()) continue;
@@ -34,6 +38,10 @@ class FakeDeepSeekProcess extends EventEmitter {
         };
         this.frames.push(parsed);
         if (parsed.method === "initialize") {
+          if (this.initializeError !== undefined) {
+            this.respondError(parsed.id, this.initializeError);
+            continue;
+          }
           this.respond(parsed.id, {
             serverInfo: { name: "deepseek-harness-sdk-runtime", version: "0.0.1" },
           });
@@ -58,6 +66,11 @@ class FakeDeepSeekProcess extends EventEmitter {
   respond(id: number | undefined, result: unknown): void {
     if (id === undefined) return;
     this.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
+  }
+
+  respondError(id: number | undefined, error: unknown): void {
+    if (id === undefined) return;
+    this.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, error })}\n`);
   }
 
   notify(method: string, params: unknown): void {
@@ -290,6 +303,40 @@ describe("DeepSeekAdapter", () => {
         expect.arrayContaining(["session.started", "session.exited"]),
       );
       expect(yield* adapter.hasSession(session.threadId)).toBe(false);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
+  it("rejects JSON-RPC errors that only include a numeric code", async () => {
+    const child = new FakeDeepSeekProcess({ initializeError: { code: -32603 } });
+    const layer = makeDeepSeekAdapterLive({
+      spawnProcess: () => child as never,
+      teardownProcess: async (process) => {
+        process.kill();
+      },
+    }).pipe(
+      Layer.provide(Layer.succeed(ServerConfig, serverConfig)),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.gen(function* () {
+      const adapter = yield* DeepSeekAdapter;
+      const result = yield* adapter
+        .startSession({
+          threadId: ThreadId.makeUnsafe("thread-deepseek-rpc-error"),
+          cwd: "/tmp/project",
+          admission: {
+            productSurface: "agent",
+            workSurface: "agent",
+            projectContextRoot: "/tmp/project",
+          },
+          runtimeMode: "full-access",
+          engineSelection: { engine: "deepseek", model: "deepseek-v4-flash" },
+        })
+        .pipe(Effect.result);
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(String(result.failure)).toMatch(/JSON-RPC error -32603/);
+      }
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 

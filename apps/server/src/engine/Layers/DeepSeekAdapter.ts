@@ -126,6 +126,17 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 }
 
+function jsonRpcFailureMessage(method: string, error: unknown): string {
+  if (isRecord(error)) {
+    const code = error.code;
+    const message = asString(error.message);
+    if (message && code !== undefined) return `${method} failed: ${message} (${String(code)})`;
+    if (message) return `${method} failed: ${message}`;
+    if (code !== undefined) return `${method} failed: JSON-RPC error ${String(code)}`;
+  }
+  return `${method} failed: JSON-RPC error`;
+}
+
 function parseResumeCursor(raw: unknown): DeepSeekResumeCursor | undefined {
   if (!isRecord(raw) || raw.schemaVersion !== DEEPSEEK_RESUME_VERSION) return undefined;
   const sessionId = asString(raw.sessionId);
@@ -448,8 +459,8 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         if (!pending) return;
         clearTimeout(pending.timeout);
         context.pending.delete(String(id));
-        if (isRecord(parsed.error) && parsed.error.message) {
-          pending.reject(new Error(`${pending.method} failed: ${String(parsed.error.message)}`));
+        if (Object.hasOwn(parsed, "error") && parsed.error != null) {
+          pending.reject(new Error(jsonRpcFailureMessage(pending.method, parsed.error)));
           return;
         }
         pending.resolve(parsed.result);
