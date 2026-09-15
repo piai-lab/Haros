@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -31,18 +31,9 @@ function engineStatus(
   };
 }
 
-const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = [
-  "oa",
-  "codex",
-  "claude",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-].map((engine) => engineStatus(engine as EngineKind));
+const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = ENGINE_KINDS.map((engine) =>
+  engineStatus(engine),
+);
 
 async function mountPicker(input: {
   engine?: EngineKind;
