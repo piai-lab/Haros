@@ -270,6 +270,12 @@ function writeWithDrain(writable: Writable, frame: Buffer, signal: AbortSignal):
     };
     const fail = (cause: unknown) => {
       if (settled) return;
+      // Node may emit the stream-level EPIPE after the write callback has
+      // already failed. Keep a one-shot sink attached so that late transport
+      // noise cannot become an uncaught process exception.
+      if ((cause as NodeJS.ErrnoException | null)?.code === "EPIPE") {
+        writable.once("error", () => undefined);
+      }
       settled = true;
       cleanup();
       reject(cause instanceof Error ? cause : new Error(String(cause)));

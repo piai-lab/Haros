@@ -79,4 +79,23 @@ describe("DeepSeek SDK transport", () => {
     expect(writer.bufferedBytes).toBe(0);
     expect(stream.chunks.map((chunk) => JSON.parse(chunk.toString("utf8")))).toEqual(messages);
   });
+
+  it("swallows a late stdin EPIPE after the write callback already failed", async () => {
+    class EpipeWritable extends EventEmitter {
+      writable = true;
+
+      write(_chunk: Uint8Array, callback: (error?: Error | null) => void): boolean {
+        const error = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+        queueMicrotask(() => callback(error));
+        return true;
+      }
+    }
+
+    const stream = new EpipeWritable();
+    const writer = new DeepSeekJsonlWriter(stream as unknown as Writable, 64, 120);
+    await expect(writer.write({ id: 1 })).rejects.toMatchObject({ code: "EPIPE" });
+    expect(() =>
+      stream.emit("error", Object.assign(new Error("late EPIPE"), { code: "EPIPE" })),
+    ).not.toThrow();
+  });
 });
