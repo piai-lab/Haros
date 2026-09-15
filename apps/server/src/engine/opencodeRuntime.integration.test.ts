@@ -4,14 +4,20 @@
 // Exports: Vitest suites for opencodeRuntime.ts
 
 import os from "node:os";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { Duration, Effect, Exit, Fiber, Layer, Scope, Sink, Stream } from "effect";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { Duration, Effect, Exit, Fiber, Layer, Result, Scope, Sink, Stream } from "effect";
 import { type ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
 import type { ChatAttachment } from "@harnessos/contracts";
 import { resolveWindowsComSpec } from "@harnessos/shared/windowsProcess";
 import { describe, expect, it, vi } from "vitest";
+
+import { ServerConfig } from "../config.ts";
+import { ServerSettingsService } from "../serverSettings.ts";
 
 import {
   buildOpenCodePermissionRules,
@@ -236,6 +242,62 @@ describe("buildOpenCodeServerProcessEnv", () => {
 });
 
 describe("OpenCodeRuntime startup diagnostics", () => {
+  it("surfaces model-service isolation errors instead of spawning without credentials", async () => {
+    const root = await mkdtemp(join(os.tmpdir(), "haros-opencode-isolation-"));
+    const spawnedCommands: Array<ChildProcess.StandardCommand> = [];
+    try {
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const runtime = yield* OpenCodeRuntime;
+            return yield* runtime
+              .runOpenCodeCommand({
+                binaryPath: "opencode",
+                args: ["--version"],
+              })
+              .pipe(Effect.result);
+          }),
+        ).pipe(
+          Effect.provide(
+            makeOpenCodeRuntimeLive({
+              teardownProcessTree: async () => ({
+                escalated: false,
+                signalErrors: [],
+              }),
+            }).pipe(
+              Layer.provide(
+                mockOpenCodeServerSpawnerLayer({
+                  stdout: "opencode 1.0.0\n",
+                  stderr: "",
+                  spawnedCommands,
+                }),
+              ),
+              Layer.provide(
+                ServerSettingsService.layerTest({
+                  engines: { pi: { agentDir: join(root, "agent") } },
+                }),
+              ),
+              Layer.provide(
+                ServerConfig.layerTest(process.cwd(), root).pipe(Layer.provide(NodeServices.layer)),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(OpenCodeRuntimeError.is(result.failure)).toBe(true);
+        if (OpenCodeRuntimeError.is(result.failure)) {
+          expect(result.failure.detail).toMatch(/retired OA Engine state/);
+        }
+      }
+      expect(spawnedCommands).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("wraps Windows .cmd server shims before spawning", async () => {
     const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
     const spawnedCommands: Array<ChildProcess.StandardCommand> = [];

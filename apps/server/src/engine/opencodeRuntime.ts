@@ -901,23 +901,40 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
     const serverSettings = Option.getOrUndefined(
       yield* Effect.serviceOption(ServerSettingsService),
     );
-    const loadModelServiceEnv = (engine: "opencode" | "kilo", processEnv: NodeJS.ProcessEnv) =>
-      Effect.promise(async () => {
+    const loadModelServiceEnv = (
+      engine: "opencode" | "kilo",
+      processEnv: NodeJS.ProcessEnv,
+    ): Effect.Effect<NodeJS.ProcessEnv, OpenCodeRuntimeError> =>
+      Effect.gen(function* () {
         if (!serverConfig || !serverSettings) return {};
-        try {
-          const settings = await Effect.runPromise(serverSettings.getSettings);
-          const agentDir = await resolveHarosModelServicesAgentDir({
-            requestedAgentDir: settings.engines.pi.agentDir,
-            serverBaseDir: serverConfig.baseDir,
-          });
-          return await loadHarosModelServiceChildEnv({
-            engine,
-            agentDir,
-            processEnv,
-          });
-        } catch {
-          return {};
-        }
+        const settings = yield* serverSettings.getSettings.pipe(
+          Effect.mapError((cause) =>
+            ensureRuntimeError(
+              "loadModelServiceEnv",
+              `Failed to load settings for model-service credentials: ${openCodeRuntimeErrorDetail(cause)}`,
+              cause,
+            ),
+          ),
+        );
+        return yield* Effect.tryPromise({
+          try: async () => {
+            const agentDir = await resolveHarosModelServicesAgentDir({
+              requestedAgentDir: settings.engines.pi.agentDir,
+              serverBaseDir: serverConfig.baseDir,
+            });
+            return await loadHarosModelServiceChildEnv({
+              engine,
+              agentDir,
+              processEnv,
+            });
+          },
+          catch: (cause) =>
+            ensureRuntimeError(
+              "loadModelServiceEnv",
+              cause instanceof Error ? cause.message : "Failed to load model-service credentials.",
+              cause,
+            ),
+        });
       });
     const pooledServerScope = yield* Effect.acquireRelease(Scope.make(), (scope) =>
       Scope.close(scope, Exit.void),
