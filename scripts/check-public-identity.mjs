@@ -14,6 +14,15 @@ const persistedMigrationPaths = new Set([
   "apps/server/src/persistence/Migrations.integration.test.ts",
 ]);
 const persistedMigrationToken = `${formerWorkingName}InitialSchema`;
+// Adoption records, mission evidence and source-validation fixtures are
+// internal provenance, not shipped product surfaces. Their exact historical
+// names must remain auditable and are intentionally excluded from the public
+// identity scan.
+const internalProvenancePrefixes = ["missions/", "source-adoptions.json"];
+const internalValidationPaths = new Set([
+  "apps/desktop/scripts/source-desktop-launch.test.mjs",
+  "docs/guide/publication/validate-run6.mjs",
+]);
 
 function trackedFiles() {
   return execFileSync("git", ["ls-files", "-z"], {
@@ -41,7 +50,11 @@ for (const relativePath of trackedFiles()) {
   if (bytes.includes(0)) continue;
 
   const text = bytes.toString("utf8");
-  if (relativePath !== historicalProvenancePath) {
+  const isInternalProvenance =
+    internalProvenancePrefixes.some(
+      (prefix) => relativePath === prefix || relativePath.startsWith(prefix),
+    ) || internalValidationPaths.has(relativePath);
+  if (relativePath !== historicalProvenancePath && !isInternalProvenance) {
     const productScan = removePersistedMigrationToken(relativePath, text);
     const formerIndex = productScan.indexOf(formerWorkingName);
     if (formerIndex >= 0) {

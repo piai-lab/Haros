@@ -1,3 +1,5 @@
+# Haros
+
 <div align="center">
   <p>
     <a href="docs/guide/README.md"><strong>Guidebook</strong></a> ·
