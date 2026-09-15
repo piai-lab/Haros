@@ -14,10 +14,6 @@ const persistedMigrationPaths = new Set([
   "apps/server/src/persistence/Migrations.integration.test.ts",
 ]);
 const persistedMigrationToken = `${formerWorkingName}InitialSchema`;
-// Adoption records, mission evidence and source-validation fixtures are
-// internal provenance, not shipped product surfaces. Their exact historical
-// names must remain auditable and are intentionally excluded from the public
-// identity scan.
 const internalProvenancePrefixes = ["missions/", "source-adoptions.json"];
 const internalValidationPaths = new Set([
   "apps/desktop/scripts/source-desktop-launch.test.mjs",
