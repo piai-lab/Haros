@@ -418,8 +418,7 @@ function countCustomServiceReferences(serviceId: string): number {
   const appState = useStore.getState();
   const draftReferences = Object.values(composerState.draftsByThreadId).reduce(
     (count, draft) =>
-      count +
-      countEngineScopedCustomServiceReferences(draft.engineSelectionByEngine, serviceId),
+      count + countEngineScopedCustomServiceReferences(draft.engineSelectionByEngine, serviceId),
     0,
   );
   const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(

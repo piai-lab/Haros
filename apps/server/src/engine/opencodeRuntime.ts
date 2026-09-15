@@ -898,7 +898,9 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const netService = yield* NetService;
     const serverConfig = Option.getOrUndefined(yield* Effect.serviceOption(ServerConfig));
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
+    const serverSettings = Option.getOrUndefined(
+      yield* Effect.serviceOption(ServerSettingsService),
+    );
     const loadModelServiceEnv = (engine: "opencode" | "kilo", processEnv: NodeJS.ProcessEnv) =>
       Effect.promise(async () => {
         if (!serverConfig || !serverSettings) return {};
@@ -926,7 +928,9 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
     const runOpenCodeCommand: OpenCodeRuntimeShape["runOpenCodeCommand"] = (input) =>
       Effect.gen(function* () {
         const engine =
-          input.cliSpec?.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName ? "kilo" : "opencode";
+          input.cliSpec?.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName
+            ? "kilo"
+            : "opencode";
         const modelServiceEnv = yield* loadModelServiceEnv(engine, process.env);
         const childEnv = buildOpenCodeServerProcessEnv({
           ...(input.cliSpec ? { cliSpec: input.cliSpec } : {}),

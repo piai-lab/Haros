@@ -292,11 +292,7 @@ export function useEngineModelCatalog(input: {
 
   const modelOptionsByEngine = useMemo(() => {
     const staticOptions = mapEngineDescriptors(({ kind }) =>
-      getAppModelOptions(
-        kind,
-        customModelsByEngine[kind],
-        modelHintByEngine?.[kind],
-      ),
+      getAppModelOptions(kind, customModelsByEngine[kind], modelHintByEngine?.[kind]),
     );
     const result: Record<EngineKind, ReadonlyArray<EngineModelOption & { isCustom?: boolean }>> = {
       ...staticOptions,

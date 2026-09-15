@@ -1,4 +1,9 @@
-import { decodePersistedEngineKind, type EngineKind, type ThreadId } from "@harnessos/contracts";
+import {
+  decodePersistedEngineKind,
+  isRetiredEngineKind,
+  type EngineKind,
+  type ThreadId,
+} from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { EngineSessionRuntimeRepository } from "../../persistence/Services/EngineSessionRuntime.ts";
@@ -22,6 +27,14 @@ function decodeEngineKind(
   engine: string,
   operation: string,
 ): Effect.Effect<EngineKind, EngineSessionDirectoryPersistenceError> {
+  if (isRetiredEngineKind(engine)) {
+    return Effect.fail(
+      new EngineSessionDirectoryPersistenceError({
+        operation,
+        detail: `Persisted engine '${engine}' is retired and cannot be resumed.`,
+      }),
+    );
+  }
   const migrated = decodePersistedEngineKind(engine);
   if (migrated !== null) {
     return Effect.succeed(migrated);
@@ -97,12 +110,18 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
 
     const now = new Date().toISOString();
     const existingEngine =
-      existingRuntime === undefined ? undefined : decodePersistedEngineKind(existingRuntime.engine);
-    const engineChanged = existingRuntime !== undefined && existingEngine !== binding.engine;
+      existingRuntime === undefined || isRetiredEngineKind(existingRuntime.engine)
+        ? undefined
+        : decodePersistedEngineKind(existingRuntime.engine);
+    const engineChanged =
+      existingRuntime !== undefined &&
+      (isRetiredEngineKind(existingRuntime.engine) || existingEngine !== binding.engine);
     const compatibleRuntime = engineChanged ? undefined : existingRuntime;
     const existingAdapterKey = existingRuntime?.adapterKey;
     const migratedAdapterKey = existingAdapterKey
-      ? (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
+      ? isRetiredEngineKind(existingAdapterKey)
+        ? undefined
+        : (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
       : undefined;
     yield* repository
       .upsert({

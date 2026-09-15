@@ -16,7 +16,10 @@ const OFFICIAL_DEEPSEEK_ORIGIN = "https://api.deepseek.com";
 const OFFICIAL_OPENAI_ORIGIN = "https://api.openai.com";
 
 const SERVICE_ENV_BY_ID: Readonly<
-  Record<string, { readonly key: string; readonly baseUrl?: string; readonly officialOrigin?: string }>
+  Record<
+    string,
+    { readonly key: string; readonly baseUrl?: string; readonly officialOrigin?: string }
+  >
 > = {
   deepseek: {
     key: "DEEPSEEK_API_KEY",
@@ -89,7 +92,9 @@ export function parseStoredModelServiceApiKeys(authJson: unknown): ReadonlyMap<s
   return keys;
 }
 
-export function parseModelServiceProviderHints(modelsJson: unknown): ReadonlyArray<HarosModelServiceProviderHint> {
+export function parseModelServiceProviderHints(
+  modelsJson: unknown,
+): ReadonlyArray<HarosModelServiceProviderHint> {
   if (!isRecord(modelsJson) || !isRecord(modelsJson.providers)) return [];
   const hints: HarosModelServiceProviderHint[] = [];
   for (const [serviceId, raw] of Object.entries(modelsJson.providers)) {

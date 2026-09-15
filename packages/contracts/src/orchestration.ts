@@ -23,6 +23,7 @@ export {
   EngineKind,
   decodePersistedEngineKind,
   migrateRetiredEngineKind,
+  isRetiredEngineKind,
   RETIRED_ENGINE_KIND_ALIASES,
 } from "./engineIdentity";
 import { ProjectKind } from "./project";
@@ -225,13 +226,14 @@ const RetiredOaEngineSelection = RetiredOaEngineSelectionEncoded.pipe(
   }),
 );
 
-export const EngineSelection = Schema.Union(
-  [...engineSelectionMembers, RetiredOaEngineSelection] as unknown as readonly [
-    Schema.Top,
-    Schema.Top,
-    ...Schema.Top[],
-  ],
-) as unknown as Schema.Codec<EngineSelection>;
+export const EngineSelection = Schema.Union([
+  ...engineSelectionMembers,
+  RetiredOaEngineSelection,
+] as unknown as readonly [
+  Schema.Top,
+  Schema.Top,
+  ...Schema.Top[],
+]) as unknown as Schema.Codec<EngineSelection>;
 
 export const CodexEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),

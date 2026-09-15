@@ -141,9 +141,9 @@ describe("DeepSeekAdapter", () => {
       });
       expect(session.engine).toBe("deepseek");
       expect(session.status).toBe("ready");
-      expect(child.frames.some((frame) => (frame as { method?: string }).method === "initialize")).toBe(
-        true,
-      );
+      expect(
+        child.frames.some((frame) => (frame as { method?: string }).method === "initialize"),
+      ).toBe(true);
 
       const turn = yield* adapter.sendTurn({
         threadId: session.threadId,
@@ -204,9 +204,9 @@ describe("DeepSeekAdapter", () => {
       yield* adapter.interruptTurn(session.threadId, turn.turnId);
       yield* Effect.sleep("20 millis");
       expect(child.killed).toBe(true);
-      expect(child.frames.some((frame) => (frame as { method?: string }).method === "shutdown")).toBe(
-        true,
-      );
+      expect(
+        child.frames.some((frame) => (frame as { method?: string }).method === "shutdown"),
+      ).toBe(true);
       expect(events.map((event) => event.type)).toEqual(
         expect.arrayContaining(["turn.started", "turn.completed", "session.exited"]),
       );

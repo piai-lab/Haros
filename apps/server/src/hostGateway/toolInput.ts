@@ -122,8 +122,7 @@ export function buildEngineSelection(
   engine: EngineKind,
   model: string | undefined,
 ): EngineSelection {
-  const effectiveModel =
-    model ?? (engine === "pi" ? undefined : DEFAULT_MODEL_BY_ENGINE[engine]);
+  const effectiveModel = model ?? (engine === "pi" ? undefined : DEFAULT_MODEL_BY_ENGINE[engine]);
   if (!effectiveModel) {
     throw new ToolInputError(
       `Engine "${engine}" has no default model; pass an explicit "model" argument.`,

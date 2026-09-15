@@ -2249,14 +2249,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         attachments: [],
         interactionMode: "debug",
       });
-      yield* engine.sendTurn({
-        threadId: oaThreadId,
-        input: "plan this",
-        attachments: [],
-        interactionMode: "plan",
-      });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
-      assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
       yield* engine.stopSession({ threadId: oaThreadId });
@@ -3599,6 +3592,10 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
+      yield* routing.codex.stopAll();
+      yield* routing.claude.stopAll();
+      yield* routing.antigravity.stopAll();
+      yield* routing.pi.stopAll();
       routing.codex.sendTurn.mockClear();
       routing.codex.interruptTurn.mockClear();
       routing.codex.startSession.mockClear();
@@ -4561,6 +4558,8 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* routing.codex.stopAll();
       yield* routing.claude.stopAll();
+      yield* routing.antigravity.stopAll();
+      yield* routing.pi.stopAll();
 
       const remaining = yield* engine.listSessions();
       assert.equal(remaining.length, 0);

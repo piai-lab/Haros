@@ -31,11 +31,11 @@ _Figure 30.1 — Similar destinations do not merge three execution paths into on
 
 _Product capture — The real browser tab strip exposes thread-local interactive browser state; it is not proof that agent web search or arbitrary external network access follows the same authority path._
 
-| Path                | Best for                                      | Owner                               | Useful evidence                         | Does not imply            |
-| ------------------- | --------------------------------------------- | ----------------------------------- | --------------------------------------- | ------------------------- |
-| Interactive browser | Signed-in UI, dynamic page, local Web testing | Browser Automation Host             | Page state, action outcome, screenshot  | Search index access       |
+| Path                | Best for                                      | Owner                                                     | Useful evidence                         | Does not imply            |
+| ------------------- | --------------------------------------------- | --------------------------------------------------------- | --------------------------------------- | ------------------------- |
+| Interactive browser | Signed-in UI, dynamic page, local Web testing | Browser Automation Host                                   | Page state, action outcome, screenshot  | Search index access       |
 | Agent web search    | Finding and opening public sources            | The selected Engine's own search or an explicit connector | Result URL, retrieved content, citation | Control of user's browser |
-| External network    | API, Git, package, command-specific traffic   | Calling service plus network policy | Protocol response/receipt               | Browser permission        |
+| External network    | API, Git, package, command-specific traffic   | Calling service plus network policy                       | Protocol response/receipt               | Browser permission        |
 
 Choosing the path is part of the task. “Find the official documentation” is search and retrieval.
 “Use my signed-in dashboard” requires an interactive browser with the user's existing session.

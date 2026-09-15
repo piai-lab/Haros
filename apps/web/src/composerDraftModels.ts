@@ -412,7 +412,9 @@ export function normalizeEngineModelOptions(
       ? (deepseekCandidate.reasoningEffort as DeepSeekReasoningEffort)
       : undefined;
   const deepseek =
-    deepseekReasoningEffort !== undefined ? { reasoningEffort: deepseekReasoningEffort } : undefined;
+    deepseekReasoningEffort !== undefined
+      ? { reasoningEffort: deepseekReasoningEffort }
+      : undefined;
   if (
     !codex &&
     !claude &&

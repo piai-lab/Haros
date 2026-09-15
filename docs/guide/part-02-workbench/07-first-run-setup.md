@@ -137,13 +137,13 @@ unauthenticated Engines are unavailable. Warnings and uncertain authentication a
 Runtime and interaction modes may also be unavailable even when the base Engine is healthy. This is
 why setup and send admission are related but not identical gates.
 
-| Fact                               | Sole owner                           | Consumer                            | Forbidden duplicate                  |
-| ---------------------------------- | ------------------------------------ | ----------------------------------- | ------------------------------------ |
-| Engine identity and display name   | `ENGINE_DESCRIPTORS`                 | Settings, Composer, selectors       | Component-local Engine arrays        |
-| Native availability/authentication | Engine health and discovery services | readiness and capability projection | UI guesses from installed files      |
-| Exact model options                | Engine model catalog projection      | Settings and Composer               | Hand-maintained global model list    |
-| Selected exact binding             | typed `EngineSelection`              | admission and provenance            | Caption-only or Provider-only state  |
-| Local capability authority         | HostGateway                          | admitted execution                  | Settings or Composer granting tools  |
+| Fact                               | Sole owner                           | Consumer                            | Forbidden duplicate                 |
+| ---------------------------------- | ------------------------------------ | ----------------------------------- | ----------------------------------- |
+| Engine identity and display name   | `ENGINE_DESCRIPTORS`                 | Settings, Composer, selectors       | Component-local Engine arrays       |
+| Native availability/authentication | Engine health and discovery services | readiness and capability projection | UI guesses from installed files     |
+| Exact model options                | Engine model catalog projection      | Settings and Composer               | Hand-maintained global model list   |
+| Selected exact binding             | typed `EngineSelection`              | admission and provenance            | Caption-only or Provider-only state |
+| Local capability authority         | HostGateway                          | admitted execution                  | Settings or Composer granting tools |
 
 ## Make a readiness decision explainable
 

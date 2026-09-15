@@ -64,9 +64,10 @@ describe("engine identity", () => {
     expect(engineOpensModelServicesSettings("codex")).toBe(false);
   });
   it("preserves explicit runnable defaults", () => {
-    expect(normalizeServerSettings({ ...DEFAULT_SERVER_SETTINGS, defaultEngine: "claude" }).defaultEngine).toBe(
-      "claude",
-    );
+    expect(
+      normalizeServerSettings({ ...DEFAULT_SERVER_SETTINGS, defaultEngine: "claude" })
+        .defaultEngine,
+    ).toBe("claude");
   });
   it("rejects unknown engines for new default or background text generation work", () => {
     expect(

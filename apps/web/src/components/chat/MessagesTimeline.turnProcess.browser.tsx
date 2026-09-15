@@ -406,7 +406,7 @@ describe("MessagesTimeline turn process approval cases", () => {
 
       expect(document.querySelectorAll("[data-assistant-turn-identity='visible']")).toHaveLength(1);
       expect(document.body.textContent).toContain("DeepSeek V4 Pro");
-      expect(document.body.textContent).toContain("OA ·");
+      expect(document.body.textContent).toContain("Pi ·");
     } finally {
       document.documentElement.classList.remove("dark");
       await page.viewport(1_280, 720);

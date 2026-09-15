@@ -33,9 +33,9 @@ describe("DeepSeek SDK transport", () => {
     expect(() => new DeepSeekJsonlFramer(64).push(Buffer.from([0xff, 0x0a]))).toThrowError(
       expect.objectContaining({ reason: "invalid-utf8" }),
     );
-    expect(new DeepSeekSdkTransportError({ reason: "read-closed", maxBytes: 1, observedBytes: 0 }).name).toBe(
-      "DeepSeekSdkTransportError",
-    );
+    expect(
+      new DeepSeekSdkTransportError({ reason: "read-closed", maxBytes: 1, observedBytes: 0 }).name,
+    ).toBe("DeepSeekSdkTransportError");
   });
 
   it("serializes slow stdin writes within one retained-byte budget", async () => {

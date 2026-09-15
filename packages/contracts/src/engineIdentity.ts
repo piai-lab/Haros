@@ -23,6 +23,10 @@ export const RETIRED_ENGINE_KIND_ALIASES = {
   oa: "pi",
 } as const satisfies Record<string, EngineKind>;
 
+export function isRetiredEngineKind(value: unknown): boolean {
+  return typeof value === "string" && Object.hasOwn(RETIRED_ENGINE_KIND_ALIASES, value);
+}
+
 export function migrateRetiredEngineKind(value: unknown): unknown {
   if (typeof value === "string" && Object.hasOwn(RETIRED_ENGINE_KIND_ALIASES, value)) {
     return RETIRED_ENGINE_KIND_ALIASES[value as keyof typeof RETIRED_ENGINE_KIND_ALIASES];
@@ -39,8 +43,8 @@ export function decodePersistedEngineKind(value: unknown): EngineKind | null {
 // bare `EngineKind`. Encode keeps the live identity so writes never revive OA.
 export const EngineKind = Schema.Union([LiveEngineKind, Schema.Literal("oa")]).pipe(
   Schema.decodeTo(LiveEngineKind, {
-    decode: SchemaGetter.transform((value): EngineKind =>
-      value === "oa" ? RETIRED_ENGINE_KIND_ALIASES.oa : value,
+    decode: SchemaGetter.transform(
+      (value): EngineKind => (value === "oa" ? RETIRED_ENGINE_KIND_ALIASES.oa : value),
     ),
     encode: SchemaGetter.transform((value: EngineKind) => value),
   }),

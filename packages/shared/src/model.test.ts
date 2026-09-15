@@ -941,9 +941,11 @@ describe("normalizeDeepSeekModelOptions", () => {
     expect(
       normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "medium" }),
     ).toBeUndefined();
-    expect(normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "high" })).toEqual({
-      reasoningEffort: "high",
-    });
+    expect(normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "high" })).toEqual(
+      {
+        reasoningEffort: "high",
+      },
+    );
     expect(
       normalizeDeepSeekModelOptions("deepseek-v4-pro", { reasoningEffort: "high" }),
     ).toBeUndefined();

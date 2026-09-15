@@ -4402,8 +4402,8 @@ const make = Effect.gen(function* () {
           : null;
     const activeEngine =
       liveSession?.engine ??
-      (decodePersistedEngineKind(engineSessionThread?.session?.engine) ??
-        thread?.engineSelection.engine);
+      decodePersistedEngineKind(engineSessionThread?.session?.engine) ??
+      thread?.engineSelection.engine;
     const replacementRequirement =
       thread !== undefined
         ? yield* resolveSessionReplacementRequirement({

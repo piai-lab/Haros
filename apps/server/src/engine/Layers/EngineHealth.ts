@@ -1382,7 +1382,8 @@ export const makeCheckDeepSeekEngineStatus = (
         available: false,
         authStatus: "unknown" as const,
         checkedAt,
-        message: "DeepSeek Harness is installed but failed to run. Timed out while running command.",
+        message:
+          "DeepSeek Harness is installed but failed to run. Timed out while running command.",
       } satisfies ServerEngineStatus;
     }
 

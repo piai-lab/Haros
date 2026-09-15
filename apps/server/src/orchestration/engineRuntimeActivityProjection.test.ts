@@ -416,7 +416,7 @@ describe("engine runtime activity projection", () => {
     ];
     expect(absent.map(projectProviderRuntimeActivities)).toEqual([[], [], []]);
 
-    for (const engine of ["codex", "antigravity", "oa", "pi"] as const) {
+    for (const engine of ["codex", "antigravity", "pi"] as const) {
       for (const lifecycle of ["item.updated", "item.completed"] as const) {
         const [activity] = projectProviderRuntimeActivities(
           runtimeEvent({

@@ -142,11 +142,7 @@ export function formatEngineModelOptionName(input: { engine: EngineKind; slug: s
     return trimmedSlug;
   }
 
-  if (
-    input.engine === "kilo" ||
-    input.engine === "opencode" ||
-    input.engine === "pi"
-  ) {
+  if (input.engine === "kilo" || input.engine === "opencode" || input.engine === "pi") {
     const modelIdentifier = trimmedSlug.includes("/")
       ? trimmedSlug.slice(trimmedSlug.lastIndexOf("/") + 1)
       : trimmedSlug;

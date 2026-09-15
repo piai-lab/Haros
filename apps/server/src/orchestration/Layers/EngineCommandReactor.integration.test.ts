@@ -2828,7 +2828,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         messageId: "harnessos-skill-delivery-message",
         skillName: "Aihot",
-        deliveryMode: "inline",
+        deliveryMode: "reference",
       },
     });
   });

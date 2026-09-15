@@ -232,13 +232,13 @@ describe("ComposerEnginePicker", () => {
     }
   });
 
-  it("names OA explicitly in the trigger and tooltip", async () => {
+  it("names Pi explicitly in the trigger and tooltip", async () => {
     const mounted = await mountPicker({ engine: "pi" });
     try {
-      const trigger = page.getByRole("button", { name: "Change engine. Current: OA" });
+      const trigger = page.getByRole("button", { name: "Change engine. Current: Pi" });
       await expect.element(trigger).toBeVisible();
       await userEvent.hover(trigger);
-      await expect.element(page.getByText("Engine · OA")).toBeVisible();
+      await expect.element(page.getByText("Engine · Pi")).toBeVisible();
     } finally {
       await mounted.cleanup();
     }

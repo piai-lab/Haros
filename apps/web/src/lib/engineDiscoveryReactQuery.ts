@@ -342,9 +342,7 @@ export function engineModelsQueryOptions(input: {
   // Keeping a Project cwd in the query identity would therefore repeat the same
   // expensive runtime catalog load for every Project and briefly replace an
   // authoritative catalog with a cold placeholder during navigation.
-  const discoveryCwd = engineHasGlobalOnlyModelCatalog(input.engine)
-    ? null
-    : (input.cwd ?? null);
+  const discoveryCwd = engineHasGlobalOnlyModelCatalog(input.engine) ? null : (input.cwd ?? null);
   return queryOptions({
     queryKey: engineDiscoveryQueryKeys.models(
       input.engine,

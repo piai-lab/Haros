@@ -215,7 +215,9 @@ export function hasDeepSeekApiKeyEnv(env: NodeJS.ProcessEnv = process.env): bool
 const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
+    const serverSettings = Option.getOrUndefined(
+      yield* Effect.serviceOption(ServerSettingsService),
+    );
     const spawnProcess = options.spawnProcess ?? spawnDeepSeekSdk;
     const resolveModelServiceEnv =
       options.resolveModelServiceEnv ??
@@ -233,7 +235,8 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         });
       });
     const teardownProcess =
-      options.teardownProcess ?? ((child: ChildProcessWithoutNullStreams) => teardownChildProcessTree(child));
+      options.teardownProcess ??
+      ((child: ChildProcessWithoutNullStreams) => teardownChildProcessTree(child));
     const eventQueue = yield* Queue.bounded<EngineRuntimeEvent>(
       ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
@@ -324,7 +327,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       }
       const completionBase = makeEventBase(context);
       delete context.activeTurnId;
-      context.session = { ...context.session, status: "ready", updatedAt: new Date().toISOString() };
+      context.session = {
+        ...context.session,
+        status: "ready",
+        updatedAt: new Date().toISOString(),
+      };
       offer({
         ...completionBase,
         type: "turn.completed",
@@ -337,7 +344,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       } satisfies EngineRuntimeEvent);
     };
 
-    const emitAssistantDelta = (context: DeepSeekSessionContext, delta: string, payload: unknown) => {
+    const emitAssistantDelta = (
+      context: DeepSeekSessionContext,
+      delta: string,
+      payload: unknown,
+    ) => {
       if (!context.activeTurnId || !delta) return;
       if (!context.activeAssistantItemId) {
         context.activeAssistantItemId = RuntimeItemId.makeUnsafe(
@@ -364,7 +375,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       } satisfies EngineRuntimeEvent);
     };
 
-    const handleNotification = (context: DeepSeekSessionContext, method: string, params: unknown) => {
+    const handleNotification = (
+      context: DeepSeekSessionContext,
+      method: string,
+      params: unknown,
+    ) => {
       if (context.stopping) return;
       if (method === "session.status") {
         const status = isRecord(params) ? asString(params.status) : undefined;
@@ -461,7 +476,9 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         payload: { reason, exitKind: "graceful" },
       } satisfies EngineRuntimeEvent);
       rejectPending(context, new Error(reason));
-      const shutdown = sendRequest(context, "shutdown", {}, SHUTDOWN_TIMEOUT_MS).catch(() => undefined);
+      const shutdown = sendRequest(context, "shutdown", {}, SHUTDOWN_TIMEOUT_MS).catch(
+        () => undefined,
+      );
       const stopPromise = shutdown
         .then(async () => {
           context.stdinWriter.close(new Error(reason));
@@ -572,8 +589,7 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         const engineSelection =
           input.engineSelection?.engine === ENGINE ? input.engineSelection : undefined;
         const resume = parseResumeCursor(input.resumeCursor);
-        const binaryPath =
-          trim(input.engineOptions?.deepseek?.binaryPath) ?? DEFAULT_BINARY;
+        const binaryPath = trim(input.engineOptions?.deepseek?.binaryPath) ?? DEFAULT_BINARY;
         const homePath = trim(input.engineOptions?.deepseek?.homePath);
         const cwd = trim(input.cwd) ?? serverConfig.cwd;
         const model = engineSelection?.model ?? resume?.model ?? DEFAULT_MODEL;
@@ -673,7 +689,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
           Effect.tapError(() => Effect.promise(() => stopContext(context, "initialize failed"))),
         );
         context.initialized = true;
-        context.session = { ...context.session, status: "ready", updatedAt: new Date().toISOString() };
+        context.session = {
+          ...context.session,
+          status: "ready",
+          updatedAt: new Date().toISOString(),
+        };
         offer({
           ...makeEventBase(context, { includeTurn: false }),
           type: "session.started",
@@ -852,7 +872,8 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       respondToRequest: (threadId) => unsupported(threadId, "request/respond"),
       respondToUserInput: (threadId) => unsupported(threadId, "user-input/respond"),
       stopSession,
-      listSessions: () => Effect.sync(() => [...sessions.values()].map((context) => context.session)),
+      listSessions: () =>
+        Effect.sync(() => [...sessions.values()].map((context) => context.session)),
       hasSession: (threadId) => Effect.sync(() => sessions.has(threadId)),
       readThread: (threadId) => requireSession(threadId).pipe(Effect.map(snapshot)),
       rollbackThread,

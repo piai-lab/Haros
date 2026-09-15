@@ -268,7 +268,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       fs.rmSync(tempDir, { recursive: true, force: true });
     }));
 
-  it("maps retired OA session bindings onto Pi", () =>
+  it("fails closed for retired OA session bindings and drops native resume state", () =>
     Effect.gen(function* () {
       const directory = yield* EngineSessionDirectory;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
@@ -287,13 +287,8 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         runtimePayload: null,
       });
 
-      const engine = yield* directory.getEngine(threadId);
-      assert.equal(engine, "pi");
-      const binding = yield* directory.getBinding(threadId);
-      assertSome(binding, {
-        threadId,
-        engine: "pi",
-      });
+      const failed = yield* Effect.result(directory.getEngine(threadId));
+      assert.equal(failed._tag, "Failure");
 
       yield* directory.upsert({
         engine: "pi",
@@ -304,11 +299,8 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       if (Option.isSome(persisted)) {
         assert.equal(persisted.value.engine, "pi");
         assert.equal(persisted.value.adapterKey, "pi");
-        assert.equal(persisted.value.lifecycleGeneration, "legacy-test-oa");
-        assert.deepEqual(persisted.value.resumeCursor, {
-          schemaVersion: 1,
-          sessionId: "native-oa",
-        });
+        assert.equal(persisted.value.lifecycleGeneration, "legacy");
+        assert.equal(persisted.value.resumeCursor, null);
       }
     }));
 

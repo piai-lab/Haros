@@ -734,7 +734,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
-    expect(document.body.textContent).not.toContain("DeepSeek");
+    expect(document.body.textContent).toContain("DeepSeek");
     await openConnectableService(mounted.screen, "DeepSeek");
     await expect
       .poll(() => mounted.calls.get)
