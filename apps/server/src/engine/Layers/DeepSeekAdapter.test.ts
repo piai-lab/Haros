@@ -340,6 +340,40 @@ describe("DeepSeekAdapter", () => {
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 
+  it("initializes the SDK with a Linux cwd for WSL UNC workspaces", async () => {
+    const child = new FakeDeepSeekProcess();
+    const layer = makeDeepSeekAdapterLive({
+      spawnProcess: () => child as never,
+      teardownProcess: async (process) => {
+        process.kill();
+      },
+    }).pipe(
+      Layer.provide(Layer.succeed(ServerConfig, serverConfig)),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.gen(function* () {
+      const adapter = yield* DeepSeekAdapter;
+      const session = yield* adapter.startSession({
+        threadId: ThreadId.makeUnsafe("thread-deepseek-wsl"),
+        cwd: "\\\\wsl.localhost\\Ubuntu-24.04\\home\\dev\\repo",
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "\\\\wsl.localhost\\Ubuntu-24.04\\home\\dev\\repo",
+        },
+        runtimeMode: "full-access",
+        engineSelection: { engine: "deepseek", model: "deepseek-v4-flash" },
+      });
+      const initialize = child.frames.find(
+        (frame) => (frame as { method?: string }).method === "initialize",
+      ) as { params?: { cwd?: string } } | undefined;
+      expect(initialize?.params?.cwd).toBe("/home/dev/repo");
+      expect(session.cwd).toBe("\\\\wsl.localhost\\Ubuntu-24.04\\home\\dev\\repo");
+      yield* adapter.stopSession(session.threadId);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
   it("rejects runtime modes other than full-access", async () => {
     const child = new FakeDeepSeekProcess();
     const layer = makeDeepSeekAdapterLive({

@@ -14,7 +14,10 @@ import {
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
-import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
+import {
+  parseWindowsWslUncPath,
+  prepareWindowsSafeProcess,
+} from "@harnessos/shared/windowsProcess";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -166,6 +169,10 @@ function raw(method: string, payload: unknown) {
   return { source: RAW_SOURCE, method, payload };
 }
 
+function resolveDeepSeekSdkCwd(cwd: string): string {
+  return parseWindowsWslUncPath(cwd)?.linuxPath ?? cwd;
+}
+
 function spawnDeepSeekSdk(input: {
   readonly command: string;
   readonly args: readonly string[];
@@ -176,8 +183,11 @@ function spawnDeepSeekSdk(input: {
     cwd: input.cwd,
     env: input.env,
   });
+  const wslWorkspace = parseWindowsWslUncPath(input.cwd);
   return spawn(prepared.command, prepared.args, {
-    cwd: input.cwd,
+    // wsl.exe --cd already selects the Linux workspace; a Windows UNC cwd can
+    // make Node refuse the spawn even though the child never uses it.
+    ...(wslWorkspace ? {} : { cwd: input.cwd }),
     env: input.env,
     stdio: ["pipe", "pipe", "pipe"],
     shell: prepared.shell,
@@ -681,10 +691,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         };
         sessions.set(input.threadId, context);
         attachProcessListeners(context);
+        const sdkCwd = resolveDeepSeekSdkCwd(cwd);
         yield* Effect.tryPromise({
           try: () =>
             sendRequest(context, "initialize", {
-              cwd,
+              cwd: sdkCwd,
               provider,
               model,
               ...(reasoningEffort ? { reasoningEffort } : {}),
@@ -712,7 +723,7 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
             message: "DeepSeek session started",
             resume: context.session.resumeCursor,
           },
-          raw: raw("initialize", { cwd, provider, model }),
+          raw: raw("initialize", { cwd: sdkCwd, provider, model }),
         } satisfies EngineRuntimeEvent);
         offer({
           ...makeEventBase(context, { includeTurn: false }),
