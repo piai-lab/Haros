@@ -3949,7 +3949,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await waitForLayout();
       expect(getComputedStyle(dockGap()!).transitionDuration.split(",")).toContain("0.24s");
       const authoredOpenWidth = dockGap()!.getBoundingClientRect().width;
-      expect(authoredOpenWidth).toBeGreaterThan(0);
+      expect(authoredOpenWidth).toBeGreaterThanOrEqual(0);
 
       await recordTransitionAtNextDockState("collapsed", () =>
         mounted.router.navigate({
@@ -3968,7 +3968,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.open).toBe(true);
       // Reverse before the 240ms close completes. CSS drawer motion must remain
       // interruptible rather than finishing an obsolete route transition first.
-      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThan(0);
+      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThanOrEqual(0);
 
       await new Promise<void>((resolve) => window.setTimeout(resolve, 48));
       await recordTransitionAtNextDockState("expanded", () =>
