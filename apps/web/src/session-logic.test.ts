@@ -935,6 +935,7 @@ describe("ENGINE_OPTIONS", () => {
     const kilo = ENGINE_OPTIONS.find((option) => option.value === "kilo");
     const opencode = ENGINE_OPTIONS.find((option) => option.value === "opencode");
     const pi = ENGINE_OPTIONS.find((option) => option.value === "pi");
+    const deepseek = ENGINE_OPTIONS.find((option) => option.value === "deepseek");
     expect(ENGINE_OPTIONS).toEqual([
       { value: "codex", label: "Codex" },
       { value: "claude", label: "Claude" },
@@ -974,6 +975,10 @@ describe("ENGINE_OPTIONS", () => {
     expect(pi).toEqual({
       value: "pi",
       label: "Pi",
+    });
+    expect(deepseek).toEqual({
+      value: "deepseek",
+      label: "DeepSeek",
     });
   });
 });

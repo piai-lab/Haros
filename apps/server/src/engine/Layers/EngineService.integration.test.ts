@@ -2203,7 +2203,6 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const piThreadId = asThreadId("thread-pi-plan-admission");
       const antigravityThreadId = asThreadId("thread-antigravity-plan-admission");
-      const oaThreadId = asThreadId("thread-harnessos-plan-admission");
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
@@ -2215,11 +2214,6 @@ routing.layer("EngineServiceLive routing", (it) => {
       yield* startTestEngineSession(engine, antigravityThreadId, {
         engine: "antigravity",
         threadId: antigravityThreadId,
-        runtimeMode: "full-access",
-      });
-      yield* startTestEngineSession(engine, oaThreadId, {
-        engine: "pi",
-        threadId: oaThreadId,
         runtimeMode: "full-access",
       });
 
@@ -2252,7 +2246,6 @@ routing.layer("EngineServiceLive routing", (it) => {
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
-      yield* engine.stopSession({ threadId: oaThreadId });
     }),
   );
 
