@@ -96,16 +96,21 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
     }
 
     const now = new Date().toISOString();
-    const engineChanged =
-      existingRuntime !== undefined && existingRuntime.engine !== binding.engine;
+    const existingEngine =
+      existingRuntime === undefined ? undefined : decodePersistedEngineKind(existingRuntime.engine);
+    const engineChanged = existingRuntime !== undefined && existingEngine !== binding.engine;
     const compatibleRuntime = engineChanged ? undefined : existingRuntime;
+    const existingAdapterKey = existingRuntime?.adapterKey;
+    const migratedAdapterKey = existingAdapterKey
+      ? (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
+      : undefined;
     yield* repository
       .upsert({
         threadId: resolvedThreadId,
         engine: binding.engine,
         adapterKey:
           binding.adapterKey ??
-          (engineChanged ? binding.engine : (existingRuntime?.adapterKey ?? binding.engine)),
+          (engineChanged ? binding.engine : (migratedAdapterKey ?? binding.engine)),
         runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
         status: binding.status ?? compatibleRuntime?.status ?? "running",
         lifecycleGeneration:

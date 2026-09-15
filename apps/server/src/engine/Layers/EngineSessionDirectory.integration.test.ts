@@ -283,7 +283,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         lifecycleGeneration: "legacy-test-oa",
         lastSeenAt: new Date().toISOString(),
         admission: null,
-        resumeCursor: null,
+        resumeCursor: { schemaVersion: 1, sessionId: "native-oa" },
         runtimePayload: null,
       });
 
@@ -294,6 +294,22 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         threadId,
         engine: "pi",
       });
+
+      yield* directory.upsert({
+        engine: "pi",
+        threadId,
+      });
+      const persisted = yield* runtimeRepository.getByThreadId({ threadId });
+      assert.equal(Option.isSome(persisted), true);
+      if (Option.isSome(persisted)) {
+        assert.equal(persisted.value.engine, "pi");
+        assert.equal(persisted.value.adapterKey, "pi");
+        assert.equal(persisted.value.lifecycleGeneration, "legacy-test-oa");
+        assert.deepEqual(persisted.value.resumeCursor, {
+          schemaVersion: 1,
+          sessionId: "native-oa",
+        });
+      }
     }));
 
   it("skips legacy bindings with unknown engine names when listing all bindings", () =>
