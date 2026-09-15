@@ -24,7 +24,9 @@ import {
   OrchestrationThreadPullRequest,
   ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   ENGINE_SEND_TURN_MAX_INPUT_CHARS,
+  EngineKind,
   EngineStartOptions,
+  ThreadHandoff,
   ProjectCreateCommand,
   THREAD_NOTES_MAX_CHARS,
   THREAD_GOAL_MAX_CHARS,
@@ -244,6 +246,27 @@ it.effect("migrates retired OA model selections onto Pi without rewriting Pi as 
       engine: "pi",
       model: "openai/gpt-5.6-terra",
       options: { thinkingLevel: "xhigh" },
+    });
+  }),
+);
+
+it.effect("migrates retired OA onto Pi for bare EngineKind fields without encoding OA", () =>
+  Effect.gen(function* () {
+    assert.equal(yield* Schema.decodeUnknownEffect(EngineKind)("oa"), "pi");
+    assert.equal(yield* Schema.encodeUnknownEffect(EngineKind)("pi"), "pi");
+
+    const handoff = yield* Schema.decodeUnknownEffect(ThreadHandoff)({
+      sourceThreadId: "thread-oa-source",
+      sourceEngine: "oa",
+      importedAt: "2026-02-28T00:00:00.000Z",
+      bootstrapStatus: "completed",
+    });
+    assert.equal(handoff.sourceEngine, "pi");
+    assert.deepStrictEqual(yield* Schema.encodeUnknownEffect(ThreadHandoff)(handoff), {
+      sourceThreadId: "thread-oa-source",
+      sourceEngine: "pi",
+      importedAt: "2026-02-28T00:00:00.000Z",
+      bootstrapStatus: "completed",
     });
   }),
 );

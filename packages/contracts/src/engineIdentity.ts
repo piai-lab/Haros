@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import * as SchemaGetter from "effect/SchemaGetter";
 
 export const ENGINE_KINDS = [
   "codex",
@@ -13,8 +14,8 @@ export const ENGINE_KINDS = [
   "deepseek",
 ] as const;
 
-export const EngineKind = Schema.Literals(ENGINE_KINDS);
-export type EngineKind = typeof EngineKind.Type;
+const LiveEngineKind = Schema.Literals(ENGINE_KINDS);
+export type EngineKind = typeof LiveEngineKind.Type;
 export const DEFAULT_ENGINE_KIND: EngineKind = "codex";
 
 /** Retired Haros engine identity. Decode-only; never write this back. */
@@ -31,5 +32,16 @@ export function migrateRetiredEngineKind(value: unknown): unknown {
 
 export function decodePersistedEngineKind(value: unknown): EngineKind | null {
   const migrated = migrateRetiredEngineKind(value);
-  return Schema.is(EngineKind)(migrated) ? migrated : null;
+  return Schema.is(LiveEngineKind)(migrated) ? migrated : null;
 }
+
+// Persist `"oa"` still decodes on handoff/runtime-event/settings fields that use
+// bare `EngineKind`. Encode keeps the live identity so writes never revive OA.
+export const EngineKind = Schema.Union([LiveEngineKind, Schema.Literal("oa")]).pipe(
+  Schema.decodeTo(LiveEngineKind, {
+    decode: SchemaGetter.transform((value): EngineKind =>
+      value === "oa" ? RETIRED_ENGINE_KIND_ALIASES.oa : value,
+    ),
+    encode: SchemaGetter.transform((value: EngineKind) => value),
+  }),
+);

@@ -72,3 +72,10 @@ describe("engine credential boundary", () => {
     },
   );
 });
+
+describe("retired OA engine settings", () => {
+  it("migrates persisted defaultEngine oa onto Pi", () => {
+    const decoded = Schema.decodeUnknownSync(ServerSettings)({ defaultEngine: "oa" });
+    expect(decoded.defaultEngine).toBe("pi");
+  });
+});
