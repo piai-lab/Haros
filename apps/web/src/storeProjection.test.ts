@@ -801,8 +801,8 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("oa");
-    expect(threadsOf(next)[0]?.session?.engine).toBe("oa");
+    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("pi");
+    expect(threadsOf(next)[0]?.session?.engine).toBe("pi");
   });
 
   it("preserves OpenCode as the active session engine", () => {
