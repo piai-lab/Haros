@@ -1318,7 +1318,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if ((error as NodeJS.ErrnoException | null)?.code === "EPIPE" && context) {
         // stdin can reject before the child exit/stderr callbacks run; allow
         // those callbacks to publish the authoritative startup diagnostic.
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       const message =
         context && error instanceof Error
