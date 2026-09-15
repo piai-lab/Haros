@@ -564,10 +564,7 @@ export function projectProviderRuntimeActivities(
   // lifecycle. Ingestion bounds hot updates before they reach this projection;
   // empty/private/encrypted reasoning boundaries still never become rows.
   if (
-    (event.engine === "codex" ||
-      event.engine === "antigravity" ||
-      event.engine === "oa" ||
-      event.engine === "pi") &&
+    (event.engine === "codex" || event.engine === "antigravity" || event.engine === "pi") &&
     (event.type === "item.updated" || event.type === "item.completed") &&
     event.payload.itemType === "reasoning" &&
     event.itemId !== undefined &&

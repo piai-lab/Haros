@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -31,18 +31,9 @@ function engineStatus(
   };
 }
 
-const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = [
-  "oa",
-  "codex",
-  "claude",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-].map((engine) => engineStatus(engine as EngineKind));
+const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = ENGINE_KINDS.map((engine) =>
+  engineStatus(engine),
+);
 
 async function mountPicker(input: {
   engine?: EngineKind;
@@ -241,13 +232,13 @@ describe("ComposerEnginePicker", () => {
     }
   });
 
-  it("names OA explicitly in the trigger and tooltip", async () => {
-    const mounted = await mountPicker({ engine: "oa" });
+  it("names Pi explicitly in the trigger and tooltip", async () => {
+    const mounted = await mountPicker({ engine: "pi" });
     try {
-      const trigger = page.getByRole("button", { name: "Change engine. Current: OA" });
+      const trigger = page.getByRole("button", { name: "Change engine. Current: Pi" });
       await expect.element(trigger).toBeVisible();
       await userEvent.hover(trigger);
-      await expect.element(page.getByText("Engine · OA")).toBeVisible();
+      await expect.element(page.getByText("Engine · Pi")).toBeVisible();
     } finally {
       await mounted.cleanup();
     }

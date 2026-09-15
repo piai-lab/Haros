@@ -67,6 +67,7 @@ export type {
 export type { BrowserAnnotationDraft } from "./lib/browserAnnotations";
 export {
   deriveEffectiveComposerModelState,
+  resolvePreferredComposerEngine,
   resolvePreferredComposerEngineSelection,
 } from "./composerDraftModels";
 export type { EffectiveComposerModelState } from "./composerDraftModels";

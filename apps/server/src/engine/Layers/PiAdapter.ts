@@ -1,34 +1,27 @@
-import path from "node:path";
-import {
-  spawn as spawnChildProcess,
-  type ChildProcess,
-  type SpawnOptions,
-} from "node:child_process";
-
-import type {
-  BashOperations,
-  ModelRegistry,
-  ModelRuntime,
-  SessionManager,
-  AgentSession as PiAgentSession,
-  AgentSessionEvent,
-  CreateAgentSessionRuntimeFactory,
-  ToolDefinition,
-} from "@earendil-works/pi-coding-agent";
+import { getHarosModelRuntimeMutationRevision } from "../modelRuntimeMutation";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model } from "@earendil-works/pi-ai";
-import type { PromptOutcome as OAPromptOutcome } from "@harnessos/oa-runtime";
-import { ASK_USER_TOOL_NAME, type AskUserProductInteractionPort } from "@harnessos/oa-ask";
+import type {
+  AgentSessionEvent,
+  BashOperations,
+  CreateAgentSessionRuntimeFactory,
+  ModelRegistry,
+  ModelRuntime,
+  AgentSession as PiAgentSession,
+  PromptOutcome as PiPromptOutcome,
+  SessionManager,
+  ToolDefinition,
+} from "@earendil-works/pi-coding-agent";
 import {
   ApprovalRequestId,
   type BuiltInToolGroupId,
   type ChatAttachment,
+  type EngineInteractionMode,
+  EngineItemId,
+  type EngineKind,
   type EngineListCommandsResult,
   type EngineListModelsResult,
   type EngineListSkillsResult,
-  type EngineKind,
-  type EngineInteractionMode,
-  EngineItemId,
   type EngineRuntimeEvent,
   type EngineSession,
   type EngineWorkSurface,
@@ -36,38 +29,42 @@ import {
   ThreadId,
   type ThreadTokenUsageSnapshot,
   type ToolResultFullReadResult,
-  type TurnTasksUpdatedPayload,
   TurnId,
 } from "@harnessos/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
-import type { ProductSurface } from "@harnessos/shared/productSurface";
-
 import {
-  hostGatewayGroupsFromToolDescriptors,
-  listHostGatewayMcpTools,
-  type HostGatewayMcpFetch,
-  type HostGatewayMcpToolDescriptor,
-} from "../../hostGateway/mcpInjection.ts";
+  type ChildProcess,
+  spawn as spawnChildProcess,
+  type SpawnOptions,
+} from "node:child_process";
+import path from "node:path";
+import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
+import { ServerConfig } from "../../config.ts";
+import {
+  extractPiCuratorWebSurfaceUrl,
+  extractTypedEngineWebSurface,
+  registerEngineWebSurfaceIntent,
+  sanitizeEngineWebSurfacePayload,
+} from "../../engineWebSurface/engineWebSurfaceHost.ts";
 import {
   HostGatewayCredentials,
   type HostGatewayMcpConnection,
 } from "../../hostGateway/Services/HostGatewayCredentials.ts";
 import {
+  hostGatewayGroupsFromToolDescriptors,
+  type HostGatewayMcpFetch,
+  type HostGatewayMcpToolDescriptor,
+  listHostGatewayMcpTools,
+} from "../../hostGateway/mcpInjection.ts";
+import {
   acquireHostGatewaySessionLease,
   cancelHostGatewayTurn,
-  releaseHostGatewaySessionLeaseOnInterrupt,
   type HostGatewaySessionLease,
+  releaseHostGatewaySessionLeaseOnInterrupt,
   withHostGatewayTurnCancellation,
 } from "../../hostGateway/sessionLease.ts";
-import { resolveEngineAttachmentPath } from "../engineAttachmentPaths.ts";
-import {
-  type PiPendingProductUserInput,
-  type PiPendingUserInput,
-  makePiFamilyUserInputBridge,
-} from "../piFamilyUserInputBridge.ts";
-import { ServerConfig } from "../../config.ts";
 import { lazyModule } from "../../lazyModule.ts";
-import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
+import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import {
   type EngineAdapterError,
   EngineAdapterRequestError,
@@ -75,83 +72,31 @@ import {
   EngineAdapterSessionNotFoundError,
   EngineAdapterValidationError,
 } from "../Errors.ts";
-import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
-import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
-import {
-  buildPiHostGatewayCustomTools,
-  buildPiHostGatewayCustomToolsFromDescriptors,
-} from "../hostGatewayPiProjection.ts";
-import { inspectOAWebAccessRegistration } from "@harnessos/oa-web-access";
-import type { CuratorPresenter } from "@harnessos/oa-web-access/curator-presentation";
-import { type HostGatewayHostExtensionHandle } from "../hostGatewayHostExtension.ts";
-import {
-  inspectOATaskListExtensionRegistration,
-  HARNESSOS_TASK_LIST_TOOL_NAME,
-} from "../oaTaskListExtension.ts";
-import { inspectOAAskUserRegistration } from "../oaAskUserExtension.ts";
-import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
-import {
-  buildOASessionExtensions,
-  type OASessionExtensionComposition,
-} from "../oaSessionExtensions.ts";
 import {
   ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type EngineAdapterShape,
   type EngineResourceDiscoveryScope,
   type EngineThreadSnapshot,
 } from "../Services/EngineAdapter.ts";
+import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
+import { askUserMetrics } from "../askUserMetrics.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
-import { makeKeyedLock } from "../keyedLock.ts";
-import { classifyPiTurnFailure } from "../piTurnFailure.ts";
+import { resolveEngineAttachmentPath } from "../engineAttachmentPaths.ts";
+import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import {
   compactEngineRuntimeEventForIngress,
-  isTerminalEngineRuntimeEvent,
   ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
   ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+  isTerminalEngineRuntimeEvent,
   type SizedEngineRuntimeEvent,
 } from "../engineRuntimeEventIngress.ts";
-import { clampUsagePercent, nonNegativeFiniteNumber, positiveFiniteNumber } from "../tokenUsage.ts";
-import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
-import {
-  teardownChildProcessTree,
-  teardownEngineProcessTree,
-} from "../supervisedProcessTeardown.ts";
-import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
-import { BrowserHostRpcError } from "../../browserAutomation/browserHostRpcClient.ts";
-import {
-  extractPiCuratorWebSurfaceUrl,
-  extractTypedEngineWebSurface,
-  registerEngineWebSurfaceIntent,
-  requireReadyEngineWebSurfaceContext,
-  sanitizeEngineWebSurfacePayload,
-} from "../../engineWebSurface/engineWebSurfaceHost.ts";
-import {
-  createOAModelsConfigReader,
-  loadOARuntimeModule,
-  resolveOAAgentDir,
-} from "../oaRuntime.ts";
-import { getOAModelRuntimeMutationRevision } from "../oaModelRuntimeMutation.ts";
-import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
-import { engineExecutionStructure } from "../engineExecutionStructure.ts";
-import { extractProposedPlanMarkdown } from "../planMode.ts";
-import type { OAPlanModeController } from "../oaPlanModeExtension.ts";
-import {
-  modePolicyVersion,
-  stableCoreToolsetHash,
-  type HarosPromptPolicyController,
-} from "../oaPromptPolicyExtension.ts";
-import { askUserMetrics } from "../askUserMetrics.ts";
-import {
-  makeOAEngineSystemPrompt,
-  oaFirmwareVersion,
-  makePiHostSystemPrompt,
-  promptRequiredHostGatewayToolNames,
-} from "../piFamilyPrompt.ts";
+import { buildPiHostGatewayCustomToolsFromDescriptors } from "../hostGatewayPiProjection.ts";
+import { makeKeyedLock } from "../keyedLock.ts";
 import {
   classifyPiRuntimeError,
   isPiBarrierSiblingBlocked,
-  latestPiAssistantText,
   makePiGatewayLoadWarning,
   makePiRuntimeEventBase,
   mapPiMessageHistory,
@@ -161,8 +106,20 @@ import {
   piToolTitle,
   type PiTrackedToolCall,
 } from "../piFamilyNativeEventProjection.ts";
-
-type PiFamilyEngine = Extract<EngineKind, "pi" | "oa">;
+import { makePiHostSystemPrompt } from "../piFamilyPrompt.ts";
+import {
+  makePiFamilyUserInputBridge,
+  type PiPendingProductUserInput,
+  type PiPendingUserInput,
+} from "../piFamilyUserInputBridge.ts";
+import { classifyPiTurnFailure } from "../piTurnFailure.ts";
+import {
+  teardownChildProcessTree,
+  teardownEngineProcessTree,
+} from "../supervisedProcessTeardown.ts";
+import { clampUsagePercent, nonNegativeFiniteNumber, positiveFiniteNumber } from "../tokenUsage.ts";
+import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
+type PiFamilyEngine = Extract<EngineKind, "pi">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
@@ -190,7 +147,6 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
   "medium",
   "high",
 ]);
-
 type PiModelRegistry = Pick<ModelRegistry, "find" | "getAll" | "getAvailable">;
 type ModelConfigProviderIdentityRuntime = ModelRuntime & {
   readonly getModelConfigProviderIds: () => ReadonlyArray<string>;
@@ -209,12 +165,19 @@ type PiCodingAgentModule = Pick<
   | "defineTool"
   | "getAgentDir"
   | "getShellConfig"
-> & { readonly DEFAULT_BASE_INSTRUCTIONS?: string };
+> & {
+  readonly DEFAULT_BASE_INSTRUCTIONS?: string;
+};
 type PiAgentRuntime = Awaited<ReturnType<PiCodingAgentModule["createAgentSessionRuntime"]>>;
 type PiShellConfig = ReturnType<PiCodingAgentModule["getShellConfig"]>;
 type PiPromptSettlementEvent = {
   readonly type: "prompt_handled";
-  readonly outcome: Extract<OAPromptOutcome, { readonly kind: "handled-without-agent" }>;
+  readonly outcome: Extract<
+    PiPromptOutcome,
+    {
+      readonly kind: "handled-without-agent";
+    }
+  >;
 };
 type PiTurnSettlementInput = {
   readonly state: "completed" | "failed" | "interrupted" | "cancelled";
@@ -234,20 +197,17 @@ type PiPromptSubmission = {
   readonly turnId: TurnId;
   settlement?: PiTurnSettlement;
 };
-
 interface PiActiveProcess {
   readonly child: ChildProcess;
   teardown: Promise<void> | undefined;
   teardownRequested: boolean;
   teardownProven: boolean;
 }
-
 export interface PiBashProcessSupervisor {
   readonly operations: BashOperations;
   readonly setShellPath: (shellPath: string | undefined) => void;
   readonly teardownAll: () => Promise<void>;
 }
-
 export interface PiBashProcessSupervisorOptions {
   readonly getShellConfig: (shellPath?: string) => PiShellConfig;
   readonly spawnProcess?: (
@@ -257,7 +217,6 @@ export interface PiBashProcessSupervisorOptions {
   ) => ChildProcess;
   readonly teardownProcessTree?: typeof teardownEngineProcessTree;
 }
-
 export function makePiBashProcessSupervisor(
   options: PiBashProcessSupervisorOptions,
 ): PiBashProcessSupervisor {
@@ -265,7 +224,6 @@ export function makePiBashProcessSupervisor(
   const teardownProcessTree = options.teardownProcessTree ?? teardownEngineProcessTree;
   const activeProcesses = new Set<PiActiveProcess>();
   let configuredShellPath: string | undefined;
-
   const startTeardown = (active: PiActiveProcess): Promise<void> => {
     active.teardownRequested = true;
     active.teardown ??= teardownChildProcessTree(active.child, teardownProcessTree).then(
@@ -279,21 +237,20 @@ export function makePiBashProcessSupervisor(
     );
     return active.teardown;
   };
-
   const operations: BashOperations = {
     exec: async (command, cwd, execution) => {
       if (execution.signal?.aborted) {
         throw new Error("aborted");
       }
-      const timeoutMs = execution.timeout === undefined ? undefined : execution.timeout * 1_000;
+      const timeoutMs = execution.timeout === undefined ? undefined : execution.timeout * 1000;
       if (
         execution.timeout !== undefined &&
         (!Number.isFinite(execution.timeout) || execution.timeout <= 0)
       ) {
         throw new Error("Invalid timeout: must be a finite number of seconds");
       }
-      if (timeoutMs !== undefined && timeoutMs > 2_147_483_647) {
-        throw new Error(`Invalid timeout: maximum is ${String(2_147_483_647 / 1_000)} seconds`);
+      if (timeoutMs !== undefined && timeoutMs > 2147483647) {
+        throw new Error(`Invalid timeout: maximum is ${String(2147483647 / 1000)} seconds`);
       }
       const shell = options.getShellConfig(configuredShellPath);
       const commandFromStdin = shell.commandTransport === "stdin";
@@ -318,7 +275,6 @@ export function makePiBashProcessSupervisor(
         teardownProven: false,
       };
       activeProcesses.add(active);
-
       if (commandFromStdin) {
         child.stdin?.on("error", () => undefined);
         child.stdin?.end(command);
@@ -329,7 +285,6 @@ export function makePiBashProcessSupervisor(
       child.stderr?.on("data", (chunk: Buffer | string) =>
         execution.onData(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
       );
-
       let timedOut = false;
       let timeout: ReturnType<typeof setTimeout> | undefined;
       const requestTeardown = () => {
@@ -344,7 +299,6 @@ export function makePiBashProcessSupervisor(
       execution.signal?.addEventListener("abort", requestTeardown, {
         once: true,
       });
-
       try {
         const exitCode = await new Promise<number | null>((resolve, reject) => {
           child.once("error", reject);
@@ -369,7 +323,6 @@ export function makePiBashProcessSupervisor(
       }
     },
   };
-
   return {
     operations,
     setShellPath: (shellPath) => {
@@ -391,47 +344,12 @@ export function makePiBashProcessSupervisor(
     },
   };
 }
-
 // Loads the Pi SDK only when the Pi engine is actually used. The SDK brings in
 // a native clipboard module, so importing it during Haros startup can bloat the
 // desktop backend before any Pi session exists.
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
 );
-
-// The product-owned package is built from the same pinned Pi source, but its
-// classes are nominally distinct because it is a separate package instance.
-// Keep the compatibility boundary limited to the exact SDK members consumed by
-// this shared session adapter. Model-services code uses the product module's
-// real exported type and never casts the complete module to stock Pi.
-const loadOAAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule(async () => {
-  const sdk = await loadOARuntimeModule();
-  return {
-    ModelRegistry: sdk.ModelRegistry,
-    ModelRuntime: sdk.ModelRuntime,
-    SessionManager: sdk.SessionManager,
-    SettingsManager: sdk.SettingsManager,
-    createAgentSessionFromServices: sdk.createAgentSessionFromServices,
-    createAgentSessionRuntime: sdk.createAgentSessionRuntime,
-    createAgentSessionServices: sdk.createAgentSessionServices,
-    createBashToolDefinition: sdk.createBashToolDefinition,
-    defineTool: sdk.defineTool,
-    getAgentDir: sdk.getAgentDir,
-    getShellConfig: sdk.getShellConfig,
-    DEFAULT_BASE_INSTRUCTIONS: sdk.DEFAULT_BASE_INSTRUCTIONS,
-  } as unknown as PiCodingAgentModule;
-});
-
-export async function createOAModelRuntime(agentDir: string) {
-  const sdk = await loadOARuntimeModule();
-  return sdk.ModelRuntime.create({
-    authPath: path.join(agentDir, "auth.json"),
-    modelsPath: null,
-    modelsConfigReader: createOAModelsConfigReader(agentDir),
-    modelsStorePath: path.join(agentDir, "models-store.json"),
-  });
-}
-
 interface PiFamilyAdapterConfig<P extends PiFamilyEngine> {
   readonly engine: P;
   readonly displayName: string;
@@ -443,7 +361,6 @@ interface PiFamilyAdapterConfig<P extends PiFamilyEngine> {
   ) => string;
   readonly createModelRuntime: (agentDir: string) => Promise<ModelRuntime>;
 }
-
 const STOCK_PI_FAMILY = {
   engine: "pi",
   displayName: "Pi",
@@ -452,28 +369,12 @@ const STOCK_PI_FAMILY = {
   createModelRuntime: async (agentDir) =>
     createPiModelRuntime(agentDir, await loadPiCodingAgentModule()),
 } satisfies PiFamilyAdapterConfig<"pi">;
-
-const OA_FAMILY = {
-  engine: "oa",
-  displayName: "OA",
-  loadModule: loadOAAdapterModule,
-  // Product state is App-owned and cannot be redirected into stock Pi state.
-  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOAAgentDir(serverBaseDir),
-  createModelRuntime: async (agentDir: string) =>
-    (await createOAModelRuntime(agentDir)) as unknown as ModelRuntime,
-} satisfies PiFamilyAdapterConfig<"oa">;
-
 interface PiSessionContext {
-  readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
+  readonly agentDir: string;
   readonly workSurface?: EngineWorkSurface;
-  readonly productSurface?: ProductSurface;
   /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
   readonly resourceScopeIdentity: string;
-  readonly hostProjection?: HostGatewayHostExtensionHandle;
-  readonly planModeController?: OAPlanModeController;
-  readonly promptPolicyController?: HarosPromptPolicyController;
-  readonly stableToolsetHash?: string;
   gatewaySessionLease?: HostGatewaySessionLease;
   gatewayConnection?: HostGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -498,13 +399,11 @@ interface PiSessionContext {
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   unsubscribe: (() => void) | undefined;
 }
-
 interface PiStoredTurn {
   readonly id: TurnId;
   readonly items: unknown[];
   leafId?: string | null;
 }
-
 export interface PiAdapterLiveOptions {
   readonly nativeEventLogPath?: string;
   readonly nativeEventLogger?: EventNdjsonLogger;
@@ -512,22 +411,18 @@ export interface PiAdapterLiveOptions {
   readonly teardownProcessTree?: typeof teardownEngineProcessTree;
   readonly hostGatewayFetch?: HostGatewayMcpFetch;
 }
-
 export { buildPiHostGatewayCustomTools } from "../hostGatewayPiProjection.ts";
 export { makePiUserInputOptions, PLAIN_PI_EXTENSION_THEME } from "../piFamilyUserInputBridge.ts";
-
 function toMessage(cause: unknown, fallback: string): string {
   if (cause instanceof Error && cause.message.trim().length > 0) {
     return cause.message;
   }
   return fallback;
 }
-
 function trimToUndefined(value: string | null | undefined): string | undefined {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return trimmed.length > 0 ? trimmed : undefined;
 }
-
 function isPiThinkingLevel(value: string | null | undefined): value is ThinkingLevel {
   return (
     value === "off" ||
@@ -539,18 +434,15 @@ function isPiThinkingLevel(value: string | null | undefined): value is ThinkingL
     value === "max"
   );
 }
-
 function normalizePiThinkingLevel(value: string | null | undefined): ThinkingLevel | undefined {
   return isPiThinkingLevel(value) ? value : undefined;
 }
-
 function getLocalSupportedThinkingLevels(
   model: Pick<Model<Api>, "reasoning" | "thinkingLevelMap">,
 ): Set<ThinkingLevel> {
   if (!model.reasoning) {
     return new Set();
   }
-
   const thinkingLevelMap = model.thinkingLevelMap;
   if (thinkingLevelMap && Object.keys(thinkingLevelMap).length > 0) {
     return new Set(
@@ -563,10 +455,8 @@ function getLocalSupportedThinkingLevels(
       }).map((option) => option.value),
     );
   }
-
   return new Set(PI_DEFAULT_SUPPORTED_THINKING_LEVELS);
 }
-
 // Mirrors Pi SDK clamping so model discovery does not advertise levels that will be ignored.
 export function getPiSupportedThinkingOptions(
   model: Pick<Model<Api>, "reasoning" | "thinkingLevelMap">,
@@ -577,13 +467,11 @@ export function getPiSupportedThinkingOptions(
   const supportedLevels = getLocalSupportedThinkingLevels(model);
   return PI_THINKING_OPTIONS.filter((option) => supportedLevels.has(option.value));
 }
-
 export function getPiDiscoverableModels(
   registry: Pick<ModelRegistry, "getAvailable">,
 ): ReadonlyArray<Model<Api>> {
   return registry.getAvailable();
 }
-
 function hasModelConfigProviderIdentity(
   runtime: ModelRuntime,
 ): runtime is ModelConfigProviderIdentityRuntime {
@@ -592,7 +480,6 @@ function hasModelConfigProviderIdentity(
     typeof runtime.getModelConfigProviderIds === "function"
   );
 }
-
 /**
  * Pi extensions own their model-provider catalogs, so normalize their display metadata
  * before it crosses Haros's trimmed-string RPC contract. A single malformed
@@ -608,7 +495,6 @@ export function toPiProviderModelDescriptor(
   if (!provider || !modelId || provider !== model.provider || modelId !== model.id) {
     return null;
   }
-
   const slug = `${provider}/${modelId}`;
   const supportedThinkingOptions = getPiSupportedThinkingOptions(model);
   return {
@@ -631,10 +517,12 @@ export function toPiProviderModelDescriptor(
       : {}),
   };
 }
-
-function parseModelReference(
-  modelId: string | null | undefined,
-): { readonly provider?: string; readonly id: string } | undefined {
+function parseModelReference(modelId: string | null | undefined):
+  | {
+      readonly provider?: string;
+      readonly id: string;
+    }
+  | undefined {
   const trimmed = trimToUndefined(modelId);
   if (!trimmed) {
     return undefined;
@@ -655,7 +543,6 @@ function parseModelReference(
   }
   return { id: trimmed };
 }
-
 export function findModelInRegistry(
   registry: PiModelRegistry,
   modelId: string | null | undefined,
@@ -670,7 +557,6 @@ export function findModelInRegistry(
   const matches = registry.getAll().filter((model) => model.id === parsed.id);
   return matches.length === 1 ? matches[0] : undefined;
 }
-
 function extractResumeSessionFile(resumeCursor: unknown): string | undefined {
   if (typeof resumeCursor === "string" && resumeCursor.trim().length > 0) {
     return resumeCursor;
@@ -687,11 +573,9 @@ function extractResumeSessionFile(resumeCursor: unknown): string | undefined {
   }
   return undefined;
 }
-
 function getSessionFile(session: PiAgentSession): string | undefined {
   return session.sessionFile ?? session.sessionManager.getSessionFile();
 }
-
 function makeSessionSnapshot(
   context: PiSessionContext,
   engine: PiFamilyEngine = "pi",
@@ -711,7 +595,6 @@ function makeSessionSnapshot(
     ...(context.session.lastError ? { lastError: context.session.lastError } : {}),
   };
 }
-
 export function normalizePiTokenUsage(
   stats: ReturnType<PiAgentSession["getSessionStats"]>,
   contextWindow?: number | null,
@@ -818,18 +701,15 @@ export function normalizePiTokenUsage(
     lastUsedTokens: usedTokens,
   };
 }
-
 function isPiReloadCommand(text: string): boolean {
   return /^\/reload(?:\s|$)/iu.test(text.trim());
 }
-
 function makeAgentDir(
   agentDir: string | undefined,
   piSdk: Pick<PiCodingAgentModule, "getAgentDir">,
 ): string {
   return trimToUndefined(agentDir) ?? piSdk.getAgentDir();
 }
-
 // Mirrors Pi 0.84.4's own session path encoding while honoring the explicit
 // agentDir already passed through the SDK services. Pi's public SessionManager
 // accepts this path but does not expose its default-path helper.
@@ -838,43 +718,43 @@ function piSessionDir(agentDir: string, cwd: string): string {
   const safePath = `--${resolvedCwd.replace(/^[/\\]/u, "").replace(/[/\\:]/gu, "-")}--`;
   return path.join(path.resolve(agentDir), "sessions", safePath);
 }
-
 export function piModelHasConfiguredCredentials(
   modelRuntime: Pick<ModelRuntime, "hasConfiguredAuth">,
   model: Pick<Model<Api>, "provider"> | undefined,
 ): boolean {
   return model !== undefined && modelRuntime.hasConfiguredAuth(model.provider);
 }
-
 // Keep session runtimes isolated so project extension engine registrations
 // cannot leak between threads that share an agent directory.
 export async function createPiModelRuntime(
   agentDir: string,
   piSdk: Pick<PiCodingAgentModule, "ModelRuntime">,
 ): Promise<ModelRuntime> {
-  return piSdk.ModelRuntime.create({
+  const runtime = await piSdk.ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
   });
+  const { installOfficialModelCatalog } = await import("../officialModelCatalog.ts");
+  installOfficialModelCatalog(runtime);
+  return runtime;
 }
-
 function modelRegistryFacade(
   modelRuntime: ModelRuntime,
   piSdk: Pick<PiCodingAgentModule, "ModelRegistry">,
 ): ModelRegistry {
   return new piSdk.ModelRegistry(modelRuntime);
 }
-
 function extensionDisplayName(extension: {
   readonly path: string;
-  readonly sourceInfo?: { readonly source?: string };
+  readonly sourceInfo?: {
+    readonly source?: string;
+  };
 }): string {
   const source = trimToUndefined(extension.sourceInfo?.source);
   if (source) return source;
   const extensionPath = trimToUndefined(extension.path);
   return extensionPath ? path.basename(extensionPath).replace(/\.(?:ts|js)$/u, "") : "extension";
 }
-
 function piProductDiscoveryOptions(
   sdk: PiCodingAgentModule,
   cwd: string,
@@ -893,15 +773,16 @@ function piProductDiscoveryOptions(
       }
     : {};
 }
-
 function piResourceScopeIdentity(
   scope:
     | EngineResourceDiscoveryScope
-    | { readonly kind: "project"; readonly authoritativeRoot: string },
+    | {
+        readonly kind: "project";
+        readonly authoritativeRoot: string;
+      },
 ): string {
   return scope.kind === "project" ? `project:${scope.authoritativeRoot}` : "global-only";
 }
-
 const makePiAdapter = <P extends PiFamilyEngine>(
   family: PiFamilyAdapterConfig<P>,
   options?: PiAdapterLiveOptions,
@@ -949,7 +830,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         sizeOf: (item) => item.bytes,
       },
     );
-
     const loadPiSdk = (method: string) =>
       Effect.tryPromise({
         try: () => family.loadModule(),
@@ -961,26 +841,20 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             cause,
           }),
       });
-
     const makeEventBase = (
       context: Parameters<typeof makePiRuntimeEventBase>[0],
       eventOptions?: Parameters<typeof makePiRuntimeEventBase>[1],
     ) => makePiRuntimeEventBase({ ...context, engine }, eventOptions);
-
     const offerRuntimeEvent = (event: EngineRuntimeEvent) => {
       runtimeEventIngress.offer(compactEngineRuntimeEventForIngress(event));
     };
-    const {
-      makeExtensionUIContext: makePiExtensionUIContext,
-      requestProductAskUser,
-      resolveExtensionUserInput,
-    } = makePiFamilyUserInputBridge<PiSessionContext>({
-      displayName,
-      extensionLabel,
-      makeEventBase,
-      offerRuntimeEvent,
-    });
-
+    const { makeExtensionUIContext: makePiExtensionUIContext, resolveExtensionUserInput } =
+      makePiFamilyUserInputBridge<PiSessionContext>({
+        displayName,
+        extensionLabel,
+        makeEventBase,
+        offerRuntimeEvent,
+      });
     const offerRuntimeError = (
       context: PiSessionContext,
       input: {
@@ -1006,7 +880,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         },
       } satisfies EngineRuntimeEvent);
     };
-
     const offerEngineWebSurfaceUnavailable = (
       context: PiSessionContext,
       tracked: PiTrackedToolCall,
@@ -1039,7 +912,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         },
       } satisfies EngineRuntimeEvent);
     };
-
     const registerPiCuratorWebSurface = (
       context: PiSessionContext,
       tracked: PiTrackedToolCall,
@@ -1067,7 +939,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 threadId: context.session.threadId,
                 name: "browser_open",
                 arguments: { url, show: true, reuse: true },
-                timeoutMs: 10_000,
+                timeoutMs: 10000,
               }),
             );
           } catch {
@@ -1077,7 +949,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       });
       tracked.engineWebSurface = { url, unregister };
     };
-
     const completePromptRejection = (context: PiSessionContext, turnId: TurnId, cause: unknown) => {
       if (context.activeTurnId !== turnId) {
         return;
@@ -1085,7 +956,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       if (context.pendingPromptSubmission?.turnId === turnId) {
         context.pendingPromptSubmission = undefined;
       }
-
       const message = toMessage(cause, `${displayName} turn failed.`);
       const failure = classifyPiTurnFailure(message);
       const completionBase = makeEventBase(context);
@@ -1093,8 +963,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         offerRuntimeError(context, { message, method: "prompt", cause });
       }
       Effect.runFork(cancelHostGatewayTurn(context.gatewaySessionLease, turnId));
-      context.planModeController?.deactivate(turnId);
-      context.promptPolicyController?.deactivate();
       context.activeTurnId = undefined;
       context.activeInteractionMode = undefined;
       context.proposedPlanCandidate = undefined;
@@ -1114,14 +982,12 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         raw: { source: "pi.sdk.event", method: "prompt", payload: cause },
       } satisfies EngineRuntimeEvent);
     };
-
     const recordItem = (context: PiSessionContext, item: unknown) => {
       const turn = context.activeTurnId
         ? context.turns.find((candidate) => candidate.id === context.activeTurnId)
         : context.turns.at(-1);
       turn?.items.push(item);
     };
-
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
       const context = sessions.get(threadId);
       if (!context) {
@@ -1138,11 +1004,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }
       return context;
     });
-
     const disposeSessionContext = async (context: PiSessionContext) => {
       try {
-        context.planModeController?.deactivate();
-        context.promptPolicyController?.deactivate();
         context.activeInteractionMode = undefined;
         context.proposedPlanCandidate = undefined;
         await Effect.runPromise(
@@ -1188,10 +1051,14 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         delete context.gatewaySessionLease;
       }
     };
-
     const handleMessageUpdate = (
       context: PiSessionContext,
-      event: Extract<AgentSessionEvent, { type: "message_update" }>,
+      event: Extract<
+        AgentSessionEvent,
+        {
+          type: "message_update";
+        }
+      >,
     ) => {
       if (event.message.role !== "assistant") return;
       const update = event.assistantMessageEvent;
@@ -1273,7 +1140,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         } satisfies EngineRuntimeEvent);
       }
     };
-
     const completePiAttemptItems = (
       context: PiSessionContext,
       event: AgentSessionEvent,
@@ -1320,7 +1186,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }
       context.activeToolItems.clear();
     };
-
     const settlePiTurn = (
       context: PiSessionContext,
       event: AgentSessionEvent | PiPromptSettlementEvent,
@@ -1332,23 +1197,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         context.pendingPromptSubmission = undefined;
       }
       const completionBase = makeEventBase(context);
-      if (
-        engine === "oa" &&
-        input.state === "completed" &&
-        context.activeInteractionMode === "plan" &&
-        context.proposedPlanCandidate
-      ) {
-        offerRuntimeEvent({
-          ...completionBase,
-          type: "turn.proposed.completed",
-          payload: { planMarkdown: context.proposedPlanCandidate },
-          raw: {
-            source: "pi.sdk.event",
-            messageType: event.type,
-            payload: { source: "proposed_plan" },
-          },
-        } satisfies EngineRuntimeEvent);
-      }
       if (context.gatewaySessionLease && context.gatewayConnection) {
         const outgoingLease = context.gatewaySessionLease;
         const drainage = outgoingLease.retireTurn(turnId);
@@ -1375,8 +1223,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           ),
         );
       }
-      context.planModeController?.deactivate(turnId);
-      context.promptPolicyController?.deactivate();
       context.activeTurnId = undefined;
       context.activeInteractionMode = undefined;
       context.proposedPlanCandidate = undefined;
@@ -1401,7 +1247,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         },
       } satisfies EngineRuntimeEvent);
     };
-
     const finalizePiTurnSettlement = (context: PiSessionContext, settlement: PiTurnSettlement) => {
       if (settlement.runtimeError) {
         offerRuntimeError(context, {
@@ -1413,7 +1258,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }
       settlePiTurn(context, settlement.event, settlement.input);
     };
-
     const deferOrFinalizePiTurnSettlement = (
       context: PiSessionContext,
       settlement: PiTurnSettlement,
@@ -1425,7 +1269,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       }
       finalizePiTurnSettlement(context, settlement);
     };
-
     const ensurePiTurnStarted = (
       context: PiSessionContext,
       event: AgentSessionEvent | PiPromptSettlementEvent,
@@ -1450,11 +1293,10 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         },
       } satisfies EngineRuntimeEvent);
     };
-
     const handlePromptOutcome = (
       context: PiSessionContext,
       turnId: TurnId,
-      outcome: OAPromptOutcome | void,
+      outcome: PiPromptOutcome | void,
     ) => {
       if (
         context.activeTurnId !== turnId ||
@@ -1486,11 +1328,10 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           : { errorMessage: "The extension action could not be completed." }),
       });
     };
-
     const resolvePromptSubmission = (
       context: PiSessionContext,
       turnId: TurnId,
-      outcome: OAPromptOutcome | void,
+      outcome: PiPromptOutcome | void,
     ) => {
       const pending = context.pendingPromptSubmission;
       if (!pending || pending.turnId !== turnId) return;
@@ -1504,20 +1345,18 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         finalizePiTurnSettlement(context, pending.settlement);
       }
     };
-
     const submitPiPrompt = (
       context: PiSessionContext,
       turnId: TurnId,
       text: string,
       images: ReadonlyArray<ImageContent>,
-    ): Promise<OAPromptOutcome | void> => {
+    ): Promise<PiPromptOutcome | void> => {
       context.pendingPromptSubmission = { turnId };
       return context.runtime.session.prompt(
         text,
         images.length > 0 ? { images: [...images] } : undefined,
-      ) as Promise<OAPromptOutcome | void>;
+      ) as Promise<PiPromptOutcome | void>;
     };
-
     const handleSessionEvent = (context: PiSessionContext, event: AgentSessionEvent) => {
       switch (event.type) {
         case "agent_start":
@@ -1541,9 +1380,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           return;
         case "tool_execution_start": {
           const itemId = RuntimeItemId.makeUnsafe(`pi-tool-${event.toolCallId}`);
-          const isBundledProductAsk =
-            event.toolName === ASK_USER_TOOL_NAME &&
-            reconcileAskUserTool(context)?.available === true;
+          const isBundledProductAsk = false;
           const tracked: PiTrackedToolCall = {
             toolCallId: event.toolCallId,
             toolName: event.toolName,
@@ -1835,11 +1672,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             ? context.turns.find((candidate) => candidate.id === turnId)
             : undefined;
           if (turn) turn.leafId = leafId;
-          if (engine === "oa" && context.activeInteractionMode === "plan") {
-            context.proposedPlanCandidate = extractProposedPlanMarkdown(
-              latestPiAssistantText(event.messages),
-            );
-          } else {
+          {
             context.proposedPlanCandidate = undefined;
           }
           completePiAttemptItems(context, event, errorMessage ? "failed" : "completed");
@@ -1891,90 +1724,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           return;
       }
     };
-
-    const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
-      if (engine !== "oa" || context.workSurface === undefined) return;
-      const inspection = inspectOATaskListExtensionRegistration({
-        extensions: context.runtime.session.resourceLoader.getExtensions(),
-        tools: context.runtime.session.getAllTools(),
-        activeToolNames: context.runtime.session.getActiveToolNames(),
-      });
-      if (inspection.available) return;
-      offerRuntimeEvent({
-        ...makeEventBase(context, { includeTurnId: false }),
-        type: "runtime.warning",
-        payload: {
-          message:
-            "Task progress is unavailable for this Haros session. Other capabilities remain available.",
-          detail: {
-            source: "pi-resource-loader",
-            capability: "turn-task-projection",
-            availability: "unavailable",
-            diagnostics: inspection.diagnostics,
-          },
-        },
-        raw: {
-          source: "pi.sdk.event",
-          method: "extension/resource-diagnostic",
-          payload: {
-            capability: "turn-task-projection",
-            diagnosticCount: inspection.diagnostics.length,
-          },
-        },
-      } satisfies EngineRuntimeEvent);
-    };
-
-    const reconcileAskUserTool = (context: PiSessionContext) => {
-      if (engine !== "oa") return undefined;
-      const inspection = inspectOAAskUserRegistration({
-        extensions: context.runtime.session.resourceLoader.getExtensions(),
-        tools: context.runtime.session.getAllTools(),
-        activeToolNames: context.runtime.session.getActiveToolNames(),
-      });
-      const shouldBeActive = userInputPresenterRegistry.available && inspection.registered;
-      if (inspection.collision && !context.askUserProvenanceCollisionRecorded) {
-        context.askUserProvenanceCollisionRecorded = true;
-        askUserMetrics.increment("provenance_collision");
-      }
-      const active = context.runtime.session.getActiveToolNames();
-      const isActive = active.includes(ASK_USER_TOOL_NAME);
-      if (shouldBeActive !== isActive) {
-        context.runtime.session.setActiveToolsByName(
-          shouldBeActive
-            ? [...active.filter((name) => name !== ASK_USER_TOOL_NAME), ASK_USER_TOOL_NAME]
-            : active.filter((name) => name !== ASK_USER_TOOL_NAME),
-        );
-      }
-      return { ...inspection, available: shouldBeActive };
-    };
-
-    const warnIfAskUserUnavailable = (context: PiSessionContext) => {
-      if (engine !== "oa" || !userInputPresenterRegistry.available) return;
-      const inspection = reconcileAskUserTool(context);
-      if (inspection?.available) return;
-      offerRuntimeEvent({
-        ...makeEventBase(context, { includeTurnId: false }),
-        type: "runtime.warning",
-        payload: {
-          message: "ask_user_provenance_unavailable",
-          detail: {
-            source: "pi-resource-loader",
-            capability: "ask-user",
-            availability: "unavailable",
-            diagnostics: inspection?.diagnostics ?? [],
-          },
-        },
-        raw: {
-          source: "pi.sdk.event",
-          method: "extension/resource-diagnostic",
-          payload: {
-            capability: "ask-user",
-            diagnosticCount: inspection?.diagnostics.length ?? 0,
-          },
-        },
-      } satisfies EngineRuntimeEvent);
-    };
-
     const createSdkRuntime = async (input: {
       threadId: ThreadId;
       sdk: PiCodingAgentModule;
@@ -1987,122 +1736,23 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       gatewayConnection?: HostGatewayMcpConnection;
       hostGatewayFetch?: HostGatewayMcpFetch;
-      onTaskListUpdate?: (input: {
-        readonly toolCallId: string;
-        readonly payload: TurnTasksUpdatedPayload;
-      }) => void;
-      askUserInteraction?: AskUserProductInteractionPort;
       hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
-      immutableSystemPrompt?: string;
       workSurface?: EngineWorkSurface;
-      productSurface?: ProductSurface;
       projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
-      const curatorPresenter: CuratorPresenter | undefined =
-        engine === "oa" &&
-        browserAutomationHost?.available &&
-        browserAutomationHost.getEngineWebSurfaceContext &&
-        browserAutomationHost.presentEngineWebSurface &&
-        browserAutomationHost.settleEngineWebSurface
-          ? {
-              snapshot: async () =>
-                requireReadyEngineWebSurfaceContext(
-                  await Effect.runPromise(
-                    browserAutomationHost.getEngineWebSurfaceContext!(
-                      `engine-web-surface:${engine}:${input.threadId}`,
-                    ),
-                  ),
-                ),
-              present: async (request) => {
-                try {
-                  const result = await Effect.runPromise(
-                    browserAutomationHost.presentEngineWebSurface!({
-                      sessionKey: `engine-web-surface:${engine}:${input.threadId}`,
-                      threadId: input.threadId,
-                      surfaceId: request.surfaceId,
-                      url: request.url,
-                      title: request.title,
-                      expiresAt: request.expiresAt,
-                    }),
-                  );
-                  return { kind: "presented", tabId: result.tabId };
-                } catch (error) {
-                  const recoverable =
-                    error instanceof BrowserHostRpcError &&
-                    ["unavailable", "timeout", "transport"].includes(error.kind);
-                  return {
-                    kind: recoverable ? "recoverable-error" : "fatal-error",
-                    message: error instanceof Error ? error.message : String(error),
-                  };
-                }
-              },
-              settle: async ({ surfaceId, preserveTab }) => {
-                await Effect.runPromise(
-                  browserAutomationHost.settleEngineWebSurface!({
-                    sessionKey: `engine-web-surface:${engine}:${input.threadId}`,
-                    threadId: input.threadId,
-                    surfaceId,
-                    ...(preserveTab === undefined ? {} : { preserveTab }),
-                  }).pipe(Effect.ignore),
-                );
-              },
-            }
-          : undefined;
-      let resolvedGatewayControlAvailable =
-        engine !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
-      let resolvedHostProjection: HostGatewayHostExtensionHandle | undefined;
-      let resolvedPlanModeController: OAPlanModeController | undefined;
-      let resolvedPromptPolicyController: HarosPromptPolicyController | undefined;
-      let resolvedStableToolsetHash: string | undefined;
-      const hostProjectionDiagnostics: string[] = [];
-      const webAccessDiagnostics: string[] = [];
+      const resolvedGatewayControlAvailable = (input.gatewayTools?.length ?? 0) > 0;
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
         sessionManager,
         sessionStartEvent,
       }) => {
-        const composition: Pick<OASessionExtensionComposition, "extensions"> &
-          Partial<
-            Pick<
-              OASessionExtensionComposition,
-              "host" | "planModeController" | "promptPolicyController"
-            >
-          > =
-          engine === "oa"
-            ? buildOASessionExtensions({
-                agentDir,
-                defineTool: (tool) => input.sdk.defineTool(tool),
-                ...(curatorPresenter === undefined ? {} : { curatorPresenter }),
-                ...(input.workSurface === undefined ? {} : { workSurface: input.workSurface }),
-                ...(input.immutableSystemPrompt === undefined
-                  ? {}
-                  : { stableProductPrompt: input.immutableSystemPrompt }),
-                ...(input.gatewayConnection === undefined
-                  ? {}
-                  : { gatewayConnection: input.gatewayConnection }),
-                ...(input.hostGatewayFetch === undefined
-                  ? {}
-                  : { gatewayFetch: input.hostGatewayFetch }),
-                ...(input.onTaskListUpdate === undefined
-                  ? {}
-                  : { onTasksUpdated: input.onTaskListUpdate }),
-                ...(input.askUserInteraction === undefined
-                  ? {}
-                  : { askUserInteraction: input.askUserInteraction }),
-              })
-            : { extensions: [] };
-        const inlineExtensions = composition.extensions;
-        resolvedHostProjection = composition.host;
-        resolvedPlanModeController = composition.planModeController;
-        resolvedPromptPolicyController = composition.promptPolicyController;
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
-            ...(engine === "oa" ? [] : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
+            ...[input.hostSystemPrompt(resolvedGatewayControlAvailable)],
           ],
-          ...(inlineExtensions.length === 0 ? {} : { extensionFactories: inlineExtensions }),
           ...(input.workSurface !== undefined
             ? {
                 projectContextRoot:
@@ -2143,31 +1793,15 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           ),
           ...(input.gatewayTools ?? []),
         ];
-        if (engine === "oa") resolvedStableToolsetHash = stableCoreToolsetHash(customTools);
         const agentSessionOptions = {
           services,
           sessionManager,
           ...(sessionStartEvent ? { sessionStartEvent } : {}),
           ...(model ? { model } : {}),
           thinkingLevel: input.thinkingLevel ?? DEFAULT_PI_THINKING_LEVEL,
-          ...(input.immutableSystemPrompt === undefined
-            ? {}
-            : { immutableSystemPrompt: input.immutableSystemPrompt }),
           customTools,
         };
         const createdSession = await input.sdk.createAgentSessionFromServices(agentSessionOptions);
-        if (composition.host !== undefined) {
-          const inspection = composition.host.inspectRegistration({
-            extensions: services.resourceLoader.getExtensions(),
-            tools: createdSession.session.getAllTools(),
-          });
-          resolvedGatewayControlAvailable = inspection.available;
-          hostProjectionDiagnostics.push(...inspection.diagnostics);
-        }
-        if (engine === "oa") {
-          const inspection = inspectOAWebAccessRegistration(createdSession.session.getAllTools());
-          webAccessDiagnostics.push(...inspection.diagnostics);
-        }
         return {
           ...createdSession,
           services,
@@ -2183,25 +1817,12 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         runtime,
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
         gatewayControlAvailable: resolvedGatewayControlAvailable,
-        hostProjectionDiagnostics,
-        webAccessDiagnostics,
-        ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
-        ...(resolvedPlanModeController === undefined
-          ? {}
-          : { planModeController: resolvedPlanModeController }),
-        ...(resolvedPromptPolicyController === undefined
-          ? {}
-          : { promptPolicyController: resolvedPromptPolicyController }),
-        ...(resolvedStableToolsetHash === undefined
-          ? {}
-          : { stableToolsetHash: resolvedStableToolsetHash }),
       };
     };
-
     const startSession: PiAdapterShape["startSession"] = (input) =>
       Effect.gen(function* () {
         const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
-        const { productSurface, workSurface } = input.admission;
+        const { workSurface } = input.admission;
         const projectContextRoot =
           input.admission.projectContextRoot === null
             ? undefined
@@ -2286,85 +1907,51 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         const hostGatewayConnection = hostGatewaySessionLease?.connection;
         let gatewayToolLoadFailed = false;
         let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
-        const gatewayDescriptors =
-          hostGatewayConnection && engine !== "oa"
-            ? yield* releaseHostGatewaySessionLeaseOnInterrupt(
-                hostGatewaySessionLease,
-                Effect.tryPromise({
-                  try: () =>
-                    listHostGatewayMcpTools({
-                      connection: hostGatewayConnection,
-                      ...(options?.hostGatewayFetch === undefined
-                        ? {}
-                        : { fetch: options.hostGatewayFetch }),
+        const gatewayDescriptors = hostGatewayConnection
+          ? yield* releaseHostGatewaySessionLeaseOnInterrupt(
+              hostGatewaySessionLease,
+              Effect.tryPromise({
+                try: () =>
+                  listHostGatewayMcpTools({
+                    connection: hostGatewayConnection,
+                    ...(options?.hostGatewayFetch === undefined
+                      ? {}
+                      : { fetch: options.hostGatewayFetch }),
+                  }),
+                catch: (cause) => cause,
+              }),
+            ).pipe(
+              Effect.catch(() =>
+                Effect.sync(() => {
+                  gatewayToolLoadFailed = true;
+                  hostGatewaySessionLease?.release();
+                }).pipe(
+                  Effect.andThen(
+                    Effect.logWarning("Pi could not install thread-scoped Haros gateway tools", {
+                      engine,
+                      reason: "gateway-discovery-failed",
                     }),
-                  catch: (cause) => cause,
-                }),
-              ).pipe(
-                Effect.catch(() =>
-                  Effect.sync(() => {
-                    gatewayToolLoadFailed = true;
-                    hostGatewaySessionLease?.release();
-                  }).pipe(
-                    Effect.andThen(
-                      Effect.logWarning("Pi could not install thread-scoped Haros gateway tools", {
-                        engine,
-                        reason: "gateway-discovery-failed",
-                      }),
-                    ),
-                    Effect.as([] as ReadonlyArray<HostGatewayMcpToolDescriptor>),
                   ),
+                  Effect.as([] as ReadonlyArray<HostGatewayMcpToolDescriptor>),
                 ),
-              )
-            : [];
+              ),
+            )
+          : [];
         enabledBuiltInGroups = hostGatewayGroupsFromToolDescriptors(gatewayDescriptors);
-        const gatewayTools =
-          engine === "oa" || !hostGatewayConnection
-            ? []
-            : buildPiHostGatewayCustomToolsFromDescriptors({
-                connection: hostGatewayConnection,
-                defineTool: (tool) => piSdk.defineTool(tool),
-                tools: gatewayDescriptors,
-                ...(options?.hostGatewayFetch === undefined
-                  ? {}
-                  : { fetch: options.hostGatewayFetch }),
-              });
-        if (engine !== "oa" && gatewayDescriptors.length === 0) {
+        const gatewayTools = !hostGatewayConnection
+          ? []
+          : buildPiHostGatewayCustomToolsFromDescriptors({
+              connection: hostGatewayConnection,
+              defineTool: (tool) => piSdk.defineTool(tool),
+              tools: gatewayDescriptors,
+              ...(options?.hostGatewayFetch === undefined
+                ? {}
+                : { fetch: options.hostGatewayFetch }),
+            });
+        if (gatewayDescriptors.length === 0) {
           hostGatewaySessionLease?.release();
         }
-        let taskProjectionContext: PiSessionContext | undefined;
-        let askProjectionContext: PiSessionContext | undefined;
-        const askUserInteraction: AskUserProductInteractionPort | undefined =
-          engine === "oa"
-            ? {
-                present: ({ toolCallId, request, signal }) => {
-                  const current = askProjectionContext;
-                  if (!current || current.stopped || sessions.get(input.threadId) !== current) {
-                    return Promise.resolve({
-                      version: 1,
-                      requestId: crypto.randomUUID(),
-                      status: "stale",
-                    });
-                  }
-                  return requestProductAskUser(current, {
-                    toolCallId,
-                    request,
-                    ...(signal === undefined ? {} : { signal }),
-                  });
-                },
-              }
-            : undefined;
-        const {
-          runtime,
-          modelRegistry,
-          gatewayControlAvailable,
-          hostProjectionDiagnostics,
-          webAccessDiagnostics,
-          hostProjection,
-          planModeController,
-          promptPolicyController,
-          stableToolsetHash,
-        } = yield* releaseHostGatewaySessionLeaseOnInterrupt(
+        const { runtime, modelRegistry } = yield* releaseHostGatewaySessionLeaseOnInterrupt(
           hostGatewaySessionLease,
           Effect.tryPromise({
             try: () =>
@@ -2378,56 +1965,13 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
                 ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
-                ...(engine === "oa" && hostGatewayConnection !== undefined
-                  ? {
-                      gatewayConnection: hostGatewayConnection!,
-                      ...(options?.hostGatewayFetch === undefined
-                        ? {}
-                        : { hostGatewayFetch: options.hostGatewayFetch }),
-                    }
-                  : {}),
                 workSurface,
-                ...(engine === "oa" ? { productSurface } : {}),
                 ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                ...(engine === "oa"
-                  ? {
-                      onTaskListUpdate: ({ toolCallId, payload }) => {
-                        const current = taskProjectionContext;
-                        if (
-                          !current ||
-                          current.stopped ||
-                          !current.activeTurnId ||
-                          sessions.get(input.threadId) !== current
-                        ) {
-                          return;
-                        }
-                        offerRuntimeEvent({
-                          ...makeEventBase(current),
-                          type: "turn.tasks.updated",
-                          payload,
-                          raw: {
-                            source: "pi.sdk.event",
-                            messageType: HARNESSOS_TASK_LIST_TOOL_NAME,
-                            payload: { toolCallId },
-                          },
-                        } satisfies EngineRuntimeEvent);
-                      },
-                    }
-                  : {}),
-                ...(askUserInteraction === undefined ? {} : { askUserInteraction }),
                 hostSystemPrompt: (available) =>
                   makePiHostSystemPrompt({
-                    gatewayControlAvailable:
-                      engine === "oa" ? hostGatewayConnection !== undefined : available,
+                    gatewayControlAvailable: available,
                     enabledBuiltInGroups,
                   }),
-                ...(engine === "oa" && workSurface !== undefined
-                  ? {
-                      immutableSystemPrompt: makeOAEngineSystemPrompt({
-                        productSurface,
-                      }),
-                    }
-                  : {}),
               }),
             catch: (cause) =>
               new EngineAdapterRequestError({
@@ -2466,19 +2010,13 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             : {}),
           runtime,
           agentDir,
-          appliedModelRuntimeMutationRevision:
-            engine === "oa" ? getOAModelRuntimeMutationRevision(agentDir) : 0,
+          appliedModelRuntimeMutationRevision: getHarosModelRuntimeMutationRevision(agentDir),
           workSurface,
-          ...(engine === "oa" ? { productSurface } : {}),
           resourceScopeIdentity: piResourceScopeIdentity(
             workSurface === "chat"
               ? { kind: "global-only" }
               : { kind: "project", authoritativeRoot: projectContextRoot ?? cwd },
           ),
-          ...(hostProjection === undefined ? {} : { hostProjection }),
-          ...(planModeController === undefined ? {} : { planModeController }),
-          ...(promptPolicyController === undefined ? {} : { promptPolicyController }),
-          ...(stableToolsetHash === undefined ? {} : { stableToolsetHash }),
           ...(hostGatewaySessionLease
             ? {
                 gatewaySessionLease: hostGatewaySessionLease,
@@ -2505,9 +2043,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
         };
-        taskProjectionContext = context;
-        askProjectionContext = context;
-        reconcileAskUserTool(context);
         context.unsubscribe = runtime.session.subscribe((event) =>
           handleSessionEvent(context, event),
         );
@@ -2560,58 +2095,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             },
           } satisfies EngineRuntimeEvent);
         }
-        if (hostProjectionDiagnostics.length > 0) {
-          const diagnostics = [...new Set(hostProjectionDiagnostics)];
-          offerRuntimeEvent({
-            ...makeEventBase(context, { includeTurnId: false }),
-            type: "runtime.warning",
-            payload: {
-              message:
-                "Some Haros Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
-              detail: {
-                source: "pi-resource-loader",
-                capability: "host-gateway-host-projection",
-                availability: gatewayControlAvailable ? "degraded" : "unavailable",
-                diagnostics,
-              },
-            },
-            raw: {
-              source: "pi.sdk.event",
-              method: "extension/resource-diagnostic",
-              payload: {
-                capability: "host-gateway-host-projection",
-                diagnosticCount: diagnostics.length,
-              },
-            },
-          } satisfies EngineRuntimeEvent);
-        }
-        if (webAccessDiagnostics.length > 0) {
-          const diagnostics = [...new Set(webAccessDiagnostics)];
-          offerRuntimeEvent({
-            ...makeEventBase(context, { includeTurnId: false }),
-            type: "runtime.warning",
-            payload: {
-              message:
-                "Haros Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
-              detail: {
-                source: "pi-resource-loader",
-                capability: "harnessos-web-access",
-                availability: "degraded",
-                diagnostics,
-              },
-            },
-            raw: {
-              source: "pi.sdk.event",
-              method: "extension/resource-diagnostic",
-              payload: {
-                capability: "harnessos-web-access",
-                diagnosticCount: diagnostics.length,
-              },
-            },
-          } satisfies EngineRuntimeEvent);
-        }
-        warnIfTaskListExtensionUnavailable(context);
-        warnIfAskUserUnavailable(context);
         const loadedExtensions = runtime.session.resourceLoader
           .getExtensions()
           .extensions.filter((extension) => extension.hidden !== true);
@@ -2666,7 +2149,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         }
         return session;
       });
-
     const buildPromptPayload = (input: {
       readonly input?: string | undefined;
       readonly attachments?: ReadonlyArray<ChatAttachment> | undefined;
@@ -2719,13 +2201,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           images: images.filter((image): image is ImageContent => image !== undefined),
         };
       });
-
-    const sendTurn: PiAdapterShape["sendTurn"] = (input, dispatchContext) =>
+    const sendTurn: PiAdapterShape["sendTurn"] = (input) =>
       sessionResourceAdmission.withLock(
         input.threadId,
         Effect.gen(function* () {
           const context = yield* requireSession(input.threadId);
-          let currentHostDescriptors: ReadonlyArray<HostGatewayMcpToolDescriptor> | undefined;
           if (context.activeTurnId) {
             return yield* new EngineAdapterValidationError({
               engine: engine,
@@ -2733,60 +2213,34 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               issue: `A ${displayName} turn is already active for this thread.`,
             });
           }
-          if (engine === "oa") {
-            const currentRevision = getOAModelRuntimeMutationRevision(context.agentDir);
-            if (currentRevision > context.appliedModelRuntimeMutationRevision) {
-              yield* Effect.tryPromise({
-                try: async () => {
-                  await context.runtime.services.modelRuntime.refresh({
-                    allowNetwork: false,
-                  });
-                  const configurationError = context.runtime.services.modelRuntime.getError();
-                  if (configurationError !== undefined) {
-                    throw new Error("Haros model-service state could not be reconciled.");
-                  }
-                  const piSdk = await family.loadModule();
-                  context.modelRegistry = modelRegistryFacade(
-                    context.runtime.services.modelRuntime,
-                    piSdk,
-                  );
-                  context.appliedModelRuntimeMutationRevision = currentRevision;
-                },
-                catch: (cause) =>
-                  new EngineAdapterRequestError({
-                    engine,
-                    method: "model-services/reconcile",
-                    detail: "Haros model-service changes could not be applied to this session.",
-                    cause,
-                  }),
-              });
-            }
-            if (context.hostProjection !== undefined) {
-              yield* Effect.tryPromise({
-                try: async () => {
-                  const descriptors = await context.hostProjection!.refreshCurrentDescriptors();
-                  currentHostDescriptors = descriptors;
-                  if (!context.hostProjection!.requiresReload(descriptors)) {
-                    return;
-                  }
-                  // Pi owns the active tool registry. Re-run its native
-                  // ResourceLoader before this turn when the authoritative Host
-                  // catalog changed, so newly enabled tools are registered and
-                  // disabled tools disappear rather than merely failing at call.
-                  await context.runtime.session.reload();
-                },
-                catch: (cause) =>
-                  new EngineAdapterRequestError({
-                    engine,
-                    method: "host-catalog/reconcile",
-                    detail: "Haros Host tool changes could not be applied to this session.",
-                    cause,
-                  }),
-              });
-              warnIfTaskListExtensionUnavailable(context);
-            }
-            reconcileAskUserTool(context);
+          const currentRevision = getHarosModelRuntimeMutationRevision(context.agentDir);
+          if (currentRevision > context.appliedModelRuntimeMutationRevision) {
+            yield* Effect.tryPromise({
+              try: async () => {
+                await context.runtime.services.modelRuntime.refresh({
+                  allowNetwork: false,
+                });
+                const configurationError = context.runtime.services.modelRuntime.getError();
+                if (configurationError !== undefined) {
+                  throw new Error("Haros model-service state could not be reconciled.");
+                }
+                const piSdk = await family.loadModule();
+                context.modelRegistry = modelRegistryFacade(
+                  context.runtime.services.modelRuntime,
+                  piSdk,
+                );
+                context.appliedModelRuntimeMutationRevision = currentRevision;
+              },
+              catch: (cause) =>
+                new EngineAdapterRequestError({
+                  engine,
+                  method: "model-services/reconcile",
+                  detail: "Haros model-service changes could not be applied to this session.",
+                  cause,
+                }),
+            });
           }
+
           if (input.engineSelection?.engine === engine) {
             const model = findModelInRegistry(context.modelRegistry, input.engineSelection.model);
             if (!model) {
@@ -2835,66 +2289,14 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 : `${displayName} cannot send because no model with configured credentials is selected.`,
             });
           }
-          const promptRequiredNames = promptRequiredHostGatewayToolNames(dispatchContext);
-          if (engine === "oa" && promptRequiredNames.length > 0) {
-            if (context.gatewayConnection === undefined || context.hostProjection === undefined) {
-              return yield* new EngineAdapterValidationError({
-                engine,
-                operation: "sendTurn",
-                issue:
-                  "This synthetic Haros turn requires Host capabilities that are unavailable in the current Agent session.",
-              });
-            }
-            yield* Effect.tryPromise({
-              try: async () => {
-                const currentlyExposed =
-                  currentHostDescriptors ??
-                  (await context.hostProjection!.refreshCurrentDescriptors());
-                context.hostProjection!.assertDelivered({
-                  tools: context.runtime.session.getAllTools(),
-                  requiredNames: promptRequiredNames,
-                  currentlyExposedNames: new Set(
-                    currentlyExposed
-                      .filter((tool) => tool.provenance === "host-gateway")
-                      .map(({ name }) => name),
-                  ),
-                });
-              },
-              catch: (cause) =>
-                new EngineAdapterValidationError({
-                  engine,
-                  operation: "sendTurn",
-                  issue:
-                    "This synthetic Haros turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
-                  cause,
-                }),
-            });
-          }
           const payload = yield* buildPromptPayload(input);
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           const interactionMode = input.interactionMode ?? "default";
-          const promptText = engine === "oa" ? payload.text : payload.text;
+          const promptText = payload.text;
           context.activeTurnId = turnId;
           context.activeInteractionMode = interactionMode;
-          context.promptPolicyController?.activate({
-            surface: context.workSurface ?? "chat",
-            mode: interactionMode,
-            runtimeAccess: interactionMode === "plan" ? "read_only" : "read_write",
-            firmwareVersion: oaFirmwareVersion({
-              ...(context.productSurface === undefined
-                ? {}
-                : { productSurface: context.productSurface }),
-              ...(context.workSurface === undefined ? {} : { workSurface: context.workSurface }),
-            }),
-            modePolicyVersion: modePolicyVersion(interactionMode),
-            stableToolsetHash: context.stableToolsetHash ?? "unavailable",
-          });
           context.proposedPlanCandidate = undefined;
-          if (engine === "oa" && interactionMode === "plan") {
-            context.planModeController?.activate(turnId);
-          } else {
-            context.planModeController?.deactivate();
-          }
+          {}
           context.startedTurnId = undefined;
           context.turns.push({ id: turnId, items: [] });
           context.session = makeSessionSnapshot(context, engine);
@@ -2916,50 +2318,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 payload: { command: payload.text },
               },
             } satisfies EngineRuntimeEvent);
-            yield* Effect.tryPromise({
-              try: () => context.runtime.session.reload(),
-              catch: (cause) =>
-                new EngineAdapterRequestError({
-                  engine: engine,
-                  method: "session/reload",
-                  detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
-                  cause,
-                }),
-            }).pipe(
-              Effect.catch((error) =>
-                Effect.gen(function* () {
-                  const message = error.message;
-                  offerRuntimeEvent({
-                    ...makeEventBase(context),
-                    type: "turn.completed",
-                    payload: {
-                      state: "failed",
-                      stopReason: "error",
-                      errorMessage: message,
-                    },
-                    raw: {
-                      source: "pi.sdk.event",
-                      method: "reload",
-                      payload: error,
-                    },
-                  } satisfies EngineRuntimeEvent);
-                  offerRuntimeError(context, {
-                    message,
-                    method: "session/reload",
-                    cause: error,
-                  });
-                  yield* cancelHostGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
-                  context.planModeController?.deactivate(turnId);
-                  context.promptPolicyController?.deactivate();
-                  context.activeTurnId = undefined;
-                  context.activeInteractionMode = undefined;
-                  context.proposedPlanCandidate = undefined;
-                  context.startedTurnId = undefined;
-                  context.session = makeSessionSnapshot(context, engine);
-                  return yield* Effect.fail(error);
-                }),
-              ),
-            );
             offerRuntimeEvent({
               ...makeEventBase(context),
               type: "turn.completed",
@@ -2971,8 +2329,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               },
             } satisfies EngineRuntimeEvent);
             yield* cancelHostGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
-            context.planModeController?.deactivate(turnId);
-            context.promptPolicyController?.deactivate();
             context.activeTurnId = undefined;
             context.activeInteractionMode = undefined;
             context.proposedPlanCandidate = undefined;
@@ -2998,7 +2354,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           };
         }),
       );
-
     const steerTurn: NonNullable<PiAdapterShape["steerTurn"]> = (input) =>
       sessionResourceAdmission.withLock(
         input.threadId,
@@ -3008,29 +2363,13 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           const interactionMode = context.activeTurnId
             ? (context.activeInteractionMode ?? "default")
             : (input.interactionMode ?? "default");
-          const promptText = engine === "oa" ? payload.text : payload.text;
+          const promptText = payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
           if (!context.activeTurnId) {
             context.activeTurnId = turnId;
             context.activeInteractionMode = interactionMode;
-            context.promptPolicyController?.activate({
-              surface: context.workSurface ?? "chat",
-              mode: interactionMode,
-              runtimeAccess: interactionMode === "plan" ? "read_only" : "read_write",
-              firmwareVersion: oaFirmwareVersion({
-                ...(context.productSurface === undefined
-                  ? {}
-                  : { productSurface: context.productSurface }),
-                ...(context.workSurface === undefined ? {} : { workSurface: context.workSurface }),
-              }),
-              modePolicyVersion: modePolicyVersion(interactionMode),
-              stableToolsetHash: context.stableToolsetHash ?? "unavailable",
-            });
             context.proposedPlanCandidate = undefined;
-            if (engine === "oa" && interactionMode === "plan") {
-              context.planModeController?.activate(turnId);
-            } else {
-              context.planModeController?.deactivate();
+            {
             }
             context.startedTurnId = undefined;
             context.turns.push({ id: turnId, items: [] });
@@ -3062,7 +2401,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           };
         }),
       );
-
     const interruptTurn: PiAdapterShape["interruptTurn"] = (threadId, turnId) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
@@ -3107,7 +2445,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           }),
         );
       });
-
     const respondUnsupported = (threadId: ThreadId, method: string) =>
       Effect.fail(
         new EngineAdapterRequestError({
@@ -3116,7 +2453,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           detail: `${displayName} does not expose Haros approval/user-input requests for thread ${threadId}.`,
         }),
       );
-
     const respondToUserInput: PiAdapterShape["respondToUserInput"] = (
       threadId,
       requestId,
@@ -3168,7 +2504,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           context.runtime.session.agent.abort();
         }
       });
-
     const stopSession: PiAdapterShape["stopSession"] = (threadId) =>
       Effect.gen(function* () {
         const context = sessions.get(threadId);
@@ -3197,7 +2532,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           payload: { reason: "stopped", exitKind: "graceful" },
         } satisfies EngineRuntimeEvent);
       });
-
     const reloadSessionResources: NonNullable<PiAdapterShape["reloadSessionResources"]> = (
       threadId,
     ) =>
@@ -3215,8 +2549,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           ) {
             return "busy" as const;
           }
-          context.planModeController?.deactivate();
-          context.promptPolicyController?.deactivate();
           context.activeInteractionMode = undefined;
           context.proposedPlanCandidate = undefined;
           yield* Effect.tryPromise({
@@ -3229,20 +2561,15 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 cause,
               }),
           });
-          warnIfTaskListExtensionUnavailable(context);
-          warnIfAskUserUnavailable(context);
           return "reloaded" as const;
         }),
       );
-
     const listSessions: PiAdapterShape["listSessions"] = () =>
       Effect.sync(() =>
         Array.from(sessions.values()).map((context) => makeSessionSnapshot(context, engine)),
       );
-
     const hasSession: PiAdapterShape["hasSession"] = (threadId) =>
       Effect.sync(() => sessions.has(threadId));
-
     const snapshotThread = (context: PiSessionContext): EngineThreadSnapshot => {
       const historyItems = mapPiMessageHistory(context.runtime.session);
       const activeTurn = context.activeTurnId
@@ -3271,10 +2598,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               })),
       };
     };
-
     const readThread: PiAdapterShape["readThread"] = (threadId) =>
       requireSession(threadId).pipe(Effect.map(snapshotThread));
-
     const readToolResult: NonNullable<PiAdapterShape["readToolResult"]> = (input) =>
       Effect.sync((): ToolResultFullReadResult => {
         const context = sessions.get(input.threadId);
@@ -3301,7 +2626,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         }
         return { status: "unavailable", reason: "not_found" };
       });
-
     const rollbackThread: PiAdapterShape["rollbackThread"] = (threadId, numTurns) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
@@ -3315,7 +2639,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         }
         return snapshotThread(context);
       });
-
     const compactThread: NonNullable<PiAdapterShape["compactThread"]> = (threadId) =>
       requireSession(threadId).pipe(
         Effect.flatMap((context) =>
@@ -3332,13 +2655,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         ),
         Effect.asVoid,
       );
-
     const stopAll: PiAdapterShape["stopAll"] = () =>
       Effect.forEach(Array.from(sessions.keys()), (threadId) => stopSession(threadId), {
         concurrency: "unbounded",
         discard: true,
       }).pipe(Effect.asVoid);
-
     const listModels: NonNullable<PiAdapterShape["listModels"]> = (input) =>
       Effect.tryPromise({
         try: async () => {
@@ -3369,9 +2690,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                   ? "extension"
                   : configuredProviderIds.has(providerId)
                     ? "models_json"
-                    : family.engine === "oa" && services.modelRuntime.getProvider(providerId)
-                      ? "builtin"
-                      : "unknown",
+                    : "unknown",
             );
             return descriptor ? [descriptor] : [];
           });
@@ -3389,7 +2708,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             cause,
           }),
       });
-
     const listSkills: NonNullable<PiAdapterShape["listSkills"]> = (input) =>
       Effect.tryPromise({
         try: async () => {
@@ -3453,7 +2771,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             cause,
           }),
       });
-
     const listCommands: NonNullable<PiAdapterShape["listCommands"]> = (input) =>
       Effect.tryPromise({
         try: async () => {
@@ -3529,7 +2846,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             cause,
           }),
       });
-
     yield* Effect.addFinalizer(() =>
       stopAll().pipe(
         Effect.orDie,
@@ -3542,7 +2858,6 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         Effect.ensuring(Queue.shutdown(runtimeEventQueue)),
       ),
     );
-
     return {
       engine: engine,
       capabilities: {
@@ -3582,15 +2897,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       readonly engine: P;
     };
   });
-
 export const PiAdapterLive = Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY));
-
 export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
   return Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY, options));
-}
-
-export const OAAgentAdapterLive = Layer.effect(OAAgentAdapter, makePiAdapter(OA_FAMILY));
-
-export function makeOAAgentAdapterLive(options?: PiAdapterLiveOptions) {
-  return Layer.effect(OAAgentAdapter, makePiAdapter(OA_FAMILY, options));
 }

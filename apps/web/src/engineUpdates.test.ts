@@ -91,14 +91,14 @@ function serverSettings(
   };
 
   return {
-    defaultEngine: "oa",
+    modelServices: { autoSync: {}, added: {} },
+    defaultEngine: "codex",
     enableAssistantStreaming: false,
     enableEngineUpdateChecks: true,
     defaultThreadEnvMode: "local",
     addProjectBaseDirectory: "",
     textGenerationEngineSelection: { engine: "codex", model: "gpt-5.4-mini" },
     engines: {
-      oa: { enabled: true },
       codex: { ...engine, binaryPath: "codex", homePath: "" },
       claude: { ...engine, binaryPath: "claude", launchArgs: "" },
       cursor: { ...engine, binaryPath: "cursor-agent", apiEndpoint: "" },
@@ -114,6 +114,7 @@ function serverSettings(
         experimentalWebSockets: false,
       },
       pi: { ...engine, binaryPath: "pi", agentDir: "" },
+      deepseek: { ...engine, binaryPath: "dsh", homePath: "" },
       ...overrides,
     },
     skills: { disabled: [] },

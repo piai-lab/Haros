@@ -1,40 +1,22 @@
+import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 // FILE: _chat.settings.tsx
 // Purpose: Render the dedicated settings experience with its own section sidebar and grouped panels.
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
-
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   type DesktopAppIcon,
   type EngineKind,
   type ServerSettingsPatch,
 } from "@harnessos/contracts";
-import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sameAppSnapShortcut } from "@harnessos/shared/appSnapShortcut";
+import {
+  ENGINE_DISPLAY_NAMES,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "@harnessos/shared/engineMetadata";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  type FollowUpBehavior,
-  DEFAULT_CHAT_WIDTH,
-  DEFAULT_UI_DENSITY,
-  type UiDensity,
-  MAX_CHAT_FONT_SIZE_PX,
-  MAX_TERMINAL_FONT_SIZE_PX,
-  MIN_CHAT_FONT_SIZE_PX,
-  MIN_TERMINAL_FONT_SIZE_PX,
-  normalizeChatFontSizePx,
-  normalizeTerminalFontFamily,
-  normalizeTerminalFontSizePx,
-  TERMINAL_FONT_FAMILY_SUGGESTIONS,
-  type LocalPreferences,
-  useLocalPreferences,
-} from "../localPreferences";
-import {
-  getGitTextGenerationModelOptions,
-  isGitTextGenerationSettingsDirty,
-} from "../engineSettings";
-import { useServerSettings } from "../serverSettings";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
 import { AppIconPicker } from "~/components/settings/AppIconPicker";
 import {
@@ -45,19 +27,25 @@ import {
   AppSnapSettingsPanel,
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
-import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
-import { WebSearchSettingsPanel } from "~/components/settings/WebSearchSettingsPanel";
-import { PromptsSettingsPanel } from "~/components/settings/PromptsSettingsPanel";
 import {
-  isEngineInstallSettingsDirty,
   EnginesSettingsPanel,
+  isEngineInstallSettingsDirty,
 } from "~/components/settings/EnginesSettingsPanel";
+import {
+  CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+  CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+} from "../components/chat/chatHeaderControls";
+import {
+  CHAT_CONTENT_CARD_CLASS_NAME,
+  CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
+} from "../components/chat/composerPickerStyles";
 import { EngineOptionLabel } from "../components/EngineIcon";
-import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
-import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
+import { RouteInsetSurface } from "../components/RouteInsetSurface";
+import { BuiltInToolsSettingsPanel } from "../components/settings/BuiltInToolsSettingsPanel";
 import { EngineUsageSettingsPanel } from "../components/settings/EngineUsageSettingsPanel";
 import { ExternalConnectionsSettingsPanel } from "../components/settings/ExternalConnectionsSettingsPanel";
-import { BuiltInToolsSettingsPanel } from "../components/settings/BuiltInToolsSettingsPanel";
+import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
+import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -70,15 +58,8 @@ import {
 } from "../components/settings/SettingsPanelPrimitives";
 import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
 import { ThemeModePicker } from "../components/settings/ThemeModePicker";
+import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
 import { ThemePackEditor } from "../components/ThemePackEditor";
-import {
-  CHAT_CONTENT_CARD_CLASS_NAME,
-  CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
-} from "../components/chat/composerPickerStyles";
-import {
-  CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-  CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-} from "../components/chat/chatHeaderControls";
 import {
   Autocomplete,
   AutocompleteEmpty,
@@ -92,18 +73,22 @@ import { Input } from "../components/ui/input";
 import { SelectItem } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { toastManager } from "../components/ui/toast";
-import { RouteInsetSurface } from "../components/RouteInsetSurface";
-import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
-import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
+import { sameEngineOrder } from "../engineOrdering";
+import {
+  getGitTextGenerationModelOptions,
+  isGitTextGenerationSettingsDirty,
+} from "../engineSettings";
+import { isElectron } from "../env";
 import { useDesktopAppIcon } from "../hooks/useDesktopAppIcon";
+import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useEngineModelCatalog } from "../hooks/useEngineModelCatalog";
 import { useTheme } from "../hooks/useTheme";
+import { useI18n } from "../i18n";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
-import { isElectron } from "../env";
-import { useI18n } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
+import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import {
   cn,
   getNavigatorPlatform,
@@ -111,42 +96,49 @@ import {
   isMacPlatform,
   isWindowsPlatform,
 } from "../lib/utils";
-import { ensureNativeApi, readNativeApi } from "../nativeApi";
-import { serverConfigQueryOptions } from "../lib/serverReactQuery";
-import { sameEngineOrder } from "../engineOrdering";
 import {
-  normalizeSettingsSection,
-  SETTINGS_SECTION_BY_ID,
-  SETTINGS_TARGETS,
-} from "../settingsNavigation";
+  DEFAULT_CHAT_WIDTH,
+  DEFAULT_UI_DENSITY,
+  MAX_CHAT_FONT_SIZE_PX,
+  MAX_TERMINAL_FONT_SIZE_PX,
+  MIN_CHAT_FONT_SIZE_PX,
+  MIN_TERMINAL_FONT_SIZE_PX,
+  normalizeChatFontSizePx,
+  normalizeTerminalFontFamily,
+  normalizeTerminalFontSizePx,
+  TERMINAL_FONT_FAMILY_SUGGESTIONS,
+  useLocalPreferences,
+  type FollowUpBehavior,
+  type LocalPreferences,
+  type UiDensity,
+} from "../localPreferences";
+import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import { useServerSettings } from "../serverSettings";
 import {
   APPEARANCE_SETTINGS_SEARCH,
   BEHAVIOR_SETTINGS_SEARCH,
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
+import {
+  normalizeSettingsSection,
+  SETTINGS_SECTION_BY_ID,
+  SETTINGS_TARGETS,
+} from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
-
 // ── Settings taxonomy ──────────────────────────────────────────────────────
-
-const ENGINE_SELECT_OPTIONS = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
+const ENGINE_SELECT_OPTIONS = RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
-
 // ── Settings UI primitives ────────────────────────────────────────────────
-
 // Shared settings controls live in ~/components/settings/SettingControls.
-
 function isEngineSelectOption(value: string): value is EngineKind {
   return ENGINE_SELECT_OPTIONS.includes(value as EngineKind);
 }
-
 // Keys of LocalPreferences whose value is a plain boolean — the only ones that can be
 // driven by the shared on/off toggle row below.
 type BooleanSettingKey = {
   [Key in keyof LocalPreferences]-?: LocalPreferences[Key] extends boolean ? Key : never;
 }[keyof LocalPreferences];
-
 // ── Route screen ───────────────────────────────────────────────────────────
-
 function SettingsRouteView() {
   const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
@@ -279,7 +271,10 @@ function SettingsRouteView() {
         { value: "compact", label: t("settings.densityCompact") },
         { value: "comfortable", label: t("settings.densityComfortable") },
         { value: "spacious", label: t("settings.densitySpacious") },
-      ] as const satisfies ReadonlyArray<{ value: UiDensity; label: string }>,
+      ] as const satisfies ReadonlyArray<{
+        value: UiDensity;
+        label: string;
+      }>,
     [t],
   );
   const chatWidthOptions = useMemo(
@@ -288,7 +283,10 @@ function SettingsRouteView() {
         { value: "standard", label: t("settings.chatWidthStandard") },
         { value: "wide", label: t("settings.chatWidthWide") },
         { value: "full", label: t("settings.chatWidthFull") },
-      ] as const satisfies ReadonlyArray<{ value: ChatWidthMode; label: string }>,
+      ] as const satisfies ReadonlyArray<{
+        value: ChatWidthMode;
+        label: string;
+      }>,
     [t],
   );
   const followUpBehaviorOptions = useMemo(
@@ -323,7 +321,6 @@ function SettingsRouteView() {
     supportsCustomTitleBarSetting &&
     customTitleBarState.supported &&
     customTitleBarState.preference !== true;
-
   function showCustomTitleBarRestartToast(): void {
     toastManager.add({
       type: "warning",
@@ -338,10 +335,9 @@ function SettingsRouteView() {
       },
     });
   }
-
-  async function persistCustomTitleBarPreference(
-    enabled: boolean,
-  ): Promise<{ readonly restartRequired: boolean } | null> {
+  async function persistCustomTitleBarPreference(enabled: boolean): Promise<{
+    readonly restartRequired: boolean;
+  } | null> {
     try {
       const bridge = window.desktopBridge?.customTitleBar;
       if (!bridge) throw new Error("Desktop title bar bridge is unavailable.");
@@ -358,13 +354,11 @@ function SettingsRouteView() {
       return null;
     }
   }
-
   async function applyCustomTitleBarPreference(enabled: boolean): Promise<void> {
     const state = await persistCustomTitleBarPreference(enabled);
     if (state === null) return;
     if (state.restartRequired) showCustomTitleBarRestartToast();
   }
-
   async function applyDesktopAppIcon(icon: DesktopAppIcon): Promise<void> {
     const result = await updateDesktopAppIcon(icon);
     if (result.state === "failed") {
@@ -375,7 +369,6 @@ function SettingsRouteView() {
       });
     }
   }
-
   const visibleTerminalFontFamilySuggestions = useMemo(() => {
     const query = settings.terminalFontFamily.trim().toLowerCase();
     if (!query) return TERMINAL_FONT_FAMILY_SUGGESTIONS;
@@ -383,7 +376,6 @@ function SettingsRouteView() {
       suggestion.toLowerCase().includes(query),
     );
   }, [settings.terminalFontFamily]);
-
   const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(
     serverSettings ?? serverDefaults,
     serverDefaults,
@@ -394,7 +386,6 @@ function SettingsRouteView() {
   );
   const hiddenEngineCount = new Set(settings.hiddenEngines).size;
   const isEngineOrderDirty = !sameEngineOrder(settings.engineOrder, defaults.engineOrder);
-
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
     if (!settingsTarget) return;
@@ -405,7 +396,6 @@ function SettingsRouteView() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeSection, settingsTarget]);
-
   const changedSettingLabels = [
     ...(settings.localePreference !== defaults.localePreference ? [t("settings.language")] : []),
     ...(theme !== "system" ? [t("settings.theme")] : []),
@@ -488,10 +478,8 @@ function SettingsRouteView() {
     ...(hiddenEngineCount > 0 ? [t("settings.visibleEngines")] : []),
     ...(isEngineOrderDirty ? [t("settings.enginePicker")] : []),
   ];
-
   async function restoreDefaults() {
     if (changedSettingLabels.length === 0) return;
-
     const api = readNativeApi();
     const confirmed = await (api ?? ensureNativeApi()).dialogs.confirm(
       [
@@ -502,7 +490,6 @@ function SettingsRouteView() {
       ].join("\n"),
     );
     if (!confirmed) return;
-
     let appearanceResetFailed = false;
     try {
       resetAllThemes();
@@ -525,7 +512,6 @@ function SettingsRouteView() {
         ? persistCustomTitleBarPreference(true)
         : Promise.resolve({ restartRequired: false }),
     ]);
-
     const applyDefaultAppSnapRuntime = async (): Promise<boolean> => {
       const appSnapBridge = window.desktopBridge?.appSnap;
       if (!appSnapBridge) return true;
@@ -541,7 +527,6 @@ function SettingsRouteView() {
     if (localResult.state !== "failed") {
       appSnapNativeApplied = await applyDefaultAppSnapRuntime();
     }
-
     const failed =
       appearanceResetFailed ||
       localResult.state === "failed" ||
@@ -585,7 +570,6 @@ function SettingsRouteView() {
     if (titleBarResult?.restartRequired) showCustomTitleBarRestartToast();
     setResetEpoch((current) => current + 1);
   }
-
   // Shared on/off settings row: a labelled Switch bound to a boolean local preference
   // key, with the standard "reset to default" affordance shown only when changed.
   // Rows with bespoke controls (e.g. the desktop-notifications Test button) keep
@@ -631,7 +615,6 @@ function SettingsRouteView() {
       />
     );
   };
-
   const renderGeneralPanel = () => (
     <div className="space-y-6">
       <SettingsSection title={t("settings.coreDefaults")}>
@@ -997,7 +980,6 @@ function SettingsRouteView() {
       </div>
     </div>
   );
-
   const renderAppearancePanel = () => (
     <div className="space-y-6">
       <SettingsSectionShell
@@ -1396,7 +1378,6 @@ function SettingsRouteView() {
       </SettingsSection>
     </div>
   );
-
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
       <SettingsSection title={t("settings.conversation")}>
@@ -1506,7 +1487,6 @@ function SettingsRouteView() {
       </SettingsSection>
     </div>
   );
-
   const renderRouteOwnedPanel = () => {
     switch (activeSection) {
       case "general":
@@ -1527,7 +1507,6 @@ function SettingsRouteView() {
         return null;
     }
   };
-
   return (
     <div
       className={cn(
@@ -1579,48 +1558,35 @@ function SettingsRouteView() {
                       {activeSectionDescriptor ? t(activeSectionDescriptor.descriptionKey) : null}
                     </p>
                   </div>
-                  {activeSection !== "prompts" && activeSection !== "web-search" ? (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="shrink-0"
-                      disabled={changedSettingLabels.length === 0}
-                      onClick={() => void restoreDefaults()}
-                    >
-                      <RotateCcwIcon className="size-3.5" />
-                      {t("settings.restoreDefaults")}
-                    </Button>
-                  ) : null}
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={changedSettingLabels.length === 0}
+                    onClick={() => void restoreDefaults()}
+                  >
+                    <RotateCcwIcon className="size-3.5" />
+                    {t("settings.restoreDefaults")}
+                  </Button>
                 </div>
               ) : null}
 
               {renderRouteOwnedPanel()}
               {/* These workflow owners stay mounted so drafts, request guards, and pending
-                  mutations retain route lifetime while inactive panels render no DOM. */}
+            mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
                 <NotificationsSettingsPanel active={activeSection === "notifications"} />
                 <AppSnapSettingsPanel active={activeSection === "appsnap"} />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
-                <WebSearchSettingsPanel
-                  active={activeSection === "web-search"}
-                  activeTarget={settingsTarget}
-                  onTargetInvalidated={() => {
-                    if (!settingsTarget) return;
-                    void navigate({
-                      to: "/settings",
-                      replace: true,
-                      search: (previous) => ({ ...previous, target: undefined }),
-                    });
-                  }}
-                />
+
                 <EnginesSettingsPanel
                   active={activeSection === "engines"}
                   resetEpoch={resetEpoch}
                 />
                 <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />
-                <PromptsSettingsPanel active={activeSection === "prompts"} />
+
                 <ExternalConnectionsSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}
@@ -1634,7 +1600,6 @@ function SettingsRouteView() {
     </div>
   );
 }
-
 export const Route = createFileRoute("/_chat/settings")({
   component: SettingsRouteView,
 });

@@ -2,20 +2,20 @@ import "../index.css";
 
 import {
   DEFAULT_SERVER_SETTINGS_VIEW,
+  DEVICE_WS_METHODS,
   EventId,
   MessageId,
-  DEVICE_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
   ProjectId,
   ThreadId,
   TurnId,
+  WS_METHODS,
   type OrchestrationEvent,
   type OrchestrationReadModel,
   type OrchestrationShellStreamItem,
   type OrchestrationThread,
   type ServerConfig,
   type WsWelcomePayload,
-  WS_METHODS,
 } from "@harnessos/contracts";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
@@ -51,6 +51,7 @@ import { useComposerDraftStore } from "../composerDraftStore";
 import { getRouter } from "../router";
 import { deriveTimelineEntries } from "../session-logic";
 import { useStore } from "../store";
+import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
 import {
   createShellSnapshotFromReadModel,
   flattenEffectRpcRequestPayload,
@@ -59,7 +60,6 @@ import {
   sendEffectRpcExit,
   type EffectRpcWebSocketClient,
 } from "../test/effectRpcWebSocketMock";
-import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
 import { getThreadFromState } from "../threadDerivation";
 import { resetThreadDetailResumeCursorsForTests } from "../threadDetailResumeCursors";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
@@ -347,14 +347,6 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
   }
   if (tag === WS_METHODS.engineListAgents) {
     return { source: "browser.fixture", agents: [] };
-  }
-  if (tag === WS_METHODS.oaModelServicesList) {
-    return {
-      state: "empty",
-      services: [],
-      connectableServices: [],
-      errorCode: null,
-    };
   }
   if (tag === WS_METHODS.engineGetComposerCapabilities) {
     const request = body as { readonly engine?: string } | null;

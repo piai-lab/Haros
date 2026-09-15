@@ -3,9 +3,9 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   applyServerSettingsPatch,
-  normalizeBuiltInGroupOverrides,
   engineStartOptionsFromServerSettings,
   isServerEngineEnabled,
+  normalizeBuiltInGroupOverrides,
   validateServerSettingsPatch,
 } from "./serverSettings";
 
@@ -13,11 +13,11 @@ const decodeEngineSessionStartInput = Schema.decodeUnknownSync(EngineSessionStar
 
 describe("applyServerSettingsPatch", () => {
   it("treats only an explicit false engine setting as disabled", () => {
-    expect(isServerEngineEnabled(DEFAULT_SERVER_SETTINGS, "oa")).toBe(true);
+    expect(isServerEngineEnabled(DEFAULT_SERVER_SETTINGS, "pi")).toBe(true);
     expect(
       isServerEngineEnabled(
         { engines: {} } as Pick<typeof DEFAULT_SERVER_SETTINGS, "engines">,
-        "oa",
+        "pi",
       ),
     ).toBe(true);
     expect(
@@ -25,10 +25,10 @@ describe("applyServerSettingsPatch", () => {
         {
           engines: {
             ...DEFAULT_SERVER_SETTINGS.engines,
-            oa: { ...DEFAULT_SERVER_SETTINGS.engines.oa, enabled: false },
+            pi: { ...DEFAULT_SERVER_SETTINGS.engines.pi, enabled: false },
           },
         },
-        "oa",
+        "pi",
       ),
     ).toBe(false);
   });
@@ -89,7 +89,7 @@ describe("applyServerSettingsPatch", () => {
 
   it("refuses a engine-only switch to a runtime-catalog-only engine", () => {
     const patch = {
-      textGenerationEngineSelection: { engine: "oa" as const },
+      textGenerationEngineSelection: { engine: "pi" as const },
     };
 
     expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toContain(
@@ -103,7 +103,7 @@ describe("applyServerSettingsPatch", () => {
   it("preserves an explicit runtime-catalog model selection exactly", () => {
     const patch = {
       textGenerationEngineSelection: {
-        engine: "oa" as const,
+        engine: "pi" as const,
         model: "deepseek/deepseek-v4-pro",
         options: { thinkingLevel: "high" },
       },
@@ -121,9 +121,6 @@ describe("engineStartOptionsFromServerSettings", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       engines: {
-        oa: {
-          ...DEFAULT_SERVER_SETTINGS.engines.oa,
-        },
         codex: {
           ...DEFAULT_SERVER_SETTINGS.engines.codex,
           binaryPath: "",
@@ -165,6 +162,11 @@ describe("engineStartOptionsFromServerSettings", () => {
           binaryPath: "",
           agentDir: "",
         },
+        deepseek: {
+          ...DEFAULT_SERVER_SETTINGS.engines.deepseek,
+          binaryPath: "",
+          homePath: "",
+        },
       },
     };
 
@@ -192,6 +194,7 @@ describe("engineStartOptionsFromServerSettings", () => {
     expect(engineOptions.kilo).toEqual({});
     expect(engineOptions.opencode).toEqual({ experimentalWebSockets: false });
     expect(engineOptions.pi).toEqual({});
+    expect(engineOptions.deepseek).toEqual({});
   });
 
   it("preserves configured launch settings", () => {

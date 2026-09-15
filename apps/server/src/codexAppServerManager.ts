@@ -183,6 +183,7 @@ interface CodexSessionContext {
     readonly message: string;
     readonly recordedAt: number;
   }>;
+  transportFailureDeferred?: boolean;
 }
 
 interface CodexSkillListInput {
@@ -1314,7 +1315,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }).pipe(this.runPromise);
       return { ...context.session };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to start Codex session.";
+      if ((error as NodeJS.ErrnoException | null)?.code === "EPIPE" && context) {
+        // stdin can reject before the child exit/stderr callbacks run; allow
+        // those callbacks to publish the authoritative startup diagnostic.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      const message =
+        context && error instanceof Error
+          ? appendCodexProcessErrorTail(context, error.message)
+          : error instanceof Error
+            ? error.message
+            : "Failed to start Codex session.";
       let cleanupError: unknown;
       if (context) {
         this.updateSession(context, {
@@ -2891,7 +2902,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       this.scheduleDiscoverySessionIdleStop(normalizedCwd);
       return context;
     } catch (error) {
-      await this.stopDiscoverySession(normalizedCwd);
+      try {
+        await this.stopDiscoverySession(normalizedCwd);
+      } catch (cleanupError) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw combineCodexFailureWithCleanupError(message, error, cleanupError);
+      }
       throw error;
     }
   }
@@ -3054,6 +3070,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private handleTransportFailure(context: CodexSessionContext, cause: unknown): void {
     if (context.stopping) return;
+    if ((cause as NodeJS.ErrnoException | null)?.code === "EPIPE") {
+      // The pending write reports EPIPE to the startup request; the child exit
+      // handler owns the authoritative diagnostic and lifecycle event.
+      return;
+    }
     const error =
       cause instanceof Error ? cause : new Error("Codex app-server transport failed", { cause });
     const message = appendCodexProcessErrorTail(

@@ -21,7 +21,6 @@ const supportedWorkspaces = [
   "apps/web",
   "packages/contracts",
   "packages/oa-ask",
-  "packages/oa-web-access",
   "packages/shared",
   "scripts",
 ];
@@ -74,15 +73,6 @@ export function planFocusedTestRuns(inputs, root = repoRoot) {
           "focused",
           ...workspaceFiles,
         ],
-        cwd: workspaceRoot,
-        files: files.map((file) => file.relativePath),
-      };
-    }
-    if (workspace === "packages/oa-web-access") {
-      return {
-        workspace,
-        command: process.execPath,
-        args: ["--test", "--test-concurrency=4", ...workspaceFiles],
         cwd: workspaceRoot,
         files: files.map((file) => file.relativePath),
       };

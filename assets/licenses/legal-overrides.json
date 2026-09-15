@@ -136,7 +136,7 @@
         "@earendil-works/pi-agent-core@0.84.4": "bc1769075d1722922e64f6cf30f8f32ce8e40906946807a90fc50dada0509d47",
         "@earendil-works/pi-ai@0.84.4": "77fbac764e5c4bbb2bbc8212fd677208f8470a9363df09c8c1643e332351be9b",
         "@earendil-works/pi-client@0.84.4": "619d3373f21e3f1ae15bfa3842f687f8202f05ae6b3c8e8b4f248a2bd97ccdd3",
-        "@earendil-works/pi-coding-agent@0.84.4": "db9fead11bd2ddf7a327d2c2d11b535f30d059241c251d376837d5ab638a5576",
+        "@earendil-works/pi-coding-agent@0.84.4": "0dc14f978e2d95d47cafe0ae6f19446c039eaf13a02bf0250b666f9037f8c29a",
         "@earendil-works/pi-protocol@0.84.4": "930cf0b5d48dabc9d086fad293f2c418eb9f7186fae4ad80e6beeebc02d91e10",
         "@earendil-works/pi-telemetry@0.84.4": "cc85c3f202c7e8ffab562e050c7de3fcbf534b69cfee53afe52020cfcac7556e",
         "@earendil-works/pi-tui@0.84.4": "ebe367b1bf8c15ba72bba50fb9c7cb682a8693faa90366e11946bac969c9b399"

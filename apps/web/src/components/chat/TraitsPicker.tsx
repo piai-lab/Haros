@@ -339,7 +339,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
       primarySelectDescriptorId ??
       (engine === "kilo" || engine === "opencode"
         ? "variant"
-        : engine === "pi" || engine === "oa"
+        : engine === "pi"
           ? "thinkingLevel"
           : engine === "claude"
             ? "effort"
@@ -388,7 +388,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
             label={
               engine === "kilo" || engine === "opencode"
                 ? t("composer.variant")
-                : engine === "pi" || engine === "oa"
+                : engine === "pi"
                   ? t("composer.thinkingLevel")
                   : t("composer.effort")
             }

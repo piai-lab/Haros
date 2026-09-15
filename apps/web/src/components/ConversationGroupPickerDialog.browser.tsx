@@ -46,7 +46,7 @@ const thread: SidebarThreadSummary = {
   projectId: project.id,
   groupIds: [firstGroupId],
   title: "Polish conversation groups",
-  engineSelection: { engine: "oa", model: "mimo-v2-pro" },
+  engineSelection: { engine: "pi", model: "mimo-v2-pro" },
   interactionMode: "default",
   branch: null,
   worktreePath: null,

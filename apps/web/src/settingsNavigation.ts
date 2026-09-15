@@ -2,7 +2,6 @@
 // Purpose: Share the settings topic taxonomy between the main sidebar and the settings screen.
 // Layer: Route/UI support
 // Exports: section ids, nav items, and search normalization helper
-
 import type { MessageKey } from "./i18n";
 import { ADVANCED_SETTINGS_SEARCH } from "./settingsMetadata/advancedSettings";
 import {
@@ -14,19 +13,13 @@ import {
   APPSNAP_SETTINGS_SEARCH,
   NOTIFICATIONS_SETTINGS_SEARCH,
 } from "./settingsMetadata/desktopSettings";
-import { PROMPTS_SETTINGS_SEARCH } from "./settingsMetadata/promptSettings";
 import { ENGINES_SETTINGS_SEARCH } from "./settingsMetadata/engineSettings";
-import { WEB_SEARCH_SETTINGS_SEARCH } from "./settingsMetadata/webSearchSettings";
 import {
-  SETTINGS_TARGETS,
   defineSettingsSearchPanel,
   type OwnedSettingsSearchRecord,
 } from "./settingsSearchMetadata";
-
 export { SETTINGS_TARGETS } from "./settingsSearchMetadata";
-
 export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "system" | "archived";
-
 export type SettingsNavItem = {
   readonly id: string;
   group: SettingsNavGroupId;
@@ -36,7 +29,6 @@ export type SettingsNavItem = {
   icon: string;
   searchRecords: readonly OwnedSettingsSearchRecord[];
 };
-
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   id: SettingsNavGroupId;
   labelKey: MessageKey;
@@ -47,7 +39,6 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   { id: "system", labelKey: "settings.groupSystem" },
   { id: "archived", labelKey: "settings.groupArchived" },
 ] as const;
-
 export const SETTINGS_NAV_ITEMS = [
   {
     id: "general",
@@ -175,17 +166,9 @@ export const SETTINGS_NAV_ITEMS = [
         id: "models:model-services",
         titleKey: "settings.models",
         keywords:
-          "Configure Haros model services credentials authentication available models catalog engine API key OAuth.",
+          "model services credentials authentication available models catalog API key OAuth login gateway DeepSeek OpenCode Kilo Pi",
       }),
     ],
-  },
-  {
-    id: "web-search",
-    group: "coding",
-    labelKey: "settings.webSearch",
-    descriptionKey: "settings.webSearchDescription",
-    icon: "globe",
-    searchRecords: Object.values(WEB_SEARCH_SETTINGS_SEARCH),
   },
   {
     id: "skills",
@@ -200,14 +183,6 @@ export const SETTINGS_NAV_ITEMS = [
         keywords: "Every skill found across engines, with toggles to control availability. agent",
       }),
     ],
-  },
-  {
-    id: "prompts",
-    group: "coding",
-    labelKey: "settings.prompts",
-    descriptionKey: "settings.promptsDescription",
-    icon: "prompt",
-    searchRecords: Object.values(PROMPTS_SETTINGS_SEARCH),
   },
   {
     id: "worktrees",
@@ -246,18 +221,14 @@ export const SETTINGS_NAV_ITEMS = [
     ],
   },
 ] as const satisfies readonly SettingsNavItem[];
-
 export type SettingsSectionId = (typeof SETTINGS_NAV_ITEMS)[number]["id"];
-
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = SETTINGS_NAV_ITEMS.map(
   (item) => item.id,
 );
-
 export const SETTINGS_SECTION_BY_ID = new Map<
   SettingsSectionId,
   (typeof SETTINGS_NAV_ITEMS)[number]
 >(SETTINGS_NAV_ITEMS.map((item) => [item.id, item]));
-
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (typeof value !== "string") {
     return "general";

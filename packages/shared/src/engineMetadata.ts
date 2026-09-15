@@ -4,8 +4,19 @@
 import type { EngineKind } from "@harnessos/contracts";
 
 export interface EngineDescriptor {
+  readonly installation: {
+    readonly binary: string;
+    readonly windowsBinary?: string;
+    readonly npm?: string;
+  } | null;
   readonly kind: EngineKind;
   readonly displayName: string;
+  /** Passive listModels is global-only; project cwd must not enter the query identity. */
+  readonly globalOnlyModelCatalog?: boolean;
+  /** Composer/model slugs are `serviceId/modelId` owned by Haros model services. */
+  readonly ownsProviderModelServices?: boolean;
+  /** Spawn/auth may use the Haros model-service store without owning picker slugs. */
+  readonly consumesHarosModelServiceCredentials?: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -23,12 +34,8 @@ function defineEngineDescriptors<const Descriptors extends readonly EngineDescri
 
 export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
-    kind: "oa",
-    displayName: "OA",
-    usage: null,
-  },
-  {
     kind: "codex",
+    installation: { binary: "codex", npm: "@openai/codex" },
     displayName: "Codex",
     usage: {
       signInCommand: "codex login",
@@ -37,6 +44,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "claude",
+    installation: { binary: "claude", npm: "@anthropic-ai/claude-code" },
     displayName: "Claude",
     usage: {
       signInCommand: "claude",
@@ -45,6 +53,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "cursor",
+    installation: { binary: "cursor-agent", windowsBinary: "cursor-agent.cmd" },
     displayName: "Cursor",
     usage: {
       signInCommand: "cursor-agent login",
@@ -53,6 +62,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "antigravity",
+    installation: { binary: "agy" },
     displayName: "Antigravity",
     usage: {
       signInCommand: "agy",
@@ -61,6 +71,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "grok",
+    installation: { binary: "grok", npm: "@xai-official/grok" },
     displayName: "Grok",
     usage: {
       signInCommand: "grok login",
@@ -69,6 +80,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "droid",
+    installation: { binary: "droid", npm: "@factory/cli" },
     displayName: "Droid",
     usage: {
       signInCommand: "droid",
@@ -77,7 +89,9 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "kilo",
+    installation: { binary: "kilo", npm: "@kilocode/cli" },
     displayName: "Kilo",
+    consumesHarosModelServiceCredentials: true,
     usage: {
       signInCommand: "kilo",
       learnMoreHref: "https://kilo.ai",
@@ -85,7 +99,9 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "opencode",
+    installation: { binary: "opencode", npm: "opencode-ai" },
     displayName: "OpenCode",
+    consumesHarosModelServiceCredentials: true,
     usage: {
       signInCommand: "opencode auth login",
       learnMoreHref: "https://opencode.ai",
@@ -93,11 +109,61 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "pi",
+    installation: null,
     displayName: "Pi",
+    globalOnlyModelCatalog: true,
+    ownsProviderModelServices: true,
     // This independent Engine does not opt into background usage discovery.
     usage: null,
   },
+  {
+    kind: "deepseek",
+    installation: { binary: "dsh", npm: "@deepseek-ai/dsh" },
+    displayName: "DeepSeek",
+    // SDK has no model-list RPC; the static catalog is global and sendable.
+    globalOnlyModelCatalog: true,
+    consumesHarosModelServiceCredentials: true,
+    // No live account-usage API; health infers auth from DEEPSEEK_API_KEY
+    // or a stored DeepSeek model-service key.
+    usage: null,
+  },
 ] as const satisfies readonly EngineDescriptor[]);
+
+export function isRunnableEngine(engine: EngineKind): boolean {
+  return ENGINE_DESCRIPTOR_BY_KIND[engine] !== undefined;
+}
+
+export function firstRunnableEngine(
+  ...candidates: ReadonlyArray<EngineKind | null | undefined>
+): EngineKind | null {
+  for (const candidate of candidates) {
+    if (candidate && isRunnableEngine(candidate)) return candidate;
+  }
+  return null;
+}
+
+export function engineHasGlobalOnlyModelCatalog(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.globalOnlyModelCatalog === true;
+}
+
+export function engineOwnsProviderModelServices(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.ownsProviderModelServices === true;
+}
+
+export function engineConsumesHarosModelServiceCredentials(engine: EngineKind): boolean {
+  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
+  return descriptor.consumesHarosModelServiceCredentials === true;
+}
+
+export function engineOpensModelServicesSettings(engine: EngineKind): boolean {
+  return (
+    engineOwnsProviderModelServices(engine) || engineConsumesHarosModelServiceCredentials(engine)
+  );
+}
+
+export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS;
 
 export const ENGINE_DESCRIPTOR_BY_KIND = Object.fromEntries(
   ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),

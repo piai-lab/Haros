@@ -31,7 +31,6 @@ const PRODUCT_INTERACTION_MODES = ENGINE_INTERACTION_MODES;
  * assets and presentation remain with their existing owners.
  */
 export const ENGINE_EXECUTION_STRUCTURE = {
-  oa: defineStructure(true, ["full-access"], PRODUCT_INTERACTION_MODES),
   codex: defineStructure(
     true,
     ["full-access", "auto", "approval-required"],
@@ -49,6 +48,7 @@ export const ENGINE_EXECUTION_STRUCTURE = {
   kilo: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   opencode: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   pi: defineStructure(true, ["full-access"], HOST_INTERACTION_MODES),
+  deepseek: defineStructure(false, ["full-access"], HOST_INTERACTION_MODES),
 } as const satisfies Partial<Record<EngineKind, EngineExecutionStructure>>;
 
 const EMPTY_ENGINE_EXECUTION_STRUCTURE = defineStructure(false, [], []);

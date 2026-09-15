@@ -25,6 +25,8 @@ import {
   type OpenCodeEngineSelection,
   type PiModelOptions,
   type PiEngineSelection,
+  type DeepSeekModelOptions,
+  type DeepSeekEngineSelection,
   type EngineKind,
   type EngineModelOptions,
 } from "@harnessos/contracts";
@@ -140,12 +142,7 @@ export function formatEngineModelOptionName(input: { engine: EngineKind; slug: s
     return trimmedSlug;
   }
 
-  if (
-    input.engine === "kilo" ||
-    input.engine === "opencode" ||
-    input.engine === "pi" ||
-    input.engine === "oa"
-  ) {
+  if (input.engine === "kilo" || input.engine === "opencode" || input.engine === "pi") {
     const modelIdentifier = trimmedSlug.includes("/")
       ? trimmedSlug.slice(trimmedSlug.lastIndexOf("/") + 1)
       : trimmedSlug;
@@ -426,11 +423,17 @@ export function buildNextEngineOptions(
       ...patch,
     } as DroidModelOptions;
   }
-  if (engine === "opencode") {
+  if (engine === "opencode" || engine === "kilo") {
     return {
       ...(modelOptions as OpenCodeModelOptions | undefined),
       ...patch,
     } as OpenCodeModelOptions;
+  }
+  if (engine === "deepseek") {
+    return {
+      ...(modelOptions as DeepSeekModelOptions | undefined),
+      ...patch,
+    } as DeepSeekModelOptions;
   }
   return {
     ...(modelOptions as PiModelOptions | undefined),
@@ -493,6 +496,11 @@ export function buildEngineSelection(
   options?: PiModelOptions | null | undefined,
 ): PiEngineSelection;
 export function buildEngineSelection(
+  engine: "deepseek",
+  model: string,
+  options?: DeepSeekModelOptions | null | undefined,
+): DeepSeekEngineSelection;
+export function buildEngineSelection(
   engine: EngineKind,
   model: string,
   options?: EngineOptions | null | undefined,
@@ -505,8 +513,6 @@ export function buildEngineSelection(
   supportsAutoMode?: boolean | undefined,
 ): EngineSelection {
   switch (engine) {
-    case "oa":
-      return options ? { engine, model, options: options as PiModelOptions } : { engine, model };
     case "antigravity":
       return options
         ? {
@@ -576,6 +582,14 @@ export function buildEngineSelection(
             engine,
             model,
             options: options as PiModelOptions,
+          }
+        : { engine, model };
+    case "deepseek":
+      return options
+        ? {
+            engine,
+            model,
+            options: options as DeepSeekModelOptions,
           }
         : { engine, model };
     default:

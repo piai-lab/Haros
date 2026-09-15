@@ -1,6 +1,9 @@
 import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
+  "settings.engineBundledInstallation":
+    "Pi is included with Haros and is updated with the desktop application.",
+  "settings.engineInstalling": "Downloading, installing and verifying…",
   "settings.engines": "Agent engines",
   "settings.defaultEngine": "Default engine",
   "settings.defaultEngineDescription": "Choose the engine used for new chats.",
@@ -51,6 +54,8 @@ const EN_MESSAGES = {
   "settings.piAgentDirectory": "Pi agent directory",
   "settings.piAgentDirectoryDescription":
     "Optional custom Pi agent directory for auth, models, skills, and commands.",
+  "settings.deepseekHomePath": "DSH_HOME path",
+  "settings.deepseekHomeDescription": "Optional custom DeepSeek Harness home directory.",
   "settings.reorderEngine": "Reorder {engine}",
   "settings.showEngine": "Show {engine} in the engine picker",
   "settings.cliDocs": "CLI docs",
@@ -105,6 +110,8 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
+  "settings.engineBundledInstallation": "Pi 已随 Haros 内置安装，其版本随桌面应用更新。",
+  "settings.engineInstalling": "正在下载、安装并验证…",
   "settings.engines": "Agent 引擎",
   "settings.defaultEngine": "默认引擎",
   "settings.defaultEngineDescription": "选择新 Chat 默认使用的引擎。",
@@ -150,6 +157,8 @@ const ZH_CN_MESSAGES = {
     "为托管本地服务使用 OpenCode 实验性的 OpenAI response WebSocket 传输。",
   "settings.piAgentDirectory": "Pi Agent 目录",
   "settings.piAgentDirectoryDescription": "用于认证、模型、技能与命令的可选自定义 Pi Agent 目录。",
+  "settings.deepseekHomePath": "DSH_HOME 路径",
+  "settings.deepseekHomeDescription": "可选的 DeepSeek Harness 主目录。",
   "settings.reorderEngine": "调整 {engine} 顺序",
   "settings.showEngine": "在引擎选择器中显示 {engine}",
   "settings.cliDocs": "CLI 文档",

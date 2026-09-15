@@ -45,7 +45,7 @@ describe("engine execution capability projection", () => {
       status: "ready",
     });
     expect(result.interactionModes.plan).toMatchObject(
-      engine === "pi" || engine === "antigravity"
+      engine === "pi" || engine === "antigravity" || engine === "deepseek"
         ? { mode: "plan", structurallySupported: false, reason: "mode-unsupported" }
         : { mode: "plan", structurallySupported: true, status: "ready" },
     );
@@ -71,7 +71,7 @@ describe("engine execution capability projection", () => {
     });
   });
 
-  it.each(["oa", "pi"] as const)(
+  it.each(["pi"] as const)(
     "does not advertise approval-required for Pi-family engine %s without a request bridge",
     (engine) => {
       const result = resolveEngineExecutionCapabilities({

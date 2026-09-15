@@ -1229,7 +1229,7 @@ describe("deriveMessagesTimelineRows", () => {
       pendingMessageId,
       turnId: TurnId.makeUnsafe("t-model"),
       engineSelection: {
-        engine: "oa" as const,
+        engine: "pi" as const,
         model: "deepseek/deepseek-v4-pro",
       },
       requestedAt: "2026-08-27T02:21:00.000Z",

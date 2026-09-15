@@ -2783,7 +2783,7 @@ describe("EngineCommandReactor", () => {
   it("persists one deterministic Skill delivery receipt per selected Haros Skill", async () => {
     const harness = await createHarness({
       startReactor: false,
-      threadEngineSelection: { engine: "oa", model: "harnessos-test" },
+      threadEngineSelection: { engine: "pi", model: "harnessos-test" },
     });
     const skillPath = path.join(harness.stateDir, "skills", "aihot", "SKILL.md");
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
@@ -2828,7 +2828,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         messageId: "harnessos-skill-delivery-message",
         skillName: "Aihot",
-        deliveryMode: "inline",
+        deliveryMode: "reference",
       },
     });
   });
@@ -6687,7 +6687,7 @@ describe("EngineCommandReactor", () => {
 
   it("derives the bundled Haros Agent surface and canonical Project root", async () => {
     const harness = await createHarness({
-      threadEngineSelection: { engine: "oa", model: "deepseek/deepseek-chat" },
+      threadEngineSelection: { engine: "pi", model: "deepseek/deepseek-chat" },
     });
     const now = new Date().toISOString();
 
@@ -6720,7 +6720,7 @@ describe("EngineCommandReactor", () => {
 
   it("does not pass the Home chat container workspace root through as engine cwd", async () => {
     const harness = await createHarness({
-      threadEngineSelection: { engine: "oa", model: "deepseek/deepseek-chat" },
+      threadEngineSelection: { engine: "pi", model: "deepseek/deepseek-chat" },
     });
     const now = new Date().toISOString();
 
@@ -6733,7 +6733,7 @@ describe("EngineCommandReactor", () => {
         title: "Home",
         workspaceRoot: "/Users/tester",
         defaultEngineSelection: {
-          engine: "oa",
+          engine: "pi",
           model: "deepseek/deepseek-chat",
         },
         createdAt: now,
@@ -6748,7 +6748,7 @@ describe("EngineCommandReactor", () => {
         projectId: asProjectId("project-home"),
         title: "Home thread",
         engineSelection: {
-          engine: "oa",
+          engine: "pi",
           model: "deepseek/deepseek-chat",
         },
         interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
@@ -6779,7 +6779,7 @@ describe("EngineCommandReactor", () => {
     await waitFor(() => harness.startSession.mock.calls.length === 1);
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
       engineSelection: {
-        engine: "oa",
+        engine: "pi",
         model: "deepseek/deepseek-chat",
       },
       runtimeMode: "full-access",

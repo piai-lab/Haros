@@ -13,7 +13,6 @@ import {
   APPEARANCE_SETTINGS_SEARCH,
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
-import { PROMPTS_SETTINGS_SEARCH } from "../settingsMetadata/promptSettings";
 import { ENGINES_SETTINGS_SEARCH } from "../settingsMetadata/engineSettings";
 import { SETTINGS_NAV_ITEMS, SETTINGS_TARGETS } from "../settingsNavigation";
 import { defineSettingsSearchRow } from "../settingsSearchMetadata";
@@ -62,12 +61,22 @@ describe("rankSettingsSearchEntries", () => {
     );
   });
 
-  it("localizes Model services search without losing its stable entry", () => {
-    const results = rankSettingsSearchEntries("模型", SETTINGS_SEARCH_RECORDS.length, translateZh);
+  it("excludes removed OA settings from navigation and search in both languages", () => {
+    for (const section of SETTINGS_NAV_ITEMS) {
+      expect(["prompts", "web-search"]).not.toContain(section.id);
+    }
+    for (const translate of [translateEn, translateZh]) {
+      for (const query of ["Model services", "模型服务", "Personal Strategy", "Web Search"]) {
+        const results = rankSettingsSearchEntries(query, SETTINGS_SEARCH_RECORDS.length, translate);
+        expect(results.every((entry) => !["prompts", "web-search"].includes(entry.section))).toBe(
+          true,
+        );
+      }
+    }
+  });
 
-    expect(results).toContainEqual(
-      expect.objectContaining({ id: "models:model-services", title: "模型服务" }),
-    );
+  it("keeps model services discoverable after OA retirement", () => {
+    expect(SETTINGS_NAV_ITEMS.map((item) => item.id)).toContain("models");
   });
 
   it("indexes the system UI font row", () => {
@@ -173,10 +182,6 @@ describe("rankSettingsSearchEntries", () => {
     });
     expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
   });
-
-  it("routes prompt search results to the sole Personal Strategy owner", () => {
-    expect(PROMPTS_SETTINGS_SEARCH.personalStrategy.target).toBe(SETTINGS_TARGETS.personalStrategy);
-  });
 });
 
 describe("SettingsSidebarNav", () => {
@@ -204,7 +209,7 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Built-in tools");
     expect(markup).toContain("External connections");
     expect(markup).toContain("Agent engines");
-    expect(markup).toContain("Prompts");
+    expect(markup).not.toContain("Prompts");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived tasks and chats");

@@ -1,5 +1,5 @@
 diff --git a/dist/core/agent-session.d.ts b/dist/core/agent-session.d.ts
-index 8c7cfec6fc0ec004f17c08c52a58c354b28b3978..77c0a917eaa41dce134a88ca51c6ccbd40cc4835 100644
+index 8c7cfec..77c0a91 100644
 --- a/dist/core/agent-session.d.ts
 +++ b/dist/core/agent-session.d.ts
 @@ -31,6 +31,15 @@ export interface ParsedSkillBlock {
@@ -36,7 +36,7 @@ index 8c7cfec6fc0ec004f17c08c52a58c354b28b3978..77c0a917eaa41dce134a88ca51c6ccbd
      /**
       * Expand skill commands (/skill:name args) to their full content.
 diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
-index fd82b71cf332715f185d07459429f04ed7491ce9..9651eefdfdecbab301a93558ed6fd8cf0465dc47 100644
+index fd82b71..9651eef 100644
 --- a/dist/core/agent-session.js
 +++ b/dist/core/agent-session.js
 @@ -125,6 +125,7 @@ export class AgentSession {
@@ -182,8 +182,1217 @@ index fd82b71cf332715f185d07459429f04ed7491ce9..9651eefdfdecbab301a93558ed6fd8cf
                      runner.emitError({
                          extensionPath: "<runtime>",
                          event: "send_user_message",
+diff --git a/dist/core/model-config.d.ts b/dist/core/model-config.d.ts
+index 188c8cf..bd0059e 100644
+--- a/dist/core/model-config.d.ts
++++ b/dist/core/model-config.d.ts
+@@ -106,6 +106,8 @@ declare const ModelDefinitionSchema: Type.TObject<{
+         supportsOpenAIGrammarTools: Type.TOptional<Type.TBoolean>;
+         supportsAdditionalTools: Type.TOptional<Type.TBoolean>;
+         supportsToolSearch: Type.TOptional<Type.TBoolean>;
++        supportsMaxOutputTokens: Type.TOptional<Type.TBoolean>;
++        supportsExplicitPromptCacheMode: Type.TOptional<Type.TBoolean>;
+     }>, Type.TObject<{
+         supportsEagerToolInputStreaming: Type.TOptional<Type.TBoolean>;
+         supportsLongCacheRetention: Type.TOptional<Type.TBoolean>;
+@@ -221,6 +223,8 @@ declare const ModelOverrideSchema: Type.TObject<{
+         supportsOpenAIGrammarTools: Type.TOptional<Type.TBoolean>;
+         supportsAdditionalTools: Type.TOptional<Type.TBoolean>;
+         supportsToolSearch: Type.TOptional<Type.TBoolean>;
++        supportsMaxOutputTokens: Type.TOptional<Type.TBoolean>;
++        supportsExplicitPromptCacheMode: Type.TOptional<Type.TBoolean>;
+     }>, Type.TObject<{
+         supportsEagerToolInputStreaming: Type.TOptional<Type.TBoolean>;
+         supportsLongCacheRetention: Type.TOptional<Type.TBoolean>;
+@@ -313,6 +317,8 @@ declare const ProviderConfigSchema: Type.TObject<{
+         supportsOpenAIGrammarTools: Type.TOptional<Type.TBoolean>;
+         supportsAdditionalTools: Type.TOptional<Type.TBoolean>;
+         supportsToolSearch: Type.TOptional<Type.TBoolean>;
++        supportsMaxOutputTokens: Type.TOptional<Type.TBoolean>;
++        supportsExplicitPromptCacheMode: Type.TOptional<Type.TBoolean>;
+     }>, Type.TObject<{
+         supportsEagerToolInputStreaming: Type.TOptional<Type.TBoolean>;
+         supportsLongCacheRetention: Type.TOptional<Type.TBoolean>;
+@@ -431,6 +437,8 @@ declare const ProviderConfigSchema: Type.TObject<{
+             supportsOpenAIGrammarTools: Type.TOptional<Type.TBoolean>;
+             supportsAdditionalTools: Type.TOptional<Type.TBoolean>;
+             supportsToolSearch: Type.TOptional<Type.TBoolean>;
++            supportsMaxOutputTokens: Type.TOptional<Type.TBoolean>;
++            supportsExplicitPromptCacheMode: Type.TOptional<Type.TBoolean>;
+         }>, Type.TObject<{
+             supportsEagerToolInputStreaming: Type.TOptional<Type.TBoolean>;
+             supportsLongCacheRetention: Type.TOptional<Type.TBoolean>;
+@@ -546,6 +554,8 @@ declare const ProviderConfigSchema: Type.TObject<{
+             supportsOpenAIGrammarTools: Type.TOptional<Type.TBoolean>;
+             supportsAdditionalTools: Type.TOptional<Type.TBoolean>;
+             supportsToolSearch: Type.TOptional<Type.TBoolean>;
++            supportsMaxOutputTokens: Type.TOptional<Type.TBoolean>;
++            supportsExplicitPromptCacheMode: Type.TOptional<Type.TBoolean>;
+         }>, Type.TObject<{
+             supportsEagerToolInputStreaming: Type.TOptional<Type.TBoolean>;
+             supportsLongCacheRetention: Type.TOptional<Type.TBoolean>;
+@@ -562,15 +572,90 @@ declare const ProviderConfigSchema: Type.TObject<{
+ export type ModelsJsonModel = Static<typeof ModelDefinitionSchema>;
+ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
+ export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
++export interface ModelConfigReadOptions {
++    readonly signal?: AbortSignal;
++}
++export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
++export type ModelConfigCredentialReferenceMutation = {
++    readonly type: "environment";
++    readonly variableName: string;
++} | {
++    readonly type: "command";
++    readonly command: string;
++} | {
++    readonly type: "clear";
++};
++export type ModelConfigHeaderReferenceSource = "external" | "environment" | "command";
++export type ModelConfigHeaderReferenceValueMutation = {
++    readonly type: "environment";
++    readonly variableName: string;
++} | {
++    readonly type: "clear";
++};
++export interface ModelConfigHeaderReferenceMetadata {
++    readonly name: string;
++    readonly source: ModelConfigHeaderReferenceSource;
++}
++export interface ModelConfigProviderHeaderMetadata {
++    readonly provider: readonly ModelConfigHeaderReferenceMetadata[];
++    readonly models: readonly {
++        readonly modelId: string;
++        readonly headers: readonly ModelConfigHeaderReferenceMetadata[];
++    }[];
++}
++export interface ModelConfigHeaderReferenceMutation {
++    readonly scope: {
++        readonly type: "provider";
++    } | {
++        readonly type: "model";
++        readonly modelId: string;
++    };
++    readonly name: string;
++    readonly reference: ModelConfigHeaderReferenceValueMutation;
++}
++export type ModelConfigProviderMutation = {
++    type: "upsert";
++    providerId: string;
++    provider: ModelsJsonProvider;
++    credentialReference?: ModelConfigCredentialReferenceMutation;
++    headerReferences?: readonly ModelConfigHeaderReferenceMutation[];
++} | {
++    type: "remove";
++    providerId: string;
++};
++export interface ModelConfigMutationOptions {
++    readonly signal?: AbortSignal;
++}
++export interface ModelConfigFileMutationOptions extends ModelConfigMutationOptions {
++    readonly validateCandidate: (candidatePath: string, signal?: AbortSignal) => Promise<void>;
++}
++export interface ModelConfigMutationResult {
++    readonly changed: boolean;
++    readonly providerIds: readonly string[];
++}
++/** Merge one credential-blind edit while retaining Pi-owned fields on matching models. */
++export declare function mergeModelConfigProviderEdit(currentProvider: ModelsJsonProvider | undefined, editedProvider: ModelsJsonProvider): ModelsJsonProvider;
+ /** One immutable load of models.json. */
+ export declare class ModelConfig {
+     private readonly providers;
+     private readonly error;
+     private constructor();
+-    static load(modelsJsonPath: string | undefined): Promise<ModelConfig>;
++    private static fromContent;
++    static load(modelsJsonPath: string | undefined, options?: {
++        reader?: ModelConfigReader;
++        signal?: AbortSignal;
++    }): Promise<ModelConfig>;
+     getProvider(providerId: string): ModelsJsonProvider | undefined;
++    withProviderEdit(providerId: string, provider: ModelsJsonProvider, credentialReference?: ModelConfigCredentialReferenceMutation, headerReferences?: readonly ModelConfigHeaderReferenceMutation[]): ModelConfig;
+     getProviderIds(): readonly string[];
++    getProviderHeaderMetadata(providerId: string): ModelConfigProviderHeaderMetadata | undefined;
+     getError(): string | undefined;
++    static validateContent(content: string): ModelConfig;
+ }
++/**
++ * Persist one typed provider mutation while preserving unrelated JSONC bytes.
++ * The explicit file path is used only for this user-requested mutation; passive
++ * ModelRuntime reads continue to use the caller-owned content reader.
++ */
++export declare function mutateModelConfigProviderFile(modelsJsonPath: string, mutation: ModelConfigProviderMutation, options: ModelConfigFileMutationOptions): Promise<ModelConfigMutationResult>;
+ export {};
+-//# sourceMappingURL=model-config.d.ts.map
+\ No newline at end of file
+diff --git a/dist/core/model-config.js b/dist/core/model-config.js
+index 109bd84..616c1b8 100644
+--- a/dist/core/model-config.js
++++ b/dist/core/model-config.js
+@@ -1,10 +1,16 @@
+ /** Immutable, credential-blind models.json snapshot. */
+-import { readFile } from "node:fs/promises";
++import { constants as fsConstants } from "node:fs";
++import { randomUUID } from "node:crypto";
++import { chmod, lstat, mkdir, open, readFile, realpath, rename, rm } from "node:fs/promises";
++import { basename, dirname, join } from "node:path";
++import { applyEdits, modify } from "jsonc-parser";
++import lockfile from "proper-lockfile";
+ import { Type } from "typebox";
+ import { Compile } from "typebox/compile";
+ import { stripJsonComments } from "../utils/json.js";
+ import { normalizePath } from "../utils/paths.js";
+ import { stripBom } from "../utils/text.js";
++import { getConfigValueEnvVarNames, isCommandConfigValue } from "./resolve-config-value.js";
+ const PercentileCutoffsSchema = Type.Object({
+     p50: Type.Optional(Type.Number()),
+     p75: Type.Optional(Type.Number()),
+@@ -102,6 +108,8 @@ const OpenAIResponsesCompatSchema = Type.Object({
+     supportsOpenAIGrammarTools: Type.Optional(Type.Boolean()),
+     supportsAdditionalTools: Type.Optional(Type.Boolean()),
+     supportsToolSearch: Type.Optional(Type.Boolean()),
++    supportsMaxOutputTokens: Type.Optional(Type.Boolean()),
++    supportsExplicitPromptCacheMode: Type.Optional(Type.Boolean()),
+ });
+ const AnthropicMessagesCompatSchema = Type.Object({
+     supportsEagerToolInputStreaming: Type.Optional(Type.Boolean()),
+@@ -182,6 +190,296 @@ const ModelsConfigSchema = Type.Object({
+     providers: Type.Record(Type.String(), ProviderConfigSchema),
+ });
+ const validateModelsConfig = Compile(ModelsConfigSchema);
++const MAX_MODELS_CONFIG_BYTES = 4 * 1024 * 1024;
++const MODELS_CONFIG_FILE_MODE = 0o600;
++const ENVIRONMENT_VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/u;
++const MAX_CREDENTIAL_COMMAND_LENGTH = 4_096;
++const MAX_HEADER_REFERENCES = 64;
++const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
++const FORBIDDEN_HEADER_NAMES = new Set([
++    "authorization",
++    "connection",
++    "content-length",
++    "content-type",
++    "cookie",
++    "host",
++    "keep-alive",
++    "proxy-authenticate",
++    "proxy-authorization",
++    "set-cookie",
++    "te",
++    "trailer",
++    "transfer-encoding",
++    "upgrade",
++    "x-api-key",
++    "x-goog-api-key",
++]);
++const MODEL_CONFIG_PROVIDER_FIELDS = [
++    "name",
++    "baseUrl",
++    "apiKey",
++    "api",
++    "oauth",
++    "headers",
++    "compat",
++    "authHeader",
++    "models",
++    "modelOverrides",
++];
++const MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS = ["authHeader"];
++const MODEL_CONFIG_EDITABLE_MODEL_FIELDS = [
++    "name",
++    "api",
++    "baseUrl",
++    "reasoning",
++    "thinkingLevelMap",
++    "input",
++    "cost",
++    "contextWindow",
++    "maxTokens",
++];
++const MODEL_CONFIG_EDITABLE_COMPAT_FIELDS = [
++    "supportsDeveloperRole",
++    "supportsReasoningEffort",
++    "supportsUsageInStreaming",
++    "maxTokensField",
++    "requiresToolResultName",
++    "requiresAssistantAfterToolResult",
++    "requiresThinkingAsText",
++    "requiresReasoningContentOnAssistantMessages",
++    "supportsOpenAIGrammarTools",
++    "supportsStrictMode",
++    "supportsToolSearch",
++    "supportsMaxOutputTokens",
++    "supportsExplicitPromptCacheMode",
++    "supportsEagerToolInputStreaming",
++    "supportsCacheControlOnTools",
++    "supportsTemperature",
++    "forceAdaptiveThinking",
++    "allowEmptySignature",
++    "supportsStrictTools",
++    "supportsToolReferences",
++];
++function deleteOmittedEditableFields(merged, edited, fields) {
++    for (const field of fields) {
++        if (!Object.prototype.hasOwnProperty.call(edited, field)) {
++            delete merged[field];
++        }
++    }
++}
++function mergeEditedModels(currentModels, editedModels) {
++    const currentById = new Map((currentModels ?? []).map((model) => [model.id, model]));
++    return editedModels.map((editedModel) => {
++        const currentModel = currentById.get(editedModel.id);
++        if (!currentModel)
++            return structuredClone(editedModel);
++        const merged = {
++            ...structuredClone(currentModel),
++            ...structuredClone(editedModel),
++        };
++        if (Object.prototype.hasOwnProperty.call(editedModel, "compat")) {
++            const currentCompat = structuredClone(currentModel.compat ?? {});
++            const editedCompat = structuredClone(editedModel.compat ?? {});
++            const mergedCompat = { ...currentCompat, ...editedCompat };
++            deleteOmittedEditableFields(mergedCompat, editedCompat, MODEL_CONFIG_EDITABLE_COMPAT_FIELDS);
++            if (Object.keys(mergedCompat).length > 0)
++                merged.compat = mergedCompat;
++            else
++                delete merged.compat;
++        }
++        deleteOmittedEditableFields(merged, editedModel, MODEL_CONFIG_EDITABLE_MODEL_FIELDS);
++        return merged;
++    });
++}
++/** Merge one credential-blind edit while retaining Pi-owned fields on matching models. */
++export function mergeModelConfigProviderEdit(currentProvider, editedProvider) {
++    const merged = {
++        ...(currentProvider ? structuredClone(currentProvider) : {}),
++        ...structuredClone(editedProvider),
++        ...(editedProvider.models
++            ? { models: mergeEditedModels(currentProvider?.models, editedProvider.models) }
++            : {}),
++    };
++    deleteOmittedEditableFields(merged, editedProvider, MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS);
++    return merged;
++}
++function encodeCredentialReference(mutation) {
++    if (mutation.type === "clear")
++        return undefined;
++    if (mutation.type === "environment") {
++        if (!ENVIRONMENT_VARIABLE_NAME.test(mutation.variableName)) {
++            throw new Error("Credential environment variable name is invalid");
++        }
++        return `\${${mutation.variableName}}`;
++    }
++    if (mutation.command.length === 0 ||
++        mutation.command.length > MAX_CREDENTIAL_COMMAND_LENGTH ||
++        mutation.command !== mutation.command.trim() ||
++        /[\u0000-\u001f\u007f-\u009f]/u.test(mutation.command)) {
++        throw new Error("Credential command is invalid");
++    }
++    return `!${mutation.command}`;
++}
++function headerReferenceSource(value) {
++    if (isCommandConfigValue(value))
++        return "command";
++    return getConfigValueEnvVarNames(value).length > 0 ? "environment" : "external";
++}
++function headerMetadata(headers) {
++    if (!headers)
++        return [];
++    const normalized = new Map();
++    for (const [name, value] of Object.entries(headers)) {
++        if (name.length === 0 || name.length > 128 || !HEADER_NAME.test(name))
++            continue;
++        normalized.set(name.toLowerCase(), [name, value]);
++    }
++    const entries = [...normalized.values()].slice(0, MAX_HEADER_REFERENCES);
++    return entries.map(([name, value]) => ({ name, source: headerReferenceSource(value) }));
++}
++function validateHeaderReferenceName(name, referenceType) {
++    if (name.length === 0 || name.length > 128 || !HEADER_NAME.test(name)) {
++        throw new Error("Header name is invalid");
++    }
++    const normalizedName = name.toLowerCase();
++    if (referenceType !== "clear" && FORBIDDEN_HEADER_NAMES.has(normalizedName)) {
++        throw new Error("Header name is reserved by the request or credential owner");
++    }
++    return normalizedName;
++}
++function applyHeaderReferenceMutations(provider, mutations) {
++    if (!mutations?.length)
++        return provider;
++    if (mutations.length > MAX_HEADER_REFERENCES) {
++        throw new Error("Too many header reference mutations");
++    }
++    const edited = structuredClone(provider);
++    const seen = new Set();
++    for (const mutation of mutations) {
++        if (mutation.reference.type !== "environment" && mutation.reference.type !== "clear") {
++            throw new Error("Header reference type is not supported");
++        }
++        const normalizedName = validateHeaderReferenceName(mutation.name, mutation.reference.type);
++        const scopeKey = mutation.scope.type === "provider"
++            ? `provider\0${normalizedName}`
++            : `model\0${mutation.scope.modelId}\0${normalizedName}`;
++        if (seen.has(scopeKey))
++            throw new Error("Duplicate header reference mutation");
++        seen.add(scopeKey);
++        let target;
++        if (mutation.scope.type === "provider") {
++            target = edited;
++        }
++        else {
++            const modelId = mutation.scope.modelId;
++            if (!modelId.trim() || modelId !== modelId.trim()) {
++                throw new Error("Header model id is invalid");
++            }
++            const model = edited.models?.find((entry) => entry.id === modelId);
++            if (!model)
++                throw new Error("Header model target is unavailable");
++            target = model;
++        }
++        const headers = { ...(target.headers ?? {}) };
++        for (const currentName of Object.keys(headers)) {
++            if (currentName.toLowerCase() === normalizedName)
++                delete headers[currentName];
++        }
++        const value = mutation.reference.type === "clear"
++            ? undefined
++            : encodeCredentialReference(mutation.reference);
++        if (value !== undefined)
++            headers[mutation.name] = value;
++        if (Object.keys(headers).length > MAX_HEADER_REFERENCES) {
++            throw new Error("Configured headers exceed the safe mutation boundary");
++        }
++        if (Object.keys(headers).length > 0)
++            target.headers = headers;
++        else
++            delete target.headers;
++        if (mutation.scope.type === "model") {
++            const override = edited.modelOverrides?.[mutation.scope.modelId];
++            if (override?.headers) {
++                const overrideHeaders = { ...override.headers };
++                for (const currentName of Object.keys(overrideHeaders)) {
++                    if (currentName.toLowerCase() === normalizedName)
++                        delete overrideHeaders[currentName];
++                }
++                if (Object.keys(overrideHeaders).length > 0)
++                    override.headers = overrideHeaders;
++                else
++                    delete override.headers;
++            }
++        }
++    }
++    return edited;
++}
++function isMissingPathError(error) {
++    return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
++}
++function formattingOptions(content) {
++    const indentation = content.match(/(?:^|\r?\n)([ \t]+)"providers"\s*:/)?.[1] ?? "\t";
++    return {
++        insertSpaces: !indentation.includes("\t"),
++        tabSize: indentation.includes("\t") ? 4 : Math.max(1, indentation.length),
++        eol: content.includes("\r\n") ? "\r\n" : "\n",
++    };
++}
++async function readModelConfigFile(modelsJsonPath, signal) {
++    signal?.throwIfAborted();
++    const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
++    let handle;
++    try {
++        handle = await open(modelsJsonPath, flags);
++    }
++    catch (error) {
++        if (isMissingPathError(error))
++            return { content: undefined, identity: undefined };
++        throw error;
++    }
++    try {
++        const metadata = await handle.stat();
++        if (!metadata.isFile() || metadata.nlink !== 1 || metadata.size > MAX_MODELS_CONFIG_BYTES) {
++            throw new Error("models.json is not a private regular file or exceeds the safe mutation boundary");
++        }
++        const bytes = await handle.readFile();
++        signal?.throwIfAborted();
++        return {
++            content: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
++            identity: {
++                dev: metadata.dev,
++                ino: metadata.ino,
++                size: metadata.size,
++                mtimeMs: metadata.mtimeMs,
++            },
++        };
++    }
++    finally {
++        await handle.close();
++    }
++}
++async function assertModelConfigUnchanged(modelsJsonPath, identity) {
++    try {
++        const current = await lstat(modelsJsonPath);
++        if (!identity ||
++            current.isSymbolicLink() ||
++            !current.isFile() ||
++            current.nlink !== 1 ||
++            current.dev !== identity.dev ||
++            current.ino !== identity.ino ||
++            current.size !== identity.size ||
++            current.mtimeMs !== identity.mtimeMs) {
++            throw new Error("models.json changed during the persistent mutation");
++        }
++    }
++    catch (error) {
++        if (isMissingPathError(error) && !identity)
++            return;
++        if (isMissingPathError(error))
++            throw new Error("models.json changed during the persistent mutation");
++        throw error;
++    }
++}
+ function formatValidationPath(error) {
+     if (error.keyword === "required") {
+         const requiredProperties = error.params.requiredProperties;
+@@ -209,32 +507,20 @@ export class ModelConfig {
+         this.providers = providers;
+         this.error = error;
+     }
+-    static async load(modelsJsonPath) {
+-        if (!modelsJsonPath)
+-            return new ModelConfig(new Map());
+-        const path = normalizePath(modelsJsonPath);
+-        let content;
+-        try {
+-            content = await readFile(path, "utf-8");
+-        }
+-        catch (error) {
+-            if (error.code === "ENOENT")
+-                return new ModelConfig(new Map());
+-            return new ModelConfig(new Map(), `Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`);
+-        }
++    static fromContent(content, sourceLabel) {
+         let parsed;
+         try {
+             parsed = JSON.parse(stripJsonComments(stripBom(content)));
+         }
+         catch (error) {
+-            return new ModelConfig(new Map(), `Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`);
++            return new ModelConfig(new Map(), `Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`);
+         }
+         if (!validateModelsConfig.Check(parsed)) {
+             const errors = validateModelsConfig
+                 .Errors(parsed)
+                 .map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
+                 .join("\n") || "Unknown schema error";
+-            return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
++            return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`);
+         }
+         const config = parsed;
+         const providers = new Map();
+@@ -243,14 +529,199 @@ export class ModelConfig {
+         }
+         return new ModelConfig(providers);
+     }
++    static async load(modelsJsonPath, options = {}) {
++        options.signal?.throwIfAborted();
++        let content;
++        let normalizedPath;
++        if (options.reader) {
++            try {
++                content = await options.reader({ signal: options.signal });
++                options.signal?.throwIfAborted();
++            }
++            catch {
++                options.signal?.throwIfAborted();
++                return new ModelConfig(new Map(), "Failed to load models.json from configured reader");
++            }
++        }
++        else {
++            if (!modelsJsonPath)
++                return new ModelConfig(new Map());
++            normalizedPath = normalizePath(modelsJsonPath);
++            try {
++                content = await readFile(normalizedPath, "utf-8");
++            }
++            catch (error) {
++                if (error.code === "ENOENT")
++                    return new ModelConfig(new Map());
++                return new ModelConfig(new Map(), `Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${normalizedPath}`);
++            }
++        }
++        if (content === undefined)
++            return new ModelConfig(new Map());
++        options.signal?.throwIfAborted();
++        options.signal?.throwIfAborted();
++        return ModelConfig.fromContent(content, normalizedPath);
++    }
+     getProvider(providerId) {
+         return this.providers.get(providerId);
+     }
++    withProviderEdit(providerId, provider, credentialReference, headerReferences) {
++        const providers = new Map(this.providers);
++        let edited = mergeModelConfigProviderEdit(this.providers.get(providerId), provider);
++        if (credentialReference) {
++            const apiKey = encodeCredentialReference(credentialReference);
++            if (apiKey === undefined)
++                delete edited.apiKey;
++            else
++                edited.apiKey = apiKey;
++        }
++        edited = applyHeaderReferenceMutations(edited, headerReferences);
++        providers.set(providerId, deepFreeze(edited));
++        return new ModelConfig(providers, this.error);
++    }
+     getProviderIds() {
+         return [...this.providers.keys()];
+     }
++    getProviderHeaderMetadata(providerId) {
++        const provider = this.providers.get(providerId);
++        if (!provider)
++            return undefined;
++        return {
++            provider: headerMetadata(provider.headers),
++            models: (provider.models ?? []).flatMap((model) => {
++                const headers = headerMetadata({
++                    ...(provider.modelOverrides?.[model.id]?.headers ?? {}),
++                    ...(model.headers ?? {}),
++                });
++                return headers.length > 0 ? [{ modelId: model.id, headers }] : [];
++            }),
++        };
++    }
+     getError() {
+         return this.error;
+     }
++    static validateContent(content) {
++        return ModelConfig.fromContent(content);
++    }
++}
++/**
++ * Persist one typed provider mutation while preserving unrelated JSONC bytes.
++ * The explicit file path is used only for this user-requested mutation; passive
++ * ModelRuntime reads continue to use the caller-owned content reader.
++ */
++export async function mutateModelConfigProviderFile(modelsJsonPath, mutation, options) {
++    options.signal?.throwIfAborted();
++    if (!mutation.providerId.trim() || mutation.providerId !== mutation.providerId.trim()) {
++        throw new Error("Model provider id must not be empty or padded");
++    }
++    const requestedPath = normalizePath(modelsJsonPath);
++    const parentDir = dirname(requestedPath);
++    await mkdir(parentDir, { recursive: true, mode: 0o700 });
++    const parentMetadata = await lstat(parentDir);
++    if (parentMetadata.isSymbolicLink() || !parentMetadata.isDirectory()) {
++        throw new Error("models.json parent is not a private directory");
++    }
++    const normalizedPath = join(await realpath(parentDir), basename(requestedPath));
++    let compromised;
++    const release = await lockfile.lock(normalizedPath, {
++        realpath: false,
++        retries: { retries: 10, factor: 1.5, minTimeout: 10, maxTimeout: 100 },
++        stale: 30_000,
++        onCompromised: (error) => {
++            compromised = error;
++        },
++    });
++    let temporaryPath;
++    try {
++        options.signal?.throwIfAborted();
++        if (compromised)
++            throw compromised;
++        const current = await readModelConfigFile(normalizedPath, options.signal);
++        const currentContent = current.content ?? '{\n\t"providers": {}\n}\n';
++        const currentConfig = ModelConfig.validateContent(currentContent);
++        if (currentConfig.getError())
++            throw new Error(currentConfig.getError());
++        if (mutation.type === "remove" && !currentConfig.getProvider(mutation.providerId)) {
++            return { changed: false, providerIds: currentConfig.getProviderIds() };
++        }
++        let nextContent = currentContent;
++        if (mutation.type === "remove") {
++            nextContent = applyEdits(nextContent, modify(nextContent, ["providers", mutation.providerId], undefined, {
++                formattingOptions: formattingOptions(nextContent),
++            }));
++        }
++        else if (!currentConfig.getProvider(mutation.providerId)) {
++            const provider = mutation.headerReferences?.length
++                ? applyHeaderReferenceMutations(mergeModelConfigProviderEdit(undefined, mutation.provider), mutation.headerReferences)
++                : mutation.provider;
++            nextContent = applyEdits(nextContent, modify(nextContent, ["providers", mutation.providerId], provider, {
++                formattingOptions: formattingOptions(nextContent),
++            }));
++        }
++        else {
++            const currentProvider = currentConfig.getProvider(mutation.providerId);
++            const mergedProvider = applyHeaderReferenceMutations(mergeModelConfigProviderEdit(currentProvider, mutation.provider), mutation.headerReferences);
++            const editsProviderHeaders = mutation.headerReferences?.some((reference) => reference.scope.type === "provider");
++            const editsModelHeaders = mutation.headerReferences?.some((reference) => reference.scope.type === "model");
++            for (const field of MODEL_CONFIG_PROVIDER_FIELDS) {
++                const isEditableOmission = MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS.some((editableField) => editableField === field);
++                if (!Object.hasOwn(mutation.provider, field) &&
++                    !isEditableOmission &&
++                    !(field === "headers" && editsProviderHeaders) &&
++                    !(field === "models" && editsModelHeaders) &&
++                    !(field === "modelOverrides" && editsModelHeaders)) {
++                    continue;
++                }
++                nextContent = applyEdits(nextContent, modify(nextContent, ["providers", mutation.providerId, field], mergedProvider[field], {
++                    formattingOptions: formattingOptions(nextContent),
++                }));
++            }
++        }
++        if (mutation.type === "upsert" && mutation.credentialReference) {
++            nextContent = applyEdits(nextContent, modify(nextContent, ["providers", mutation.providerId, "apiKey"], encodeCredentialReference(mutation.credentialReference), { formattingOptions: formattingOptions(nextContent) }));
++        }
++        if (Buffer.byteLength(nextContent, "utf8") > MAX_MODELS_CONFIG_BYTES) {
++            throw new Error("models.json exceeds the safe mutation boundary");
++        }
++        const nextConfig = ModelConfig.validateContent(nextContent);
++        if (nextConfig.getError())
++            throw new Error(nextConfig.getError());
++        if (mutation.type === "upsert" && !nextConfig.getProvider(mutation.providerId)) {
++            throw new Error("Model provider mutation was not accepted by the official schema");
++        }
++        if (mutation.type === "remove" && nextConfig.getProvider(mutation.providerId)) {
++            throw new Error("Model provider removal was not accepted by the official schema");
++        }
++        if (nextContent === currentContent) {
++            return { changed: false, providerIds: nextConfig.getProviderIds() };
++        }
++        options.signal?.throwIfAborted();
++        if (compromised)
++            throw compromised;
++        await assertModelConfigUnchanged(normalizedPath, current.identity);
++        temporaryPath = `${normalizedPath}.${randomUUID()}.tmp`;
++        const flags = fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY | (fsConstants.O_NOFOLLOW ?? 0);
++        const handle = await open(temporaryPath, flags, MODELS_CONFIG_FILE_MODE);
++        try {
++            await handle.writeFile(nextContent, "utf8");
++            await handle.sync();
++        }
++        finally {
++            await handle.close();
++        }
++        await options.validateCandidate(temporaryPath, options.signal);
++        options.signal?.throwIfAborted();
++        if (compromised)
++            throw compromised;
++        await assertModelConfigUnchanged(normalizedPath, current.identity);
++        await rename(temporaryPath, normalizedPath);
++        temporaryPath = undefined;
++        await chmod(normalizedPath, MODELS_CONFIG_FILE_MODE);
++        return { changed: true, providerIds: nextConfig.getProviderIds() };
++    }
++    finally {
++        if (temporaryPath)
++            await rm(temporaryPath, { force: true });
++        await release().catch(() => undefined);
++    }
+ }
+-//# sourceMappingURL=model-config.js.map
+\ No newline at end of file
+diff --git a/dist/core/model-runtime.d.ts b/dist/core/model-runtime.d.ts
+index 4f7c936..e8fea2a 100644
+--- a/dist/core/model-runtime.d.ts
++++ b/dist/core/model-runtime.d.ts
+@@ -1,10 +1,20 @@
+ import { type Api, type AssistantMessage, type AssistantMessageEventStream, type AuthCheck, type AuthInteraction, type AuthOperationOptions, type AuthResult, type AuthType, type Context, type Credential, type CredentialInfo, type CredentialStore, type DeferredHandle, type Model, type Models, type ModelsApiStreamOptions, type ModelsDeferredCancelOptions, type ModelsDeferredFetchOptions, type ModelsRefreshOptions, type ModelsRefreshResult, type ModelsSimpleStreamOptions, type ModelsStore, type Provider } from "@earendil-works/pi-ai";
++import { type ModelConfigHeaderReferenceMutation, type ModelConfigProviderHeaderMetadata, type ModelConfigMutationOptions, type ModelConfigMutationResult, type ModelConfigCredentialReferenceMutation, type ModelConfigProviderMutation, type ModelConfigReader, type ModelsJsonModel, type ModelsJsonProvider } from "./model-config.ts";
+ import { type AuthStatus, type CompatibilityRequestConfig, type ProviderConfigInput } from "./provider-composer.ts";
++export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
++/**
++ * Persist one provider only after a fresh official runtime can reload and
++ * compose the complete candidate file. The candidate uses memory-only auth and
++ * catalog stores, so validation cannot read or mutate the user's credentials.
++ */
++export declare function mutateModelConfigProvider(modelsJsonPath: string, mutation: ModelConfigProviderMutation, options?: ModelConfigMutationOptions): Promise<ModelConfigMutationResult>;
+ export interface CreateModelRuntimeOptions {
+     /** Credential storage. Defaults to the file at authPath. */
+     credentials?: CredentialStore;
+     authPath?: string;
+     modelsPath?: string | null;
++    /** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
++    modelsConfigReader?: ModelConfigReader;
+     modelsStore?: ModelsStore;
+     modelsStorePath?: string;
+     /** Allow create() to refresh model catalogs over the network. Defaults to false. */
+@@ -24,6 +34,14 @@ export interface ModelRuntimeAuthOverrides extends AuthOperationOptions {
+     minOAuthValidityMs?: number;
+ }
+ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntimeApiKey" | "removeRuntimeApiKey";
++export interface ModelConfigProviderDiscoveryOptions {
++    readonly signal?: AbortSignal;
++}
++export type ModelConfigProviderDiscoveryErrorCode = "invalid_configuration" | "authentication_failed" | "request_failed" | "catalog_unavailable" | "response_too_large";
++export declare class ModelConfigProviderDiscoveryError extends Error {
++    readonly code: ModelConfigProviderDiscoveryErrorCode;
++    constructor(code: ModelConfigProviderDiscoveryErrorCode, options?: ErrorOptions);
++}
+ /** Credentials changed successfully, but the local model/auth snapshot could not be synchronized. */
+ export declare class CredentialSynchronizationError extends Error {
+     readonly providerId: string;
+@@ -41,6 +59,7 @@ export declare class ModelRuntime implements Models {
+     private readonly extensionProviders;
+     private readonly compositionErrors;
+     private readonly modelsPath;
++    private readonly modelsConfigReader;
+     private readonly modelNetworkEnabled;
+     private config;
+     private snapshot;
+@@ -83,6 +102,20 @@ export declare class ModelRuntime implements Models {
+     removeRuntimeApiKey(providerId: string, options?: AuthOperationOptions): Promise<void>;
+     listCredentials(options?: AuthOperationOptions): Promise<readonly CredentialInfo[]>;
+     getProviderAuthStatus(providerId: string): AuthStatus;
++    /** Provider IDs accepted from the current official models.json configuration snapshot. */
++    getModelConfigProviderIds(): readonly string[];
++    /** Credential-blind provider configuration accepted by ModelConfig. */
++    getModelConfigProvider(providerId: string): ModelsJsonProvider | undefined;
++    /** Header names and source kinds accepted from models.json, without values or resolution. */
++    getModelConfigProviderHeaderMetadata(providerId: string): ModelConfigProviderHeaderMetadata | undefined;
++    /** Apply one credential-blind edit to this disposable runtime without exposing retained secrets. */
++    registerModelConfigProviderPreview(providerId: string, provider: ModelsJsonProvider, credentialReference?: ModelConfigCredentialReferenceMutation, headerReferences?: readonly ModelConfigHeaderReferenceMutation[]): void;
++    /**
++     * Discover a generic models.json provider's model identities through its
++     * configured Pi protocol and effective credential. This explicit operation
++     * never mutates models.json or the catalog store.
++     */
++    discoverModelConfigProviderModels(providerId: string, options?: ModelConfigProviderDiscoveryOptions): Promise<readonly ModelsJsonModel[]>;
+     private prepareRequest;
+     stream<TApi extends Api>(model: Model<TApi>, context: Context, options?: ModelsApiStreamOptions<TApi>): AssistantMessageEventStream;
+     complete<TApi extends Api>(model: Model<TApi>, context: Context, options?: ModelsApiStreamOptions<TApi>): Promise<AssistantMessage>;
+@@ -97,4 +130,3 @@ export declare class ModelRuntime implements Models {
+     registerProvider(providerId: string, config: ProviderConfigInput): void;
+     unregisterProvider(providerId: string): void;
+ }
+-//# sourceMappingURL=model-runtime.d.ts.map
+\ No newline at end of file
+diff --git a/dist/core/model-runtime.js b/dist/core/model-runtime.js
+index 7d93ba6..1c7d838 100644
+--- a/dist/core/model-runtime.js
++++ b/dist/core/model-runtime.js
+@@ -1,14 +1,172 @@
+ import { dirname, join } from "node:path";
+-import { createModels, lazyStream, ModelsError, } from "@earendil-works/pi-ai";
++import { createModels, InMemoryCredentialStore, lazyStream, ModelsError, } from "@earendil-works/pi-ai";
+ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
+ import { getAgentDir } from "../config.js";
+ import { operationSignal, raceWithAbortSignal } from "../utils/abort.js";
+ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.js";
+-import { ModelConfig } from "./model-config.js";
++import { ModelConfig, mutateModelConfigProviderFile, } from "./model-config.js";
+ import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.js";
+ import { composeModelProvider, configuredRequestAuthStatus, resolveCompatibilityRequestConfig, resolveConfiguredModelHeaders, validateExtensionProvider, } from "./provider-composer.js";
+ import { withRemoteCatalog } from "./remote-catalog-provider.js";
+ import { RuntimeCredentials } from "./runtime-credentials.js";
++/**
++ * Persist one provider only after a fresh official runtime can reload and
++ * compose the complete candidate file. The candidate uses memory-only auth and
++ * catalog stores, so validation cannot read or mutate the user's credentials.
++ */
++export async function mutateModelConfigProvider(modelsJsonPath, mutation, options = {}) {
++    return mutateModelConfigProviderFile(modelsJsonPath, mutation, {
++        ...options,
++        validateCandidate: async (candidatePath, signal) => {
++            const runtime = await ModelRuntime.create({
++                credentials: new InMemoryCredentialStore(),
++                modelsPath: candidatePath,
++                modelsStore: new InMemoryCodingAgentModelsStore(),
++                allowModelNetwork: false,
++                refreshOnCreate: false,
++                signal,
++            });
++            const error = runtime.getError();
++            if (error)
++                throw new Error(error);
++        },
++    });
++}
++export class ModelConfigProviderDiscoveryError extends Error {
++    code;
++    constructor(code, options) {
++        super("Model discovery failed", options);
++        this.name = "ModelConfigProviderDiscoveryError";
++        this.code = code;
++    }
++}
++const MAX_DISCOVERED_MODEL_COUNT = 4_096;
++const MAX_DISCOVERY_RESPONSE_BYTES = 4 * 1024 * 1024;
++const DISCOVERABLE_MODEL_CONFIG_APIS = new Set([
++    "openai-completions",
++    "openai-responses",
++    "anthropic-messages",
++    "google-generative-ai",
++]);
++function appendDiscoveryPath(baseUrl, version) {
++    let url;
++    try {
++        url = new URL(baseUrl);
++    }
++    catch (cause) {
++        throw new ModelConfigProviderDiscoveryError("invalid_configuration", { cause });
++    }
++    if ((url.protocol !== "https:" && url.protocol !== "http:") ||
++        url.username !== "" ||
++        url.password !== "" ||
++        url.hash !== "") {
++        throw new ModelConfigProviderDiscoveryError("invalid_configuration");
++    }
++    const normalizedPath = url.pathname.replace(/\/+$/u, "");
++    url.pathname = normalizedPath.endsWith(`/${version}`)
++        ? `${normalizedPath}/models`
++        : `${normalizedPath}/${version}/models`;
++    url.search = "";
++    return url;
++}
++function setHeaderUnlessPresent(headers, name, value) {
++    if (value && !headers.has(name))
++        headers.set(name, value);
++}
++function safeDiscoveredModelText(value, maxLength) {
++    if (typeof value !== "string")
++        return undefined;
++    const normalized = value.trim();
++    if (!normalized ||
++        normalized.length > maxLength ||
++        /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u.test(normalized)) {
++        return undefined;
++    }
++    return normalized;
++}
++function discoveredModelsFromPayload(api, payload) {
++    if (typeof payload !== "object" || payload === null) {
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    }
++    const record = payload;
++    const entries = api === "google-generative-ai" ? record.models : record.data;
++    if (!Array.isArray(entries)) {
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    }
++    if (entries.length > MAX_DISCOVERED_MODEL_COUNT) {
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    }
++    const models = new Map();
++    for (const entry of entries) {
++        if (typeof entry !== "object" || entry === null)
++            continue;
++        const item = entry;
++        const rawId = safeDiscoveredModelText(api === "google-generative-ai" ? item.name : item.id, 512);
++        if (!rawId)
++            continue;
++        const id = api === "google-generative-ai" ? rawId.replace(/^models\//u, "") : rawId;
++        if (!id || models.has(id))
++            continue;
++        const name = safeDiscoveredModelText(api === "google-generative-ai"
++            ? item.displayName
++            : api === "anthropic-messages"
++                ? item.display_name
++                : item.name, 256);
++        models.set(id, name ? { id, name } : { id });
++    }
++    if (models.size === 0) {
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    }
++    return [...models.values()];
++}
++async function readBoundedDiscoveryResponse(response, signal) {
++    if (response.status === 401 || response.status === 403) {
++        throw new ModelConfigProviderDiscoveryError("authentication_failed");
++    }
++    if (!response.ok)
++        throw new ModelConfigProviderDiscoveryError("request_failed");
++    const declaredLength = Number(response.headers.get("content-length"));
++    if (Number.isFinite(declaredLength) && declaredLength > MAX_DISCOVERY_RESPONSE_BYTES) {
++        throw new ModelConfigProviderDiscoveryError("response_too_large");
++    }
++    const reader = response.body?.getReader();
++    if (!reader)
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    const chunks = [];
++    let totalBytes = 0;
++    const abortRead = () => void reader.cancel(signal?.reason).catch(() => undefined);
++    signal?.addEventListener("abort", abortRead, { once: true });
++    try {
++        while (true) {
++            signal?.throwIfAborted();
++            const { done, value } = await reader.read();
++            if (done)
++                break;
++            totalBytes += value.byteLength;
++            if (totalBytes > MAX_DISCOVERY_RESPONSE_BYTES) {
++                await reader.cancel();
++                throw new ModelConfigProviderDiscoveryError("response_too_large");
++            }
++            chunks.push(value);
++        }
++    }
++    finally {
++        signal?.removeEventListener("abort", abortRead);
++        reader.releaseLock();
++    }
++    const bytes = new Uint8Array(totalBytes);
++    let offset = 0;
++    for (const chunk of chunks) {
++        bytes.set(chunk, offset);
++        offset += chunk.byteLength;
++    }
++    try {
++        return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
++    }
++    catch {
++        throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++    }
++}
+ /** Credentials changed successfully, but the local model/auth snapshot could not be synchronized. */
+ export class CredentialSynchronizationError extends Error {
+     providerId;
+@@ -46,6 +204,7 @@ export class ModelRuntime {
+     extensionProviders = new Map();
+     compositionErrors = new Map();
+     modelsPath;
++    modelsConfigReader;
+     modelNetworkEnabled;
+     config;
+     snapshot = {
+@@ -60,10 +219,11 @@ export class ModelRuntime {
+     providerAvailabilitySeq = new Map();
+     availabilityError;
+     credentialOperations = new Map();
+-    constructor(credentials, config, modelsPath, modelsStore, providers, modelNetworkEnabled) {
++    constructor(credentials, config, modelsPath, modelsConfigReader, modelsStore, providers, modelNetworkEnabled) {
+         this.credentials = credentials;
+         this.config = config;
+         this.modelsPath = modelsPath;
++        this.modelsConfigReader = modelsConfigReader;
+         this.modelNetworkEnabled = modelNetworkEnabled;
+         this.defaultBuiltins = new Map(providers.map((provider) => [provider.id, provider]));
+         for (const [providerId, provider] of this.defaultBuiltins)
+@@ -72,20 +232,28 @@ export class ModelRuntime {
+         this.rebuildProviders();
+     }
+     static async create(options = {}) {
++        if (options.modelsConfigReader && options.modelsPath !== null) {
++            throw new Error("modelsConfigReader requires modelsPath: null");
++        }
+         const credentials = new RuntimeCredentials(options.credentials ?? DefaultAuthStorage.create(options.authPath));
+         const modelsPath = options.modelsPath === null ? undefined : (options.modelsPath ?? join(getAgentDir(), "models.json"));
+-        const config = await ModelConfig.load(modelsPath);
++        const config = await ModelConfig.load(modelsPath, {
++            reader: options.modelsConfigReader,
++            signal: options.signal,
++        });
+         const modelsStore = options.modelsStore ??
+-            (modelsPath
+-                ? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
+-                : new InMemoryCodingAgentModelsStore());
++            (options.modelsStorePath
++                ? new FileModelsStore(options.modelsStorePath)
++                : modelsPath
++                    ? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
++                    : new InMemoryCodingAgentModelsStore());
+         const builtinModelDataGeneratedAt = builtinProviderCatalog.getBuiltinModelDataGeneratedAt();
+         const providers = builtinProviderCatalog
+             .builtinProviders()
+             .map((provider) => provider.id === "radius"
+             ? provider
+             : withRemoteCatalog(provider, options.catalogBaseUrl, builtinModelDataGeneratedAt));
+-        const runtime = new ModelRuntime(credentials, config, modelsPath, modelsStore, providers, process.env.PI_OFFLINE === undefined);
++        const runtime = new ModelRuntime(credentials, config, modelsPath, options.modelsConfigReader, modelsStore, providers, process.env.PI_OFFLINE === undefined);
+         runtime.configureRadiusProviders();
+         runtime.rebuildProviders();
+         const refreshFromNetwork = runtime.modelNetworkEnabled && options.allowModelNetwork === true;
+@@ -419,6 +587,95 @@ export class ModelRuntime {
+         const check = this.snapshot.auth.get(providerId);
+         return check ? { configured: true, source: "environment", label: check.source } : { configured: false };
+     }
++    /** Provider IDs accepted from the current official models.json configuration snapshot. */
++    getModelConfigProviderIds() {
++        return this.config.getProviderIds();
++    }
++    /** Credential-blind provider configuration accepted by ModelConfig. */
++    getModelConfigProvider(providerId) {
++        const provider = this.config.getProvider(providerId);
++        if (!provider)
++            return undefined;
++        const credentialBlindClone = (value) => {
++            if (Array.isArray(value))
++                return value.map(credentialBlindClone);
++            if (typeof value !== "object" || value === null)
++                return value;
++            return Object.fromEntries(Object.entries(value)
++                .filter(([key]) => key !== "apiKey" && key !== "headers")
++                .map(([key, child]) => [key, credentialBlindClone(child)]));
++        };
++        return credentialBlindClone(provider);
++    }
++    /** Header names and source kinds accepted from models.json, without values or resolution. */
++    getModelConfigProviderHeaderMetadata(providerId) {
++        return this.config.getProviderHeaderMetadata(providerId);
++    }
++    /** Apply one credential-blind edit to this disposable runtime without exposing retained secrets. */
++    registerModelConfigProviderPreview(providerId, provider, credentialReference, headerReferences) {
++        this.config = this.config.withProviderEdit(providerId, provider, credentialReference, headerReferences);
++        this.recomposeProvider(providerId);
++        this.updateModelSnapshot();
++    }
++    /**
++     * Discover a generic models.json provider's model identities through its
++     * configured Pi protocol and effective credential. This explicit operation
++     * never mutates models.json or the catalog store.
++     */
++    async discoverModelConfigProviderModels(providerId, options = {}) {
++        const signal = operationSignal(options.signal);
++        signal.throwIfAborted();
++        const config = this.config.getProvider(providerId);
++        const api = config?.api;
++        if (!config?.baseUrl || !api || !DISCOVERABLE_MODEL_CONFIG_APIS.has(api)) {
++            throw new ModelConfigProviderDiscoveryError("invalid_configuration");
++        }
++        let auth;
++        try {
++            auth = await this.models.getAuth(providerId, { signal });
++        }
++        catch (cause) {
++            signal.throwIfAborted();
++            throw new ModelConfigProviderDiscoveryError("authentication_failed", { cause });
++        }
++        if (!auth)
++            throw new ModelConfigProviderDiscoveryError("authentication_failed");
++        const headers = new Headers();
++        for (const [name, value] of Object.entries(auth.auth.headers ?? {})) {
++            if (value !== null)
++                headers.set(name, value);
++        }
++        headers.set("Accept", "application/json");
++        let endpoint;
++        if (api === "google-generative-ai") {
++            endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1beta");
++            setHeaderUnlessPresent(headers, "x-goog-api-key", auth.auth.apiKey);
++        }
++        else if (api === "anthropic-messages") {
++            endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
++            setHeaderUnlessPresent(headers, "x-api-key", auth.auth.apiKey);
++            setHeaderUnlessPresent(headers, "anthropic-version", "2023-06-01");
++        }
++        else {
++            endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
++            setHeaderUnlessPresent(headers, "Authorization", auth.auth.apiKey ? `Bearer ${auth.auth.apiKey}` : undefined);
++        }
++        try {
++            const response = await fetch(endpoint, {
++                method: "GET",
++                headers,
++                redirect: "error",
++                signal,
++            });
++            return discoveredModelsFromPayload(api, await readBoundedDiscoveryResponse(response, signal));
++        }
++        catch (cause) {
++            signal.throwIfAborted();
++            if (cause instanceof ModelConfigProviderDiscoveryError)
++                throw cause;
++            throw new ModelConfigProviderDiscoveryError("request_failed", { cause });
++        }
++    }
+     async prepareRequest(model, options) {
+         const provider = this.models.getProvider(model.provider);
+         if (!provider)
+@@ -499,7 +756,10 @@ export class ModelRuntime {
+         });
+     }
+     async refresh(options = {}) {
+-        this.config = await ModelConfig.load(this.modelsPath);
++        this.config = await ModelConfig.load(this.modelsPath, {
++            reader: this.modelsConfigReader,
++            signal: options.signal,
++        });
+         this.configureRadiusProviders();
+         if (options.providers) {
+             for (const providerId of new Set(options.providers))
+@@ -596,4 +856,3 @@ export class ModelRuntime {
+         void this.refresh({ allowNetwork: false });
+     }
+ }
+-//# sourceMappingURL=model-runtime.js.map
+\ No newline at end of file
+diff --git a/dist/core/resource-loader.d.ts b/dist/core/resource-loader.d.ts
+index 0a908d3..523e049 100644
+--- a/dist/core/resource-loader.d.ts
++++ b/dist/core/resource-loader.d.ts
+@@ -22,6 +22,7 @@ export interface ResourceExtensionPaths {
+     }>;
+ }
+ export interface ResourceLoaderReloadOptions {
++    onMissingPackage?: (source: string) => Promise<"install" | "skip" | "error">;
+     resolveProjectTrust?: (input: {
+         extensionsResult: LoadExtensionsResult;
+     }) => Promise<boolean>;
+@@ -191,7 +192,7 @@ export declare class DefaultResourceLoader implements ResourceLoader {
+         path: string;
+     }>;
+     extendResources(paths: ResourceExtensionPaths): void;
+-    loadProjectTrustExtensions(): Promise<LoadExtensionsResult>;
++    loadProjectTrustExtensions(options?: ResourceLoaderReloadOptions): Promise<LoadExtensionsResult>;
+     reload(options?: ResourceLoaderReloadOptions): Promise<void>;
+     private loadCurrentExtensionSet;
+     private resolveExtensionLoadPath;
+@@ -218,4 +219,3 @@ export declare class DefaultResourceLoader implements ResourceLoader {
+     private isUnderPath;
+     private detectExtensionConflicts;
+ }
+-//# sourceMappingURL=resource-loader.d.ts.map
+\ No newline at end of file
+diff --git a/dist/core/resource-loader.js b/dist/core/resource-loader.js
+index c5ed4d7..28e4922 100644
+--- a/dist/core/resource-loader.js
++++ b/dist/core/resource-loader.js
+@@ -253,12 +253,12 @@ export class DefaultResourceLoader {
+             this.updateThemesFromPaths(this.lastThemePaths, this.resourceMetadataByPath);
+         }
+     }
+-    async loadProjectTrustExtensions() {
++    async loadProjectTrustExtensions(options) {
+         // Force untrusted project settings for the bootstrap pass. This keeps project-local
+         // extensions/packages out while still loading user/global and temporary CLI extensions.
+         this.settingsManager.setProjectTrusted(false);
+         await this.settingsManager.reload();
+-        return this.loadCurrentExtensionSet({ includeInlineFactories: true });
++        return this.loadCurrentExtensionSet({ includeInlineFactories: true, onMissingPackage: options?.onMissingPackage });
+     }
+     async reload(options) {
+         resetTimings("extensions");
+@@ -267,13 +267,13 @@ export class DefaultResourceLoader {
+         }
+         let preTrustExtensions;
+         if (options?.resolveProjectTrust) {
+-            preTrustExtensions = await this.loadProjectTrustExtensions();
++            preTrustExtensions = await this.loadProjectTrustExtensions(options);
+             const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
+             this.settingsManager.setProjectTrusted(projectTrusted);
+         }
+         // reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
+         await this.settingsManager.reload();
+-        const resolvedPaths = await this.packageManager.resolve();
++        const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
+         const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+             temporary: true,
+         });
+@@ -400,7 +400,7 @@ export class DefaultResourceLoader {
+         this.loaded = true;
+     }
+     async loadCurrentExtensionSet(options) {
+-        const resolvedPaths = await this.packageManager.resolve();
++        const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
+         const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+             temporary: true,
+         });
+@@ -872,4 +872,3 @@ export class DefaultResourceLoader {
+         return conflicts;
+     }
+ }
+-//# sourceMappingURL=resource-loader.js.map
+\ No newline at end of file
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 3e9241dc237322f9ba64aac399f4eda31ac4715c..e258da9d772a863fd401752dd6863bee9e772e0f 100644
+index 6cf34af..24937c7 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1,6 +1,6 @@
@@ -194,10 +1403,40 @@ index 3e9241dc237322f9ba64aac399f4eda31ac4715c..e258da9d772a863fd401752dd6863bee
  export { readStoredCredential } from "./core/auth-storage.ts";
  export { type BranchPreparation, type BranchSummaryResult, type CollectEntriesResult, type CompactionResult, type CutPointResult, calculateContextTokens, collectEntriesForBranchSummary, compact, DEFAULT_COMPACTION_SETTINGS, estimateTokens, type FileOperations, findCutPoint, findTurnStartIndex, type GenerateBranchSummaryOptions, generateBranchSummary, generateSummary, generateSummaryWithUsage, getLastAssistantUsage, prepareBranchEntries, serializeConversation, shouldCompact, } from "./core/compaction/index.ts";
  export { createEventBus, type EventBus, type EventBusController } from "./core/event-bus.ts";
-@@ -33,4 +33,4 @@ export { convertToPng } from "./utils/image-convert.ts";
+@@ -10,7 +10,7 @@ export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts"
+ export { convertToLlm } from "./core/messages.ts";
+ export { ModelRegistry } from "./core/model-registry.ts";
+ export { type ModelScopeDiagnostic, type ResolveCliModelResult, type ResolveModelScopeResult, resolveCliModel, resolveModelScopeWithDiagnostics, type ScopedModel, } from "./core/model-resolver.ts";
+-export { type CreateModelRuntimeOptions, CredentialSynchronizationError, type CredentialSynchronizationOperation, ModelRuntime, type ModelRuntimeAuthOverrides, } from "./core/model-runtime.ts";
++export { type CreateModelRuntimeOptions, CredentialSynchronizationError, type CredentialSynchronizationOperation, type ModelConfigProviderDiscoveryOptions, ModelConfigProviderDiscoveryError, type ModelConfigProviderDiscoveryErrorCode, type ModelConfigReader, type ModelConfigReadOptions, ModelRuntime, type ModelRuntimeAuthOverrides, mutateModelConfigProvider, } from "./core/model-runtime.ts";
+ export type { PackageManager, PathMetadata, ProgressCallback, ProgressEvent, ResolvedPaths, ResolvedResource, } from "./core/package-manager.ts";
+ export { DefaultPackageManager } from "./core/package-manager.ts";
+ export type { ResourceCollision, ResourceDiagnostic, ResourceLoader } from "./core/resource-loader.ts";
+@@ -33,4 +33,6 @@ export { convertToPng } from "./utils/image-convert.ts";
  export { formatDimensionNote, type ResizedImage, resizeImage } from "./utils/image-resize.ts";
  export { detectSupportedImageMimeTypeFromFile } from "./utils/mime.ts";
  export { getPowerShellConfig, getShellConfig } from "./utils/shell.ts";
 -//# sourceMappingURL=index.d.ts.map
 \ No newline at end of file
 +//# sourceMappingURL=index.d.ts.map
++
++export type { ModelConfigCredentialReferenceMutation, ModelConfigHeaderReferenceMetadata, ModelConfigHeaderReferenceMutation, ModelConfigHeaderReferenceSource, ModelConfigHeaderReferenceValueMutation, ModelConfigMutationOptions, ModelConfigMutationResult, ModelConfigProviderHeaderMetadata, ModelConfigProviderMutation, ModelsJsonModel, ModelsJsonModelOverride, ModelsJsonProvider, } from "./core/model-config.ts";
+diff --git a/dist/index.js b/dist/index.js
+index 01017cd..09503f7 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -11,7 +11,7 @@ export { createExtensionRuntime, defineTool, discoverAndLoadExtensions, Extensio
+ export { convertToLlm } from "./core/messages.js";
+ export { ModelRegistry } from "./core/model-registry.js";
+ export { resolveCliModel, resolveModelScopeWithDiagnostics, } from "./core/model-resolver.js";
+-export { CredentialSynchronizationError, ModelRuntime, } from "./core/model-runtime.js";
++export { CredentialSynchronizationError, ModelConfigProviderDiscoveryError, ModelRuntime, mutateModelConfigProvider, } from "./core/model-runtime.js";
+ export { DefaultPackageManager } from "./core/package-manager.js";
+ export { DefaultResourceLoader, loadProjectContextFiles } from "./core/resource-loader.js";
+ // SDK for programmatic usage
+diff --git a/package.json b/package.json
+index 8aa4735..67c4f27 100644
+--- a/package.json
++++ b/package.json
+@@ -59,0 +60 @@
++		"jsonc-parser": "3.3.1",

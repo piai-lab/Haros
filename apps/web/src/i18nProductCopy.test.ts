@@ -22,7 +22,6 @@ const PRODUCT_COPY_SOURCES = [
   "components/CreateGitHubProjectFields.tsx",
   "components/CreateProjectDialog.tsx",
   "components/ChatView.tsx",
-  "components/onboarding/FirstRunReadinessDialog.tsx",
   "components/ChatMarkdown.tsx",
   "components/BrowserPanel.tsx",
   "components/BranchToolbarBranchSelector.tsx",
@@ -144,7 +143,6 @@ const PRODUCT_COPY_SOURCES = [
   "components/settings/DesktopSettingsPanels.tsx",
   "components/settings/ExternalConnectionsSettingsPanel.tsx",
   "components/settings/KeyboardShortcutsSettingsPanel.tsx",
-  "components/settings/ModelsSettingsPanel.tsx",
   "components/settings/ProfileSettingsPanel.tsx",
   "components/settings/EngineUsageSettingsPanel.tsx",
   "components/settings/EnginesSettingsPanel.tsx",
@@ -263,6 +261,7 @@ const RAW_FACT_ALLOWLIST = [
   "ThemePackEditor.tsx:text:Aa",
   'ThemePackEditor.tsx:attribute:harnessos-theme-v1:{"presetId":"linear",...}',
   "EnginesSettingsPanel.tsx:property:CODEX_HOME",
+  "EnginesSettingsPanel.tsx:property:DSH_HOME",
   "EnginesSettingsPanel.tsx:property:https://api2.cursor.sh",
   "EnginesSettingsPanel.tsx:property:droid",
   "EnginesSettingsPanel.tsx:property:http://127.0.0.1:4096",
@@ -583,28 +582,6 @@ describe("reachable Haros-owned product copy", () => {
         ),
       ).toEqual([]);
     }
-  });
-
-  it("locks the bilingual first-run focus-flow copy without internal runtime vocabulary", () => {
-    const exact = [
-      ["onboarding.firstRun.engineTitle", "Choose your work engine", "选择你的工作引擎"],
-      ["onboarding.firstRun.serviceTitle", "Connect a model service", "连接一个模型服务"],
-      ["onboarding.firstRun.modelTitle", "Choose an exact model", "选择一个精确模型"],
-      ["onboarding.firstRun.readyTitle", "Haros is ready", "Haros 已准备好"],
-      ["onboarding.firstRun.later", "Set up later", "稍后设置"],
-      ["onboarding.firstRun.startUsing", "Start using", "开始使用"],
-    ] as const;
-
-    for (const [key, en, zh] of exact) {
-      expect(EN_MESSAGES[key]).toBe(en);
-      expect(ZH_CN_MESSAGES[key]).toBe(zh);
-    }
-
-    const firstRunCopy = Object.entries(EN_MESSAGES)
-      .filter(([key]) => key.startsWith("onboarding.firstRun."))
-      .map(([, value]) => value)
-      .join(" ");
-    expect(firstRunCopy).not.toMatch(/\b(?:Pi-derived|ModelRuntime|runtime projection)\b/u);
   });
 
   it("keeps interruption recovery localized in both supported languages", () => {

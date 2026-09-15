@@ -58,7 +58,7 @@ async function renderPanel() {
     keybindings: [],
     availableEditors: [],
     activeThreadId: null,
-    activeEngine: "oa",
+    activeEngine: "pi",
     isStudioChat: true,
     studioFolderPath: "/task/studio-folder",
     showGitActions: false,

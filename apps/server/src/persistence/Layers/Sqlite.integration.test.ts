@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeSqlitePersistenceLive } from "./Sqlite.ts";
 import { runMigrations } from "../Migrations.ts";
 import * as NodeSqliteClient from "../NodeSqliteClient.ts";
+import { resolveSqliteMemoryBudget } from "../sqliteMemoryBudget.ts";
 
 const tempDirectories: Array<string> = [];
 
@@ -73,7 +74,9 @@ describe("SQLite persistence", () => {
         const [mmapSize] = yield* sql<{ readonly mmap_size: number }>`
           PRAGMA mmap_size;
         `;
-        expect(cacheSize?.cache_size).toBe(-262144);
+        expect(cacheSize?.cache_size).toBe(
+          resolveSqliteMemoryBudget(os.totalmem()).cacheSizePragma,
+        );
         // SQLite/runtime builds may cap the requested 1 GiB window; requiring a
         // positive value proves that file-backed mapping was actually enabled.
         expect(mmapSize?.mmap_size).toBeGreaterThan(0);

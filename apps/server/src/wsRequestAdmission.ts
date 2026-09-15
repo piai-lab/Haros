@@ -1,17 +1,13 @@
-import * as Crypto from "node:crypto";
-
 import { ORCHESTRATION_WS_METHODS, WS_METHODS, WsRpcError } from "@harnessos/contracts";
 import { Effect, Ref } from "effect";
-
+import * as Crypto from "node:crypto";
 export type WsRequestClass = "control" | "standard" | "engine-discovery" | "expensive-read";
-
 export const WS_REQUEST_CLASS_LIMITS: Readonly<Record<WsRequestClass, number>> = {
   control: 16,
   standard: 12,
   "engine-discovery": 2,
   "expensive-read": 2,
 };
-
 const CONTROL_METHODS = new Set<string>([
   ORCHESTRATION_WS_METHODS.dispatchCommand,
   ORCHESTRATION_WS_METHODS.updatePendingUserInputDraft,
@@ -25,7 +21,6 @@ const CONTROL_METHODS = new Set<string>([
   WS_METHODS.automationMarkRunRead,
   WS_METHODS.automationArchiveRun,
 ]);
-
 // Composer model truth must not queue behind cold shell restoration. Keep the
 // engine catalog bounded, but give it an independent lane so two long-running
 // snapshot/diff reads cannot strand every Engine until a window-focus refetch.
@@ -33,7 +28,6 @@ const ENGINE_DISCOVERY_METHODS = new Set<string>([
   WS_METHODS.engineListModels,
   WS_METHODS.engineListAgents,
 ]);
-
 const EXPENSIVE_READ_METHODS = new Set<string>([
   ORCHESTRATION_WS_METHODS.getSnapshot,
   ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
@@ -69,36 +63,29 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.engineListSkillsCatalog,
   WS_METHODS.engineListPlugins,
   WS_METHODS.providerReadPlugin,
-  WS_METHODS.oaModelServicesList,
-  WS_METHODS.oaModelServicesGet,
-  WS_METHODS.oaModelServicesDiscoverCustom,
-  WS_METHODS.oaModelServicesTestCustom,
-  WS_METHODS.oaWebSearchTestProvider,
-  WS_METHODS.oaWebSearchRecheck,
-  WS_METHODS.oaWebSearchGeminiDiagnostic,
+  WS_METHODS.modelServicesList,
+  WS_METHODS.modelServicesGet,
+  WS_METHODS.modelServicesDiscoverCustom,
+  WS_METHODS.modelServicesTestCustom,
 ]);
-
 export function classifyWsRequest(method: string): WsRequestClass {
   if (CONTROL_METHODS.has(method)) return "control";
   if (ENGINE_DISCOVERY_METHODS.has(method)) return "engine-discovery";
   if (EXPENSIVE_READ_METHODS.has(method)) return "expensive-read";
   return "standard";
 }
-
 export interface WsRequestLease {
   readonly clientId: number;
   readonly leaseId: string;
   readonly method: string;
   readonly requestClass: WsRequestClass;
 }
-
 interface AdmissionLedger {
   readonly clients: ReadonlyMap<number, ReadonlyMap<string, WsRequestLease>>;
   readonly admittedTotal: number;
   readonly releasedTotal: number;
   readonly rejectedTotal: number;
 }
-
 export interface WsRequestAdmissionSnapshot {
   readonly clients: number;
   readonly active: number;
@@ -106,17 +93,14 @@ export interface WsRequestAdmissionSnapshot {
   readonly releasedTotal: number;
   readonly rejectedTotal: number;
 }
-
 const initialLedger = (): AdmissionLedger => ({
   clients: new Map(),
   admittedTotal: 0,
   releasedTotal: 0,
   rejectedTotal: 0,
 });
-
 export const makeWsRequestAdmission = Effect.gen(function* () {
   const ledgerRef = yield* Ref.make<AdmissionLedger>(initialLedger());
-
   const acquire = (clientId: number, method: string) =>
     Ref.modify(
       ledgerRef,
@@ -144,7 +128,6 @@ export const makeWsRequestAdmission = Effect.gen(function* () {
             { ...ledger, rejectedTotal: ledger.rejectedTotal + 1 },
           ] as const;
         }
-
         const lease: WsRequestLease = {
           clientId,
           leaseId: Crypto.randomUUID(),
@@ -161,7 +144,6 @@ export const makeWsRequestAdmission = Effect.gen(function* () {
         ] as const;
       },
     ).pipe(Effect.flatten);
-
   const release = (lease: WsRequestLease) =>
     Ref.update(ledgerRef, (ledger) => {
       const clientLeases = ledger.clients.get(lease.clientId);
@@ -177,10 +159,8 @@ export const makeWsRequestAdmission = Effect.gen(function* () {
         releasedTotal: ledger.releasedTotal + 1,
       };
     });
-
   const guard = <A, E, R>(clientId: number, method: string, effect: Effect.Effect<A, E, R>) =>
     Effect.acquireUseRelease(acquire(clientId, method), () => effect, release);
-
   const snapshot = Ref.get(ledgerRef).pipe(
     Effect.map(
       (ledger): WsRequestAdmissionSnapshot => ({
@@ -195,6 +175,5 @@ export const makeWsRequestAdmission = Effect.gen(function* () {
       }),
     ),
   );
-
   return { acquire, release, guard, snapshot } as const;
 });

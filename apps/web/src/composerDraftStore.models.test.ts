@@ -2,6 +2,7 @@ import { ThreadId, type EngineSelection } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deriveEffectiveComposerModelState,
+  resolvePreferredComposerEngine,
   resolvePreferredComposerEngineSelection,
   useComposerDraftStore,
 } from "./composerDraftStore";
@@ -81,18 +82,47 @@ describe("resolvePreferredComposerEngineSelection", () => {
     ).toBeNull();
   });
 
-  it("keeps an unbound Haros intent fail-closed until its runtime catalog provides a model", () => {
+  it("keeps an existing Pi thread engine when the composer draft has no active engine", () => {
     expect(
       resolvePreferredComposerEngineSelection({
         draft: {
           engineSelectionByEngine: {},
-          activeEngine: "oa",
+          activeEngine: null,
         },
-        threadEngineSelection: null,
+        threadEngineSelection: engineSelection("pi", "provider/original-model"),
         projectEngineSelection: null,
         defaultEngine: "codex",
       }),
-    ).toBeNull();
+    ).toEqual(engineSelection("pi", "provider/original-model"));
+  });
+
+  it("keeps an existing runnable thread engine when the composer draft has no active engine", () => {
+    expect(
+      resolvePreferredComposerEngine({
+        draft: {
+          engineSelectionByEngine: {},
+          activeEngine: null,
+        },
+        threadEngineSelection: engineSelection("claude", "claude-opus-4-6"),
+        projectEngineSelection: engineSelection("codex", "gpt-5.5"),
+        defaultEngine: "codex",
+        hasExecutedWork: true,
+      }),
+    ).toBe("claude");
+  });
+
+  it("keeps an unbound Pi intent as the composer engine without fabricating a model", () => {
+    expect(
+      resolvePreferredComposerEngine({
+        draft: {
+          engineSelectionByEngine: {},
+          activeEngine: "pi",
+        },
+        threadEngineSelection: engineSelection("codex", "gpt-5.5"),
+        projectEngineSelection: null,
+        defaultEngine: "codex",
+      }),
+    ).toBe("pi");
   });
 });
 
@@ -498,16 +528,16 @@ describe("composerDraftStore engineSelection", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         engineSelectionByEngine: {
-          oa: engineSelection("oa", "service-a/model-a"),
+          pi: engineSelection("pi", "service-a/model-a"),
         },
-        activeEngine: "oa",
+        activeEngine: "pi",
       },
-      selectedEngine: "oa",
+      selectedEngine: "pi",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {},
       availableModelOptionsByEngine: {
-        oa: [{ slug: "service-b/model-b", name: "Model B" }],
+        pi: [{ slug: "service-b/model-b", name: "Model B" }],
       },
     });
 
@@ -516,13 +546,13 @@ describe("composerDraftStore engineSelection", () => {
 
   it("selects the first Haros catalog model only when no exact selection was remembered", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeEngine: "oa" },
-      selectedEngine: "oa",
+      draft: { engineSelectionByEngine: {}, activeEngine: "pi" },
+      selectedEngine: "pi",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {},
       availableModelOptionsByEngine: {
-        oa: [{ slug: "service-b/model-b", name: "Model B" }],
+        pi: [{ slug: "service-b/model-b", name: "Model B" }],
       },
     });
 
@@ -531,14 +561,14 @@ describe("composerDraftStore engineSelection", () => {
 
   it("uses an authority-selected Haros catalog fallback instead of the first catalog row", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeEngine: "oa" },
-      selectedEngine: "oa",
+      draft: { engineSelectionByEngine: {}, activeEngine: "pi" },
+      selectedEngine: "pi",
       threadEngineSelection: null,
       projectEngineSelection: null,
       runtimeCatalogFallbackModel: "service-b/model-b",
       customModelsByEngine: {},
       availableModelOptionsByEngine: {
-        oa: [
+        pi: [
           { slug: "service-a/model-a", name: "Model A" },
           { slug: "service-b/model-b", name: "Model B" },
         ],
@@ -552,16 +582,16 @@ describe("composerDraftStore engineSelection", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         engineSelectionByEngine: {
-          oa: engineSelection("oa", "deepseek/deepseek-chat"),
+          pi: engineSelection("pi", "deepseek/deepseek-chat"),
           codex: engineSelection("codex", "gpt-5.5"),
         },
-        activeEngine: "oa",
+        activeEngine: "pi",
       },
-      selectedEngine: "oa",
+      selectedEngine: "pi",
       threadEngineSelection: engineSelection("codex", "gpt-5.4"),
       projectEngineSelection: engineSelection("codex", "gpt-5.5"),
       customModelsByEngine: {},
-      availableModelOptionsByEngine: { oa: [] },
+      availableModelOptionsByEngine: { pi: [] },
     });
 
     expect(state.selectedModel).toBeNull();
@@ -620,12 +650,12 @@ describe("composerDraftStore setEngineSelection", () => {
     const store = useComposerDraftStore.getState();
 
     store.setEngineSelectionAndSticky(threadId, engineSelection("codex", "gpt-5.4"));
-    store.setActiveEngineAndSticky(threadId, "oa");
+    store.setActiveEngineAndSticky(threadId, "pi");
 
     const state = useComposerDraftStore.getState();
-    expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("oa");
-    expect(state.stickyActiveEngine).toBe("oa");
-    expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.oa).toBeUndefined();
+    expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("pi");
+    expect(state.stickyActiveEngine).toBe("pi");
+    expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.pi).toBeUndefined();
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.codex).toEqual(
       engineSelection("codex", "gpt-5.4"),
     );
@@ -1132,15 +1162,15 @@ describe("composerDraftStore engine-scoped option updates", () => {
 
     store.setEngineModelOptions(
       threadId,
-      "oa",
+      "pi",
       { thinkingLevel: "max" },
       { model: "deepseek/deepseek-reasoner" },
     );
 
     expect(
-      useComposerDraftStore.getState().draftsByThreadId[threadId]?.engineSelectionByEngine.oa,
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.engineSelectionByEngine.pi,
     ).toEqual(
-      engineSelection("oa", "deepseek/deepseek-reasoner", {
+      engineSelection("pi", "deepseek/deepseek-reasoner", {
         thinkingLevel: "max",
       }),
     );

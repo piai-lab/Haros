@@ -11,8 +11,7 @@ same orchestration owner with different workspace lifecycles.
 ## Engines
 
 An Engine is a complete agent runtime. `ENGINE_DESCRIPTORS` is the single owner of Engine identity,
-display name, registration, capability projection, and Settings discovery. One built-in Engine is
-the default for a fresh setup.
+display name, registration, capability projection, and Settings discovery. Codex is the default for a fresh setup. Runnable descriptors exclude the retired OA identity, which remains decodable for historical records.
 
 Engine selection freezes the exact Engine, model, and options admitted to a queued turn. Changing
 Engine is stop-first. A launch failure preserves the prompt and Queue and never silently selects a
@@ -30,19 +29,24 @@ only a typed projection.
 HostGateway also owns exact-turn authority, permission checks, cancellation, timeout, idempotency,
 and receipts. Engine adapters do not duplicate those responsibilities.
 
-## Built-in Engine
+## Retired OA Engine
 
-The built-in default Engine uses Haros-owned state. Its runtime composition is explicit and
-bounded: planning guard, todos, user questions, web access, and HostGateway tools. Those resources
-are not ambiently injected into other Engines.
+The OA runtime, package management, and bundled web access are removed. Independent Pi retains its own SDK, resource discovery, and shared user-input bridge. No replacement Engine is silently selected for an existing OA task.
 
-Its model services remain internal to the Engine. The product UI receives a typed,
-credential-blind projection and never becomes a second credential, package, or model-catalog owner.
+The first-run setup wizard is also removed. The workbench opens directly; existing OA records remain readable only. Independent Pi, external Engines, and the shared workbench keep their existing boundaries. AppSnap welcome is a separate optional overlay, not Engine setup.
+
+首次设置向导和 OA 运行能力已移除。工作台直接启动；旧 OA 记录只保留读取能力，独立 Pi、外部引擎及共享工作台继续使用原有边界。AppSnap 欢迎介绍不是引擎设置。
+
+## Model services
+
+Haros owns the model-service settings, credential-blind RPC projections, authentication workflows, and configuration mutations. They use the same pinned SDK as the independent Pi Engine and its configured agent directory. Each operation freezes that directory, including pending authentication. Model changes invalidate Pi snapshots before the next turn; destructive removal shares EngineService admission fences. Other Engines keep their native configuration. This does not register OA, restore its package, or read or migrate its retired state.
+
+Haros 保留模型服务设置、凭据保护、认证和配置读写能力，使用独立 Pi 引擎的 SDK 及其配置目录。每项操作绑定发起时的目录；模型变更在 Pi 下一回合前刷新，删除操作与引擎启动共享并发保护。其他引擎继续使用原生配置。不会恢复 OA 引擎或自动读取、迁移它的旧状态。
 
 ## State boundaries
 
 - Product state is owned by Haros persistence.
-- Built-in Engine global and project-local state uses Haros-owned paths.
+- Existing OA state is retained without runtime activation or automatic cleanup.
 - Other Engines retain their own private configuration and session state.
 - System capabilities never write their authority state into an Engine's private directory.
 - Haros does not import or mutate retired product namespaces.

@@ -2,8 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import * as product from "@harnessos/oa-runtime";
-import * as stock from "@earendil-works/pi-coding-agent";
+import * as pi from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 const roots: string[] = [];
@@ -30,80 +29,61 @@ afterEach(() => {
 });
 
 describe("Pi runtime physical isolation", () => {
-  it("keeps module identity, global/project resources, sessions, and package roots separate", async () => {
+  it("keeps sessions and package roots inside the explicit agentDir rather than a forked OA runtime", async () => {
     const root = makeRoot();
     const cwd = path.join(root, "project");
-    const stockAgentDir = path.join(root, "stock-agent");
-    const productAgentDir = path.join(root, "product-agent");
+    const firstAgentDir = path.join(root, "first-agent");
+    const secondAgentDir = path.join(root, "second-agent");
     mkdirSync(cwd, { recursive: true });
 
-    expect(stock.VERSION).toBe("0.84.4");
-    expect(product.VERSION).toBe("0.84.4");
-    expect(stock.CONFIG_DIR_NAME).toBe(".pi");
-    expect(product.CONFIG_DIR_NAME).toBe(".harnessos");
-    expect(stock.SessionManager).not.toBe(product.SessionManager);
-    expect(stock.DefaultPackageManager).not.toBe(product.DefaultPackageManager);
+    expect(pi.VERSION).toBe("0.84.4");
+    expect(pi.CONFIG_DIR_NAME).toBe(".pi");
 
-    writeSkill(path.join(stockAgentDir, "skills"), "stock-global");
-    writeSkill(path.join(productAgentDir, "skills"), "product-global");
-    writeSkill(path.join(cwd, ".pi", "skills"), "stock-project");
-    writeSkill(path.join(cwd, ".harnessos", "skills"), "product-project");
+    writeSkill(path.join(firstAgentDir, "skills"), "first-global");
+    writeSkill(path.join(secondAgentDir, "skills"), "second-global");
+    writeSkill(path.join(cwd, ".pi", "skills"), "project-skill");
 
-    const stockLoader = new stock.DefaultResourceLoader({
+    const firstLoader = new pi.DefaultResourceLoader({
       cwd,
-      agentDir: stockAgentDir,
+      agentDir: firstAgentDir,
       noExtensions: true,
       noPromptTemplates: true,
       noThemes: true,
       noContextFiles: true,
     });
-    const productLoader = new product.DefaultResourceLoader({
+    const secondLoader = new pi.DefaultResourceLoader({
       cwd,
-      agentDir: productAgentDir,
+      agentDir: secondAgentDir,
       noExtensions: true,
       noPromptTemplates: true,
       noThemes: true,
       noContextFiles: true,
     });
-    await Promise.all([stockLoader.reload(), productLoader.reload()]);
+    await Promise.all([firstLoader.reload(), secondLoader.reload()]);
 
-    const stockSkillNames = stockLoader.getSkills().skills.map((skill) => skill.name);
-    const productSkillNames = productLoader.getSkills().skills.map((skill) => skill.name);
-    expect(stockSkillNames).toEqual(expect.arrayContaining(["stock-global", "stock-project"]));
-    expect(stockSkillNames).not.toContain("product-global");
-    expect(stockSkillNames).not.toContain("product-project");
-    expect(productSkillNames).toEqual(
-      expect.arrayContaining(["product-global", "product-project"]),
-    );
-    expect(productSkillNames).not.toContain("stock-global");
-    expect(productSkillNames).not.toContain("stock-project");
+    const firstSkillNames = firstLoader.getSkills().skills.map((skill) => skill.name);
+    const secondSkillNames = secondLoader.getSkills().skills.map((skill) => skill.name);
+    expect(firstSkillNames).toEqual(expect.arrayContaining(["first-global", "project-skill"]));
+    expect(firstSkillNames).not.toContain("second-global");
+    expect(secondSkillNames).toEqual(expect.arrayContaining(["second-global", "project-skill"]));
+    expect(secondSkillNames).not.toContain("first-global");
 
-    const stockSessionDir = path.join(stockAgentDir, "sessions", "test");
-    const productSessionDir = path.join(productAgentDir, "sessions", "test");
-    const stockSession = stock.SessionManager.create(cwd, stockSessionDir);
-    const productSession = product.SessionManager.create(cwd, productSessionDir);
-    expect(stockSession.getSessionFile()).toContain(stockSessionDir);
-    expect(productSession.getSessionFile()).toContain(productSessionDir);
+    const firstSessionDir = path.join(firstAgentDir, "sessions", "test");
+    const secondSessionDir = path.join(secondAgentDir, "sessions", "test");
+    const firstSession = pi.SessionManager.create(cwd, firstSessionDir);
+    const secondSession = pi.SessionManager.create(cwd, secondSessionDir);
+    expect(firstSession.getSessionFile()).toContain(firstSessionDir);
+    expect(secondSession.getSessionFile()).toContain(secondSessionDir);
 
-    const stockPackagePath = path.join(cwd, ".pi", "npm", "node_modules", "example");
-    const productPackagePath = path.join(cwd, ".harnessos", "npm", "node_modules", "example");
-    mkdirSync(stockPackagePath, { recursive: true });
-    mkdirSync(productPackagePath, { recursive: true });
-    const stockPackages = new stock.DefaultPackageManager({
+    const firstPackagePath = path.join(cwd, ".pi", "npm", "node_modules", "example");
+    mkdirSync(firstPackagePath, { recursive: true });
+    const firstPackages = new pi.DefaultPackageManager({
       cwd,
-      agentDir: stockAgentDir,
-      settingsManager: stock.SettingsManager.create(cwd, stockAgentDir, {
+      agentDir: firstAgentDir,
+      settingsManager: pi.SettingsManager.create(cwd, firstAgentDir, {
         projectTrusted: true,
       }),
     });
-    const productPackages = new product.DefaultPackageManager({
-      cwd,
-      agentDir: productAgentDir,
-      settingsManager: product.SettingsManager.create(cwd, productAgentDir, {
-        projectTrusted: true,
-      }),
-    });
-    expect(stockPackages.getInstalledPath("npm:example", "project")).toBe(stockPackagePath);
-    expect(productPackages.getInstalledPath("npm:example", "project")).toBe(productPackagePath);
+    expect(firstPackages.getInstalledPath("npm:example", "project")).toBe(firstPackagePath);
   });
 });

@@ -32,6 +32,11 @@ registry. Engine order and display names are projected from `ENGINE_DESCRIPTORS`
 owner. Execution modes come from `ENGINE_EXECUTION_STRUCTURE`. Feature flags come from the live
 adapter capability blocks and are checked against adapter methods by conformance tests.
 
+Current source correction after this edition pin: OA remains in `ENGINE_DESCRIPTORS` with
+`runnable: false` and has no live adapter. Treat the OA rows below as historical identity evidence.
+Do not read them as current execution capability. Nine Engines are runnable; Codex is the fresh
+default.
+
 If this appendix and the running product disagree, the canonical owners and focused tests win. Fix
 or prove those owners, then regenerate the publication snapshot. Never add an Engine to this table
 as the first implementation step, and never copy these rows into Settings, routing, or discovery
@@ -51,7 +56,7 @@ The mode abbreviations are `approval` for `approval-required`, `auto` for `auto`
 
 | Descriptor order | Engine key    | Display name | Model change    | Turn steering | Runtime modes        | Interaction modes |
 | ---------------: | ------------- | ------------ | --------------- | ------------- | -------------------- | ----------------- |
-|                1 | `oa`          | OA           | In session      | Yes           | full                 | all               |
+|                1 | `oa`          | OA (retired) | Historical only | No            | full (historical)    | all (historical)  |
 |                2 | `codex`       | Codex        | In session      | Yes           | approval, auto, full | all               |
 |                3 | `claude`      | Claude       | In session      | Yes           | approval, auto, full | all               |
 |                4 | `cursor`      | Cursor       | In session      | No            | approval, full       | all               |
@@ -76,7 +81,7 @@ adapter exposes a native listing seam. Those two columns are deliberately separa
 
 | Engine      | Models | Skills use / discover | Slash commands | Plugins use / discover | Compact | Import | Live diff |
 | ----------- | ------ | --------------------- | -------------- | ---------------------- | ------- | ------ | --------- |
-| OA          | Yes    | Yes / Yes             | Yes            | — / —                  | Yes     | —      | —         |
+| OA          | —      | — / —                 | —              | — / —                  | —       | —      | —         |
 | Codex       | Yes    | Yes / Yes             | —              | Yes / Yes              | Yes     | Yes    | Yes       |
 | Claude      | Yes    | — / —                 | Yes            | — / —                  | —       | Yes    | —         |
 | Cursor      | Yes    | Yes / Yes             | —              | — / —                  | —       | Yes    | —         |
@@ -106,8 +111,9 @@ The edition derivation uses this bounded join:
 2. Join each key to `engineExecutionStructure(engine)` for steering, runtime modes, and interaction
    modes. This source is deliberately limited to structural execution truth.
 3. Join the corresponding live adapter capability block for model switching, discovery, compact,
-   import, and live-diff flags. The OA and Pi rows share the Pi adapter factory; Kilo and OpenCode
-   share the OpenCode adapter factory with an explicit OpenCode-only command-discovery branch.
+   import, and live-diff flags. Retired OA has no live adapter. Pi uses the Pi adapter factory; Kilo
+   and OpenCode share the OpenCode adapter factory with an explicit OpenCode-only command-discovery
+   branch.
 4. Verify registry completeness and order, duplicate rejection, structural capability projection,
    and capability-to-method conformance with the focused tests named in `source_anchors`.
 

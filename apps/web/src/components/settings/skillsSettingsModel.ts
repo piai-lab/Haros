@@ -52,8 +52,6 @@ function engineForSkillOrigin(origin: string): EngineKind | null {
 
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
-    case "oa":
-      return { label: "Haros", engine: null };
     case "agents":
       return { label: "Shared (.agents)", engine: null };
     case "project":

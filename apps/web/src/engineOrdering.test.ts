@@ -4,7 +4,10 @@
 // Depends on: engine display metadata from contracts and engineOrdering helpers.
 
 import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
-import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
+import {
+  RUNNABLE_ENGINE_DESCRIPTORS,
+  ENGINE_DISPLAY_NAMES,
+} from "@harnessos/shared/engineMetadata";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,14 +20,21 @@ import {
 const ALL_ENGINE_KINDS: readonly EngineKind[] = ENGINE_KINDS;
 
 describe("engineOrdering", () => {
+  it("drops unknown engines from persisted picker order without hiding Pi", () => {
+    expect(isEngineKind("oa")).toBe(false);
+    expect(normalizeEngineOrder(["oa", "pi", "codex"])).not.toContain("oa");
+    expect(normalizeEngineOrder(["oa", "pi", "codex"])[0]).toBe("pi");
+  });
   it("includes every displayable engine in the default order", () => {
     expect(DEFAULT_PROVIDER_ORDER).toHaveLength(ALL_ENGINE_KINDS.length);
     expect(new Set(DEFAULT_PROVIDER_ORDER)).toEqual(new Set(ALL_ENGINE_KINDS));
   });
 
   it("keeps the shared presentation descriptor exhaustive and internally aligned", () => {
-    expect(ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind)).toEqual(DEFAULT_PROVIDER_ORDER);
-    for (const descriptor of ENGINE_DESCRIPTORS) {
+    expect(RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind)).toEqual(
+      DEFAULT_PROVIDER_ORDER,
+    );
+    for (const descriptor of RUNNABLE_ENGINE_DESCRIPTORS) {
       expect(descriptor.displayName).toBe(ENGINE_DISPLAY_NAMES[descriptor.kind]);
     }
   });

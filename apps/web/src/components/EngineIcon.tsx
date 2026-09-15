@@ -8,12 +8,12 @@ import { type EngineKind } from "@harnessos/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
-import { OABadge } from "./HarosLogo";
 import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,
   ClaudeAI,
   CursorIcon,
+  DeepSeekIcon,
   DroidIcon,
   GrokIcon,
   type Icon,
@@ -65,7 +65,6 @@ const OpenCodeEngineIcon = ({
 };
 
 export const ENGINE_ICON_COMPONENT_BY_ENGINE: Partial<Record<EngineKind, Icon>> = {
-  oa: OABadge,
   codex: OpenAI,
   claude: ClaudeAI,
   cursor: CursorIcon,
@@ -75,6 +74,7 @@ export const ENGINE_ICON_COMPONENT_BY_ENGINE: Partial<Record<EngineKind, Icon>> 
   kilo: KiloIcon,
   opencode: OpenCodeEngineIcon,
   pi: PiIcon,
+  deepseek: DeepSeekIcon,
 };
 
 export function engineIconToneClassName(

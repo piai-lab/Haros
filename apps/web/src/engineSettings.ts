@@ -23,7 +23,7 @@ import { formatEngineModelOptionName, type EngineModelOption } from "./engineMod
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 
-type CustomModelEngine = Exclude<keyof ServerSettingsView["engines"], "oa">;
+type CustomModelEngine = keyof ServerSettingsView["engines"];
 
 export type EngineCustomModelConfig = {
   readonly engine: CustomModelEngine;
@@ -100,6 +100,13 @@ export const MODEL_PROVIDER_SETTINGS: readonly EngineCustomModelConfig[] = [
     description: "Save additional Pi model slugs for the picker and engine runtime.",
     placeholder: "engine/model",
     example: "anthropic/claude-sonnet-4-5",
+  },
+  {
+    engine: "deepseek",
+    title: "DeepSeek",
+    description: "Save additional DeepSeek model slugs for the picker and engine runtime.",
+    placeholder: "deepseek-v4-flash",
+    example: "deepseek-v4-pro",
   },
 ];
 

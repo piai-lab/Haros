@@ -22,7 +22,8 @@
     "HARNESSOS_ALLOW_INSECURE_REMOTE",
     "HARNESSOS_LOG_WS_EVENTS",
     "HARNESSOS_HOST",
-    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"
+    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+    "HARNESSOS_APP_VERSION"
   ],
   "tasks": {
     "build": {
@@ -83,7 +84,7 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/web/public/**",
         "$TURBO_ROOT$/packages/contracts/src/**",
-        "$TURBO_ROOT$/packages/oa-web-access/**",
+        "$TURBO_ROOT$/packages/oa-ask/**",
         "$TURBO_ROOT$/packages/shared/src/**"
       ],
       "cache": true,

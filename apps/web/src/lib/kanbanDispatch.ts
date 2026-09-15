@@ -151,6 +151,10 @@ async function dispatchKanbanDraftThreadOnce(
     threadEngineSelection: thread?.engineSelection ?? null,
     projectEngineSelection: project?.defaultEngineSelection ?? null,
     defaultEngine: input.defaultEngine,
+    hasExecutedWork:
+      (existingThread?.messages.length ?? 0) > 0 ||
+      existingThread?.latestTurn != null ||
+      existingThread?.session != null,
   });
   if (!engineSelection) {
     return { kind: "open-thread", reason: "model-unavailable" };

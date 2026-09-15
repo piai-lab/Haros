@@ -41,6 +41,13 @@ describe("desktop artifact candidate ownership", () => {
     );
   });
 
+  it("rejects a malformed packaged version", () => {
+    const result = runBuildScript(["--build-version", "not-a-version"]);
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("semver packaged version");
+  });
+
   it("refuses to overwrite an existing artifact directory", () => {
     const outputDirectory = mkdtempSync(join(tmpdir(), "harnessos-artifact-output-test-"));
     temporaryRoots.push(outputDirectory);

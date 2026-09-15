@@ -19,7 +19,7 @@ import {
   sanitizeEngineWebSurfacePayload,
 } from "../engineWebSurface/engineWebSurfaceHost.ts";
 
-type PiFamilyEngine = Extract<EngineKind, "pi" | "oa">;
+type PiFamilyEngine = Extract<EngineKind, "pi">;
 
 export interface PiTrackedToolCall {
   readonly toolCallId: string;

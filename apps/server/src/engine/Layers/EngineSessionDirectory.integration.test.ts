@@ -139,7 +139,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       const threadId = ThreadId.makeUnsafe("thread-runtime-replace");
 
       yield* directory.upsert({
-        engine: "oa",
+        engine: "pi",
         threadId,
         status: "starting",
         lifecycleGeneration: "failed-target-generation",
@@ -149,7 +149,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         },
       });
       yield* directory.replace({
-        engine: "oa",
+        engine: "pi",
         threadId,
         status: "starting",
         lifecycleGeneration: "restore-generation",
@@ -268,6 +268,42 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       fs.rmSync(tempDir, { recursive: true, force: true });
     }));
 
+  it("fails closed for retired OA session bindings and drops native resume state", () =>
+    Effect.gen(function* () {
+      const directory = yield* EngineSessionDirectory;
+      const runtimeRepository = yield* EngineSessionRuntimeRepository;
+      const threadId = ThreadId.makeUnsafe("thread-retired-oa");
+
+      yield* runtimeRepository.upsert({
+        threadId,
+        engine: "oa",
+        adapterKey: "oa",
+        runtimeMode: "full-access",
+        status: "running",
+        lifecycleGeneration: "legacy-test-oa",
+        lastSeenAt: new Date().toISOString(),
+        admission: null,
+        resumeCursor: { schemaVersion: 1, sessionId: "native-oa" },
+        runtimePayload: null,
+      });
+
+      const failed = yield* Effect.result(directory.getEngine(threadId));
+      assert.equal(failed._tag, "Failure");
+
+      yield* directory.upsert({
+        engine: "pi",
+        threadId,
+      });
+      const persisted = yield* runtimeRepository.getByThreadId({ threadId });
+      assert.equal(Option.isSome(persisted), true);
+      if (Option.isSome(persisted)) {
+        assert.equal(persisted.value.engine, "pi");
+        assert.equal(persisted.value.adapterKey, "pi");
+        assert.equal(persisted.value.lifecycleGeneration, "legacy");
+        assert.equal(persisted.value.resumeCursor, null);
+      }
+    }));
+
   it("skips legacy bindings with unknown engine names when listing all bindings", () =>
     Effect.gen(function* () {
       const directory = yield* EngineSessionDirectory;
@@ -278,11 +314,11 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
       yield* runtimeRepository.upsert({
         threadId: legacyThreadId,
-        engine: "kilo",
-        adapterKey: "kilo",
+        engine: "unknown-legacy-engine",
+        adapterKey: "unknown-legacy-engine",
         runtimeMode: "full-access",
         status: "running",
-        lifecycleGeneration: "legacy-test-kilo",
+        lifecycleGeneration: "legacy-test-unknown",
         lastSeenAt: new Date().toISOString(),
         admission: null,
         resumeCursor: null,

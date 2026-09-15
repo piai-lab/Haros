@@ -48,6 +48,7 @@ import {
   Scope,
   Stream,
 } from "effect";
+import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
 import { nonEmptyTrimmed } from "@harnessos/shared/text";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
@@ -284,7 +285,7 @@ function readPersistedEngineSelection(
 }
 
 function modelServiceIdFromSelection(selection: EngineSelection | undefined): string | undefined {
-  if (selection?.engine !== "oa") return undefined;
+  if (!selection || !engineOwnsProviderModelServices(selection.engine)) return undefined;
   const separatorIndex = selection.model.indexOf("/");
   return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
 }
@@ -3379,7 +3380,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               ? yield* findLiveSessionAdapter(input.threadId, operation)
               : yield* registry.getByEngine(binding.engine);
           if (adapter === null) return { state: "no_active_session" as const };
-          if (adapter.engine !== "oa") {
+          if (adapter.engine !== "pi") {
             return { state: "different_engine" as const };
           }
           if (!(yield* adapter.hasSession(input.threadId))) {
@@ -3391,7 +3392,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
           if (!adapter.reloadSessionResources) {
             return yield* toValidationError(
               operation,
-              "Haros Agent does not expose active-session resource reload.",
+              "Pi does not expose active-session resource reload.",
             );
           }
           return {

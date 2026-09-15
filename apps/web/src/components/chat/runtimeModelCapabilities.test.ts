@@ -28,7 +28,7 @@ describe("resolveRuntimeModelDescriptor", () => {
 
   it("keeps Haros Agent runtime reasoning options", () => {
     const capabilities = getRuntimeAwareModelCapabilities({
-      engine: "oa",
+      engine: "pi",
       model: "deepseek/deepseek-v4-pro",
       runtimeModel: {
         slug: "deepseek/deepseek-v4-pro",

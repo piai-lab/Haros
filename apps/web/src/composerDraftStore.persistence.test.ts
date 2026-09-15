@@ -67,7 +67,7 @@ function makePendingDirectTurnRecovery(
       interactionMode: "default",
     },
     targetBinding: {
-      engineSelection: engineSelection("oa", "gateway/model"),
+      engineSelection: engineSelection("pi", "gateway/model"),
       runtimeMode: "auto",
       interactionMode: "plan",
     },
@@ -213,6 +213,23 @@ describe("composerDraftStore persisted-state hydration", () => {
     expect(hydrated.draftsByThreadId[threadId]?.runtimeMode).toBe("auto");
     expect(hydrated.draftThreadsByThreadId[threadId]?.runtimeMode).toBe("auto");
     expect(hydrated.draftThreadsByThreadId[threadId]?.title).toBe("Local Pi terminal");
+  });
+
+  it("keeps a live Pi sticky engine after hydration", () => {
+    const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
+      draftsByThreadId: {},
+      draftThreadsByThreadId: {},
+      projectDraftThreadIdByProjectId: {},
+      stickyActiveEngine: "pi",
+      stickyEngineSelectionByEngine: {
+        pi: engineSelection("pi", "provider/original-model"),
+      },
+    });
+
+    expect(hydrated.stickyActiveEngine).toBe("pi");
+    expect(hydrated.stickyEngineSelectionByEngine?.pi).toEqual(
+      engineSelection("pi", "provider/original-model"),
+    );
   });
 
   it("preserves Debug mode in composer and draft-thread state during hydration", () => {

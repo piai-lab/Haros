@@ -1,10 +1,36 @@
 import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
+  "settings.addDeepSeek": "Add DeepSeek",
+  "settings.allModelServices": "All services",
+  "settings.modelServiceCommon": "Frequent",
+  "settings.modelServiceDirectoryCount": "{count} services to choose from.",
+  "settings.modelServicePreferenceFailed": "Couldn’t save the setting. Try again.",
+  "settings.modelServiceDetectedCredentials": "Credentials detected",
+  "settings.modelServiceUseDetected": "Add with these credentials",
+  "settings.modelServiceAutoSync": "Sync models automatically",
+  "settings.modelServiceAutoSyncDescription":
+    "Check daily while Haros Server is running. Keep your selected model and retain the previous catalog if syncing fails.",
+  "settings.modelServiceNewModel": "New",
+  "settings.modelServiceChatVerified": "Text chat verified",
+  "settings.modelServiceNotVerified": "Not verified",
+  "settings.modelServiceTry": "Try model",
+  "settings.modelServiceTryNamed": "Try {name}",
+  "settings.modelServiceTrialPrompt": "Reply briefly to say you are ready.",
+  "settings.modelServiceTrialDescription":
+    "Send a short request to this model using its saved connection. A successful reply verifies text chat only; tool calling remains unverified.",
+  "settings.modelServiceTrialMessage": "Message",
+  "settings.modelServiceAutomaticProtocol": "API selected from the service and model configuration",
+  "settings.modelServiceTrialFailed":
+    "The model did not complete the request. Check the credentials, connection and model access, then retry.",
+  "settings.modelServiceTrialRunning": "Sending…",
+  "settings.modelServiceTrialSend": "Send test message",
   "settings.models": "Model services",
+  "settings.modelServicesAvailable": "Currently available",
+  "settings.modelServiceCount": "{count} services",
   "settings.modelsDescription":
-    "Configure the model services, credentials, and available models Haros uses.",
-  "settings.configuredModelServices": "Connected",
+    "Configure model services, credentials, and catalogs used by API engines (Pi, DeepSeek, OpenCode, Kilo). Sign in, save an API key, or connect a custom endpoint. Codex and Claude keep their native sign-in.",
+  "settings.configuredModelServices": "Added services",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
   "settings.modelServicesCapabilityChecking": "Checking Server support…",
@@ -14,15 +40,15 @@ const EN_MESSAGES = {
     "Haros couldn’t reach Model services. Check the Server connection and try again.",
   "settings.modelServicesUnavailable":
     "Haros couldn’t read model services. Check the local configuration and try again.",
-  "settings.noModelServices": "No model services are available",
+  "settings.noModelServices": "Add a key to get started",
   "settings.noModelServicesDescription":
-    "Add credentials for a supported service to make models available to Haros.",
+    "Connect DeepSeek or choose from the full service directory. Services only appear here after you add them.",
   "settings.addModelService": "Add model service",
   "settings.customApiNotFoundPrompt": "Can’t find your service?",
   "settings.connectByApiAddress": "Connect with an API endpoint →",
   "settings.editCustomApiService": "Edit API connection",
   "settings.customApiDescription":
-    "Choose the API format, add at least one model, then test the connection before saving.",
+    "Enter the endpoint and key, sync the model list, then save. You can also add a model manually or adjust advanced settings.",
   "settings.customApiConnectionName": "Connection name",
   "settings.customApiConnectionNamePlaceholder": "My model service",
   "settings.customApiProtocol": "API format",
@@ -144,7 +170,8 @@ const EN_MESSAGES = {
   "settings.customApiDiscoveredModels": "Models found",
   "settings.customApiDiscoveryDescription":
     "Select the models to add. You can test and save with the service defaults, then add advanced limits only when you know them.",
-  "settings.customApiDiscoverySucceeded": "Found {count} models. Select the ones to add.",
+  "settings.customApiDiscoverySucceeded":
+    "Synced {count} model identities. Existing model settings were retained.",
   "settings.customApiDiscoveryFailed.invalid_configuration":
     "Check the connection name, API format, and endpoint.",
   "settings.customApiDiscoveryFailed.authentication_failed":
@@ -237,7 +264,7 @@ const EN_MESSAGES = {
   "settings.customApiModelThinking": "Thinking",
   "settings.customApiModelImages": "Image input",
   "settings.customApiTestRequired":
-    "Testing is required before every save. Editing any field invalidates the previous test.",
+    "You can save without a test. A successful test only verifies the model used for that request.",
   "settings.customApiTestConnection": "Test connection",
   "settings.customApiTesting": "Testing…",
   "settings.customApiCancelTest": "Cancel test",
@@ -303,9 +330,10 @@ const EN_MESSAGES = {
   "settings.modelServiceRefreshRequired": "Credential refresh required",
   "settings.modelServiceAuthUnavailable": "Authentication unavailable",
   "settings.modelServiceInstanceNamed": "{name} · {id}",
-  "settings.modelServiceModelCounts": "{known} known · {available} available",
+  "settings.modelServiceModelCounts": "{known} models · {available} have credentials",
   "settings.modelServiceModels": "Models",
-  "settings.modelServiceModelsDescription": "{known} known · {available} currently available",
+  "settings.modelServiceModelsDescription":
+    "{known} models · {available} have credentials. Catalog entries do not verify model access or tool calling.",
   "settings.searchServiceModels": "Search this service’s models…",
   "settings.noMatchingServiceModels": "No models match this search.",
   "settings.noServiceModels": "This service has not reported any models yet.",
@@ -434,9 +462,35 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
+  "settings.addDeepSeek": "添加 DeepSeek",
+  "settings.allModelServices": "全部服务",
+  "settings.modelServiceCommon": "常用",
+  "settings.modelServiceDirectoryCount": "共 {count} 个服务可选。",
+  "settings.modelServicePreferenceFailed": "设置未能保存，请重试。",
+  "settings.modelServiceDetectedCredentials": "检测到凭据",
+  "settings.modelServiceUseDetected": "使用此凭据添加",
+  "settings.modelServiceAutoSync": "自动同步模型",
+  "settings.modelServiceAutoSyncDescription":
+    "Haros 服务运行时每天检查更新，保留已选模型；同步失败时保留原目录。",
+  "settings.modelServiceNewModel": "新增",
+  "settings.modelServiceChatVerified": "对话已验证",
+  "settings.modelServiceNotVerified": "未验证",
+  "settings.modelServiceTry": "试用模型",
+  "settings.modelServiceTryNamed": "试用 {name}",
+  "settings.modelServiceTrialPrompt": "请简短回复，告诉我你已准备好。",
+  "settings.modelServiceTrialDescription":
+    "使用已保存的连接向此模型发送简短请求。成功回复仅验证文本对话，工具调用仍未验证。",
+  "settings.modelServiceTrialMessage": "消息",
+  "settings.modelServiceAutomaticProtocol": "根据服务和模型配置自动选择接口",
+  "settings.modelServiceTrialFailed": "模型未完成请求。请检查凭据、连接和模型权限后重试。",
+  "settings.modelServiceTrialRunning": "正在发送…",
+  "settings.modelServiceTrialSend": "发送测试消息",
   "settings.models": "模型服务",
-  "settings.modelsDescription": "配置 Haros 使用的模型服务、凭据与可用模型。",
-  "settings.configuredModelServices": "已连接",
+  "settings.modelServicesAvailable": "当前提供",
+  "settings.modelServiceCount": "{count} 个服务",
+  "settings.modelsDescription":
+    "配置 API 引擎（Pi、DeepSeek、OpenCode、Kilo）共用的模型服务、凭据与目录。可登录、填入 Key，或连接自定义中转。Codex 与 Claude 仍使用各自的原生登录。",
+  "settings.configuredModelServices": "已添加",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",
   "settings.modelServicesCapabilityChecking": "正在检查 Server 支持情况…",
@@ -445,13 +499,15 @@ const ZH_CN_MESSAGES = {
   "settings.modelServicesConnectionUnavailable":
     "Haros 无法连接模型服务，请检查 Server 连接后重试。",
   "settings.modelServicesUnavailable": "Haros 无法读取模型服务，请检查本地配置后重试。",
-  "settings.noModelServices": "还没有可用的模型服务",
-  "settings.noModelServicesDescription": "为受支持的服务添加凭据，即可让 Haros 使用模型。",
+  "settings.noModelServices": "填入 Key，开始使用模型",
+  "settings.noModelServicesDescription":
+    "直接连接 DeepSeek，也可在完整目录中选择其他服务。这里只显示你已添加的服务。",
   "settings.addModelService": "添加模型服务",
   "settings.customApiNotFoundPrompt": "没有找到你的服务？",
   "settings.connectByApiAddress": "通过 API 地址连接 →",
   "settings.editCustomApiService": "编辑 API 连接",
-  "settings.customApiDescription": "请选择 API 格式，添加至少一个模型，并在保存前测试连接。",
+  "settings.customApiDescription":
+    "填写地址和 Key，同步模型列表后即可保存。也可手动添加模型或调整高级设置。",
   "settings.customApiConnectionName": "连接名称",
   "settings.customApiConnectionNamePlaceholder": "我的模型服务",
   "settings.customApiProtocol": "API 格式",
@@ -569,7 +625,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiDiscoveredModels": "发现的模型",
   "settings.customApiDiscoveryDescription":
     "选择要添加的模型。可以先使用服务默认值完成测试和保存，仅在确认具体能力时再填写高级限制。",
-  "settings.customApiDiscoverySucceeded": "发现 {count} 个模型，请选择要添加的项目。",
+  "settings.customApiDiscoverySucceeded": "已同步 {count} 个模型，保留原有模型设置。",
   "settings.customApiDiscoveryFailed.invalid_configuration":
     "请检查连接名称、API 格式和 API 地址。",
   "settings.customApiDiscoveryFailed.authentication_failed":
@@ -658,7 +714,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiMaxTokens": "最大输出 Token",
   "settings.customApiModelThinking": "思考",
   "settings.customApiModelImages": "图像输入",
-  "settings.customApiTestRequired": "每次保存前都必须测试；修改任意字段后，需要重新测试。",
+  "settings.customApiTestRequired": "可直接保存配置。试用成功仅代表本次请求使用的模型已验证。",
   "settings.customApiTestConnection": "测试连接",
   "settings.customApiTesting": "正在测试…",
   "settings.customApiCancelTest": "取消测试",
@@ -717,9 +773,10 @@ const ZH_CN_MESSAGES = {
   "settings.modelServiceRefreshRequired": "凭据需要刷新",
   "settings.modelServiceAuthUnavailable": "认证不可用",
   "settings.modelServiceInstanceNamed": "{name} · {id}",
-  "settings.modelServiceModelCounts": "已知 {known} 个 · 当前可用 {available} 个",
+  "settings.modelServiceModelCounts": "{known} 个模型 · {available} 个已具备凭据",
   "settings.modelServiceModels": "模型",
-  "settings.modelServiceModelsDescription": "已知 {known} 个 · 当前可用 {available} 个",
+  "settings.modelServiceModelsDescription":
+    "{known} 个模型 · {available} 个已具备凭据。目录信息不代表模型访问和工具调用已经验证。",
   "settings.searchServiceModels": "搜索该服务的模型…",
   "settings.noMatchingServiceModels": "没有匹配的模型。",
   "settings.noServiceModels": "此服务尚未报告任何模型。",

@@ -154,11 +154,6 @@ describe("ServerSettingsService", () => {
               enableEngineUpdateChecks: false,
               addProjectBaseDirectory: "/tmp/harnessos-projects",
               engines: {
-                oa: {
-                  enabled: false,
-                  [retiredKey]: ["legacy/provider-model"],
-                  defaultPrompt: "retired private prompt",
-                },
                 codex: { customModels: ["custom/codex-model"] },
               },
               agentTools: { builtInGroupOverrides: {} },
@@ -176,7 +171,6 @@ describe("ServerSettingsService", () => {
           migrationVersion: number;
           settings: Record<string, unknown> & {
             engines: Record<string, unknown> & {
-              oa: Record<string, unknown>;
               codex: { customModels: string[] };
             };
           };
@@ -185,9 +179,6 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
-    expect(result.view.engines.oa).toEqual({ enabled: false });
-    expect(result.internal.engines.oa).toEqual({ enabled: false });
     expect(result.persisted).toMatchObject({
       revision: 5,
       migrationVersion: 4,
@@ -196,13 +187,51 @@ describe("ServerSettingsService", () => {
         enableEngineUpdateChecks: false,
         addProjectBaseDirectory: "/tmp/harnessos-projects",
         engines: {
-          oa: { enabled: false },
           codex: { customModels: ["custom/codex-model"] },
         },
         agentTools: { builtInGroupOverrides: {} },
       },
     });
-    expect(result.persisted.settings.engines.oa).not.toHaveProperty(retiredKey);
+    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
+  });
+
+  it("migrates a retired OA default engine onto Pi and drops the OA engine block", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 2,
+            migrationVersion: 4,
+            settings: {
+              defaultEngine: "oa",
+              engines: {
+                oa: { enabled: true },
+                pi: { enabled: true, binaryPath: "pi", customModels: [], agentDir: "" },
+              },
+            },
+          }),
+        );
+        yield* service.start;
+        const settings = yield* service.getSettings;
+        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          settings: {
+            defaultEngine: string;
+            engines: Record<string, unknown>;
+          };
+        };
+        return { settings, persisted };
+      }),
+    );
+
+    expect(result.settings.defaultEngine).toBe("pi");
+    expect(result.settings.engines).not.toHaveProperty("oa");
+    expect(result.persisted.settings.defaultEngine).toBe("pi");
+    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
   });
 
   it.each([
@@ -469,7 +498,7 @@ describe("ServerSettingsService", () => {
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationEngineSelection: { engine: "oa" },
+            textGenerationEngineSelection: { engine: "pi" },
           }),
         );
         return {
@@ -514,7 +543,7 @@ describe("ServerSettingsService", () => {
 
   it("persists an explicit runtime-catalog model selection exactly", async () => {
     const selection = {
-      engine: "oa" as const,
+      engine: "pi" as const,
       model: "deepseek/deepseek-v4-pro",
       options: { thinkingLevel: "high" as const },
     };
@@ -717,7 +746,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultEngine).toBe("oa");
+    expect(result.reset.defaultEngine).toBe("codex");
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);

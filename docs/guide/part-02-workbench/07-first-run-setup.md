@@ -7,13 +7,19 @@ edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
   - docs/architecture.md#engines
+  - docs/architecture.md#retired-oa-engine
   - packages/shared/src/engineMetadata.ts#ENGINE_DESCRIPTORS
-  - apps/web/src/components/onboarding/firstRunReadiness.logic.ts#deriveFirstRunReadinessState
-  - apps/web/src/components/onboarding/useFirstRunReadinessController.ts#useFirstRunReadinessController
   - apps/server/src/engine/executionCapabilityProjection.ts#resolveEngineExecutionCapabilities
 ---
 
 # Chapter 7 — First-Run Setup {#chapter-07}
+
+Current source correction after this edition pin: the first-run readiness dialog and
+`apps/web/src/components/onboarding/**` have been removed. Fresh installs open the workbench
+directly and default to Codex. Engine and exact-model readiness now live in Settings, the
+Composer, and `resolveEngineExecutionCapabilities`. AppSnap welcome remains a separate optional
+overlay, not Engine setup. Treat the first-run dialog states below as historical edition
+evidence, not current product UI.
 
 ## The question
 
@@ -22,8 +28,9 @@ usable exact model binding, and enough current health information to say that th
 For Haros's built-in Engine, a configured model service may also be part of that path. These are
 separate layers. “The app opened” is not the same as “this exact request can run.”
 
-The setup dialog is therefore not a ceremonial welcome screen. It is a truthful readiness check.
-It derives a state from settled discovery facts and remembered exact bindings. It never treats an
+The pinned edition described a setup dialog as a truthful readiness check rather than a ceremonial
+welcome screen. That dialog is gone. The same layers still apply at send time: Haros derives
+readiness from settled discovery facts and remembered exact bindings, and it never treats an
 Engine name, a model-service connection, or a model family label as a complete executable choice.
 
 ![A Part II control anatomy connects Composer controls and desired selection to admission, permission, Queue, Timeline, refusal, and recovery.](../assets/generated/part-02-opener.jpg)
@@ -60,10 +67,11 @@ behavior have also been configured.
 
 ## See it in Haros
 
-On first run, Haros gathers credential-blind product facts. The Engine picker derives its entries
-from the canonical descriptor owner. Health discovery reports whether a runtime is installed,
-authenticated, ready, degraded, or not yet known. Model discovery produces options for the selected
-Engine. The dialog asks for an exact model where required and retains a usable remembered binding.
+Fresh installs open the workbench directly. Haros still gathers credential-blind product facts.
+The Engine picker derives its entries from the canonical descriptor owner. Health discovery reports
+whether a runtime is installed, authenticated, ready, degraded, or not yet known. Model discovery
+produces options for the selected Engine. Settings and the Composer ask for an exact model where
+required and retain a usable remembered binding.
 
 ![The real Haros Engine picker shows one selected Engine alongside ready, sign-in, not-installed, limited, and checking states.](../assets/captures/capture-04-engine-availability.png)
 
@@ -93,16 +101,17 @@ adapter that translates an admitted Haros turn into native execution. She then c
 model from that Engine's credential-blind catalog. The selection contains both `engine` and `model`;
 the UI does not store only a friendly model caption.
 
-Before she sends, the workbench checks current availability. If the Engine is not installed, setup
-explains that condition. If authentication is required, it remains an explicit recovery task. If
-health is degraded or still unknown, Haros does not invent a green “ready” state. Maya can repair the
-selected path or deliberately choose another ready binding. What Haros cannot do is silently move
-the prompt to another Engine or model, because that would change the executor after the user made a
-choice.
+Before she sends, the workbench checks current availability. If the Engine is not installed, Settings
+and the Composer explain that condition. If authentication is required, it remains an explicit
+recovery task. If health is degraded or still unknown, Haros does not invent a green “ready” state.
+Maya can repair the selected path or deliberately choose another ready binding. What Haros cannot do
+is silently move the prompt to another Engine or model, because that would change the executor after
+the user made a choice.
 
 Once ready, Maya's selection becomes the candidate binding for the Composer. Admission later freezes
-the exact Engine, model, runtime mode, interaction mode, and applicable options for the turn. Setup
-prepared a valid choice; it did not execute anything or grant capability authority.
+the exact Engine, model, runtime mode, interaction mode, and applicable options for the turn.
+Choosing a valid binding prepared admission; it did not execute anything or grant capability
+authority.
 
 ![A row-local recovery matrix maps unavailable Engine, model catalog, and exact binding to explicit re-checks.](../assets/generated/ch-07-secondary.jpg)
 
@@ -113,15 +122,14 @@ _Figure 7.2 — Recovery is explicit and bounded; readiness never comes from sil
 ## How it works
 
 `ENGINE_DESCRIPTORS` owns the exhaustive credential-blind identity and display information for
-top-level Engines. The Web does not maintain another list in onboarding. Engine status and model
-catalog hooks add current facts without becoming new identity owners. This lets Settings,
-onboarding, and the Composer project the same Engine vocabulary.
+top-level Engines. The Web does not maintain another Engine list in Settings or the Composer.
+Engine status and model catalog hooks add current facts without becoming new identity owners.
+This lets Settings and the Composer project the same Engine vocabulary.
 
-`deriveFirstRunReadinessState` takes settled facts, remembered exact selections, service capability,
-transport state, passive service state, and a deferred preference. Its ordering matters. A usable
-exact binding returns `ready` before model-service state is considered. Unsettled or incompatible
-facts return `unknown`. Only then does the function distinguish Engine recovery, model-service
-recovery, deferred setup, and true first run.
+The pinned edition derived first-run state in `deriveFirstRunReadinessState`. That owner is
+removed. Current send-time ordering still matters: a usable exact binding is ready before
+unrelated model-service state is considered; unsettled facts stay unknown; Engine recovery,
+model-service recovery, and a missing binding remain distinct.
 
 At execution time, `resolveEngineExecutionCapabilities` combines the exact selection, registered
 adapter capabilities, and Engine health. Missing adapters are unavailable. Not-installed and
@@ -129,13 +137,13 @@ unauthenticated Engines are unavailable. Warnings and uncertain authentication a
 Runtime and interaction modes may also be unavailable even when the base Engine is healthy. This is
 why setup and send admission are related but not identical gates.
 
-| Fact                               | Sole owner                           | Consumer                            | Forbidden duplicate                  |
-| ---------------------------------- | ------------------------------------ | ----------------------------------- | ------------------------------------ |
-| Engine identity and display name   | `ENGINE_DESCRIPTORS`                 | onboarding, Settings, selectors     | Component-local Engine arrays        |
-| Native availability/authentication | Engine health and discovery services | readiness and capability projection | UI guesses from installed files      |
-| Exact model options                | Engine model catalog projection      | onboarding and Composer             | Hand-maintained global model list    |
-| Selected exact binding             | typed `EngineSelection`              | admission and provenance            | Caption-only or Provider-only state  |
-| Local capability authority         | HostGateway                          | admitted execution                  | Setup dialog granting tools directly |
+| Fact                               | Sole owner                           | Consumer                            | Forbidden duplicate                 |
+| ---------------------------------- | ------------------------------------ | ----------------------------------- | ----------------------------------- |
+| Engine identity and display name   | `ENGINE_DESCRIPTORS`                 | Settings, Composer, selectors       | Component-local Engine arrays       |
+| Native availability/authentication | Engine health and discovery services | readiness and capability projection | UI guesses from installed files     |
+| Exact model options                | Engine model catalog projection      | Settings and Composer               | Hand-maintained global model list   |
+| Selected exact binding             | typed `EngineSelection`              | admission and provenance            | Caption-only or Provider-only state |
+| Local capability authority         | HostGateway                          | admitted execution                  | Settings or Composer granting tools |
 
 ## Make a readiness decision explainable
 
@@ -166,24 +174,23 @@ remembered Engine is healthy, its catalog settled without the selected slug, and
 model-service recovery” identifies both the observation and the owner without exposing credentials
 or private runtime state.
 
-## From setup to the first admitted turn
+## From a ready binding to the first admitted turn
 
-Setup and admission are adjacent gates, not duplicates. Setup establishes that Maya has at least one
-currently usable candidate binding. The Composer can then add a prompt, references, options,
-runtime mode, interaction mode, and dispatch intent. Admission evaluates that complete request
-against the latest product and capability state. Time passes between the two checks, so a binding
-that was ready during onboarding can still be refused at send time.
+Selection and admission are adjacent gates, not duplicates. Settings and the Composer establish that
+Maya has at least one currently usable candidate binding. The Composer can then add a prompt,
+references, options, runtime mode, interaction mode, and dispatch intent. Admission evaluates that
+complete request against the latest product and capability state. Time passes between the two
+checks, so a binding that was ready in Settings can still be refused at send time.
 
 Consider three short outcomes for the parser task:
 
-1. Maya completes setup, stays on the same exact binding, and sends while health remains current.
-   Admission can accept the request and freeze its provenance.
-2. Maya completes setup, then the Engine loses authentication. Admission refuses that exact
-   request, preserves her prompt, and points back to Engine recovery. It does not reopen onboarding
-   as though no choice had ever existed.
-3. Maya completes setup, then selects Plan on an Engine that does not support Plan. The Engine may
-   still be generally usable, but this request is not. Recovery changes the mode or binding through
-   an explicit decision.
+1. Maya keeps the same exact binding and sends while health remains current. Admission can accept
+   the request and freeze its provenance.
+2. Maya's Engine then loses authentication. Admission refuses that exact request, preserves her
+   prompt, and points back to Engine recovery. It does not pretend no choice had ever existed.
+3. Maya then selects Plan on an Engine that does not support Plan. The Engine may still be generally
+   usable, but this request is not. Recovery changes the mode or binding through an explicit
+   decision.
 
 The distinction matters after restart as well. Product-owned remembered selection can survive a
 process restart. Runtime health must be discovered again. A native Engine's private Session is not
@@ -199,9 +206,9 @@ terminal, browser, device, or connected-service authority.
 
 ### Review a readiness defect from one missing fact
 
-Suppose Maya returns after an update and sees her remembered Engine and model in the setup dialog,
-but readiness does not settle. Begin with the remembered binding and compare each current fact in
-order. The Engine descriptor proves identity, not installation. Adapter registration proves an
+Suppose Maya returns after an update and sees her remembered Engine and model in Settings or the
+Composer, but readiness does not settle. Begin with the remembered binding and compare each current
+fact in order. The Engine descriptor proves identity, not installation. Adapter registration proves an
 integration exists, not that authentication is valid. Health can prove the runtime is usable while
 the catalog remains unsettled. The catalog can settle while the remembered exact slug is absent.
 Only the complete chain supports the readiness conclusion.
@@ -214,9 +221,9 @@ specific planned request is not. Naming the narrow failure keeps recovery attach
 Now simulate the repair with synthetic state. Let the catalog settle with the remembered slug and
 confirm readiness changes without replacing Engine identity. Then remove authentication and confirm
 the same binding becomes a recovery clue rather than a sendable choice. Finally restore health and
-request an unsupported interaction mode at Composer admission. Setup should remain complete while
-that request is refused. These transitions prove that setup, capability, and admission are related
-but independent decisions.
+request an unsupported interaction mode at Composer admission. The remembered binding may still be
+complete while that request is refused. These transitions prove that selection, capability, and
+admission are related but independent decisions.
 
 The reviewer should finish with one sentence containing the exact boundary: “The selected binding
 was remembered, current catalog and health made it usable, and the requested mode was evaluated
@@ -257,10 +264,11 @@ _Figure 7.3 — Explicit degraded states preserve the choice needed for honest r
 
 ## Try it safely
 
-Use a fresh task-specific Haros home or the isolated browser fixture. Open first-run setup and inspect
-one ready Engine and one unavailable or unknown path. Do not enter real credentials for this
-exercise. Confirm three observable results: each Engine comes from the shared descriptor vocabulary;
-the model choice is exact rather than a family slogan; and an unavailable binding stays explicit.
+Use a fresh task-specific Haros home or the isolated browser fixture. Open Settings or the Composer
+and inspect one ready Engine and one unavailable or unknown path. Do not enter real credentials for
+this exercise. Confirm three observable results: each Engine comes from the shared descriptor
+vocabulary; the model choice is exact rather than a family slogan; and an unavailable binding stays
+explicit.
 
 Then return to the Composer without sending. Change the selected Engine and note that its model
 catalog changes with it. The exercise proves selection structure, not external service quality. It
@@ -268,11 +276,11 @@ must not modify private Engine state or probe paid APIs.
 
 ## Recap
 
-1. Setup resolves a complete Engine and exact model binding; it does not merely acknowledge that the app opened.
+1. Opening the workbench is not enough; sending still requires a complete Engine and exact model binding.
 2. Model services are internal upstream layers, not top-level Engine identity.
 3. Readiness is derived from current settled facts and can be unknown or degraded.
 4. Haros never silently substitutes another Engine or model during recovery.
-5. Setup prepares admission; HostGateway still owns local capability authority.
+5. Settings and Composer prepare admission; HostGateway still owns local capability authority.
 
 ## Check your model
 
@@ -280,18 +288,18 @@ must not modify private Engine state or probe paid APIs.
    nor freezes an exact model for a turn.
 2. **What should Haros do when discovery is unsettled?** Show UNKNOWN and keep recovery explicit,
    rather than guessing readiness.
-3. **Can setup grant filesystem authority?** No. Exact-turn capability authorization belongs to
-   HostGateway later in the execution path.
+3. **Can Settings or the Composer grant filesystem authority?** No. Exact-turn capability
+   authorization belongs to HostGateway later in the execution path.
 
 ## Source trail
 
 - `packages/shared/src/engineMetadata.ts` owns `ENGINE_DESCRIPTORS`.
-- `apps/web/src/components/onboarding/firstRunReadiness.logic.ts` owns first-run state derivation.
-- `apps/web/src/components/onboarding/useFirstRunReadinessController.ts` gathers the credential-blind
-  status, catalog, remembered selection, and service facts.
-- `apps/web/src/components/onboarding/FirstRunReadinessDialog.tsx` projects those states.
+- `docs/architecture.md` records that the first-run setup wizard is removed; the workbench opens
+  directly, and AppSnap welcome is not Engine setup.
 - `apps/server/src/engine/executionCapabilityProjection.ts` resolves mode capability and health for
   an exact Engine selection.
+- The pinned edition's `apps/web/src/components/onboarding/**` first-run owners are gone; do not
+  restore them as a second Engine registry.
 
 <!-- guide-navigation:start -->
 

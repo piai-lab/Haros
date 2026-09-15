@@ -20,7 +20,6 @@ vi.mock("../../localPreferences", () => ({
 }));
 
 const MODEL_OPTIONS_BY_ENGINE = {
-  oa: [],
   claude: [
     { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
     { slug: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
@@ -227,10 +226,10 @@ describe("EngineModelPicker", () => {
 
   it("does not present a loading catalog as an empty catalog", async () => {
     const mounted = await mountPicker({
-      engine: "oa",
+      engine: "pi",
       model: "" as ModelSlug,
-      lockedEngine: "oa",
-      catalogStateByEngine: { oa: "checking" },
+      lockedEngine: "pi",
+      catalogStateByEngine: { pi: "checking" },
     });
 
     try {
@@ -250,10 +249,10 @@ describe("EngineModelPicker", () => {
     "labels a settled %s catalog accurately without a selection",
     async (state, label) => {
       const mounted = await mountPicker({
-        engine: "oa",
+        engine: "pi",
         model: "" as ModelSlug,
-        lockedEngine: "oa",
-        catalogStateByEngine: { oa: state },
+        lockedEngine: "pi",
+        catalogStateByEngine: { pi: state },
       });
 
       try {

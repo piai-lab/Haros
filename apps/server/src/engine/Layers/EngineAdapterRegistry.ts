@@ -7,26 +7,26 @@
  *
  * @module EngineAdapterRegistryLive
  */
+import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 import { Effect, Layer } from "effect";
-import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
-import { EngineUnsupportedError, type EngineAdapterError } from "../Errors.ts";
 import { assertEngineAdapterConformance } from "../engineAdapterConformance.ts";
+import { EngineUnsupportedError, type EngineAdapterError } from "../Errors.ts";
+import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
+import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
+import { CodexAdapter } from "../Services/CodexAdapter.ts";
+import { CursorAdapter } from "../Services/CursorAdapter.ts";
+import { DroidAdapter } from "../Services/DroidAdapter.ts";
 import type { EngineAdapterShape } from "../Services/EngineAdapter.ts";
 import {
   EngineAdapterRegistry,
   type EngineAdapterRegistryShape,
 } from "../Services/EngineAdapterRegistry.ts";
-import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
-import { CodexAdapter } from "../Services/CodexAdapter.ts";
-import { CursorAdapter } from "../Services/CursorAdapter.ts";
-import { DroidAdapter } from "../Services/DroidAdapter.ts";
 import { GrokAdapter } from "../Services/GrokAdapter.ts";
 import { KiloAdapter } from "../Services/KiloAdapter.ts";
+import { DeepSeekAdapter } from "../Services/DeepSeekAdapter.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
-import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
-import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
 
 export interface EngineAdapterRegistryLiveOptions {
   readonly adapters?: ReadonlyArray<EngineAdapterShape<EngineAdapterError>>;
@@ -46,8 +46,8 @@ const makeEngineAdapterRegistry = (options?: EngineAdapterRegistryLiveOptions) =
             yield* DroidAdapter,
             yield* KiloAdapter,
             yield* OpenCodeAdapter,
-            yield* OAAgentAdapter,
             yield* PiAdapter,
+            yield* DeepSeekAdapter,
           ];
 
     for (const adapter of adapters) {
@@ -59,13 +59,16 @@ const makeEngineAdapterRegistry = (options?: EngineAdapterRegistryLiveOptions) =
       return yield* Effect.die(new Error("Duplicate Engine adapter registration"));
     }
 
-    const registeredEngines = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind).filter(
-      (engine) => byEngine.has(engine),
-    );
-    if (options?.adapters === undefined && registeredEngines.length !== ENGINE_DESCRIPTORS.length) {
-      const missing = ENGINE_DESCRIPTORS.filter((descriptor) => !byEngine.has(descriptor.kind)).map(
-        (descriptor) => descriptor.kind,
-      );
+    const registeredEngines = RUNNABLE_ENGINE_DESCRIPTORS.map(
+      (descriptor) => descriptor.kind,
+    ).filter((engine) => byEngine.has(engine));
+    if (
+      options?.adapters === undefined &&
+      registeredEngines.length !== RUNNABLE_ENGINE_DESCRIPTORS.length
+    ) {
+      const missing = RUNNABLE_ENGINE_DESCRIPTORS.filter(
+        (descriptor) => !byEngine.has(descriptor.kind),
+      ).map((descriptor) => descriptor.kind);
       return yield* Effect.die(new Error(`Missing Engine adapters: ${missing.join(", ")}`));
     }
 

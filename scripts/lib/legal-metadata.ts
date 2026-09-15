@@ -6,9 +6,9 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   realpathSync,
-  readdirSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -28,7 +28,6 @@ const PI_PACKAGE_NAMES = [
   "@earendil-works/pi-protocol",
   "@earendil-works/pi-telemetry",
   "@earendil-works/pi-tui",
-  "@harnessos/oa-runtime",
 ] as const;
 
 interface PackageManifest {

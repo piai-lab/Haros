@@ -441,7 +441,6 @@ function makeEngineServiceLayer(
     conversationRollback: "restart-session",
   });
   const pi = makeFakeCodexAdapter("pi");
-  const oa = makeFakeCodexAdapter("oa");
   const registry: typeof EngineAdapterRegistry.Service = {
     getByEngine: (engine) =>
       engine === "codex"
@@ -452,19 +451,16 @@ function makeEngineServiceLayer(
             ? Effect.succeed(antigravity.adapter)
             : engine === "droid" && engines?.includeRestartRollbackDroid === true
               ? Effect.succeed(droid.adapter)
-              : engine === "pi" && engines?.includePi === true
+              : engine === "pi" && (engines?.includePi === true || engines?.includeHaros === true)
                 ? Effect.succeed(pi.adapter)
-                : engine === "oa" && engines?.includeHaros === true
-                  ? Effect.succeed(oa.adapter)
-                  : Effect.fail(new EngineUnsupportedError({ engine })),
+                : Effect.fail(new EngineUnsupportedError({ engine })),
     listEngines: () =>
       Effect.succeed([
         "codex",
         "claude",
         "antigravity",
         ...(engines?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
-        ...(engines?.includePi === true ? (["pi"] as const) : []),
-        ...(engines?.includeHaros === true ? (["oa"] as const) : []),
+        ...(engines?.includePi === true || engines?.includeHaros === true ? (["pi"] as const) : []),
       ] as const),
   };
 
@@ -492,7 +488,6 @@ function makeEngineServiceLayer(
     antigravity,
     droid,
     pi,
-    oa,
     layer,
     rawLayer,
   };
@@ -500,10 +495,10 @@ function makeEngineServiceLayer(
 
 const routing = makeEngineServiceLayer(undefined, { includePi: true, includeHaros: true });
 const modelServiceAdmission = makeEngineServiceLayer(undefined, {
-  includeHaros: true,
+  includePi: true,
 });
 const ecosystemReloadRouting = makeEngineServiceLayer(undefined, {
-  includeHaros: true,
+  includePi: true,
 });
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
@@ -1534,21 +1529,21 @@ bindingRetryRouting.layer("EngineServiceLive binding settlement retry", (it) => 
 });
 
 ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) => {
-  it.effect("reloads only the exact live Haros Agent session", () =>
+  it.effect("reloads only the exact live Pi session", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-reload");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
 
       assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
         state: "reloaded",
       });
-      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, 1);
+      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, 1);
     }),
   );
 
@@ -1556,14 +1551,14 @@ ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-ecosystem-no-session");
-      const startCount = ecosystemReloadRouting.oa.startSession.mock.calls.length;
-      const reloadCount = ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length;
+      const startCount = ecosystemReloadRouting.pi.startSession.mock.calls.length;
+      const reloadCount = ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length;
 
       assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
         state: "no_active_session",
       });
-      assert.equal(ecosystemReloadRouting.oa.startSession.mock.calls.length, startCount);
-      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, reloadCount);
+      assert.equal(ecosystemReloadRouting.pi.startSession.mock.calls.length, startCount);
+      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, reloadCount);
     }),
   );
 
@@ -1840,22 +1835,22 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-start-first");
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseStart = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
       );
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       }).pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "Haros custom-service start",
@@ -1892,20 +1887,20 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(mutationEntered);
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       }).pipe(Effect.forkChild);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseMutation, undefined);
       yield* Fiber.join(mutationFiber);
       yield* Fiber.join(startFiber);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
       yield* engine.stopSession({ threadId });
     }),
   );
@@ -1915,25 +1910,25 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const engine = yield* EngineService;
       const threadId = asThreadId("thread-model-service-recovery-first");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway/model-one" },
+        engineSelection: { engine: "pi", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
       yield* engine.stopRuntimeSession!({ threadId });
 
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const releaseRecovery = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
       );
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const recoveryFiber = yield* engine
         .sendTurn({ threadId, input: "recover", attachments: [] })
         .pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "Haros custom-service recovery",
@@ -1961,21 +1956,21 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         const engine = yield* EngineService;
         const threadId = asThreadId("thread-model-service-replacement-restore");
         yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
-          engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+          engineSelection: { engine: "pi", model: "gateway-a/model-one" },
           runtimeMode: "full-access",
         });
 
-        const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+        const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
         if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
         const replacementFailure = new EngineAdapterSessionNotFoundError({
-          engine: "oa",
+          engine: "pi",
           threadId,
         });
         const restoreEntered = yield* Deferred.make<void>();
         const releaseRestore = yield* Deferred.make<void>();
-        modelServiceAdmission.oa.startSession
+        modelServiceAdmission.pi.startSession
           .mockImplementationOnce(() => Effect.fail(replacementFailure))
           .mockImplementationOnce((input) =>
             Deferred.succeed(restoreEntered, undefined).pipe(
@@ -1985,9 +1980,9 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
           );
 
         const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
-          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
           runtimeMode: "full-access",
         }).pipe(Effect.result, Effect.forkChild);
         yield* Deferred.await(restoreEntered);
@@ -2013,17 +2008,17 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-turn-persistence-fence");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
 
-      const defaultHasSession = modelServiceAdmission.oa.hasSession.getMockImplementation();
+      const defaultHasSession = modelServiceAdmission.pi.hasSession.getMockImplementation();
       if (!defaultHasSession) assert.fail("Expected the fake Haros session probe");
       const lifecycleEntered = yield* Deferred.make<void>();
       const releaseLifecycle = yield* Deferred.make<void>();
-      modelServiceAdmission.oa.hasSession.mockImplementationOnce((probedThreadId) =>
+      modelServiceAdmission.pi.hasSession.mockImplementationOnce((probedThreadId) =>
         Deferred.succeed(lifecycleEntered, undefined).pipe(
           Effect.andThen(Deferred.await(releaseLifecycle)),
           Effect.andThen(defaultHasSession(probedThreadId)),
@@ -2037,19 +2032,19 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(lifecycleEntered);
 
-      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
       const replacementFailure = new EngineAdapterSessionNotFoundError({
-        engine: "oa",
+        engine: "pi",
         threadId,
       });
-      modelServiceAdmission.oa.startSession
+      modelServiceAdmission.pi.startSession
         .mockImplementationOnce(() => Effect.fail(replacementFailure))
         .mockImplementationOnce(defaultStart);
       const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         runtimeMode: "full-access",
       }).pipe(Effect.result, Effect.forkChild);
       yield* sleep(25);
@@ -2067,7 +2062,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
           threadId,
           input: "persist model C",
           attachments: [],
-          engineSelection: { engine: "oa", model: "gateway-c/model-three" },
+          engineSelection: { engine: "pi", model: "gateway-c/model-three" },
         })
         .pipe(Effect.forkChild);
       yield* sleep(25);
@@ -2087,7 +2082,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
       yield* Fiber.join(sendFiber);
 
-      const restoreCall = modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0];
+      const restoreCall = modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0];
       assert.equal(restoreCall?.engineSelection?.model, "gateway-a/model-one");
       yield* engine.stopSession({ threadId });
     }),
@@ -2099,9 +2094,9 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const directory = yield* EngineSessionDirectory;
       const threadId = asThreadId("thread-model-service-recovery-current-binding");
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* engine.stopRuntimeSession!({ threadId });
@@ -2116,7 +2111,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         .pipe(Effect.forkChild);
       yield* Deferred.await(aEntered);
 
-      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
       const recoveryFiber = yield* engine
         .sendTurn({ threadId, input: "recover current binding", attachments: [] })
         .pipe(Effect.forkChild);
@@ -2128,7 +2123,7 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
         ...binding,
         runtimePayload: {
           ...asRuntimePayloadRecord(binding.runtimePayload),
-          engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         },
       });
 
@@ -2145,14 +2140,14 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       yield* Deferred.succeed(releaseA, undefined);
       yield* Fiber.join(aFenceFiber);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseB, undefined);
       yield* Fiber.join(bFenceFiber);
       yield* Fiber.join(recoveryFiber);
-      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
+      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
       assert.equal(
-        modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0].engineSelection?.model,
+        modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0].engineSelection?.model,
         "gateway-b/model-two",
       );
       yield* engine.stopSession({ threadId });
@@ -2165,30 +2160,30 @@ modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (
       const aThreadId = asThreadId("thread-model-service-a-to-b");
       const bThreadId = asThreadId("thread-model-service-b-to-a");
       yield* startTestEngineSession(engine, aThreadId, {
-        engine: "oa",
+        engine: "pi",
         threadId: aThreadId,
-        engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* startTestEngineSession(engine, bThreadId, {
-        engine: "oa",
+        engine: "pi",
         threadId: bThreadId,
-        engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
         runtimeMode: "full-access",
       });
 
       const replacements = yield* Effect.all(
         [
           startTestEngineSession(engine, aThreadId, {
-            engine: "oa",
+            engine: "pi",
             threadId: aThreadId,
-            engineSelection: { engine: "oa", model: "gateway-b/model-two" },
+            engineSelection: { engine: "pi", model: "gateway-b/model-two" },
             runtimeMode: "full-access",
           }),
           startTestEngineSession(engine, bThreadId, {
-            engine: "oa",
+            engine: "pi",
             threadId: bThreadId,
-            engineSelection: { engine: "oa", model: "gateway-a/model-one" },
+            engineSelection: { engine: "pi", model: "gateway-a/model-one" },
             runtimeMode: "full-access",
           }),
         ],
@@ -2208,7 +2203,6 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const piThreadId = asThreadId("thread-pi-plan-admission");
       const antigravityThreadId = asThreadId("thread-antigravity-plan-admission");
-      const oaThreadId = asThreadId("thread-harnessos-plan-admission");
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
@@ -2220,11 +2214,6 @@ routing.layer("EngineServiceLive routing", (it) => {
       yield* startTestEngineSession(engine, antigravityThreadId, {
         engine: "antigravity",
         threadId: antigravityThreadId,
-        runtimeMode: "full-access",
-      });
-      yield* startTestEngineSession(engine, oaThreadId, {
-        engine: "oa",
-        threadId: oaThreadId,
         runtimeMode: "full-access",
       });
 
@@ -2254,17 +2243,9 @@ routing.layer("EngineServiceLive routing", (it) => {
         attachments: [],
         interactionMode: "debug",
       });
-      yield* engine.sendTurn({
-        threadId: oaThreadId,
-        input: "plan this",
-        attachments: [],
-        interactionMode: "plan",
-      });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
-      assert.equal(routing.oa.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
-      yield* engine.stopSession({ threadId: oaThreadId });
     }),
   );
 
@@ -2384,7 +2365,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const threadId = asThreadId("thread-harnessos-work-surface-recovery");
 
       yield* startTestEngineSession(engine, threadId, {
-        engine: "oa",
+        engine: "pi",
         threadId,
         cwd: "/tmp/project/packages/app",
         admission: {
@@ -2402,10 +2383,10 @@ routing.layer("EngineServiceLive routing", (it) => {
       });
 
       yield* engine.stopRuntimeSession!({ threadId });
-      routing.oa.startSession.mockClear();
+      routing.pi.startSession.mockClear();
       yield* engine.sendTurn({ threadId, input: "resume", attachments: [] });
 
-      const recoveredInput = routing.oa.startSession.mock.calls[0]?.[0];
+      const recoveredInput = routing.pi.startSession.mock.calls[0]?.[0];
       assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
       assert.deepEqual(recoveredInput?.admission, {
         productSurface: "agent",
@@ -3096,11 +3077,11 @@ routing.layer("EngineServiceLive routing", (it) => {
         const directory = yield* EngineSessionDirectory;
         const threadId = asThreadId("thread-same-engine-start-persistence-failure");
         const previousEngineSelection = {
-          engine: "oa" as const,
+          engine: "pi" as const,
           model: "local/stable-model",
         };
         yield* startTestEngineSession(engine, threadId, {
-          engine: "oa",
+          engine: "pi",
           threadId,
           cwd: "/tmp/same-engine-persistence-failure",
           admission: {
@@ -3122,11 +3103,11 @@ routing.layer("EngineServiceLive routing", (it) => {
           .spyOn(directory, "upsert")
           .mockImplementationOnce((binding) => originalUpsert(binding))
           .mockImplementationOnce(() => Effect.fail(persistenceFailure));
-        const stopCount = routing.oa.stopSession.mock.calls.length;
+        const stopCount = routing.pi.stopSession.mock.calls.length;
 
         const result = yield* Effect.result(
           startTestEngineSession(engine, threadId, {
-            engine: "oa",
+            engine: "pi",
             threadId,
             cwd: "/tmp/same-engine-persistence-failure-new",
             admission: {
@@ -3136,7 +3117,7 @@ routing.layer("EngineServiceLive routing", (it) => {
             },
             runtimeMode: "full-access",
             engineSelection: {
-              engine: "oa",
+              engine: "pi",
               model: "local/new-model",
             },
           }),
@@ -3147,8 +3128,8 @@ routing.layer("EngineServiceLive routing", (it) => {
         // Stop-first retires the old incarnation, cleanup retires the failed
         // target, then the exact old binding is restored as a fresh physical
         // incarnation under a third generation.
-        assert.equal(routing.oa.stopSession.mock.calls.length, stopCount + 2);
-        assert.equal(yield* routing.oa.hasSession(threadId), true);
+        assert.equal(routing.pi.stopSession.mock.calls.length, stopCount + 2);
+        assert.equal(yield* routing.pi.hasSession(threadId), true);
         const restoredBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(restoredBinding?.engine, previousBinding.engine);
         assert.notEqual(restoredBinding?.lifecycleGeneration, previousBinding.lifecycleGeneration);
@@ -3162,7 +3143,7 @@ routing.layer("EngineServiceLive routing", (it) => {
           workSurface: "agent",
           projectContextRoot: "/tmp/same-engine-persistence-failure",
         });
-        const restoredStartInput = routing.oa.startSession.mock.calls.at(-1)?.[0];
+        const restoredStartInput = routing.pi.startSession.mock.calls.at(-1)?.[0];
         assert.deepEqual(restoredStartInput?.admission, {
           productSurface: "agent",
           workSurface: "agent",
@@ -3604,6 +3585,10 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
+      yield* routing.codex.stopAll();
+      yield* routing.claude.stopAll();
+      yield* routing.antigravity.stopAll();
+      yield* routing.pi.stopAll();
       routing.codex.sendTurn.mockClear();
       routing.codex.interruptTurn.mockClear();
       routing.codex.startSession.mockClear();
@@ -4566,6 +4551,8 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* routing.codex.stopAll();
       yield* routing.claude.stopAll();
+      yield* routing.antigravity.stopAll();
+      yield* routing.pi.stopAll();
 
       const remaining = yield* engine.listSessions();
       assert.equal(remaining.length, 0);

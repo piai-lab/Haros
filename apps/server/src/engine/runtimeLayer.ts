@@ -1,34 +1,33 @@
+import { HarosModelCatalogSyncLive } from "./Layers/HarosModelCatalogSync";
+import { HarosModelServicesLive } from "./Layers/HarosModelServices";
 import { Effect, Layer } from "effect";
 
-import { HostGatewayCredentialsWithSecretsLive } from "../hostGateway/Layers/HostGatewayCredentials";
 import { BrowserAutomationHostLive } from "../browserAutomation/Layers/BrowserAutomationHost";
 import { ServerConfig } from "../config";
 import {
-  makeEngineServerPasswordResolver,
   EngineCredentials,
   EngineCredentialsLive,
+  makeEngineServerPasswordResolver,
 } from "../engineCredentials";
+import { HostGatewayCredentialsWithSecretsLive } from "../hostGateway/Layers/HostGatewayCredentials";
+import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
+import { EngineRuntimeEventRepositoryLive } from "../persistence/Layers/EngineRuntimeEvents";
+import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
 import { ServerSettingsLive } from "../serverSettings";
+import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
 import { makeClaudeAdapterLive } from "./Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./Layers/CodexAdapter";
 import { makeCursorAdapterLive } from "./Layers/CursorAdapter";
-import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
-import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
+import { makeDeepSeekAdapterLive } from "./Layers/DeepSeekAdapter";
 import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
-import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
-import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
-import { makeOAAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
-import { OAEcosystemLive } from "./Layers/OAEcosystem";
-import { OAAgentPromptFilesLive } from "./Layers/OAAgentPromptFiles";
-import { OAWebSearchSettingsLive } from "./Layers/OAWebSearchSettings";
-import { OAModelServicesLive } from "./Layers/OAModelServices";
 import { makeDurableEngineServiceLive } from "./Layers/EngineService";
 import { EngineSessionDirectoryLive } from "./Layers/EngineSessionDirectory";
-import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
-import { EngineRuntimeEventRepositoryLive } from "../persistence/Layers/EngineRuntimeEvents";
-import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
+import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
+import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
+import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
+import { makePiAdapterLive } from "./Layers/PiAdapter";
 
 export function makeServerEngineLayer(
   options: {
@@ -89,13 +88,7 @@ export function makeServerEngineLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(hostGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
-    const oaAgentAdapterLayer = makeOAAgentAdapterLive(
-      nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(
-      Layer.provide(hostGatewayCredentialsLayer),
-      Layer.provide(BrowserAutomationHostLive),
-      Layer.provide(ServerSettingsLive),
-    );
+    const deepSeekAdapterLayer = makeDeepSeekAdapterLive();
     const adapterRegistryLayer = EngineAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -105,8 +98,8 @@ export function makeServerEngineLayer(
       Layer.provide(droidAdapterLayer),
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
-      Layer.provide(oaAgentAdapterLayer),
       Layer.provide(piAdapterLayer),
+      Layer.provide(deepSeekAdapterLayer),
       Layer.provideMerge(engineSessionDirectoryLayer),
     );
     const engineServiceLayer = makeDurableEngineServiceLive(
@@ -123,16 +116,18 @@ export function makeServerEngineLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
-    const oaModelServicesLayer = OAModelServicesLive.pipe(Layer.provide(engineServiceLayer));
-    const oaEcosystemLayer = OAEcosystemLive.pipe(Layer.provide(engineServiceLayer));
-    const oaAgentPromptFilesLayer = OAAgentPromptFilesLive.pipe(Layer.provide(ServerSettingsLive));
+    const modelServicesLayer = HarosModelServicesLive.pipe(
+      Layer.provide(engineServiceLayer),
+      Layer.provide(ServerSettingsLive),
+    );
     return Layer.mergeAll(
+      modelServicesLayer,
+      HarosModelCatalogSyncLive.pipe(
+        Layer.provide(modelServicesLayer),
+        Layer.provide(ServerSettingsLive),
+      ),
       engineServiceLayer,
       engineDiscoveryLayer,
-      oaEcosystemLayer,
-      oaAgentPromptFilesLayer,
-      OAWebSearchSettingsLive,
-      oaModelServicesLayer,
       adapterRegistryLayer,
       engineSessionDirectoryLayer,
     );

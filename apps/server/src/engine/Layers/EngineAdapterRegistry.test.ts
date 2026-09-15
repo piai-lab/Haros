@@ -1,23 +1,23 @@
-import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
-import { it, assert, vi } from "@effect/vitest";
+import { assert, it, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
+import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
 
 import { Effect, Layer, Stream } from "effect";
 
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { EngineUnsupportedError } from "../Errors.ts";
+import { AntigravityAdapter, AntigravityAdapterShape } from "../Services/AntigravityAdapter.ts";
 import { ClaudeAdapter, ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
 import { CodexAdapter, CodexAdapterShape } from "../Services/CodexAdapter.ts";
 import { CursorAdapter, CursorAdapterShape } from "../Services/CursorAdapter.ts";
 import { DroidAdapter, DroidAdapterShape } from "../Services/DroidAdapter.ts";
+import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
 import { GrokAdapter, GrokAdapterShape } from "../Services/GrokAdapter.ts";
 import { KiloAdapter, KiloAdapterShape } from "../Services/KiloAdapter.ts";
+import { DeepSeekAdapter, DeepSeekAdapterShape } from "../Services/DeepSeekAdapter.ts";
 import { OpenCodeAdapter, OpenCodeAdapterShape } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter, PiAdapterShape } from "../Services/PiAdapter.ts";
-import { OAAgentAdapter, OAAgentAdapterShape } from "../Services/OAAgentAdapter.ts";
-import { AntigravityAdapter, AntigravityAdapterShape } from "../Services/AntigravityAdapter.ts";
-import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
 import { EngineAdapterRegistryLive } from "./EngineAdapterRegistry.ts";
-import { EngineUnsupportedError } from "../Errors.ts";
-import * as NodeServices from "@effect/platform-node/NodeServices";
 
 const fakeCodexAdapter: CodexAdapterShape = {
   engine: "codex",
@@ -159,9 +159,21 @@ const fakePiAdapter: PiAdapterShape = {
   streamEvents: Stream.empty,
 };
 
-const fakeOAAgentAdapter: OAAgentAdapterShape = {
-  ...fakePiAdapter,
-  engine: "oa",
+const fakeDeepSeekAdapter: DeepSeekAdapterShape = {
+  engine: "deepseek",
+  capabilities: { sessionModelSwitch: "restart-session" },
+  startSession: vi.fn(),
+  sendTurn: vi.fn(),
+  interruptTurn: vi.fn(),
+  respondToRequest: vi.fn(),
+  respondToUserInput: vi.fn(),
+  stopSession: vi.fn(),
+  listSessions: vi.fn(),
+  hasSession: vi.fn(),
+  readThread: vi.fn(),
+  rollbackThread: vi.fn(),
+  stopAll: vi.fn(),
+  streamEvents: Stream.empty,
 };
 
 const fakeAntigravityAdapter: AntigravityAdapterShape = {
@@ -194,8 +206,8 @@ const layer = it.layer(
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
         Layer.succeed(KiloAdapter, fakeKiloAdapter),
         Layer.succeed(OpenCodeAdapter, fakeOpenCodeAdapter),
-        Layer.succeed(OAAgentAdapter, fakeOAAgentAdapter),
         Layer.succeed(PiAdapter, fakePiAdapter),
+        Layer.succeed(DeepSeekAdapter, fakeDeepSeekAdapter),
       ),
     ),
     NodeServices.layer,
@@ -214,8 +226,8 @@ layer("EngineAdapterRegistryLive", (it) => {
       const droid = yield* registry.getByEngine("droid");
       const kilo = yield* registry.getByEngine("kilo");
       const opencode = yield* registry.getByEngine("opencode");
-      const harnessos = yield* registry.getByEngine("oa");
       const pi = yield* registry.getByEngine("pi");
+      const deepseek = yield* registry.getByEngine("deepseek");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
       assert.equal(cursor, fakeCursorAdapter);
@@ -224,8 +236,8 @@ layer("EngineAdapterRegistryLive", (it) => {
       assert.equal(droid, fakeDroidAdapter);
       assert.equal(kilo, fakeKiloAdapter);
       assert.equal(opencode, fakeOpenCodeAdapter);
-      assert.equal(harnessos, fakeOAAgentAdapter);
       assert.equal(pi, fakePiAdapter);
+      assert.equal(deepseek, fakeDeepSeekAdapter);
 
       const engines = yield* registry.listEngines();
       assert.deepEqual(engines, ENGINE_KINDS);

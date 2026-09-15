@@ -1,8 +1,8 @@
 import { Schema } from "effect";
+import { BuiltInToolGroupOverrides } from "./agentTools";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { EngineSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
-import { BuiltInToolGroupOverrides } from "./agentTools";
+import { EngineKind, EngineSelection, ThreadEnvironmentMode } from "./orchestration";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -14,11 +14,6 @@ const EngineSettingsBase = {
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   customModels: CustomModels,
 };
-
-export const HarosServerEngineSettings = Schema.Struct({
-  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-});
-export type HarosServerEngineSettings = typeof HarosServerEngineSettings.Type;
 
 export const CodexServerEngineSettings = Schema.Struct({
   ...EngineSettingsBase,
@@ -85,6 +80,13 @@ export const PiServerEngineSettings = Schema.Struct({
 });
 export type PiServerEngineSettings = typeof PiServerEngineSettings.Type;
 
+export const DeepSeekServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
+  binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "dsh")),
+  homePath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
+});
+export type DeepSeekServerEngineSettings = typeof DeepSeekServerEngineSettings.Type;
+
 const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
   Schema.withDecodingDefault(() => []),
 );
@@ -102,8 +104,23 @@ export const AgentToolsServerSettings = Schema.Struct({
 });
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
+const ModelServiceFlags = Schema.Record(
+  Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256)),
+  Schema.Boolean,
+).check(
+  Schema.makeFilter((value) => Object.keys(value).length <= 512, {
+    message: "Model service settings must contain at most 512 services",
+  }),
+);
+export const ModelServicesServerSettings = Schema.Struct({
+  autoSync: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
+  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
+});
+export type ModelServicesServerSettings = typeof ModelServicesServerSettings.Type;
+
 export const ServerSettings = Schema.Struct({
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -115,7 +132,6 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarosServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -125,6 +141,7 @@ export const ServerSettings = Schema.Struct({
     kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    deepseek: DeepSeekServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -133,12 +150,9 @@ export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
-const HarosServerEngineSettingsView = Schema.Struct({
-  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-});
-
 export const ServerSettingsView = Schema.Struct({
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -150,7 +164,6 @@ export const ServerSettingsView = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: HarosServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -160,6 +173,7 @@ export const ServerSettingsView = Schema.Struct({
     kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    deepseek: DeepSeekServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -183,6 +197,12 @@ const EngineSettingsBasePatch = {
 };
 
 export const ServerSettingsPatch = Schema.Struct({
+  modelServices: Schema.optionalKey(
+    Schema.Struct({
+      autoSync: Schema.optionalKey(ModelServiceFlags),
+      added: Schema.optionalKey(ModelServiceFlags),
+    }),
+  ),
   defaultEngine: Schema.optionalKey(EngineKind),
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableEngineUpdateChecks: Schema.optionalKey(Schema.Boolean),
@@ -191,11 +211,6 @@ export const ServerSettingsPatch = Schema.Struct({
   textGenerationEngineSelection: Schema.optionalKey(EngineSelectionPatch),
   engines: Schema.optionalKey(
     Schema.Struct({
-      oa: Schema.optionalKey(
-        Schema.Struct({
-          enabled: Schema.optionalKey(Schema.Boolean),
-        }),
-      ),
       codex: Schema.optionalKey(
         Schema.Struct({
           ...EngineSettingsBasePatch,
@@ -237,6 +252,12 @@ export const ServerSettingsPatch = Schema.Struct({
           ...EngineSettingsBasePatch,
           binaryPath: Schema.optionalKey(StringSetting),
           agentDir: Schema.optionalKey(StringSetting),
+        }),
+      ),
+      deepseek: Schema.optionalKey(
+        Schema.Struct({
+          ...EngineSettingsBasePatch,
+          homePath: Schema.optionalKey(StringSetting),
         }),
       ),
     }),

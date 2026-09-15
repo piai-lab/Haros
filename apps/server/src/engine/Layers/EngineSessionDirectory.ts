@@ -1,5 +1,10 @@
-import { EngineKind, type ThreadId } from "@harnessos/contracts";
-import { Effect, Layer, Option, Schema } from "effect";
+import {
+  decodePersistedEngineKind,
+  isRetiredEngineKind,
+  type EngineKind,
+  type ThreadId,
+} from "@harnessos/contracts";
+import { Effect, Layer, Option } from "effect";
 
 import { EngineSessionRuntimeRepository } from "../../persistence/Services/EngineSessionRuntime.ts";
 import { EngineSessionDirectoryPersistenceError, EngineValidationError } from "../Errors.ts";
@@ -22,8 +27,17 @@ function decodeEngineKind(
   engine: string,
   operation: string,
 ): Effect.Effect<EngineKind, EngineSessionDirectoryPersistenceError> {
-  if (Schema.is(EngineKind)(engine)) {
-    return Effect.succeed(engine);
+  if (isRetiredEngineKind(engine)) {
+    return Effect.fail(
+      new EngineSessionDirectoryPersistenceError({
+        operation,
+        detail: `Persisted engine '${engine}' is retired and cannot be resumed.`,
+      }),
+    );
+  }
+  const migrated = decodePersistedEngineKind(engine);
+  if (migrated !== null) {
+    return Effect.succeed(migrated);
   }
   return Effect.fail(
     new EngineSessionDirectoryPersistenceError({
@@ -95,16 +109,27 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
     }
 
     const now = new Date().toISOString();
+    const existingEngine =
+      existingRuntime === undefined || isRetiredEngineKind(existingRuntime.engine)
+        ? undefined
+        : decodePersistedEngineKind(existingRuntime.engine);
     const engineChanged =
-      existingRuntime !== undefined && existingRuntime.engine !== binding.engine;
+      existingRuntime !== undefined &&
+      (isRetiredEngineKind(existingRuntime.engine) || existingEngine !== binding.engine);
     const compatibleRuntime = engineChanged ? undefined : existingRuntime;
+    const existingAdapterKey = existingRuntime?.adapterKey;
+    const migratedAdapterKey = existingAdapterKey
+      ? isRetiredEngineKind(existingAdapterKey)
+        ? undefined
+        : (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
+      : undefined;
     yield* repository
       .upsert({
         threadId: resolvedThreadId,
         engine: binding.engine,
         adapterKey:
           binding.adapterKey ??
-          (engineChanged ? binding.engine : (existingRuntime?.adapterKey ?? binding.engine)),
+          (engineChanged ? binding.engine : (migratedAdapterKey ?? binding.engine)),
         runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
         status: binding.status ?? compatibleRuntime?.status ?? "running",
         lifecycleGeneration:

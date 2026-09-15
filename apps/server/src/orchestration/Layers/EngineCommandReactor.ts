@@ -15,7 +15,8 @@ import {
   type EngineMentionReference,
   type EngineInteractionMode,
   type EngineRuntimeEvent,
-  EngineKind,
+  type EngineKind,
+  decodePersistedEngineKind,
   type EngineTurnStartFailureReason,
   type EngineReviewTarget,
   type EngineStartOptions,
@@ -1339,9 +1340,8 @@ const make = Effect.gen(function* () {
   }) {
     const projectedThread = yield* resolveThread(input.threadId);
     const engine = projectedThread
-      ? Schema.is(EngineKind)(projectedThread.session?.engine)
-        ? projectedThread.session?.engine
-        : projectedThread.engineSelection.engine
+      ? (decodePersistedEngineKind(projectedThread.session?.engine) ??
+        projectedThread.engineSelection.engine)
       : undefined;
     const rebuildsContext =
       engine !== undefined &&
@@ -1511,11 +1511,8 @@ const make = Effect.gen(function* () {
 
     const desiredRuntimeMode = options?.runtimeMode ?? thread.runtimeMode;
     const desiredInteractionMode = options?.interactionMode ?? thread.interactionMode;
-    const projectedSessionEngine: EngineKind | undefined = Schema.is(EngineKind)(
-      thread.session?.engine,
-    )
-      ? thread.session.engine
-      : undefined;
+    const projectedSessionEngine: EngineKind | undefined =
+      decodePersistedEngineKind(thread.session?.engine) ?? undefined;
     const requestedEngineSelection = options?.engineSelection;
     const desiredEngineSelection = requestedEngineSelection ?? thread.engineSelection;
     const targetEngine = desiredEngineSelection.engine;
@@ -1938,9 +1935,8 @@ const make = Effect.gen(function* () {
     // then fail locally without any turn being sent or a rollback owner left.
     const targetEngine = input.engineSelection?.engine ?? thread.engineSelection.engine;
     const preEnsureLiveSession = input.preEnsureLiveSession;
-    const projectedEngine = Schema.is(EngineKind)(thread.session?.engine)
-      ? thread.session.engine
-      : thread.engineSelection.engine;
+    const projectedEngine =
+      decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine;
     const previousEngine = preEnsureLiveSession?.engine ?? projectedEngine;
     const requiresCrossProviderTranscriptBootstrap =
       targetEngine !== previousEngine &&
@@ -4373,9 +4369,7 @@ const make = Effect.gen(function* () {
   }) {
     const thread = yield* resolveThread(input.threadId);
     const engine = thread
-      ? Schema.is(EngineKind)(thread.session?.engine)
-        ? thread.session?.engine
-        : thread.engineSelection.engine
+      ? (decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine)
       : undefined;
     const rebuildsContext =
       engine !== undefined &&
@@ -4408,9 +4402,8 @@ const make = Effect.gen(function* () {
           : null;
     const activeEngine =
       liveSession?.engine ??
-      (Schema.is(EngineKind)(engineSessionThread?.session?.engine)
-        ? engineSessionThread.session.engine
-        : thread?.engineSelection.engine);
+      decodePersistedEngineKind(engineSessionThread?.session?.engine) ??
+      thread?.engineSelection.engine;
     const replacementRequirement =
       thread !== undefined
         ? yield* resolveSessionReplacementRequirement({

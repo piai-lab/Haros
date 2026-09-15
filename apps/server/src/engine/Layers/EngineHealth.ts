@@ -1,3 +1,7 @@
+import {
+  ENGINE_DESCRIPTOR_BY_KIND,
+  RUNNABLE_ENGINE_DESCRIPTORS,
+} from "@harnessos/shared/engineMetadata";
 /**
  * EngineHealthLive - Cache-backed engine health service.
  *
@@ -8,20 +12,20 @@
  *
  * @module EngineHealthLive
  */
-import * as OS from "node:os";
+import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type {
   EngineKind,
-  ServerSettings,
   ServerEngineAuthStatus,
   ServerEngineStatus,
   ServerEngineStatusState,
   ServerEngineUpdateState,
+  ServerSettings,
 } from "@harnessos/contracts";
 import { ENGINE_KINDS, ServerEngineUpdateError } from "@harnessos/contracts";
 import { parseCodexConfigModelProvider } from "@harnessos/shared/codexConfig";
 import { decodeJsonResult } from "@harnessos/shared/schemaJson";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,
   Cache,
@@ -42,21 +46,15 @@ import {
   Stream,
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
+import * as OS from "node:os";
 
 import { resolveExecutable } from "../../executableLookup.ts";
 
-import {
-  compareCodexCliVersions,
-  formatCodexCliUpgradeMessage,
-  isCodexCliVersionSupported,
-  MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
-  parseCodexCliVersion,
-} from "../codexCliVersion";
+import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
 import { ServerConfig } from "../../config";
-import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
 import { ServerSettingsService } from "../../serverSettings";
 import { isWindowsShellCommandMissingResult } from "../../shell-command-detection";
+import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
 import {
   buildCursorAgentCommand,
   buildCursorAgentHeadlessEnv,
@@ -65,45 +63,58 @@ import {
 } from "../acp/CursorAcpCommand";
 import { hasDroidApiKeyEnv, resolveDroidCliBinaryPath } from "../acp/DroidAcpSupport";
 import { hasGrokApiKeyEnv } from "../acp/GrokAcpSupport";
+import { hasDeepSeekApiKeyEnv } from "./DeepSeekAdapter";
+import {
+  hasStoredDeepSeekModelServiceKey,
+  loadHarosModelServiceSnapshot,
+  resolveHarosModelServicesAgentDir,
+} from "../modelServiceChildEnv.ts";
+import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import {
   claudeAuthMetadata,
   isStructuredClaudeAuthFalseNegativeCandidate,
   parseClaudeAuthStatusFromOutput,
 } from "../claudeAuthStatus";
 import { acquireClaudeAuthStatusLock } from "../claudeAuthStatusLock";
-import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
+import { isClaudeAutoModeCliVersionSupported } from "../claudeCliVersion.ts";
 import { buildClaudeProcessEnv, readClaudeCliCredentialsSummary } from "../claudeProcessEnv";
 import {
+  compareCodexCliVersions,
+  formatCodexCliUpgradeMessage,
+  isCodexCliVersionSupported,
+  MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
+  parseCodexCliVersion,
+} from "../codexCliVersion";
+import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
+import {
   detailFromResult,
+  ENGINE_COMMAND_TIMEOUT_DETAIL,
   extractAuthBoolean,
   extractAuthMethod,
   makeCommandMissingCause,
   nonEmptyTrimmed,
-  ENGINE_COMMAND_TIMEOUT_DETAIL,
   toTitleCaseWords,
   type CommandResult,
 } from "../engineCliOutput";
 import { probeEngineCliVersion } from "../engineCliVersionProbe";
-import { EngineHealth, type EngineHealthShape } from "../Services/EngineHealth";
 import {
-  orderEngineStatuses,
-  readEngineStatusCache,
-  resolveEngineStatusCachePath,
-  writeEngineStatusCache,
-} from "../engineStatusCache";
-import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
-import {
-  enrichEngineStatusWithVersionAdvisory,
   compareSemverVersions,
+  enrichEngineStatusWithVersionAdvisory,
   makeEngineMaintenanceCapabilities,
   normalizeCommandPath,
   parseGenericCliVersion,
   resolveEngineMaintenanceCapabilitiesEffect,
   type PackageManagedEngineMaintenanceDefinition,
 } from "../engineMaintenance";
-import { isClaudeAutoModeCliVersionSupported } from "../claudeCliVersion.ts";
-import { collectUint8StreamText } from "../../stream/collectUint8StreamText";
-import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
+import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
+import { installManagedEngine } from "../managedEngineInstall";
+import {
+  orderEngineStatuses,
+  readEngineStatusCache,
+  resolveEngineStatusCachePath,
+  writeEngineStatusCache,
+} from "../engineStatusCache";
+import { EngineHealth, type EngineHealthShape } from "../Services/EngineHealth";
 
 export { parseClaudeAuthStatusFromOutput } from "../claudeAuthStatus";
 export type { CommandResult } from "../engineCliOutput";
@@ -121,13 +132,13 @@ const DROID_ENGINE = "droid" as const;
 const KILO_ENGINE = "kilo" as const;
 const OPENCODE_ENGINE = "opencode" as const;
 const PI_ENGINE = "pi" as const;
-const OA_ENGINE = "oa" as const;
-const BUNDLED_OA_RUNTIME_VERSION = "0.84.4";
+const DEEPSEEK_ENGINE = "deepseek" as const;
+const BUNDLED_PI_RUNTIME_VERSION = "0.84.4";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
 const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in Haros settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
-const ENGINES = ENGINE_KINDS;
+const ENGINES = RUNNABLE_ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
 
 const engineCommandEnv = (engine: EngineKind): NodeJS.ProcessEnv =>
   buildEngineChildEnvironment({ engine });
@@ -714,6 +725,15 @@ const runClaudeCommand = (
 
 const runGrokCommand = (args: ReadonlyArray<string>, executable = "grok") =>
   runEngineCommand(executable, args, engineCommandEnv(GROK_ENGINE)).pipe(
+    Effect.flatMap((result) =>
+      isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
+        ? Effect.fail(makeCommandMissingCause(executable))
+        : Effect.succeed(result),
+    ),
+  );
+
+const runDeepSeekCommand = (args: ReadonlyArray<string>, executable = "dsh") =>
+  runEngineCommand(executable, args, engineCommandEnv(DEEPSEEK_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -1322,6 +1342,87 @@ export const makeCheckGrokEngineStatus = (
 
 export const checkGrokEngineStatus = makeCheckGrokEngineStatus();
 
+// ── DeepSeek health check ─────────────────────────────────────────
+
+export const makeCheckDeepSeekEngineStatus = (
+  binaryPath?: string,
+  options: { readonly storedKeyAvailable?: boolean } = {},
+): Effect.Effect<ServerEngineStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
+  Effect.gen(function* () {
+    const checkedAt = new Date().toISOString();
+    const executable = nonEmptyTrimmed(binaryPath) ?? "dsh";
+
+    const versionProbe = yield* probeEngineCliVersion(
+      runDeepSeekCommand(["--version"], executable),
+      DEFAULT_TIMEOUT_MS,
+    );
+
+    if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
+      const error = versionProbe.cause;
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
+        checkedAt,
+        message:
+          versionProbe.outcome === "missing"
+            ? "DeepSeek Harness (`dsh`) is not installed or not on PATH."
+            : `Failed to execute DeepSeek Harness health check: ${error instanceof Error ? error.message : String(error)}.`,
+      } satisfies ServerEngineStatus;
+    }
+
+    if (versionProbe.outcome === "timeout") {
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        checkedAt,
+        message:
+          "DeepSeek Harness is installed but failed to run. Timed out while running command.",
+      } satisfies ServerEngineStatus;
+    }
+
+    if (versionProbe.outcome === "nonzero") {
+      const version = versionProbe.result;
+      const detail = detailFromResult(version);
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "error" as const,
+        available: false,
+        authStatus: "unknown" as const,
+        checkedAt,
+        message: detail
+          ? `DeepSeek Harness is installed but failed to run. ${detail}`
+          : "DeepSeek Harness is installed but failed to run.",
+      } satisfies ServerEngineStatus;
+    }
+    const version = versionProbe.result;
+    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+    const hasApiKey = hasDeepSeekApiKeyEnv() || options.storedKeyAvailable === true;
+
+    return {
+      engine: DEEPSEEK_ENGINE,
+      status: "ready" as const,
+      available: true,
+      authStatus: hasApiKey ? ("authenticated" as const) : ("unknown" as const),
+      version: parsedVersion,
+      checkedAt,
+      ...(hasApiKey
+        ? { authType: "apiKey", authLabel: "DeepSeek API Key" }
+        : {
+            message:
+              "DeepSeek Harness is installed. Add a DeepSeek key in Model services, or set DEEPSEEK_API_KEY.",
+          }),
+    } satisfies ServerEngineStatus;
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "dsh"));
+
+export const checkDeepSeekEngineStatus = makeCheckDeepSeekEngineStatus();
+
 // ── Droid health check ─────────────────────────────────────────────
 
 const runDroidCommand = (args: ReadonlyArray<string>, executable = "droid") =>
@@ -1569,24 +1670,10 @@ export const checkPiEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
         status: "ready",
         available: true,
         authStatus: "unknown",
-        version: BUNDLED_OA_RUNTIME_VERSION,
+        version: BUNDLED_PI_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
         message:
           "Pi 0.84.4 is bundled. Native Pi discovery and state access begin only after you select Pi.",
-      }) satisfies ServerEngineStatus,
-  );
-
-export const checkOAAgentEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
-  Effect.sync(
-    () =>
-      ({
-        engine: OA_ENGINE,
-        status: "ready",
-        available: true,
-        authStatus: "unknown",
-        version: BUNDLED_OA_RUNTIME_VERSION,
-        checkedAt: new Date().toISOString(),
-        message: "Haros is bundled and ready. Add engine credentials before sending.",
       }) satisfies ServerEngineStatus,
   );
 
@@ -2004,7 +2091,7 @@ export function resolvePassiveProviderPresence(
   const recoverable: EngineKind[] = [];
   for (const engine of ENGINES) {
     if (!isProviderEnabledForSettings(engine, settings)) continue;
-    if (engine === OA_ENGINE || engine === PI_ENGINE) {
+    if (engine === PI_ENGINE) {
       recoverable.push(engine);
       continue;
     }
@@ -2052,6 +2139,11 @@ export function resolvePassiveProviderPresence(
             settings.engines.opencode.customModels.length > 0 ||
             settings.engines.opencode.serverUrl.trim().length > 0 ||
             resolveCommand(settings.engines.opencode.binaryPath) !== null
+          );
+        case DEEPSEEK_ENGINE:
+          return (
+            settings.engines.deepseek.customModels.length > 0 ||
+            resolveCommand(settings.engines.deepseek.binaryPath) !== null
           );
       }
     })();
@@ -2152,7 +2244,10 @@ export function projectEngineStatusesForSettings(
 
 // ── Layer ───────────────────────────────────────────────────────────
 
-export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?: number }) {
+export function makeEngineHealthLive(options?: {
+  readonly engineUpdateTimeoutMs?: number;
+  readonly managedInstall?: typeof installManagedEngine;
+}) {
   const engineUpdateTimeoutMs = options?.engineUpdateTimeoutMs ?? ENGINE_UPDATE_TIMEOUT_MS;
   return Layer.effect(
     EngineHealth,
@@ -2228,8 +2323,6 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
 
       const getEngineBinaryPath = (engine: EngineKind, settings: ServerSettings) => {
         switch (engine) {
-          case "oa":
-            return null;
           case "codex":
             return settings.engines.codex.binaryPath;
           case "claude":
@@ -2248,6 +2341,8 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
             return settings.engines.opencode.binaryPath;
           case "pi":
             return settings.engines.pi.binaryPath;
+          case "deepseek":
+            return settings.engines.deepseek.binaryPath;
         }
       };
 
@@ -2413,7 +2508,6 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           Effect.flatMap((settings) =>
             Effect.all(
               [
-                checkProviderWhenEnabled(settings, OA_ENGINE, checkOAAgentEngineStatus()),
                 checkProviderWhenEnabled(
                   settings,
                   CODEX_ENGINE,
@@ -2462,6 +2556,28 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
                   makeCheckOpenCodeEngineStatus(settings.engines.opencode.binaryPath),
                 ),
                 checkProviderWhenEnabled(settings, PI_ENGINE, checkPiEngineStatus()),
+                checkProviderWhenEnabled(
+                  settings,
+                  DEEPSEEK_ENGINE,
+                  Effect.gen(function* () {
+                    const storedKeyAvailable = yield* Effect.promise(async () => {
+                      try {
+                        const agentDir = await resolveHarosModelServicesAgentDir({
+                          requestedAgentDir: settings.engines.pi.agentDir,
+                          serverBaseDir: serverConfig.baseDir,
+                        });
+                        const snapshot = await loadHarosModelServiceSnapshot({ agentDir });
+                        return hasStoredDeepSeekModelServiceKey(snapshot);
+                      } catch {
+                        return false;
+                      }
+                    });
+                    return yield* makeCheckDeepSeekEngineStatus(
+                      settings.engines.deepseek.binaryPath,
+                      { storedKeyAvailable },
+                    );
+                  }),
+                ),
               ],
               {
                 concurrency: "unbounded",
@@ -2618,9 +2734,9 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
             shell: prepared.shell,
             ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
             env: updateEnv,
+            stdin: "ignore",
           }),
         );
-        yield* Effect.addFinalizer(() => child.kill().pipe(Effect.ignore));
         const [stdout, stderr, exitCode] = yield* Effect.all(
           [
             collectUint8StreamText({
@@ -2658,6 +2774,93 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           return yield* new ServerEngineUpdateError({
             engine,
             reason: "Engine is disabled in Haros settings.",
+          });
+        }
+        if (ENGINE_DESCRIPTOR_BY_KIND[engine].installation) {
+          return yield* commandCoordinator.withCommandLock({
+            targetKey: engine,
+            lockKey: `managed-install:${engine}`,
+            onQueued: setEngineUpdateState(
+              engine,
+              makeUpdateState({
+                status: "queued",
+                startedAt: null,
+                finishedAt: null,
+                message: "Waiting for engine installation.",
+              }),
+            ).pipe(Effect.asVoid),
+            run: Effect.gen(function* () {
+              const startedAt = yield* nowIso;
+              const result = yield* (options?.managedInstall ?? installManagedEngine)({
+                engine,
+                root: path.join(serverConfig.stateDir, "engines"),
+                ...(process.env.HARNESSOS_ENGINE_MIRROR_URL
+                  ? { mirrorUrl: process.env.HARNESSOS_ENGINE_MIRROR_URL }
+                  : {}),
+                run: (command, args) =>
+                  runUpdateCommand({ engine, command, args }).pipe(Effect.scoped),
+                progress: (message) =>
+                  setEngineUpdateState(
+                    engine,
+                    makeUpdateState({ status: "running", startedAt, finishedAt: null, message }),
+                  ).pipe(Effect.asVoid),
+              }).pipe(
+                Effect.scoped,
+                Effect.timeoutOrElse({
+                  duration: Duration.millis(options?.engineUpdateTimeoutMs ?? 60 * 60_000),
+                  onTimeout: () =>
+                    Effect.fail(
+                      new Error(
+                        `Installation timed out after ${formatEngineUpdateTimeout(options?.engineUpdateTimeoutMs ?? 60 * 60_000)}. The installation was stopped.`,
+                      ),
+                    ),
+                }),
+                Effect.result,
+              );
+              if (Result.isFailure(result)) {
+                const engines = yield* setEngineUpdateState(
+                  engine,
+                  makeUpdateState({
+                    status: "failed",
+                    startedAt,
+                    finishedAt: yield* nowIso,
+                    message: describeUpdateCommandError(result.failure),
+                  }),
+                );
+                return { engines };
+              }
+              yield* serverSettings
+                .updateSettings({
+                  engines: { [engine]: { binaryPath: result.success.binaryPath } },
+                })
+                .pipe(Effect.mapError(toUpdateError));
+              const statuses = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+              const installedStatus = statuses.find((status) => status.engine === engine);
+              const available = installedStatus?.available;
+              if (!available) {
+                yield* serverSettings
+                  .updateSettings({
+                    engines: {
+                      [engine]: { binaryPath: getEngineBinaryPath(engine, settings) ?? "" },
+                    },
+                  })
+                  .pipe(Effect.mapError(toUpdateError));
+                yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+              }
+              const engines = yield* setEngineUpdateState(
+                engine,
+                makeUpdateState({
+                  status: available ? "succeeded" : "failed",
+                  startedAt,
+                  finishedAt: yield* nowIso,
+                  message: available
+                    ? "Engine installed and verified."
+                    : `Executable installed, but the engine health check failed. Previous executable selection was restored. ${installedStatus?.message ?? ""}`,
+                  output: result.success.output,
+                }),
+              );
+              return { engines };
+            }),
           });
         }
         const capabilities = yield* getEngineMaintenanceCapabilities(engine).pipe(

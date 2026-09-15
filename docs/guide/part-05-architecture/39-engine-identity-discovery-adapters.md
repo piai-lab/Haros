@@ -38,9 +38,10 @@ The central ownership rule is strict:
 > `ENGINE_DESCRIPTORS` is the sole owner of Engine identity, registration, display name, capability
 > projection, and Settings discovery.
 
-The current source-alpha edition derives ten Engine identities from that owner. The number and
-individual entries are edition facts, not a list this chapter should duplicate. Contributors read
-the descriptor source or a generated projection when an exact matrix is needed.
+The current source-alpha edition derives ten Engine identities from that owner: nine runnable
+Engines plus retired OA, which remains decodable for historical records and is not runnable.
+The number and individual entries are edition facts, not a list this chapter should duplicate.
+Contributors read the descriptor source or a generated projection when an exact matrix is needed.
 
 ![ENGINE_DESCRIPTORS fans out to the adapter registry, discovery, Settings, and the Engine selector as one canonical identity source.](../assets/generated/ch-39-primary.jpg)
 

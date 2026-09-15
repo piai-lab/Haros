@@ -208,7 +208,7 @@ export function RuntimeUsageControls({
   const { t } = useI18n();
   const executionCapabilitiesQuery = useQuery({
     ...engineExecutionCapabilitiesQueryOptions(
-      engineSelection ?? { engine: "oa", model: "default" },
+      engineSelection ?? { engine: "codex", model: "default" },
     ),
     enabled: engineSelection !== undefined,
   });

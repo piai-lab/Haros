@@ -7,12 +7,12 @@ import {
   HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
-  type OAModelServiceAuthEvent,
-  type OAModelServiceAuthPrompt,
-  type OAModelServiceAuthResult,
-  type OAModelServiceDescriptor,
-  type OAModelServiceOAuthPromptMode,
-  type OAModelServiceModel,
+  type HarosModelServiceAuthEvent,
+  type HarosModelServiceAuthPrompt,
+  type HarosModelServiceAuthResult,
+  type HarosModelServiceDescriptor,
+  type HarosModelServiceOAuthPromptMode,
+  type HarosModelServiceModel,
   type HarosCustomModelServiceApi,
   type HarosCustomModelServiceConfigInput,
   type HarosCustomModelServiceCredentialInput,
@@ -20,8 +20,10 @@ import {
   type HarosCustomModelHeaderMetadata,
   type HarosCustomModelHeaderMutation,
   type HarosCustomModelServiceModelInput,
+  type EngineKind,
   type EngineSelection,
 } from "@harnessos/contracts";
+import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import {
@@ -43,12 +45,13 @@ import {
   readNativeApiTransportState,
 } from "~/nativeApi";
 import {
-  cancelOAModelServicesAddIntentQueries,
-  oaModelServicesQueryKeys,
-  oaModelServiceDetailQueryOptions,
-  oaModelServicesListQueryOptions,
-} from "~/lib/oaModelServicesReactQuery";
+  cancelHarosModelServicesAddIntentQueries,
+  modelServicesQueryKeys,
+  modelServiceDetailQueryOptions,
+  modelServicesListQueryOptions,
+} from "~/lib/modelServicesReactQuery";
 import { engineDiscoveryQueryKeys } from "~/lib/engineDiscoveryReactQuery";
+import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";
 import { useStore } from "~/store";
@@ -75,6 +78,7 @@ import {
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
+import { Switch } from "../ui/switch";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ArrowLeftIcon, ChevronRightIcon, EyeIcon, PlusIcon } from "~/lib/icons";
@@ -93,10 +97,10 @@ interface ModelServiceAuthDialogState {
   readonly serviceId: string;
   readonly serviceName: string;
   readonly authType: "api_key" | "oauth";
-  readonly oauthPromptMode: OAModelServiceOAuthPromptMode | null;
+  readonly oauthPromptMode: HarosModelServiceOAuthPromptMode | null;
   readonly requestId?: string;
-  readonly prompt?: OAModelServiceAuthPrompt;
-  readonly events: ReadonlyArray<OAModelServiceAuthEvent>;
+  readonly prompt?: HarosModelServiceAuthPrompt;
+  readonly events: ReadonlyArray<HarosModelServiceAuthEvent>;
   readonly busy: boolean;
   readonly error: string | null;
   readonly value: string;
@@ -108,8 +112,8 @@ interface ModelServiceNotice {
 }
 
 export interface PreparedModelService {
-  readonly service: OAModelServiceDescriptor;
-  readonly models: ReadonlyArray<OAModelServiceModel>;
+  readonly service: HarosModelServiceDescriptor;
+  readonly models: ReadonlyArray<HarosModelServiceModel>;
 }
 
 interface CustomHeaderEditorEntry {
@@ -134,7 +138,7 @@ interface CustomModelServiceEditorState {
   readonly apiKey: string;
   readonly environmentVariableName: string;
   readonly credentialCommand: string;
-  readonly existingAuthSource: OAModelServiceDescriptor["authSource"];
+  readonly existingAuthSource: HarosModelServiceDescriptor["authSource"];
   readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
   readonly models: ReadonlyArray<CustomModelEditorModel>;
   readonly testedFingerprint: string | null;
@@ -392,15 +396,31 @@ function engineSelectionUsesCustomService(
   selection: EngineSelection | null | undefined,
   serviceId: string,
 ): boolean {
-  return selection?.engine === "oa" && selection.model.startsWith(`${serviceId}/`);
+  return (
+    selection !== null &&
+    selection !== undefined &&
+    engineOwnsProviderModelServices(selection.engine) &&
+    selection.model.startsWith(`${serviceId}/`)
+  );
+}
+
+function countEngineScopedCustomServiceReferences(
+  selections: Partial<Record<EngineKind, EngineSelection | null | undefined>>,
+  serviceId: string,
+): number {
+  return Object.values(selections).filter((selection) =>
+    engineSelectionUsesCustomService(selection, serviceId),
+  ).length;
 }
 
 function countCustomServiceReferences(serviceId: string): number {
   const composerState = useComposerDraftStore.getState();
   const appState = useStore.getState();
-  const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
-    engineSelectionUsesCustomService(draft.engineSelectionByEngine.oa, serviceId),
-  ).length;
+  const draftReferences = Object.values(composerState.draftsByThreadId).reduce(
+    (count, draft) =>
+      count + countEngineScopedCustomServiceReferences(draft.engineSelectionByEngine, serviceId),
+    0,
+  );
   const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(
     (count, draft) =>
       count +
@@ -409,12 +429,10 @@ function countCustomServiceReferences(serviceId: string): number {
       ).length,
     0,
   );
-  const stickyReference = engineSelectionUsesCustomService(
-    composerState.stickyEngineSelectionByEngine.oa,
+  const stickyReference = countEngineScopedCustomServiceReferences(
+    composerState.stickyEngineSelectionByEngine,
     serviceId,
-  )
-    ? 1
-    : 0;
+  );
   const projectReferences = appState.projects.filter((project) =>
     engineSelectionUsesCustomService(project.defaultEngineSelection, serviceId),
   ).length;
@@ -431,7 +449,7 @@ function countCustomServiceReferences(serviceId: string): number {
 }
 
 function customApiDeleteDescriptionKey(
-  service: OAModelServiceDescriptor | null,
+  service: HarosModelServiceDescriptor | null,
 ):
   | "settings.customApiDeleteDescriptionStored"
   | "settings.customApiDeleteDescriptionEnvironment"
@@ -785,7 +803,7 @@ const subscribeModelServicesTransport = (listener: () => void) =>
 const readModelServicesTransport = () => readNativeApiTransportState();
 const readServerModelServicesTransport = () => null;
 
-function authEventExternalUrl(event: OAModelServiceAuthEvent): string | null {
+function authEventExternalUrl(event: HarosModelServiceAuthEvent): string | null {
   return event.type === "auth_url"
     ? event.url
     : event.type === "device_code"
@@ -793,7 +811,7 @@ function authEventExternalUrl(event: OAModelServiceAuthEvent): string | null {
       : null;
 }
 
-function authEventExternalHost(event: OAModelServiceAuthEvent): string | null {
+function authEventExternalHost(event: HarosModelServiceAuthEvent): string | null {
   const url = authEventExternalUrl(event);
   return url ? new URL(url).hostname : null;
 }
@@ -849,6 +867,16 @@ function ActiveModelsSettingsPanel({
   const modelServiceApiKeyControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
   const customDiscoveryControllerRef = useRef<AbortController | null>(null);
+  const modelTrialControllerRef = useRef<AbortController | null>(null);
+  const [modelTrial, setModelTrial] = useState<{
+    modelId: string;
+    message: string;
+    reply: string;
+    api: string;
+    busy: boolean;
+    failed: boolean;
+  } | null>(null);
+  const [verifiedModels, setVerifiedModels] = useState<ReadonlySet<string>>(new Set());
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
@@ -884,10 +912,9 @@ function ActiveModelsSettingsPanel({
     "overview" | "browser"
   >("overview");
   const [authDialog, setAuthDialog] = useState<ModelServiceAuthDialogState | null>(null);
-  const [logoutService, setLogoutService] = useState<OAModelServiceDescriptor | null>(null);
-  const [removeCustomService, setRemoveCustomService] = useState<OAModelServiceDescriptor | null>(
-    null,
-  );
+  const [logoutService, setLogoutService] = useState<HarosModelServiceDescriptor | null>(null);
+  const [removeCustomService, setRemoveCustomService] =
+    useState<HarosModelServiceDescriptor | null>(null);
   const removeCustomServiceReferenceCount = removeCustomService
     ? countCustomServiceReferences(removeCustomService.serviceId)
     : 0;
@@ -930,18 +957,40 @@ function ActiveModelsSettingsPanel({
     withResolver: true,
   });
   const modelServicesQuery = useQuery(
-    oaModelServicesListQueryOptions({
+    modelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true,
     }),
   );
+  const modelServiceSettingsQuery = useQuery({
+    ...serverSettingsQueryOptions(),
+    enabled: active && modelServicesCapability === true,
+  });
+  const updateModelServicePreference = async (
+    serviceId: string,
+    field: "autoSync" | "added",
+    value: boolean,
+  ) => {
+    setModelServiceMutation(`preferences:${serviceId}`);
+    try {
+      const settings = await ensureNativeApi().server.updateSettings({
+        modelServices: { [field]: { [serviceId]: value } },
+      });
+      queryClient.setQueryData(serverQueryKeys.settings(), settings);
+      await queryClient.invalidateQueries({ queryKey: modelServicesQueryKeys.all });
+    } catch {
+      setModelServiceNotice({ tone: "error", text: t("settings.modelServicePreferenceFailed") });
+    } finally {
+      setModelServiceMutation(null);
+    }
+  };
   const addModelServicesQuery = useQuery(
-    oaModelServicesListQueryOptions({
+    modelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true && modelServiceBrowserOpen,
       intent: "add_service",
     }),
   );
   const modelServiceDetailQuery = useQuery(
-    oaModelServiceDetailQueryOptions({
+    modelServiceDetailQueryOptions({
       enabled: active && modelServicesCapability === true,
       serviceId: selectedModelServiceId,
       ...(modelServiceDetailReturnView === "browser" ? { intent: "add_service" as const } : {}),
@@ -950,26 +999,26 @@ function ActiveModelsSettingsPanel({
 
   useEffect(() => {
     if (active && modelServicesCapability === true && modelServiceBrowserOpen) return;
-    void cancelOAModelServicesAddIntentQueries(queryClient);
+    void cancelHarosModelServicesAddIntentQueries(queryClient);
   }, [active, modelServiceBrowserOpen, modelServicesCapability, queryClient]);
 
   useEffect(
     () => () => {
-      void cancelOAModelServicesAddIntentQueries(queryClient);
+      void cancelHarosModelServicesAddIntentQueries(queryClient);
     },
     [queryClient],
   );
 
   useEffect(() => {
     if (modelServiceDetailReturnView !== "browser" || selectedModelServiceId === null) return;
-    const queryKey = oaModelServicesQueryKeys.detail(selectedModelServiceId, "add_service");
+    const queryKey = modelServicesQueryKeys.detail(selectedModelServiceId, "add_service");
     return () => {
       void queryClient.cancelQueries({ queryKey, exact: true });
     };
   }, [modelServiceDetailReturnView, queryClient, selectedModelServiceId]);
   const finishSetupIfReady = useCallback(
     async (
-      service: OAModelServiceDescriptor | null | undefined,
+      service: HarosModelServiceDescriptor | null | undefined,
       completionController?: AbortController,
     ) => {
       const completionIsCurrent = () =>
@@ -988,7 +1037,7 @@ function ActiveModelsSettingsPanel({
       setupCompletionArmedRef.current = false;
       try {
         const detail = await queryClient.fetchQuery(
-          oaModelServiceDetailQueryOptions({
+          modelServiceDetailQueryOptions({
             enabled: true,
             serviceId: service.serviceId,
             intent: "add_service",
@@ -1009,7 +1058,7 @@ function ActiveModelsSettingsPanel({
           models: availableModels,
         });
         onSetupReady?.({
-          engine: "oa",
+          engine: "pi",
           model: `${service.serviceId}/${model.modelId}`,
         });
         return true;
@@ -1067,7 +1116,7 @@ function ActiveModelsSettingsPanel({
     authRequestIdRef.current = null;
     return requestId
       ? ensureNativeApi()
-          .oaModelServices.cancelLogin({ requestId })
+          .modelServices.cancelLogin({ requestId })
           .catch(() => null)
       : null;
   }, []);
@@ -1121,6 +1170,52 @@ function ActiveModelsSettingsPanel({
     setModelServiceNotice(null);
   });
   const selectedModelService = modelServiceDetailQuery.data?.service ?? null;
+  useEffect(() => {
+    setModelTrial(null);
+    setVerifiedModels(new Set());
+    return () => {
+      modelTrialControllerRef.current?.abort();
+      modelTrialControllerRef.current = null;
+    };
+  }, [selectedModelServiceId, active]);
+  const runModelTrial = async () => {
+    if (!modelTrial || !selectedModelService) return;
+    modelTrialControllerRef.current?.abort();
+    const controller = new AbortController();
+    modelTrialControllerRef.current = controller;
+    const trial = modelTrial;
+    const service = selectedModelService;
+    setModelTrial({ ...trial, busy: true, failed: false, reply: "" });
+    try {
+      const result = await ensureNativeApi().modelServices.testModel(
+        {
+          serviceId: service.serviceId,
+          modelId: trial.modelId,
+          message: trial.message,
+          ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+        },
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      if (result.state === "cancelled") {
+        setModelTrial({ ...trial, busy: false, failed: false, reply: "" });
+        return;
+      }
+      setModelTrial({
+        ...trial,
+        busy: false,
+        failed: result.state !== "success",
+        reply: result.text,
+        api: result.api,
+      });
+      if (result.state === "success")
+        setVerifiedModels(
+          (current) => new Set([...current, `${service.serviceId}\0${trial.modelId}`]),
+        );
+    } catch {
+      if (!controller.signal.aborted) setModelTrial({ ...trial, busy: false, failed: true });
+    }
+  };
   const selectedCustomConfig =
     modelServiceDetailQuery.data?.state === "ready"
       ? modelServiceDetailQuery.data.customConfig
@@ -1130,7 +1225,7 @@ function ActiveModelsSettingsPanel({
       ? modelServiceDetailQuery.data.models
       : undefined;
   const selectedModelServiceModelsKnown = projectedModelServiceModels !== undefined;
-  const selectedModelServiceModels: ReadonlyArray<OAModelServiceModel> =
+  const selectedModelServiceModels: ReadonlyArray<HarosModelServiceModel> =
     projectedModelServiceModels ?? [];
   const selectedModelServiceApiKeyMethod = selectedModelService?.authMethods.find(
     (method) => method.type === "api_key" && method.canLogin,
@@ -1160,7 +1255,7 @@ function ActiveModelsSettingsPanel({
   ]);
 
   const modelServiceInstanceLabel = useCallback(
-    (service: OAModelServiceDescriptor) =>
+    (service: HarosModelServiceDescriptor) =>
       (modelServiceDisplayNameCounts.get(service.displayName) ?? 0) > 1
         ? t("settings.modelServiceInstanceNamed", {
             name: service.displayName,
@@ -1171,7 +1266,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceAuthLabel = useCallback(
-    (service: OAModelServiceDescriptor) => {
+    (service: HarosModelServiceDescriptor) => {
       switch (service.authState) {
         case "configured":
           return t("settings.modelServiceConfigured");
@@ -1187,7 +1282,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceCatalogLabel = useCallback(
-    (service: OAModelServiceDescriptor) => {
+    (service: HarosModelServiceDescriptor) => {
       switch (service.catalogState) {
         case "stale":
           return t("settings.modelServiceCatalogStale");
@@ -1203,7 +1298,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceOriginLabel = useCallback(
-    (service: OAModelServiceDescriptor) => {
+    (service: HarosModelServiceDescriptor) => {
       switch (service.origin) {
         case "builtin":
           return t("settings.modelServiceOriginBuiltIn");
@@ -1219,7 +1314,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceCredentialSourceLabel = useCallback(
-    (service: OAModelServiceDescriptor) => {
+    (service: HarosModelServiceDescriptor) => {
       switch (service.authSource) {
         case "stored":
           return service.storedCredentialType === "oauth"
@@ -1251,23 +1346,26 @@ function ActiveModelsSettingsPanel({
   const invalidateModelServiceConsumers = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: oaModelServicesQueryKeys.all,
+        queryKey: modelServicesQueryKeys.all,
       }),
       queryClient.invalidateQueries({
-        queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
+        queryKey: engineDiscoveryQueryKeys.modelsForEngine("pi"),
       }),
     ]);
   }, [queryClient]);
 
   const refreshModelService = useCallback(
-    async (service: OAModelServiceDescriptor, options?: { readonly preserveNotice?: boolean }) => {
+    async (
+      service: HarosModelServiceDescriptor,
+      options?: { readonly preserveNotice?: boolean },
+    ) => {
       modelServiceRefreshControllerRef.current?.abort();
       const controller = new AbortController();
       modelServiceRefreshControllerRef.current = controller;
       setModelServiceMutation(`refresh:${service.serviceId}`);
       if (!options?.preserveNotice) setModelServiceNotice(null);
       try {
-        const result = await ensureNativeApi().oaModelServices.refresh(
+        const result = await ensureNativeApi().modelServices.refresh(
           {
             serviceId: service.serviceId,
             ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
@@ -1318,7 +1416,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const applyAuthResult = useCallback(
-    async (result: OAModelServiceAuthResult, authType: "api_key" | "oauth") => {
+    async (result: HarosModelServiceAuthResult, authType: "api_key" | "oauth") => {
       let authUrlOpenFailed = false;
       for (const event of result.events) {
         const externalUrl = authEventExternalUrl(event);
@@ -1451,7 +1549,7 @@ function ActiveModelsSettingsPanel({
 
   const consumeAuthResult = useCallback(
     async (
-      initialResult: OAModelServiceAuthResult,
+      initialResult: HarosModelServiceAuthResult,
       controller: AbortController,
       authType: "api_key" | "oauth",
     ) => {
@@ -1461,7 +1559,7 @@ function ActiveModelsSettingsPanel({
         !controller.signal.aborted
       ) {
         await applyAuthResult(result, authType);
-        result = await ensureNativeApi().oaModelServices.pollLogin(
+        result = await ensureNativeApi().modelServices.pollLogin(
           {
             requestId: result.requestId,
             afterEventCount: result.events.length,
@@ -1480,9 +1578,9 @@ function ActiveModelsSettingsPanel({
 
   const beginModelServiceLogin = useCallback(
     async (
-      service: OAModelServiceDescriptor,
+      service: HarosModelServiceDescriptor,
       authType: "api_key" | "oauth",
-      oauthPromptMode: OAModelServiceOAuthPromptMode = "provider_default",
+      oauthPromptMode: HarosModelServiceOAuthPromptMode = "provider_default",
     ) => {
       modelServiceApiKeyControllerRef.current?.abort();
       setRevealedModelServiceApiKey(null);
@@ -1503,7 +1601,7 @@ function ActiveModelsSettingsPanel({
         value: "",
       });
       try {
-        const result = await ensureNativeApi().oaModelServices.beginLogin(
+        const result = await ensureNativeApi().modelServices.beginLogin(
           authType === "oauth"
             ? {
                 serviceId: service.serviceId,
@@ -1548,7 +1646,7 @@ function ActiveModelsSettingsPanel({
     const value = current.value;
     setAuthDialog({ ...current, busy: true, error: null, value: "" });
     try {
-      const result = await ensureNativeApi().oaModelServices.answerLogin(
+      const result = await ensureNativeApi().modelServices.answerLogin(
         {
           requestId: current.requestId,
           promptId: current.prompt.promptId,
@@ -1587,7 +1685,7 @@ function ActiveModelsSettingsPanel({
   }, [applyAuthResult, authDialog?.authType, cancelCurrentAuthRequest]);
 
   const logoutModelService = useCallback(
-    async (requestedService?: OAModelServiceDescriptor) => {
+    async (requestedService?: HarosModelServiceDescriptor) => {
       const service = requestedService ?? logoutService;
       if (!service) return;
       const isOAuth = service.storedCredentialType === "oauth";
@@ -1599,7 +1697,7 @@ function ActiveModelsSettingsPanel({
       setModelServiceMutation(`logout:${service.serviceId}`);
       setModelServiceNotice(null);
       try {
-        const result = await ensureNativeApi().oaModelServices.logout({
+        const result = await ensureNativeApi().modelServices.logout({
           serviceId: service.serviceId,
           ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
         });
@@ -1635,7 +1733,7 @@ function ActiveModelsSettingsPanel({
 
   const readStoredModelServiceApiKey = useCallback(
     async (
-      service: OAModelServiceDescriptor,
+      service: HarosModelServiceDescriptor,
       intent: "reveal" | "copy",
     ): Promise<string | null> => {
       modelServiceApiKeyControllerRef.current?.abort();
@@ -1644,7 +1742,7 @@ function ActiveModelsSettingsPanel({
       setModelServiceApiKeyAccess(intent);
       setModelServiceApiKeyError(null);
       try {
-        const result = await ensureNativeApi().oaModelServices.revealApiKey(
+        const result = await ensureNativeApi().modelServices.revealApiKey(
           { serviceId: service.serviceId },
           { signal: controller.signal },
         );
@@ -1801,7 +1899,7 @@ function ActiveModelsSettingsPanel({
     setCustomServiceEditor({ ...editor, testState: "testing" });
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().oaModelServices.testCustom(
+      const result = await ensureNativeApi().modelServices.testCustom(
         {
           config: customModelServiceConfig(editor),
           credential,
@@ -1809,6 +1907,15 @@ function ActiveModelsSettingsPanel({
         },
         { signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
+      if (result.state === "cancelled") {
+        setCustomServiceEditor((current) =>
+          current && customModelServiceFingerprint(current) === fingerprint
+            ? { ...current, testState: "idle", testedFingerprint: null }
+            : current,
+        );
+        return;
+      }
       if (result.state === "success") {
         setCustomServiceEditor((current) =>
           current && customModelServiceFingerprint(current) === fingerprint
@@ -1876,7 +1983,7 @@ function ActiveModelsSettingsPanel({
     });
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().oaModelServices.discoverCustom(
+      const result = await ensureNativeApi().modelServices.discoverCustom(
         {
           config: customModelServiceDiscoveryConfig(editor),
           credential,
@@ -1967,7 +2074,7 @@ function ActiveModelsSettingsPanel({
     setModelServiceMutation("custom:save");
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().oaModelServices.saveCustom({
+      const result = await ensureNativeApi().modelServices.saveCustom({
         config: customModelServiceConfig(editor),
         credential,
       });
@@ -2094,7 +2201,7 @@ function ActiveModelsSettingsPanel({
     setModelServiceMutation(`custom:remove:${service.serviceId}`);
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().oaModelServices.removeCustom({
+      const result = await ensureNativeApi().modelServices.removeCustom({
         serviceId: service.serviceId,
       });
       if (result.state === "blocked_active_operation") {
@@ -2140,7 +2247,12 @@ function ActiveModelsSettingsPanel({
     addModelServicesQuery.data?.services,
     modelServicesQuery.data?.connectableServices,
   ]);
-  const configuredModelServices = modelServicesQuery.data?.services ?? [];
+  const configuredModelServices = (modelServicesQuery.data?.services ?? []).toSorted(
+    (left, right) => Number(right.serviceId === "deepseek") - Number(left.serviceId === "deepseek"),
+  );
+  const quickDeepSeek = connectableModelServices.find(
+    (service) => service.serviceId === "deepseek",
+  );
   const customApiCapability =
     modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty"
       ? modelServicesQuery.data.customApiConfiguration
@@ -2187,7 +2299,7 @@ function ActiveModelsSettingsPanel({
     [otherConnectableModelServices, preferredConnectableModelServices],
   );
   const modelServiceAuthMethodsLabel = useCallback(
-    (service: OAModelServiceDescriptor) => {
+    (service: HarosModelServiceDescriptor) => {
       const labels = [
         ...new Set(
           service.authMethods
@@ -2215,7 +2327,7 @@ function ActiveModelsSettingsPanel({
   }, [locale, modelServiceModelSearch, selectedModelServiceModels]);
 
   const modelContextLabel = useCallback(
-    (model: OAModelServiceModel) =>
+    (model: HarosModelServiceModel) =>
       t("settings.modelServiceContextWindow", {
         count: new Intl.NumberFormat(locale, {
           notation: "compact",
@@ -2390,9 +2502,9 @@ function ActiveModelsSettingsPanel({
                   </Button>
                 </div>
               </SettingsEmptyState>
-            ) : modelServicesQuery.data?.services.length ? (
+            ) : configuredModelServices.length ? (
               <SettingsCard>
-                {modelServicesQuery.data.services.map((service) => {
+                {configuredModelServices.map((service) => {
                   const detailOpen = selectedModelServiceId === service.serviceId;
                   const instanceLabel = modelServiceInstanceLabel(service);
                   return (
@@ -2449,6 +2561,18 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState>
                 <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
                 <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
+                {quickDeepSeek ? (
+                  <Button
+                    className="mt-4 mr-2"
+                    onClick={() => {
+                      openModelServiceDetails(quickDeepSeek.serviceId, "browser");
+                      void beginModelServiceLogin(quickDeepSeek, "api_key");
+                    }}
+                  >
+                    <ModelServiceIcon serviceId="deepseek" origin="builtin" className="size-4" />
+                    {t("settings.addDeepSeek")}
+                  </Button>
+                ) : null}
                 {canAddModelService ? (
                   <Button
                     ref={addModelServiceButtonRef}
@@ -2493,7 +2617,10 @@ function ActiveModelsSettingsPanel({
             >
               <div>
                 <p className="mb-3 text-sm text-muted-foreground">
-                  {t("settings.chooseModelServiceDescription")}
+                  {t("settings.chooseModelServiceDescription")}{" "}
+                  {t("settings.modelServiceDirectoryCount", {
+                    count: connectableModelServices.length,
+                  })}
                 </p>
                 <SearchInput
                   ref={modelServiceSearchInputRef}
@@ -2549,10 +2676,10 @@ function ActiveModelsSettingsPanel({
                   <div>
                     <div className="mb-2 flex items-center justify-between px-0.5 text-[11px] text-muted-foreground">
                       <strong className="font-semibold text-foreground/70">
-                        {t("onboarding.firstRun.servicesAvailable")}
+                        {t("settings.modelServicesAvailable")}
                       </strong>
                       <span>
-                        {t("onboarding.firstRun.serviceCount", {
+                        {t("settings.modelServiceCount", {
                           count: filteredConnectableModelServices.length,
                         })}
                       </span>
@@ -2593,6 +2720,11 @@ function ActiveModelsSettingsPanel({
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
                                 {instanceLabel}
+                                {service.serviceId === "deepseek" ? (
+                                  <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                                    {t("settings.modelServiceCommon")}
+                                  </span>
+                                ) : null}
                               </span>
                               <span className="mt-0.5 block truncate text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground">
                                 {modelServiceAuthMethodsLabel(service)}
@@ -3998,6 +4130,31 @@ function ActiveModelsSettingsPanel({
                   </div>
                 ) : null}
                 <SettingsCard>
+                  {selectedModelService.authState === "configured" &&
+                  selectedModelService.storedCredentialType === null &&
+                  !configuredModelServices.some(
+                    (service) => service.serviceId === selectedModelService.serviceId,
+                  ) ? (
+                    <SettingsListRow
+                      title={t("settings.modelServiceDetectedCredentials")}
+                      description={modelServiceCredentialSourceLabel(selectedModelService)}
+                      actions={
+                        <Button
+                          size="sm"
+                          disabled={modelServiceMutation !== null}
+                          onClick={() =>
+                            void updateModelServicePreference(
+                              selectedModelService.serviceId,
+                              "added",
+                              true,
+                            )
+                          }
+                        >
+                          {t("settings.modelServiceUseDetected")}
+                        </Button>
+                      }
+                    />
+                  ) : null}
                   <SettingsListRow
                     title={t("settings.modelServiceAuthentication")}
                     description={modelServiceAuthLabel(selectedModelService)}
@@ -4153,6 +4310,34 @@ function ActiveModelsSettingsPanel({
                       </div>
                     }
                   />
+                  {selectedModelService.supportsNetworkRefresh &&
+                  selectedModelService.origin === "builtin" &&
+                  selectedModelService.authState === "configured" ? (
+                    <SettingsListRow
+                      title={t("settings.modelServiceAutoSync")}
+                      description={t("settings.modelServiceAutoSyncDescription")}
+                      actions={
+                        <Switch
+                          aria-label={t("settings.modelServiceAutoSync")}
+                          checked={
+                            modelServiceSettingsQuery.data?.modelServices?.autoSync[
+                              selectedModelService.serviceId
+                            ] !== false
+                          }
+                          disabled={
+                            modelServiceMutation !== null || !modelServiceSettingsQuery.data
+                          }
+                          onCheckedChange={(value) =>
+                            void updateModelServicePreference(
+                              selectedModelService.serviceId,
+                              "autoSync",
+                              value,
+                            )
+                          }
+                        />
+                      }
+                    />
+                  ) : null}
                   <SettingsListRow
                     title={t("settings.modelServiceSource")}
                     description={modelServiceOriginLabel(selectedModelService)}
@@ -4214,6 +4399,12 @@ function ActiveModelsSettingsPanel({
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-foreground">
                               {model.displayName}
+                              {model.discoveredAt &&
+                              Date.now() - model.discoveredAt < 7 * 24 * 60 * 60 * 1_000 ? (
+                                <span className="ml-2 rounded border border-border px-1.5 text-[10px] font-normal">
+                                  {t("settings.modelServiceNewModel")}
+                                </span>
+                              ) : null}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-muted-foreground">
                               {model.modelId}
@@ -4227,7 +4418,11 @@ function ActiveModelsSettingsPanel({
                               )}
                             >
                               {model.available
-                                ? t("settings.modelServiceModelAvailable")
+                                ? verifiedModels.has(
+                                    `${selectedModelService.serviceId}\0${model.modelId}`,
+                                  )
+                                  ? t("settings.modelServiceChatVerified")
+                                  : t("settings.modelServiceNotVerified")
                                 : t("settings.modelServiceModelNeedsAuth")}
                             </span>
                             {model.reasoning ? (
@@ -4240,6 +4435,27 @@ function ActiveModelsSettingsPanel({
                               <span>{modelContextLabel(model)}</span>
                             ) : null}
                           </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!model.available || modelServiceMutation !== null}
+                            aria-label={t("settings.modelServiceTryNamed", {
+                              name: model.displayName,
+                            })}
+                            onClick={() => {
+                              modelTrialControllerRef.current?.abort();
+                              setModelTrial({
+                                modelId: model.modelId,
+                                message: t("settings.modelServiceTrialPrompt"),
+                                reply: "",
+                                api: "",
+                                busy: false,
+                                failed: false,
+                              });
+                            }}
+                          >
+                            {t("settings.modelServiceTry")}
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -4259,6 +4475,67 @@ function ActiveModelsSettingsPanel({
         </div>
       ) : null}
 
+      <Dialog
+        open={modelTrial !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            modelTrialControllerRef.current?.abort();
+            setModelTrial(null);
+          }
+        }}
+      >
+        <DialogPopup>
+          <DialogHeader>
+            <DialogTitle>
+              {t("settings.modelServiceTry")} · {modelTrial?.modelId}
+            </DialogTitle>
+            <DialogDescription>{t("settings.modelServiceTrialDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogPanel className="space-y-3">
+            <label className="block space-y-2 text-sm">
+              <span>{t("settings.modelServiceTrialMessage")}</span>
+              <Textarea
+                autoFocus
+                value={modelTrial?.message ?? ""}
+                disabled={modelTrial?.busy}
+                maxLength={2_000}
+                onChange={(event) =>
+                  setModelTrial((current) =>
+                    current ? { ...current, message: event.target.value } : current,
+                  )
+                }
+              />
+            </label>
+            <p className="text-xs text-muted-foreground">
+              {t("settings.modelServiceAutomaticProtocol")}
+              {modelTrial?.api ? ` · ${modelTrial.api}` : ""}
+            </p>
+            {modelTrial?.failed ? (
+              <p role="alert" className="text-sm text-destructive">
+                {t("settings.modelServiceTrialFailed")}
+              </p>
+            ) : null}
+            {modelTrial?.reply ? (
+              <p
+                role="status"
+                className="whitespace-pre-wrap break-words rounded-lg border border-border p-3 text-sm"
+              >
+                {modelTrial.reply}
+              </p>
+            ) : null}
+          </DialogPanel>
+          <DialogFooter>
+            <Button
+              disabled={modelTrial?.busy || !modelTrial?.message.trim()}
+              onClick={() => void runModelTrial()}
+            >
+              {modelTrial?.busy
+                ? t("settings.modelServiceTrialRunning")
+                : t("settings.modelServiceTrialSend")}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
       <Dialog
         open={authDialog !== null}
         onOpenChange={(open) => {

@@ -18,6 +18,7 @@ import {
   normalizeAntigravityModelOptions,
   normalizeClaudeModelOptions,
   normalizeCursorModelOptions,
+  normalizeDeepSeekModelOptions,
   normalizeOpenCodeModelOptions,
   normalizePiModelOptions,
   resolveLabeledOptionValue,
@@ -201,11 +202,16 @@ function getEngineStateFromCapabilities(input: ComposerEngineStateInput): Compos
       normalizedOptions = normalizeOpenCodeModelOptions(engineOptions);
       break;
     }
-    case "oa":
     case "pi": {
-      const engineOptions = engine === "oa" ? modelOptions?.oa : modelOptions?.pi;
+      const engineOptions = modelOptions?.pi;
       rawEffort = trimOrNull(engineOptions?.thinkingLevel);
       normalizedOptions = normalizePiModelOptions(engineOptions);
+      break;
+    }
+    case "deepseek": {
+      const engineOptions = modelOptions?.deepseek;
+      rawEffort = trimOrNull(engineOptions?.reasoningEffort);
+      normalizedOptions = normalizeDeepSeekModelOptions(model, engineOptions);
       break;
     }
     default:

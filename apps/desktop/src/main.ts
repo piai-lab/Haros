@@ -3716,6 +3716,7 @@ function backendEnv(): NodeJS.ProcessEnv {
     HARNESSOS_NO_BROWSER: "1",
     HARNESSOS_PORT: String(backendPort),
     HARNESSOS_HOME: BASE_DIR,
+    ...(app.isPackaged ? { HARNESSOS_APP_VERSION: app.getVersion() } : {}),
     HARNESSOS_AUTH_TOKEN: backendAuthToken,
     HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
     NODE_PATH: process.env.NODE_PATH

@@ -5,14 +5,15 @@
 import "../../index.css";
 
 import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
   ThreadId,
   type NativeApi,
   type EngineSelection,
   type HarosCustomModelServiceModelInput,
-  type OAModelServiceAuthResult,
-  type OAModelServiceDescriptor,
-  type OAModelServicesGetResult,
-  type OAModelServicesListResult,
+  type HarosModelServiceAuthResult,
+  type HarosModelServiceDescriptor,
+  type HarosModelServicesGetResult,
+  type HarosModelServicesListResult,
 } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -62,7 +63,7 @@ import { ModelsSettingsPanel, type PreparedModelService } from "./ModelsSettings
 
 const checkedAt = "2026-08-12T00:00:00.000Z";
 type ServiceOverrides = Omit<
-  Partial<OAModelServiceDescriptor>,
+  Partial<HarosModelServiceDescriptor>,
   "catalogState" | "catalogErrorCode"
 > &
   (
@@ -73,9 +74,9 @@ type ServiceOverrides = Omit<
       }
   );
 
-function service(overrides: ServiceOverrides = {}): OAModelServiceDescriptor {
+function service(overrides: ServiceOverrides = {}): HarosModelServiceDescriptor {
   const { catalogState = "ready", catalogErrorCode: _catalogErrorCode, ...rest } = overrides;
-  const base: Omit<OAModelServiceDescriptor, "catalogState" | "catalogErrorCode"> = {
+  const base: Omit<HarosModelServiceDescriptor, "catalogState" | "catalogErrorCode"> = {
     serviceId: "deepseek",
     providerId: "deepseek",
     displayName: "DeepSeek",
@@ -100,23 +101,24 @@ function setNativeApi(input: {
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OAModelServicesListResult>;
+  ) => Promise<HarosModelServicesListResult>;
   readonly get?: (
     input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OAModelServicesGetResult>;
+  ) => Promise<HarosModelServicesGetResult>;
   readonly supported?: boolean;
-  readonly beginLogin?: NativeApi["oaModelServices"]["beginLogin"];
-  readonly pollLogin?: NativeApi["oaModelServices"]["pollLogin"];
-  readonly answerLogin?: NativeApi["oaModelServices"]["answerLogin"];
-  readonly cancelLogin?: NativeApi["oaModelServices"]["cancelLogin"];
-  readonly logout?: NativeApi["oaModelServices"]["logout"];
-  readonly revealApiKey?: NativeApi["oaModelServices"]["revealApiKey"];
-  readonly refresh?: NativeApi["oaModelServices"]["refresh"];
-  readonly discoverCustom?: NativeApi["oaModelServices"]["discoverCustom"];
-  readonly testCustom?: NativeApi["oaModelServices"]["testCustom"];
-  readonly saveCustom?: NativeApi["oaModelServices"]["saveCustom"];
-  readonly removeCustom?: NativeApi["oaModelServices"]["removeCustom"];
+  readonly beginLogin?: NativeApi["modelServices"]["beginLogin"];
+  readonly pollLogin?: NativeApi["modelServices"]["pollLogin"];
+  readonly answerLogin?: NativeApi["modelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["modelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["modelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["modelServices"]["revealApiKey"];
+  readonly refresh?: NativeApi["modelServices"]["refresh"];
+  readonly testModel?: NativeApi["modelServices"]["testModel"];
+  readonly discoverCustom?: NativeApi["modelServices"]["discoverCustom"];
+  readonly testCustom?: NativeApi["modelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["modelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["modelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const getConfig = vi.fn().mockResolvedValue(createBrowserTestServerConfig(checkedAt));
@@ -155,6 +157,11 @@ function setNativeApi(input: {
   const refresh = vi.fn(
     input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
   );
+  const testModel = vi.fn(
+    input.testModel ??
+      (async () => ({ state: "success", text: "ready", api: "openai-completions" }) as const),
+  );
+  const getSettings = vi.fn(async () => DEFAULT_SERVER_SETTINGS_VIEW);
   const discoverCustom = vi.fn(
     input.discoverCustom ??
       (async () =>
@@ -192,12 +199,12 @@ function setNativeApi(input: {
   );
   const openExternal = vi.fn(input.openExternal ?? (async () => {}));
   window.nativeApi = {
-    server: { getConfig },
+    server: { getConfig, getSettings, updateSettings: getSettings },
     shell: { openExternal },
     ...(input.supported === false
       ? {}
       : {
-          oaModelServices: {
+          modelServices: {
             list,
             get,
             beginLogin,
@@ -207,6 +214,7 @@ function setNativeApi(input: {
             logout,
             revealApiKey,
             refresh,
+            testModel,
             discoverCustom,
             testCustom,
             saveCustom,
@@ -225,6 +233,7 @@ function setNativeApi(input: {
     logout,
     revealApiKey,
     refresh,
+    testModel,
     discoverCustom,
     testCustom,
     saveCustom,
@@ -242,24 +251,25 @@ async function renderPanel(input: {
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OAModelServicesListResult>;
+  ) => Promise<HarosModelServicesListResult>;
   readonly get?: (
     input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OAModelServicesGetResult>;
+  ) => Promise<HarosModelServicesGetResult>;
   readonly primeServerConfig?: boolean;
   readonly supported?: boolean;
-  readonly beginLogin?: NativeApi["oaModelServices"]["beginLogin"];
-  readonly pollLogin?: NativeApi["oaModelServices"]["pollLogin"];
-  readonly answerLogin?: NativeApi["oaModelServices"]["answerLogin"];
-  readonly cancelLogin?: NativeApi["oaModelServices"]["cancelLogin"];
-  readonly logout?: NativeApi["oaModelServices"]["logout"];
-  readonly revealApiKey?: NativeApi["oaModelServices"]["revealApiKey"];
-  readonly refresh?: NativeApi["oaModelServices"]["refresh"];
-  readonly discoverCustom?: NativeApi["oaModelServices"]["discoverCustom"];
-  readonly testCustom?: NativeApi["oaModelServices"]["testCustom"];
-  readonly saveCustom?: NativeApi["oaModelServices"]["saveCustom"];
-  readonly removeCustom?: NativeApi["oaModelServices"]["removeCustom"];
+  readonly beginLogin?: NativeApi["modelServices"]["beginLogin"];
+  readonly pollLogin?: NativeApi["modelServices"]["pollLogin"];
+  readonly answerLogin?: NativeApi["modelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["modelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["modelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["modelServices"]["revealApiKey"];
+  readonly refresh?: NativeApi["modelServices"]["refresh"];
+  readonly testModel?: NativeApi["modelServices"]["testModel"];
+  readonly discoverCustom?: NativeApi["modelServices"]["discoverCustom"];
+  readonly testCustom?: NativeApi["modelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["modelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["modelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const calls = setNativeApi(input);
@@ -527,7 +537,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      engine: "oa",
+      engine: "pi",
       model: "deepseek/deepseek-v4-flash",
     });
     expect(mounted.calls.list).toHaveBeenCalledWith(
@@ -624,7 +634,7 @@ describe("ModelsSettingsPanel model services", () => {
 
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      engine: "oa",
+      engine: "pi",
       model: "saved-custom/custom-model",
     });
     expect(transportDetailAttempts).toBe(2);
@@ -657,8 +667,8 @@ describe("ModelsSettingsPanel model services", () => {
   });
 
   it("keeps the first load distinct from an empty service list", async () => {
-    let resolveList!: (value: OAModelServicesListResult) => void;
-    const pendingList = new Promise<OAModelServicesListResult>((resolve) => {
+    let resolveList!: (value: HarosModelServicesListResult) => void;
+    const pendingList = new Promise<HarosModelServicesListResult>((resolve) => {
       resolveList = resolve;
     });
     const mounted = await renderPanel({ list: () => pendingList });
@@ -724,7 +734,10 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
-    expect(document.body.textContent).not.toContain("DeepSeek");
+    expect(document.body.textContent).toContain("settings.addDeepSeek");
+    expect(document.body.textContent).not.toContain(
+      'settings.viewDetailsNamed:{"name":"DeepSeek"}',
+    );
     await openConnectableService(mounted.screen, "DeepSeek");
     await expect
       .poll(() => mounted.calls.get)
@@ -769,7 +782,7 @@ describe("ModelsSettingsPanel model services", () => {
       catalogErrorCode: null,
     });
     const list = vi.fn(
-      async (input: { intent?: "add_service" } = {}): Promise<OAModelServicesListResult> =>
+      async (input: { intent?: "add_service" } = {}): Promise<HarosModelServicesListResult> =>
         input.intent === "add_service"
           ? {
               state: "empty" as const,
@@ -1063,7 +1076,7 @@ describe("ModelsSettingsPanel model services", () => {
       '[data-model-service-results="first-run-grid"]',
     )!;
     expect(firstRunGrid.querySelectorAll("button")).toHaveLength(8);
-    expect(document.body.textContent).toContain('onboarding.firstRun.serviceCount:{"count":8}');
+    expect(document.body.textContent).toContain('settings.modelServiceCount:{"count":8}');
     expect(firstRunGrid.scrollHeight).toBeGreaterThan(firstRunGrid.clientHeight);
     firstRunGrid.scrollTop = firstRunGrid.scrollHeight;
     firstRunGrid.dispatchEvent(new Event("scroll"));
@@ -2063,18 +2076,18 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceDetailsNamed");
     const referencedSelection = {
-      engine: "oa" as const,
+      engine: "pi" as const,
       model: "saved-custom/saved-model",
     };
     useComposerDraftStore.setState((state) => ({
       stickyEngineSelectionByEngine: {
         ...state.stickyEngineSelectionByEngine,
-        oa: referencedSelection,
+        pi: referencedSelection,
       },
     }));
     useComposerDraftStore.getState().enqueueQueuedTurn(ThreadId.makeUnsafe("queued-reference"), {
       ...makeQueuedChatTurn("queued-custom-service"),
-      selectedEngine: "oa",
+      selectedEngine: "pi",
       selectedModel: referencedSelection.model,
       engineSelection: referencedSelection,
     });
@@ -2096,7 +2109,7 @@ describe("ModelsSettingsPanel model services", () => {
       .click();
     await expect.poll(() => removeCustom).toHaveBeenCalledTimes(2);
     expect(removeCustom).toHaveBeenLastCalledWith({ serviceId: "saved-custom" });
-    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.oa).toEqual(
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.pi).toEqual(
       referencedSelection,
     );
 
@@ -2109,7 +2122,7 @@ describe("ModelsSettingsPanel model services", () => {
     const mounted = await renderPanel({
       list: (_input, options) => {
         observedSignal = options?.signal;
-        return new Promise<OAModelServicesListResult>(() => undefined);
+        return new Promise<HarosModelServicesListResult>(() => undefined);
       },
     });
 
@@ -2337,11 +2350,11 @@ describe("ModelsSettingsPanel model services", () => {
       return { state: "complete" as const, requestId, service: configuredService, events: [] };
     });
     let finishRefresh!: (
-      result: Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>,
+      result: Awaited<ReturnType<NativeApi["modelServices"]["refresh"]>>,
     ) => void;
     const refresh = vi.fn(
       () =>
-        new Promise<Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>>((resolve) => {
+        new Promise<Awaited<ReturnType<NativeApi["modelServices"]["refresh"]>>>((resolve) => {
           finishRefresh = resolve;
         }),
     );
@@ -2489,7 +2502,7 @@ describe("ModelsSettingsPanel model services", () => {
         await expect
           .poll(() => onSetupReady)
           .toHaveBeenCalledWith({
-            engine: "oa",
+            engine: "pi",
             model: "deepseek/deepseek-v4-flash",
           });
       } else {
@@ -2516,9 +2529,9 @@ describe("ModelsSettingsPanel model services", () => {
     const onSetupReady = vi.fn();
     let refreshSignal: AbortSignal | undefined;
     let finishRefresh!: (
-      result: Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>,
+      result: Awaited<ReturnType<NativeApi["modelServices"]["refresh"]>>,
     ) => void;
-    const refresh: NativeApi["oaModelServices"]["refresh"] = (_input, options) => {
+    const refresh: NativeApi["modelServices"]["refresh"] = (_input, options) => {
       refreshSignal = options?.signal;
       return new Promise((resolve) => {
         finishRefresh = resolve;
@@ -2976,8 +2989,8 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["modelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["modelServices"]["pollLogin"]>[1],
       ) =>
         new Promise<never>((_resolve, reject) => {
           const signal = options?.signal;
@@ -3051,8 +3064,8 @@ describe("ModelsSettingsPanel model services", () => {
     let pollCount = 0;
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["modelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["modelServices"]["pollLogin"]>[1],
       ) => {
         pollCount += 1;
         if (pollCount === 1) {
@@ -3161,10 +3174,10 @@ describe("ModelsSettingsPanel model services", () => {
     const requestId = "00000000-0000-4000-8000-000000000035";
     const promptId = "00000000-0000-4000-8000-000000000036";
     const authUrl = "https://auth.example.test/oauth/authorize?opaque=redacted";
-    let finishBrowserLogin!: (result: OAModelServiceAuthResult) => void;
+    let finishBrowserLogin!: (result: HarosModelServiceAuthResult) => void;
     const pollLogin = vi.fn(
       () =>
-        new Promise<OAModelServiceAuthResult>((resolve) => {
+        new Promise<HarosModelServiceAuthResult>((resolve) => {
           finishBrowserLogin = resolve;
         }),
     );
@@ -3271,8 +3284,8 @@ describe("ModelsSettingsPanel model services", () => {
       });
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["modelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["modelServices"]["pollLogin"]>[1],
       ) =>
         new Promise<never>((_resolve, reject) => {
           const signal = options?.signal;
@@ -3445,8 +3458,8 @@ describe("ModelsSettingsPanel model services", () => {
     let observedSignal: AbortSignal | undefined;
     const revealApiKey = vi.fn(
       (
-        _input: Parameters<NativeApi["oaModelServices"]["revealApiKey"]>[0],
-        options?: Parameters<NativeApi["oaModelServices"]["revealApiKey"]>[1],
+        _input: Parameters<NativeApi["modelServices"]["revealApiKey"]>[0],
+        options?: Parameters<NativeApi["modelServices"]["revealApiKey"]>[1],
       ) => {
         revealAttempt += 1;
         if (revealAttempt > 1) {

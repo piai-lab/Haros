@@ -11,14 +11,12 @@ export const PACKAGED_WORKSPACE_MANIFEST_PATHS = [
   // Keep the Ask fork importer available while Bun reconstructs the frozen
   // workspace. Server tsdown owns the shipped runtime bytes via noExternal.
   "packages/oa-ask/package.json",
-  "packages/oa-web-access/package.json",
   "packages/shared/package.json",
   "scripts/package.json",
 ] as const;
 
 export const PACKAGED_LOCKFILE_PATH = "bun.lock";
 export const PACKAGED_PATCHES_PATH = "patches";
-export const HARNESSOS_OA_RUNTIME_PACKAGE_PATH = "vendor/oa-runtime-0.84.4.tgz";
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
   {
@@ -26,12 +24,6 @@ export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
     manifestPath: "packages/oa-ask/package.json",
     runtimePath: "apps/server/dist/index.mjs",
     includeInLegalClosure: true,
-  },
-  {
-    name: "@harnessos/oa-web-access",
-    manifestPath: "packages/oa-web-access/package.json",
-    runtimePath: "apps/server/dist/index.mjs",
-    includeInLegalClosure: false,
   },
 ] as const;
 

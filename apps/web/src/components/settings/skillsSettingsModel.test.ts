@@ -124,8 +124,8 @@ describe("Settings skill Engine projection", () => {
     for (const engine of ENGINE_KINDS) {
       const origin = engine === "claude" ? "claude" : engine;
       const info = skillOriginInfo(origin);
-      if (engine === "oa") {
-        expect(info).toEqual({ label: "Haros", engine: null });
+      if (engine === "pi") {
+        expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[engine], engine });
       } else {
         expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[engine], engine });
       }

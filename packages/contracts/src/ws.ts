@@ -1,9 +1,23 @@
-import { Schema, Struct } from "effect";
-import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
-
 import {
-  AutomationCancelRunInput,
+  HarosCustomModelServiceRemoveInput,
+  HarosCustomModelServiceDiscoverInput,
+  HarosCustomModelServiceSaveInput,
+  HarosCustomModelServiceTestInput,
+  HarosModelServiceAnswerLoginInput,
+  HarosModelServiceBeginLoginInput,
+  HarosModelServiceCancelLoginInput,
+  HarosModelServicePollLoginInput,
+  HarosModelServiceLogoutInput,
+  HarosModelServiceRevealApiKeyInput,
+  HarosModelServiceRefreshInput,
+  HarosModelServiceTestInput,
+  HarosModelServicesGetInput,
+  HarosModelServicesListInput,
+} from "./modelServices";
+import { Schema, Struct } from "effect";
+import {
   AutomationArchiveRunInput,
+  AutomationCancelRunInput,
   AutomationCreateInput,
   AutomationDeleteInput,
   AutomationGetMemoryInput,
@@ -14,44 +28,67 @@ import {
   AutomationStreamEvent,
   AutomationUpdateInput,
 } from "./automation";
+import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 import {
-  ClientOrchestrationCommand,
-  OrchestrationEvent,
-  OrchestrationImportThreadInput,
-  OrchestrationShellStreamItem,
-  OrchestrationSubscribeShellInput,
-  OrchestrationSubscribeThreadInput,
-  OrchestrationThreadStreamItem,
-  OrchestrationUnsubscribeShellInput,
-  OrchestrationUnsubscribeThreadInput,
-  ORCHESTRATION_WS_CHANNELS,
-  OrchestrationGetFullThreadDiffInput,
-  OrchestrationGetThreadDetailSnapshotInput,
-  OrchestrationUpdatePendingUserInputDraftInput,
-  OrchestrationGetShellSnapshotInput,
-  OrchestrationRepairStateInput,
-  ORCHESTRATION_WS_METHODS,
-  OrchestrationGetSnapshotInput,
-  OrchestrationGetTurnDiffInput,
-  OrchestrationReplayEventsInput,
-} from "./orchestration";
+  DEVICE_WS_CHANNELS,
+  DEVICE_WS_METHODS,
+  DeviceAttachInput,
+  DeviceBootInput,
+  DeviceDescribeUiInput,
+  DeviceDetachInput,
+  DeviceEvent,
+  DeviceInstallAppInput,
+  DeviceKeyEventInput,
+  DeviceLaunchAppInput,
+  DeviceListInput,
+  DeviceOpenUrlInput,
+  DevicePressButtonInput,
+  DeviceScreenshotInput,
+  DeviceScrollToElementInput,
+  DeviceShutdownInput,
+  DeviceStartRecordingInput,
+  DeviceStopRecordingInput,
+  DeviceSwipeInput,
+  DeviceTapInput,
+  DeviceThreadInput,
+  DeviceTypeTextInput,
+} from "./device";
+import { OpenInEditorInput } from "./editor";
+import { EngineCompactThreadInput } from "./engine";
+import {
+  EngineGetComposerCapabilitiesInput,
+  EngineListAgentsInput,
+  EngineListCommandsInput,
+  EngineListModelsInput,
+  EngineListPluginsInput,
+  EngineListSkillsInput,
+  EngineReadPluginInput,
+  EngineSkillsCatalogInput,
+} from "./engineDiscovery";
+import { EngineExecutionCapabilitiesInput } from "./engineExecution";
+import {
+  ExternalMcpCreateIntegrationInput,
+  ExternalMcpRefreshPairingInput,
+  ExternalMcpRevokeIntegrationInput,
+} from "./externalMcp";
+import { FilesystemBrowseInput } from "./filesystem";
 import {
   GitActionProgressEvent,
   GitCheckoutInput,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
-  GitHubRepositoryInput,
-  GitHandoffThreadInput,
-  GitPreparePullRequestThreadInput,
   GitCreateWorktreeInput,
+  GitHandoffThreadInput,
+  GitHubRepositoryInput,
   GitInitInput,
   GitListBranchesInput,
+  GitPreparePullRequestThreadInput,
   GitPullInput,
   GitPullRequestRefInput,
   GitPullRequestSnapshotInput,
   GitReadWorkingTreeDiffInput,
-  GitRemoveWorktreeInput,
   GitRemoveIndexLockInput,
+  GitRemoveWorktreeInput,
   GitRunStackedActionInput,
   GitStageFilesInput,
   GitStashAndCheckoutInput,
@@ -63,6 +100,74 @@ import {
   GitWorktreeSetupProgressEvent,
 } from "./git";
 import {
+  GitHubProjectProvisionInput,
+  GitHubProjectProvisionProgressEvent,
+} from "./githubProjectProvisioning";
+import { KeybindingRule } from "./keybindings";
+import {
+  ClientOrchestrationCommand,
+  ORCHESTRATION_WS_CHANNELS,
+  ORCHESTRATION_WS_METHODS,
+  OrchestrationEvent,
+  OrchestrationGetFullThreadDiffInput,
+  OrchestrationGetShellSnapshotInput,
+  OrchestrationGetSnapshotInput,
+  OrchestrationGetThreadDetailSnapshotInput,
+  OrchestrationGetTurnDiffInput,
+  OrchestrationImportThreadInput,
+  OrchestrationRepairStateInput,
+  OrchestrationReplayEventsInput,
+  OrchestrationShellStreamItem,
+  OrchestrationSubscribeShellInput,
+  OrchestrationSubscribeThreadInput,
+  OrchestrationThreadStreamItem,
+  OrchestrationUnsubscribeShellInput,
+  OrchestrationUnsubscribeThreadInput,
+  OrchestrationUpdatePendingUserInputDraftInput,
+} from "./orchestration";
+import {
+  ProjectCreateLocalFilePreviewGrantInput,
+  ProjectDevServerEvent,
+  ProjectDiscoverScriptsInput,
+  ProjectListDirectoriesInput,
+  ProjectPrewarmSearchIndexInput,
+  ProjectReadFileInput,
+  ProjectResolveOutOfRootFileReferenceInput,
+  ProjectResolveWorkspaceFileReferencesInput,
+  ProjectRunDevServerInput,
+  ProjectSearchContentInput,
+  ProjectSearchEntriesInput,
+  ProjectSearchLocalEntriesInput,
+  ProjectStopDevServerInput,
+  ProjectWriteFileInput,
+} from "./project";
+import {
+  PullRequestCommentInput,
+  PullRequestDetailInput,
+  PullRequestMergeActionInput,
+  PullRequestNonMergeActionInput,
+  PullRequestReviewRequestCountInput,
+  PullRequestSetPinnedInput,
+  PullRequestsListInput,
+} from "./pullRequests";
+import {
+  ServerConfigUpdatedPayload,
+  ServerEngineStatusesUpdatedPayload,
+  ServerEngineUpdateInput,
+  ServerGenerateAutomationIntentInput,
+  ServerGenerateThreadRecapInput,
+  ServerLifecycleStreamEvent,
+  ServerListEngineUsageInput,
+  ServerSettingsUpdatedPayload,
+  ServerStopLocalServerInput,
+  ServerUpdateEngineCredentialInput,
+  ServerUpdateSettingsInput,
+  ServerVoicePrewarmInput,
+  ServerVoiceTranscriptionInput,
+} from "./server";
+import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
+import { StudioListThreadOutputsInput } from "./studio";
+import {
   TerminalAckOutputInput,
   TerminalClearInput,
   TerminalCloseInput,
@@ -72,137 +177,23 @@ import {
   TerminalRestartInput,
   TerminalWriteInput,
 } from "./terminal";
-import { KeybindingRule } from "./keybindings";
-import {
-  ProjectCreateLocalFilePreviewGrantInput,
-  ProjectDevServerEvent,
-  ProjectDiscoverScriptsInput,
-  ProjectListDirectoriesInput,
-  ProjectPrewarmSearchIndexInput,
-  ProjectReadFileInput,
-  ProjectResolveWorkspaceFileReferencesInput,
-  ProjectResolveOutOfRootFileReferenceInput,
-  ProjectRunDevServerInput,
-  ProjectSearchContentInput,
-  ProjectSearchEntriesInput,
-  ProjectSearchLocalEntriesInput,
-  ProjectStopDevServerInput,
-  ProjectWriteFileInput,
-} from "./project";
-import { StudioListThreadOutputsInput } from "./studio";
-import { FilesystemBrowseInput } from "./filesystem";
-import {
-  DEVICE_WS_CHANNELS,
-  DEVICE_WS_METHODS,
-  DeviceAttachInput,
-  DeviceBootInput,
-  DeviceDescribeUiInput,
-  DeviceScrollToElementInput,
-  DeviceDetachInput,
-  DeviceEvent,
-  DeviceInstallAppInput,
-  DeviceKeyEventInput,
-  DeviceLaunchAppInput,
-  DeviceListInput,
-  DeviceOpenUrlInput,
-  DevicePressButtonInput,
-  DeviceScreenshotInput,
-  DeviceStartRecordingInput,
-  DeviceStopRecordingInput,
-  DeviceShutdownInput,
-  DeviceSwipeInput,
-  DeviceTapInput,
-  DeviceThreadInput,
-  DeviceTypeTextInput,
-} from "./device";
-import { OpenInEditorInput } from "./editor";
-import {
-  ServerConfigUpdatedPayload,
-  ServerGenerateAutomationIntentInput,
-  ServerGenerateThreadRecapInput,
-  ServerLifecycleStreamEvent,
-  ServerEngineUpdateInput,
-  ServerUpdateEngineCredentialInput,
-  ServerUpdateSettingsInput,
-  ServerListEngineUsageInput,
-  ServerEngineStatusesUpdatedPayload,
-  ServerSettingsUpdatedPayload,
-  ServerStopLocalServerInput,
-  ServerVoicePrewarmInput,
-  ServerVoiceTranscriptionInput,
-} from "./server";
-import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
-import {
-  EngineListCommandsInput,
-  EngineGetComposerCapabilitiesInput,
-  EngineListPluginsInput,
-  EngineListModelsInput,
-  EngineListAgentsInput,
-  EngineReadPluginInput,
-  EngineListSkillsInput,
-  EngineSkillsCatalogInput,
-} from "./engineDiscovery";
-import { EngineExecutionCapabilitiesInput } from "./engineExecution";
-import { EngineCompactThreadInput } from "./engine";
 import { ToolResultReadInput } from "./toolResults";
-import {
-  HarosCustomModelServiceRemoveInput,
-  HarosCustomModelServiceDiscoverInput,
-  HarosCustomModelServiceSaveInput,
-  HarosCustomModelServiceTestInput,
-  OAModelServiceAnswerLoginInput,
-  OAModelServiceBeginLoginInput,
-  OAModelServiceCancelLoginInput,
-  OAModelServicePollLoginInput,
-  OAModelServiceLogoutInput,
-  OAModelServiceRevealApiKeyInput,
-  OAModelServiceRefreshInput,
-  OAModelServicesGetInput,
-  OAModelServicesListInput,
-} from "./oaModelServices";
-import {
-  OAEcosystemInstallInput,
-  OAEcosystemListInput,
-  OAEcosystemPackageInput,
-  OAEcosystemReloadInput,
-  OAEcosystemResourceToggleInput,
-} from "./oaEcosystem";
-import {
-  OAAgentPersonalStrategyRestoreInput,
-  OAAgentPersonalStrategySetInput,
-  OAAgentPromptGetSnapshotInput,
-} from "./oaAgentPrompts";
-import {
-  OAWebSearchGeminiDiagnosticInput,
-  OAWebSearchMutationInput,
-  OAWebSearchOpenConfigInput,
-  OAWebSearchOpenInput,
-  OAWebSearchProviderTestInput,
-  OAWebSearchRecheckInput,
-  OAWebSearchRefreshInput,
-} from "./oaWebSearch";
-import {
-  PullRequestMergeActionInput,
-  PullRequestNonMergeActionInput,
-  PullRequestCommentInput,
-  PullRequestDetailInput,
-  PullRequestReviewRequestCountInput,
-  PullRequestSetPinnedInput,
-  PullRequestsListInput,
-} from "./pullRequests";
-import {
-  ExternalMcpCreateIntegrationInput,
-  ExternalMcpRefreshPairingInput,
-  ExternalMcpRevokeIntegrationInput,
-} from "./externalMcp";
-import {
-  GitHubProjectProvisionInput,
-  GitHubProjectProvisionProgressEvent,
-} from "./githubProjectProvisioning";
-
 // ── WebSocket RPC Method Names ───────────────────────────────────────
-
 export const WS_METHODS = {
+  modelServicesList: "modelServices.list",
+  modelServicesGet: "modelServices.get",
+  modelServicesBeginLogin: "modelServices.beginLogin",
+  modelServicesPollLogin: "modelServices.pollLogin",
+  modelServicesAnswerLogin: "modelServices.answerLogin",
+  modelServicesCancelLogin: "modelServices.cancelLogin",
+  modelServicesLogout: "modelServices.logout",
+  modelServicesRevealApiKey: "modelServices.revealApiKey",
+  modelServicesRefresh: "modelServices.refresh",
+  modelServicesTestModel: "modelServices.testModel",
+  modelServicesDiscoverCustom: "modelServices.discoverCustom",
+  modelServicesTestCustom: "modelServices.testCustom",
+  modelServicesSaveCustom: "modelServices.saveCustom",
+  modelServicesRemoveCustom: "modelServices.removeCustom",
   // Project registry methods
   projectsDiscoverScripts: "projects.discoverScripts",
   projectsListDirectories: "projects.listDirectories",
@@ -220,16 +211,12 @@ export const WS_METHODS = {
   projectsListDevServers: "projects.listDevServers",
   subscribeProjectDevServerEvents: "projects.subscribeDevServerEvents",
   projectsProvisionFromGitHub: "projects.provisionFromGitHub",
-
   // Studio methods
   studioListThreadOutputs: "studio.listThreadOutputs",
-
   // Filesystem browse methods
   filesystemBrowse: "filesystem.browse",
-
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
-
   // Git methods
   gitPull: "git.pull",
   gitGithubRepository: "git.githubRepository",
@@ -255,7 +242,6 @@ export const WS_METHODS = {
   gitResolvePullRequest: "git.resolvePullRequest",
   gitPullRequestSnapshot: "git.pullRequestSnapshot",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
-
   // Global pull request methods
   pullRequestsList: "pullRequests.list",
   pullRequestsReviewRequestCount: "pullRequests.reviewRequestCount",
@@ -264,7 +250,6 @@ export const WS_METHODS = {
   pullRequestsAction: "pullRequests.action",
   pullRequestsComment: "pullRequests.comment",
   pullRequestsSetPinned: "pullRequests.setPinned",
-
   // Terminal methods
   terminalOpen: "terminal.open",
   terminalWrite: "terminal.write",
@@ -273,7 +258,6 @@ export const WS_METHODS = {
   terminalClear: "terminal.clear",
   terminalRestart: "terminal.restart",
   terminalClose: "terminal.close",
-
   // Server meta
   serverGetConfig: "server.getConfig",
   serverGetEnvironment: "server.getEnvironment",
@@ -307,11 +291,9 @@ export const WS_METHODS = {
   subscribeServerEngineStatuses: "server.subscribeEngineStatuses",
   subscribeServerSettings: "server.subscribeSettings",
   orchestrationUserInputPresenter: "orchestration.user-input.presenter",
-
   // Streaming subscriptions
   subscribeTerminalEvents: "terminal.subscribeEvents",
   subscribeOrchestrationDomainEvents: "orchestration.subscribeDomainEvents",
-
   // Engine discovery
   engineGetComposerCapabilities: "engine.getComposerCapabilities",
   engineGetExecutionCapabilities: "engine.getExecutionCapabilities",
@@ -324,38 +306,6 @@ export const WS_METHODS = {
   providerReadPlugin: "engine.readPlugin",
   engineListModels: "engine.listModels",
   engineListAgents: "engine.listAgents",
-
-  // Haros Agent model services
-  oaModelServicesList: "oaModelServices.list",
-  oaModelServicesGet: "oaModelServices.get",
-  oaModelServicesBeginLogin: "oaModelServices.beginLogin",
-  oaModelServicesPollLogin: "oaModelServices.pollLogin",
-  oaModelServicesAnswerLogin: "oaModelServices.answerLogin",
-  oaModelServicesCancelLogin: "oaModelServices.cancelLogin",
-  oaModelServicesLogout: "oaModelServices.logout",
-  oaModelServicesRevealApiKey: "oaModelServices.revealApiKey",
-  oaModelServicesRefresh: "oaModelServices.refresh",
-  oaModelServicesDiscoverCustom: "oaModelServices.discoverCustom",
-  oaModelServicesTestCustom: "oaModelServices.testCustom",
-  oaModelServicesSaveCustom: "oaModelServices.saveCustom",
-  oaModelServicesRemoveCustom: "oaModelServices.removeCustom",
-  oaEcosystemList: "oaEcosystem.list",
-  oaEcosystemListResources: "oaEcosystem.listResources",
-  oaEcosystemInstall: "oaEcosystem.install",
-  oaEcosystemUpdate: "oaEcosystem.update",
-  oaEcosystemRemove: "oaEcosystem.remove",
-  oaEcosystemSetResourceEnabled: "oaEcosystem.setResourceEnabled",
-  oaEcosystemReload: "oaEcosystem.reload",
-  oaAgentPromptsGetSnapshot: "oaAgentPrompts.getSnapshot",
-  oaAgentPromptsMutate: "oaAgentPrompts.mutate",
-  oaWebSearchOpen: "oaWebSearch.open",
-  oaWebSearchRefresh: "oaWebSearch.refresh",
-  oaWebSearchMutate: "oaWebSearch.mutate",
-  oaWebSearchTestProvider: "oaWebSearch.testProvider",
-  oaWebSearchRecheck: "oaWebSearch.recheck",
-  oaWebSearchOpenConfig: "oaWebSearch.openConfig",
-  oaWebSearchGeminiDiagnostic: "oaWebSearch.geminiDiagnostic",
-
   // Automation methods
   automationList: "automation.list",
   automationGetMemory: "automation.getMemory",
@@ -369,9 +319,7 @@ export const WS_METHODS = {
   automationResolveProposal: "automation.resolveProposal",
   subscribeAutomationEvents: "automation.subscribe",
 } as const;
-
 // ── Push Event Channels ──────────────────────────────────────────────
-
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
   gitActionProgress: "git.actionProgress",
@@ -385,9 +333,7 @@ export const WS_CHANNELS = {
   serverEngineStatusesUpdated: "server.engineStatusesUpdated",
   serverSettingsUpdated: "server.settingsUpdated",
 } as const;
-
 // -- Tagged Union of all request body schemas ─────────────────────────
-
 const tagRequestBody = <const Tag extends string, const Fields extends Schema.Struct.Fields>(
   tag: Tag,
   schema: Schema.Struct<Fields>,
@@ -397,32 +343,13 @@ const tagRequestBody = <const Tag extends string, const Fields extends Schema.St
     // PreserveChecks is safe here. No existing schema should have checks depending on the tag
     { unsafePreserveChecks: true },
   );
-
 const WebSocketRequestBody = Schema.Union([
   // Orchestration methods
   tagRequestBody(
     ORCHESTRATION_WS_METHODS.dispatchCommand,
     Schema.Struct({ command: ClientOrchestrationCommand }),
   ),
-  tagRequestBody(WS_METHODS.oaEcosystemList, OAEcosystemListInput),
-  tagRequestBody(WS_METHODS.oaEcosystemListResources, OAEcosystemPackageInput),
-  tagRequestBody(WS_METHODS.oaEcosystemInstall, OAEcosystemInstallInput),
-  tagRequestBody(WS_METHODS.oaEcosystemUpdate, OAEcosystemPackageInput),
-  tagRequestBody(WS_METHODS.oaEcosystemRemove, OAEcosystemPackageInput),
-  tagRequestBody(WS_METHODS.oaEcosystemSetResourceEnabled, OAEcosystemResourceToggleInput),
-  tagRequestBody(WS_METHODS.oaEcosystemReload, OAEcosystemReloadInput),
-  tagRequestBody(WS_METHODS.oaAgentPromptsGetSnapshot, OAAgentPromptGetSnapshotInput),
-  Schema.Union([
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentPersonalStrategySetInput),
-    tagRequestBody(WS_METHODS.oaAgentPromptsMutate, OAAgentPersonalStrategyRestoreInput),
-  ]),
-  tagRequestBody(WS_METHODS.oaWebSearchOpen, OAWebSearchOpenInput),
-  tagRequestBody(WS_METHODS.oaWebSearchRefresh, OAWebSearchRefreshInput),
-  tagRequestBody(WS_METHODS.oaWebSearchMutate, OAWebSearchMutationInput),
-  tagRequestBody(WS_METHODS.oaWebSearchTestProvider, OAWebSearchProviderTestInput),
-  tagRequestBody(WS_METHODS.oaWebSearchRecheck, OAWebSearchRecheckInput),
-  tagRequestBody(WS_METHODS.oaWebSearchOpenConfig, OAWebSearchOpenConfigInput),
-  tagRequestBody(WS_METHODS.oaWebSearchGeminiDiagnostic, OAWebSearchGeminiDiagnosticInput),
+  Schema.Union([]),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
@@ -442,7 +369,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(ORCHESTRATION_WS_METHODS.unsubscribeShell, OrchestrationUnsubscribeShellInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.subscribeThread, OrchestrationSubscribeThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.unsubscribeThread, OrchestrationUnsubscribeThreadInput),
-
   // Project Search
   tagRequestBody(WS_METHODS.projectsDiscoverScripts, ProjectDiscoverScriptsInput),
   tagRequestBody(WS_METHODS.projectsListDirectories, ProjectListDirectoriesInput),
@@ -469,13 +395,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsListDevServers, Schema.Struct({})),
   tagRequestBody(WS_METHODS.subscribeProjectDevServerEvents, Schema.Struct({})),
   tagRequestBody(WS_METHODS.projectsProvisionFromGitHub, GitHubProjectProvisionInput),
-
   // Filesystem browse
   // Studio
   tagRequestBody(WS_METHODS.studioListThreadOutputs, StudioListThreadOutputsInput),
-
   tagRequestBody(WS_METHODS.filesystemBrowse, FilesystemBrowseInput),
-
   // Device pane (macOS only; the server refuses these off darwin)
   tagRequestBody(DEVICE_WS_METHODS.list, DeviceListInput),
   tagRequestBody(DEVICE_WS_METHODS.boot, DeviceBootInput),
@@ -497,10 +420,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(DEVICE_WS_METHODS.describeUi, DeviceDescribeUiInput),
   tagRequestBody(DEVICE_WS_METHODS.scrollToElement, DeviceScrollToElementInput),
   tagRequestBody(DEVICE_WS_METHODS.subscribeEvents, Schema.Struct({})),
-
   // Shell methods
   tagRequestBody(WS_METHODS.shellOpenInEditor, OpenInEditorInput),
-
   // Git methods
   tagRequestBody(WS_METHODS.gitPull, GitPullInput),
   tagRequestBody(WS_METHODS.gitGithubRepository, GitHubRepositoryInput),
@@ -526,7 +447,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitResolvePullRequest, GitPullRequestRefInput),
   tagRequestBody(WS_METHODS.gitPullRequestSnapshot, GitPullRequestSnapshotInput),
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),
-
   // Global pull requests
   tagRequestBody(WS_METHODS.pullRequestsList, PullRequestsListInput),
   tagRequestBody(WS_METHODS.pullRequestsReviewRequestCount, PullRequestReviewRequestCountInput),
@@ -538,7 +458,6 @@ const WebSocketRequestBody = Schema.Union([
   ]),
   tagRequestBody(WS_METHODS.pullRequestsComment, PullRequestCommentInput),
   tagRequestBody(WS_METHODS.pullRequestsSetPinned, PullRequestSetPinnedInput),
-
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
   tagRequestBody(WS_METHODS.terminalWrite, TerminalWriteInput),
@@ -547,7 +466,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.terminalClear, TerminalClearInput),
   tagRequestBody(WS_METHODS.terminalRestart, TerminalRestartInput),
   tagRequestBody(WS_METHODS.terminalClose, TerminalCloseInput),
-
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetEnvironment, Schema.Struct({})),
@@ -574,7 +492,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverGenerateThreadRecap, ServerGenerateThreadRecapInput),
   tagRequestBody(WS_METHODS.serverGenerateAutomationIntent, ServerGenerateAutomationIntentInput),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
-
   // Engine discovery
   tagRequestBody(WS_METHODS.engineGetComposerCapabilities, EngineGetComposerCapabilitiesInput),
   tagRequestBody(WS_METHODS.engineGetExecutionCapabilities, EngineExecutionCapabilitiesInput),
@@ -587,20 +504,20 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerReadPlugin, EngineReadPluginInput),
   tagRequestBody(WS_METHODS.engineListModels, EngineListModelsInput),
   tagRequestBody(WS_METHODS.engineListAgents, EngineListAgentsInput),
-  tagRequestBody(WS_METHODS.oaModelServicesList, OAModelServicesListInput),
-  tagRequestBody(WS_METHODS.oaModelServicesGet, OAModelServicesGetInput),
-  tagRequestBody(WS_METHODS.oaModelServicesBeginLogin, OAModelServiceBeginLoginInput),
-  tagRequestBody(WS_METHODS.oaModelServicesPollLogin, OAModelServicePollLoginInput),
-  tagRequestBody(WS_METHODS.oaModelServicesAnswerLogin, OAModelServiceAnswerLoginInput),
-  tagRequestBody(WS_METHODS.oaModelServicesCancelLogin, OAModelServiceCancelLoginInput),
-  tagRequestBody(WS_METHODS.oaModelServicesLogout, OAModelServiceLogoutInput),
-  tagRequestBody(WS_METHODS.oaModelServicesRevealApiKey, OAModelServiceRevealApiKeyInput),
-  tagRequestBody(WS_METHODS.oaModelServicesRefresh, OAModelServiceRefreshInput),
-  tagRequestBody(WS_METHODS.oaModelServicesDiscoverCustom, HarosCustomModelServiceDiscoverInput),
-  tagRequestBody(WS_METHODS.oaModelServicesTestCustom, HarosCustomModelServiceTestInput),
-  tagRequestBody(WS_METHODS.oaModelServicesSaveCustom, HarosCustomModelServiceSaveInput),
-  tagRequestBody(WS_METHODS.oaModelServicesRemoveCustom, HarosCustomModelServiceRemoveInput),
-
+  tagRequestBody(WS_METHODS.modelServicesList, HarosModelServicesListInput),
+  tagRequestBody(WS_METHODS.modelServicesGet, HarosModelServicesGetInput),
+  tagRequestBody(WS_METHODS.modelServicesBeginLogin, HarosModelServiceBeginLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesPollLogin, HarosModelServicePollLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesAnswerLogin, HarosModelServiceAnswerLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesCancelLogin, HarosModelServiceCancelLoginInput),
+  tagRequestBody(WS_METHODS.modelServicesLogout, HarosModelServiceLogoutInput),
+  tagRequestBody(WS_METHODS.modelServicesRevealApiKey, HarosModelServiceRevealApiKeyInput),
+  tagRequestBody(WS_METHODS.modelServicesRefresh, HarosModelServiceRefreshInput),
+  tagRequestBody(WS_METHODS.modelServicesTestModel, HarosModelServiceTestInput),
+  tagRequestBody(WS_METHODS.modelServicesDiscoverCustom, HarosCustomModelServiceDiscoverInput),
+  tagRequestBody(WS_METHODS.modelServicesTestCustom, HarosCustomModelServiceTestInput),
+  tagRequestBody(WS_METHODS.modelServicesSaveCustom, HarosCustomModelServiceSaveInput),
+  tagRequestBody(WS_METHODS.modelServicesRemoveCustom, HarosCustomModelServiceRemoveInput),
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),
   tagRequestBody(WS_METHODS.automationGetMemory, AutomationGetMemoryInput),
@@ -614,13 +531,11 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.automationResolveProposal, AutomationResolveProposalInput),
   tagRequestBody(WS_METHODS.subscribeAutomationEvents, Schema.Struct({})),
 ]);
-
 export const WebSocketRequest = Schema.Struct({
   id: TrimmedNonEmptyString,
   body: WebSocketRequestBody,
 });
 export type WebSocketRequest = typeof WebSocketRequest.Type;
-
 export const WebSocketResponse = Schema.Struct({
   id: TrimmedNonEmptyString,
   result: Schema.optional(Schema.Unknown),
@@ -631,10 +546,8 @@ export const WebSocketResponse = Schema.Struct({
   ),
 });
 export type WebSocketResponse = typeof WebSocketResponse.Type;
-
 export const WsPushSequence = NonNegativeInt;
 export type WsPushSequence = typeof WsPushSequence.Type;
-
 export const WsWelcomePayload = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   homeDir: Schema.optional(TrimmedNonEmptyString),
@@ -645,7 +558,6 @@ export const WsWelcomePayload = Schema.Struct({
   bootstrapThreadId: Schema.optional(ThreadId),
 });
 export type WsWelcomePayload = typeof WsWelcomePayload.Type;
-
 export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverWelcome]: WsWelcomePayload;
   readonly [WS_CHANNELS.serverMaintenanceUpdated]: ServerLifecycleStreamEvent;
@@ -663,10 +575,8 @@ export interface WsPushPayloadByChannel {
   readonly [ORCHESTRATION_WS_CHANNELS.shellEvent]: OrchestrationShellStreamItem;
   readonly [ORCHESTRATION_WS_CHANNELS.threadEvent]: OrchestrationThreadStreamItem;
 }
-
 export type WsPushChannel = keyof WsPushPayloadByChannel;
 export type WsPushData<C extends WsPushChannel> = WsPushPayloadByChannel[C];
-
 const makeWsPushSchema = <const Channel extends string, Payload extends Schema.Schema<any>>(
   channel: Channel,
   payload: Payload,
@@ -677,7 +587,6 @@ const makeWsPushSchema = <const Channel extends string, Payload extends Schema.S
     channel: Schema.Literal(channel),
     data: payload,
   });
-
 export const WsPushServerWelcome = makeWsPushSchema(WS_CHANNELS.serverWelcome, WsWelcomePayload);
 export const WsPushServerMaintenanceUpdated = makeWsPushSchema(
   WS_CHANNELS.serverMaintenanceUpdated,
@@ -729,7 +638,6 @@ export const WsPushOrchestrationThreadEvent = makeWsPushSchema(
   ORCHESTRATION_WS_CHANNELS.threadEvent,
   OrchestrationThreadStreamItem,
 );
-
 export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.gitActionProgress,
   WS_CHANNELS.gitWorktreeSetupProgress,
@@ -748,7 +656,6 @@ export const WsPushChannelSchema = Schema.Literals([
   ORCHESTRATION_WS_CHANNELS.threadEvent,
 ]);
 export type WsPushChannelSchema = typeof WsPushChannelSchema.Type;
-
 export const WsPush = Schema.Union([
   WsPushServerWelcome,
   WsPushServerMaintenanceUpdated,
@@ -767,9 +674,12 @@ export const WsPush = Schema.Union([
   WsPushOrchestrationThreadEvent,
 ]);
 export type WsPush = typeof WsPush.Type;
-
-export type WsPushMessage<C extends WsPushChannel> = Extract<WsPush, { channel: C }>;
-
+export type WsPushMessage<C extends WsPushChannel> = Extract<
+  WsPush,
+  {
+    channel: C;
+  }
+>;
 export const WsPushEnvelopeBase = Schema.Struct({
   type: Schema.Literal("push"),
   sequence: WsPushSequence,
@@ -777,8 +687,6 @@ export const WsPushEnvelopeBase = Schema.Struct({
   data: Schema.Unknown,
 });
 export type WsPushEnvelopeBase = typeof WsPushEnvelopeBase.Type;
-
 // ── Union of all server → client messages ─────────────────────────────
-
 export const WsResponse = Schema.Union([WebSocketResponse, WsPush]);
 export type WsResponse = typeof WsResponse.Type;

@@ -14,14 +14,14 @@ import {
   ORCHESTRATION_WS_METHODS,
   type OrchestrationEvent,
   ProjectId,
+  type ServerEngineStatus,
   ThreadId,
-  type WsPushChannel,
-  type WsPushData,
-  type WsPushMessage,
   WS_CHANNELS,
   WS_METHODS,
   type WsPush,
-  type ServerEngineStatus,
+  type WsPushChannel,
+  type WsPushData,
+  type WsPushMessage,
 } from "@harnessos/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -212,6 +212,107 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("queues engine model discovery at the Server admission lane limit", async () => {
+    const resolvers: Array<(value: unknown) => void> = [];
+    const resolveQueued = (index: number, value: unknown) => {
+      const resolve = resolvers[index];
+      if (!resolve) throw new Error(`missing resolver ${index}`);
+      resolve(value);
+    };
+    requestMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const first = api.engine.listModels({ engine: "cursor" });
+    const second = api.engine.listModels({ engine: "claude" });
+    const third = api.engine.listModels({ engine: "codex" });
+    const fourth = api.engine.listAgents({ engine: "codex" });
+
+    expect(requestMock).toHaveBeenCalledTimes(2);
+
+    resolveQueued(0, "cursor-catalog");
+    await expect(first).resolves.toBe("cursor-catalog");
+    // The freed slot was handed to the next queued request in FIFO order.
+    expect(requestMock).toHaveBeenCalledTimes(3);
+    expect(requestMock.mock.calls[2]?.[0]).toBe(WS_METHODS.engineListModels);
+    expect(requestMock.mock.calls[2]?.[1]).toEqual({ engine: "codex" });
+
+    resolveQueued(1, "claude-catalog");
+    await second;
+    resolveQueued(2, "codex-catalog");
+    resolveQueued(3, "codex-agents");
+    await expect(second).resolves.toBe("claude-catalog");
+    await expect(third).resolves.toBe("codex-catalog");
+    await expect(fourth).resolves.toBe("codex-agents");
+  });
+
+  it("frees the lane slot when a dispatched request rejects", async () => {
+    const resolvers: Array<(value: unknown) => void> = [];
+    const resolveQueued = (index: number, value: unknown) => {
+      const resolve = resolvers[index];
+      if (!resolve) throw new Error(`missing resolver ${index}`);
+      resolve(value);
+    };
+    requestMock.mockImplementation((_method: unknown, input: unknown) => {
+      const { engine } = input as { engine: string };
+      if (engine === "cursor") {
+        return Promise.reject(new Error("discovery failed"));
+      }
+      return new Promise((resolve) => {
+        resolvers.push(resolve);
+      });
+    });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const first = api.engine.listModels({ engine: "cursor" });
+    const second = api.engine.listModels({ engine: "claude" });
+    const third = api.engine.listModels({ engine: "codex" });
+
+    await expect(first).rejects.toThrow("discovery failed");
+    expect(requestMock).toHaveBeenCalledTimes(3);
+    expect(requestMock.mock.calls[2]?.[1]).toEqual({ engine: "codex" });
+
+    resolveQueued(0, "claude-catalog");
+    resolveQueued(1, "codex-catalog");
+    await expect(second).resolves.toBe("claude-catalog");
+    await expect(third).resolves.toBe("codex-catalog");
+  });
+
+  it("drops queued engine discovery requests when their signal aborts", async () => {
+    requestMock.mockImplementation(() => new Promise(() => {}));
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    void api.engine.listModels({ engine: "cursor" });
+    void api.engine.listModels({ engine: "claude" });
+    const controller = new AbortController();
+    const queued = api.engine.listModels({ engine: "codex" }, { signal: controller.signal });
+
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    controller.abort();
+
+    await expect(queued).rejects.toBe(controller.signal.reason);
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects engine discovery immediately when the signal is already aborted", async () => {
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      api.engine.listModels({ engine: "codex" }, { signal: controller.signal }),
+    ).rejects.toBe(controller.signal.reason);
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
   it("delivers and caches valid server.welcome payloads", async () => {
     const { createWsNativeApi, onServerWelcome } = await import("./wsNativeApi");
 
@@ -376,14 +477,14 @@ describe("wsNativeApi", () => {
 
     const payload = {
       settings: {
-        defaultEngine: "oa",
+        modelServices: { autoSync: {}, added: {} },
+        defaultEngine: "codex",
         enableAssistantStreaming: true,
         enableEngineUpdateChecks: true,
         defaultThreadEnvMode: "local",
         addProjectBaseDirectory: "",
         textGenerationEngineSelection: { engine: "codex", model: "gpt-5.4-mini" },
         engines: {
-          oa: { enabled: true },
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
           claude: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
           cursor: { enabled: false, binaryPath: "agent", apiEndpoint: "", customModels: [] },
@@ -406,6 +507,7 @@ describe("wsNativeApi", () => {
             customModels: [],
           },
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
+          deepseek: { enabled: true, binaryPath: "dsh", homePath: "", customModels: [] },
         },
         skills: { disabled: [] },
         agentTools: { builtInGroupOverrides: {} },
@@ -994,225 +1096,6 @@ describe("wsNativeApi", () => {
       outcome: "safe_retry",
       note: "The engine confirms it did not accept the command.",
     });
-  });
-
-  it("forwards credential-blind Haros model-service reads", async () => {
-    requestMock
-      .mockResolvedValueOnce({ state: "empty", services: [], errorCode: null })
-      .mockResolvedValueOnce({ state: "empty", service: null, errorCode: null });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-
-    const listController = new AbortController();
-    const getController = new AbortController();
-    await api.oaModelServices.list({}, { signal: listController.signal });
-    await api.oaModelServices.get({ serviceId: "deepseek" }, { signal: getController.signal });
-
-    expect(requestMock).toHaveBeenNthCalledWith(
-      1,
-      WS_METHODS.oaModelServicesList,
-      {},
-      {
-        signal: listController.signal,
-      },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      WS_METHODS.oaModelServicesGet,
-      { serviceId: "deepseek" },
-      { signal: getController.signal },
-    );
-  });
-
-  it("forwards public package installs and opaque package actions", async () => {
-    requestMock.mockResolvedValue({ changed: true, snapshot: { packages: [] } });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const packageId = "a".repeat(64);
-    const threadId = ThreadId.makeUnsafe("thread-package-reload");
-
-    await api.oaEcosystem.install({ source: "npm:@scope/package@1.2.3" });
-    await api.oaEcosystem.listResources({ packageId });
-    await api.oaEcosystem.update({ packageId });
-    await api.oaEcosystem.reload({ threadId });
-
-    expect(requestMock).toHaveBeenNthCalledWith(
-      1,
-      WS_METHODS.oaEcosystemInstall,
-      { source: "npm:@scope/package@1.2.3" },
-      { timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.oaEcosystemListResources, {
-      packageId,
-    });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      3,
-      WS_METHODS.oaEcosystemUpdate,
-      { packageId },
-      { timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      4,
-      WS_METHODS.oaEcosystemReload,
-      { threadId },
-      { timeoutMs: null },
-    );
-  });
-
-  it("forwards typed Haros Agent prompt file intents without path authority", async () => {
-    requestMock.mockResolvedValue({});
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-
-    await api.oaAgentPrompts.getSnapshot({ locale: "en" });
-    await api.oaAgentPrompts.mutate({
-      action: "setPersonalStrategy",
-      sourceId: "AGENTS.md",
-      expectedVersion: "a".repeat(64),
-      locale: "en",
-      content: "Be concise.",
-    });
-
-    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.oaAgentPromptsGetSnapshot, {
-      locale: "en",
-    });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      WS_METHODS.oaAgentPromptsMutate,
-      {
-        action: "setPersonalStrategy",
-        sourceId: "AGENTS.md",
-        expectedVersion: "a".repeat(64),
-        locale: "en",
-        content: "Be concise.",
-      },
-      { timeoutMs: null },
-    );
-  });
-
-  it("forwards typed Haros model-service credential operations", async () => {
-    const requestId = "00000000-0000-4000-8000-000000000041";
-    const promptId = "00000000-0000-4000-8000-000000000042";
-    requestMock
-      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
-      .mockResolvedValueOnce({ state: "pending", requestId, events: [] })
-      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
-      .mockResolvedValueOnce({ state: "cancelled", requestId, errorCode: "cancelled", events: [] })
-      .mockResolvedValueOnce({ state: "complete", service: {} })
-      .mockResolvedValueOnce({ state: "failed", service: {} });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const controller = new AbortController();
-
-    await api.oaModelServices.beginLogin(
-      { serviceId: "deepseek", authType: "api_key" },
-      { signal: controller.signal },
-    );
-    await api.oaModelServices.pollLogin(
-      { requestId, afterEventCount: 0 },
-      { signal: controller.signal },
-    );
-    await api.oaModelServices.answerLogin(
-      { requestId, promptId, value: "test-secret" },
-      { signal: controller.signal },
-    );
-    await api.oaModelServices.cancelLogin({ requestId });
-    await api.oaModelServices.logout({ serviceId: "deepseek" });
-    await api.oaModelServices.refresh({ serviceId: "deepseek" }, { signal: controller.signal });
-
-    expect(requestMock).toHaveBeenNthCalledWith(
-      1,
-      WS_METHODS.oaModelServicesBeginLogin,
-      { serviceId: "deepseek", authType: "api_key" },
-      { signal: controller.signal, timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      WS_METHODS.oaModelServicesPollLogin,
-      { requestId, afterEventCount: 0 },
-      { signal: controller.signal, timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      3,
-      WS_METHODS.oaModelServicesAnswerLogin,
-      { requestId, promptId, value: "test-secret" },
-      { signal: controller.signal, timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.oaModelServicesCancelLogin, {
-      requestId,
-    });
-    expect(requestMock).toHaveBeenNthCalledWith(5, WS_METHODS.oaModelServicesLogout, {
-      serviceId: "deepseek",
-    });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      6,
-      WS_METHODS.oaModelServicesRefresh,
-      { serviceId: "deepseek" },
-      { signal: controller.signal, timeoutMs: null },
-    );
-  });
-
-  it("forwards typed custom model-service test, save, and remove operations", async () => {
-    requestMock
-      .mockResolvedValueOnce({ state: "failed", models: [], errorCode: "connection_failed" })
-      .mockResolvedValueOnce({ state: "config_saved_sync_failed", service: null })
-      .mockResolvedValueOnce({ state: "complete", serviceId: "custom" });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const controller = new AbortController();
-    const config = {
-      serviceId: null,
-      displayName: "Custom",
-      api: "openai-completions" as const,
-      baseUrl: "https://gateway.example.test/v1",
-      models: [
-        {
-          modelId: "model-one",
-          displayName: "Model One",
-          reasoning: false,
-          input: ["text" as const],
-          contextWindow: 32_000,
-          maxTokens: 4_096,
-        },
-      ],
-    };
-
-    await api.oaModelServices.testCustom(
-      {
-        config,
-        credential: { type: "stored_key", apiKey: "test-secret" },
-        testModelId: "model-one",
-      },
-      { signal: controller.signal },
-    );
-    await api.oaModelServices.saveCustom(
-      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
-      { signal: controller.signal },
-    );
-    await api.oaModelServices.removeCustom({ serviceId: "custom" }, { signal: controller.signal });
-
-    expect(requestMock).toHaveBeenNthCalledWith(
-      1,
-      WS_METHODS.oaModelServicesTestCustom,
-      {
-        config,
-        credential: { type: "stored_key", apiKey: "test-secret" },
-        testModelId: "model-one",
-      },
-      { signal: controller.signal, timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      WS_METHODS.oaModelServicesSaveCustom,
-      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
-      { signal: controller.signal, timeoutMs: null },
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      3,
-      WS_METHODS.oaModelServicesRemoveCustom,
-      { serviceId: "custom" },
-      { signal: controller.signal, timeoutMs: null },
-    );
   });
 
   it("forwards browser webview detach requests to the desktop bridge", async () => {

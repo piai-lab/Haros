@@ -105,7 +105,6 @@ export function getRuntimeAwareModelCapabilities(input: {
       input.engine !== "droid" &&
       input.engine !== "kilo" &&
       input.engine !== "opencode" &&
-      input.engine !== "oa" &&
       input.engine !== "pi") ||
     !runtimeEfforts ||
     runtimeEfforts.length === 0

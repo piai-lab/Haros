@@ -1,3 +1,5 @@
+import { HarosModelServices } from "./engine/Services/HarosModelServices";
+
 import { execFile } from "node:child_process";
 
 import {
@@ -5,59 +7,40 @@ import {
   DEFAULT_TERMINAL_ID,
   DEVICE_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
+  PullRequestsUnavailableError,
   ThreadId,
   WS_BOOTSTRAP_METHOD,
   WS_BOOTSTRAP_PATH,
   WS_FEATURE_PATH,
-  WS_NEGOTIATE_HTTP_PATH,
   WS_METHODS,
+  WS_NEGOTIATE_HTTP_PATH,
   WsBootstrapRpcGroup,
   WsCompatibilityError,
   WsDeviceRpcGroup,
   WsFeatureRpcGroup,
   WsRpcError,
-  PullRequestsUnavailableError,
   type DeviceEvent,
   type GitActionProgressEvent,
   type GitHubProjectProvisionProgressEvent,
   type GitWorktreeSetupProgressEvent,
   type OrchestrationCommand,
   type OrchestrationEvent,
-  type ProjectDevServerEvent,
   type OrchestrationShellStreamEvent,
   type OrchestrationShellStreamItem,
   type OrchestrationThread,
   type OrchestrationThreadDetailSnapshot,
   type OrchestrationThreadStreamItem,
+  type ProjectDevServerEvent,
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
-  type ServerLifecycleStreamEvent,
   type ServerEngineStatus,
+  type ServerLifecycleStreamEvent,
 } from "@harnessos/contracts";
-import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
+import { clamp } from "effect/Number";
 import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { RpcMiddleware, RpcSchema, RpcSerialization, RpcServer } from "effect/unstable/rpc";
 
-import { AutomationService } from "./automation/Services/AutomationService";
-import { authErrorResponse, makeEffectAuthRequest } from "./auth/effectHttp";
-import {
-  ServerAuth,
-  type AuthError,
-  type AuthRequest,
-  type AuthenticatedSession,
-  type ServerAuthShape,
-} from "./auth/Services/ServerAuth";
-import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
-import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
-import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
-import {
-  PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE,
-  PullRequestMergeExpectationConflictError,
-} from "./pullRequests/pullRequestOperations";
-import { ServerConfig, type ServerConfigShape } from "./config";
-import { realpathNearestExisting } from "./realpathNearestExisting";
-import { workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import {
   isEngineRuntimeModeExecutable,
   isEngineRuntimeModePermanentlyUnsupported,
@@ -66,19 +49,40 @@ import {
   isThreadDetailEventFor,
   THREAD_DETAIL_EVENT_TYPES,
 } from "@harnessos/shared/threadDetailEvents";
-import { listStudioThreadOutputs } from "./studioOutputs";
+import { workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
+import { authErrorResponse, makeEffectAuthRequest } from "./auth/effectHttp";
 import {
-  ensureStudioWorkspaceInstructionsFiles,
-  STUDIO_WORKSPACE_SUBDIRECTORIES,
-} from "./studioWorkspaceScaffold";
-import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
+  ServerAuth,
+  type AuthenticatedSession,
+  type AuthError,
+  type AuthRequest,
+  type ServerAuthShape,
+} from "./auth/Services/ServerAuth";
+import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
+import { AutomationService } from "./automation/Services/AutomationService";
+import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
+import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
+import { ServerConfig, type ServerConfigShape } from "./config";
+import { makeDeviceFrameRouteLayer } from "./device/deviceFrameRoute";
 import { DeviceService } from "./device/Services/DeviceService";
 import { makeWsDeviceHandlers } from "./device/wsDeviceHandlers";
-import { makeDeviceFrameRouteLayer } from "./device/deviceFrameRoute";
+import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
+import { ThreadDiagnosticsQuery } from "./diagnostics/Services/ThreadDiagnosticsQuery";
+import { toEngineModelDiscoveryRpcError } from "./engine/engineModelDiscoveryRpcError";
+import { EngineAdapterRegistry } from "./engine/Services/EngineAdapterRegistry";
+import { EngineDiscoveryService } from "./engine/Services/EngineDiscoveryService";
+import { EngineExecutionCapabilities } from "./engine/Services/EngineExecutionCapabilities";
+import { EngineHealth } from "./engine/Services/EngineHealth";
+import { EngineService } from "./engine/Services/EngineService";
+import { discoverSkillsCatalog, harnessosSkillsDir } from "./engine/skillsCatalog";
+import { userInputPresenterRegistry } from "./engine/userInputPresenterRegistry";
+import { listEngineUsage } from "./engineUsage";
+import { ServerEnvironment } from "./environment/Services/ServerEnvironment";
+import { ExternalMcpService } from "./externalMcp/Services/ExternalMcpService";
+import { GitHubCliError } from "./git/Errors";
 import { GitCore } from "./git/Services/GitCore";
 import { GitHubCli } from "./git/Services/GitHubCli";
 import { GitManager } from "./git/Services/GitManager";
-import { GitHubCliError } from "./git/Errors";
 import { GitStatusBroadcaster } from "./git/Services/GitStatusBroadcaster";
 import { TextGeneration } from "./git/Services/TextGeneration";
 import {
@@ -88,51 +92,59 @@ import {
   gitHandoffMetadataCommand,
   recordGitHandoffResult,
 } from "./gitHandoffOperations";
+import { HostGateway } from "./hostGateway/Services/HostGateway";
 import { Keybindings } from "./keybindings";
 import { createLocalPreviewGrant } from "./localImageFiles";
 import { listLocalServers, stopLocalServer } from "./localServerMonitor";
-import { listManagedWorktrees, pruneProjectedArchivedManagedWorktrees } from "./managedWorktrees";
 import {
   attachmentPrincipalForSession,
   CurrentManagedAttachmentPrincipal,
   LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
 } from "./managedAttachmentPrincipal";
+import { listManagedWorktrees, pruneProjectedArchivedManagedWorktrees } from "./managedWorktrees";
 import { Open, resolveAvailableEditors } from "./open";
 import { makeDispatchCommandNormalizer } from "./orchestration/dispatchCommandNormalization";
 import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
-import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { EngineCommandReactor } from "./orchestration/Services/EngineCommandReactor";
+import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
+import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
+import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProjectionStateIncompleteError } from "./persistence/Errors";
 import { ProjectionPendingInteractionRepositoryLive } from "./persistence/Layers/ProjectionPendingInteractions";
 import { ProjectionPendingInteractionRepository } from "./persistence/Services/ProjectionPendingInteractions";
-import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
-import { EngineDiscoveryService } from "./engine/Services/EngineDiscoveryService";
-import { OAEcosystem } from "./engine/Services/OAEcosystem";
-import { OAAgentPromptFiles } from "./engine/Services/OAAgentPromptFiles";
-import { OAWebSearchSettings } from "./engine/Services/OAWebSearchSettings";
-import { OAModelServices } from "./engine/Services/OAModelServices";
-import { discoverSkillsCatalog, harnessosSkillsDir } from "./engine/skillsCatalog";
-import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
-import { EngineAdapterRegistry } from "./engine/Services/EngineAdapterRegistry";
-import { EngineExecutionCapabilities } from "./engine/Services/EngineExecutionCapabilities";
-import { EngineHealth } from "./engine/Services/EngineHealth";
-import { EngineService } from "./engine/Services/EngineService";
-import { toEngineModelDiscoveryRpcError } from "./engine/engineModelDiscoveryRpcError";
-import { userInputPresenterRegistry } from "./engine/userInputPresenterRegistry";
-import { listEngineUsage } from "./engineUsage";
-import { UsageHistory } from "./usageHistory/UsageHistory";
-import { ProfileStatsQuery } from "./profileStats";
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
-import { ServerEnvironment } from "./environment/Services/ServerEnvironment";
-import { ExternalMcpService } from "./externalMcp/Services/ExternalMcpService";
+import { ProfileStatsQuery } from "./profileStats";
+import {
+  GitHubProjectProvisioningError,
+  makeGitHubProjectProvisioner,
+} from "./project/githubProjectProvisioning";
+import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
+import {
+  PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE,
+  PullRequestMergeExpectationConflictError,
+} from "./pullRequests/pullRequestOperations";
+import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
+import { PullRequestService } from "./pullRequests/Services/PullRequestService";
+import { realpathNearestExisting } from "./realpathNearestExisting";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
 import { ServerSettingsService } from "./serverSettings";
-import { HostGateway } from "./hostGateway/Services/HostGateway";
 import { isLoopbackHost } from "./startupAccess";
+import { listStudioThreadOutputs } from "./studioOutputs";
+import {
+  ensureStudioWorkspaceInstructionsFiles,
+  STUDIO_WORKSPACE_SUBDIRECTORIES,
+} from "./studioWorkspaceScaffold";
 import { TerminalManager } from "./terminal/Services/Manager";
 import { TerminalThreadTitleTracker } from "./terminal/terminalThreadTitleTracker";
+import {
+  isTrustedAppOrigin,
+  normalizeCorsOrigin,
+  requiresWebSocketAuthentication,
+  shouldRejectUntrustedRequestOrigin,
+} from "./trustedOrigins";
+import { UsageHistory } from "./usageHistory/UsageHistory";
+import { voiceUploadAdmissionGate } from "./voiceUploadAdmission";
 import { resolveOutOfRootFileReference } from "./workspace/outOfRootFileReference";
 import { WorkspaceEntries } from "./workspace/Services/WorkspaceEntries";
 import {
@@ -141,13 +153,10 @@ import {
   WorkspaceFileSystem,
 } from "./workspace/Services/WorkspaceFileSystem";
 import {
-  MAX_STREAMS_PER_RPC_CLIENT,
-  MAX_THREAD_STREAMS_PER_RPC_CLIENT,
-  makeWsStreamAdmission,
-} from "./wsStreamAdmission";
-import { ThreadDiagnosticsQuery } from "./diagnostics/Services/ThreadDiagnosticsQuery";
-import { makeWsRequestAdmission } from "./wsRequestAdmission";
-import { voiceUploadAdmissionGate } from "./voiceUploadAdmission";
+  negotiateWsCompatibility,
+  parseWsNegotiateSearchParams,
+  validateWsFeatureCompatibility,
+} from "./wsCompatibility";
 import {
   CurrentWsSessionRole,
   provideWsConnectionSession,
@@ -156,28 +165,17 @@ import {
   WsConnectionSessionsLive,
   type WsConnectionSession,
 } from "./wsConnectionSessions";
-import {
-  negotiateWsCompatibility,
-  parseWsNegotiateSearchParams,
-  validateWsFeatureCompatibility,
-} from "./wsCompatibility";
-import {
-  isTrustedAppOrigin,
-  normalizeCorsOrigin,
-  requiresWebSocketAuthentication,
-  shouldRejectUntrustedRequestOrigin,
-} from "./trustedOrigins";
-import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
+import { makeWsRequestAdmission } from "./wsRequestAdmission";
 import {
   makeCursorSafeSnapshotLiveStream,
   makeResnapshotEscalationTracker,
 } from "./wsSnapshotLiveStream";
-import { PullRequestService } from "./pullRequests/Services/PullRequestService";
-import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
 import {
-  GitHubProjectProvisioningError,
-  makeGitHubProjectProvisioner,
-} from "./project/githubProjectProvisioning";
+  makeWsStreamAdmission,
+  MAX_STREAMS_PER_RPC_CLIENT,
+  MAX_THREAD_STREAMS_PER_RPC_CLIENT,
+} from "./wsStreamAdmission";
+import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 
 export function canManageExternalMcp(role: "owner" | "client"): boolean {
   return role === "owner";
@@ -385,12 +383,9 @@ const makeWsRpcHandlersLayer = () =>
       const engineAdapterRegistry = yield* EngineAdapterRegistry;
       const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
       const engineDiscoveryService = yield* EngineDiscoveryService;
-      const oaEcosystem = yield* OAEcosystem;
-      const oaAgentPromptFiles = yield* OAAgentPromptFiles;
-      const oaWebSearchSettings = yield* OAWebSearchSettings;
-      const oaModelServices = yield* OAModelServices;
       const engineHealth = yield* EngineHealth;
       const engineService = yield* EngineService;
+      const modelServices = yield* HarosModelServices;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
@@ -2115,6 +2110,76 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(engineDiscoveryService.listPlugins(input), "Failed to list plugins"),
         [WS_METHODS.providerReadPlugin]: (input) =>
           rpcEffect(engineDiscoveryService.readPlugin(input), "Failed to read plugin"),
+        [WS_METHODS.modelServicesList]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.list(input))),
+            "Failed to list Haros model services",
+          ),
+        [WS_METHODS.modelServicesGet]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.get(input))),
+            "Failed to read an Haros model service",
+          ),
+        [WS_METHODS.modelServicesBeginLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.beginLogin(clientId, input))),
+            "Failed to begin Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesPollLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.pollLogin(clientId, input))),
+            "Failed to poll Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesAnswerLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.answerLogin(clientId, input))),
+            "Failed to continue Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesCancelLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.cancelLogin(clientId, input))),
+            "Failed to cancel Haros model-service login",
+          ),
+        [WS_METHODS.modelServicesLogout]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.logout(input))),
+            "Failed to remove Haros model-service credentials",
+          ),
+        [WS_METHODS.modelServicesRevealApiKey]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.revealApiKey(input))),
+            "Failed to reveal an Haros model-service API key",
+          ),
+        [WS_METHODS.modelServicesRefresh]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.refresh(input))),
+            "Failed to refresh an Haros model service",
+          ),
+        [WS_METHODS.modelServicesTestModel]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.testModel(input))),
+            "Failed to test model",
+          ),
+        [WS_METHODS.modelServicesDiscoverCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.discoverCustom(input))),
+            "Failed to discover models for an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesTestCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.testCustom(input))),
+            "Failed to test an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesSaveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.saveCustom(input))),
+            "Failed to save an Haros custom model service",
+          ),
+        [WS_METHODS.modelServicesRemoveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(modelServices.removeCustom(input))),
+            "Failed to remove an Haros custom model service",
+          ),
         [WS_METHODS.engineListModels]: (input) =>
           engineDiscoveryService.listModels(input).pipe(
             Effect.catch((cause) =>
@@ -2133,155 +2198,6 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.engineListAgents]: (input) =>
           rpcEffect(engineDiscoveryService.listAgents(input), "Failed to list agents"),
-        [WS_METHODS.oaEcosystemList]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.list(input))),
-            "Failed to list Haros Agent packages",
-          ),
-        [WS_METHODS.oaEcosystemListResources]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.listResources(input))),
-            "Failed to list Haros Agent package resources",
-          ),
-        [WS_METHODS.oaEcosystemInstall]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.install(input))),
-            "Failed to install an Haros Agent package",
-          ),
-        [WS_METHODS.oaEcosystemUpdate]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.update(input))),
-            "Failed to update an Haros Agent package",
-          ),
-        [WS_METHODS.oaEcosystemRemove]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.remove(input))),
-            "Failed to remove an Haros Agent package",
-          ),
-        [WS_METHODS.oaEcosystemSetResourceEnabled]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.setResourceEnabled(input))),
-            "Failed to change an Haros Agent package resource",
-          ),
-        [WS_METHODS.oaEcosystemReload]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.reload(input))),
-            "Failed to reload Haros Agent resources",
-          ),
-        [WS_METHODS.oaAgentPromptsGetSnapshot]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.getSnapshot(input))),
-            "Failed to read Haros Agent prompt files",
-          ),
-        [WS_METHODS.oaAgentPromptsMutate]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.mutate(input))),
-            "Failed to change an Haros Agent prompt file",
-          ),
-        [WS_METHODS.oaWebSearchOpen]: () =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.open())),
-            "Failed to open Web search settings",
-          ),
-        [WS_METHODS.oaWebSearchRefresh]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.refresh(input))),
-            "Failed to refresh Web search settings",
-          ),
-        [WS_METHODS.oaWebSearchMutate]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.mutate(input))),
-            "Failed to change Web search settings",
-          ),
-        [WS_METHODS.oaWebSearchTestProvider]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(oaWebSearchSettings.testProvider(input, String(clientId))),
-            ),
-            "Failed to test Web search Engine",
-          ),
-        [WS_METHODS.oaWebSearchRecheck]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(oaWebSearchSettings.recheck(input, String(clientId))),
-            ),
-            "Failed to recheck Web search",
-          ),
-        [WS_METHODS.oaWebSearchOpenConfig]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.openConfig(input.editor))),
-            "Failed to open Web search configuration",
-          ),
-        [WS_METHODS.oaWebSearchGeminiDiagnostic]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.diagnoseGemini(input))),
-            "Failed to inspect Gemini Web account",
-          ),
-        [WS_METHODS.oaModelServicesList]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.list(input))),
-            "Failed to list Haros model services",
-          ),
-        [WS_METHODS.oaModelServicesGet]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.get(input))),
-            "Failed to read an Haros model service",
-          ),
-        [WS_METHODS.oaModelServicesBeginLogin]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.beginLogin(clientId, input))),
-            "Failed to begin Haros model-service login",
-          ),
-        [WS_METHODS.oaModelServicesPollLogin]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.pollLogin(clientId, input))),
-            "Failed to poll Haros model-service login",
-          ),
-        [WS_METHODS.oaModelServicesAnswerLogin]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.answerLogin(clientId, input))),
-            "Failed to continue Haros model-service login",
-          ),
-        [WS_METHODS.oaModelServicesCancelLogin]: (input, { clientId }) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.cancelLogin(clientId, input))),
-            "Failed to cancel Haros model-service login",
-          ),
-        [WS_METHODS.oaModelServicesLogout]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.logout(input))),
-            "Failed to remove Haros model-service credentials",
-          ),
-        [WS_METHODS.oaModelServicesRevealApiKey]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.revealApiKey(input))),
-            "Failed to reveal an Haros model-service API key",
-          ),
-        [WS_METHODS.oaModelServicesRefresh]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.refresh(input))),
-            "Failed to refresh an Haros model service",
-          ),
-        [WS_METHODS.oaModelServicesDiscoverCustom]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.discoverCustom(input))),
-            "Failed to discover models for an Haros custom model service",
-          ),
-        [WS_METHODS.oaModelServicesTestCustom]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.testCustom(input))),
-            "Failed to test an Haros custom model service",
-          ),
-        [WS_METHODS.oaModelServicesSaveCustom]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.saveCustom(input))),
-            "Failed to save an Haros custom model service",
-          ),
-        [WS_METHODS.oaModelServicesRemoveCustom]: (input) =>
-          rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(oaModelServices.removeCustom(input))),
-            "Failed to remove an Haros custom model service",
-          ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>

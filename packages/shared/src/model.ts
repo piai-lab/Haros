@@ -9,6 +9,8 @@ import {
   type ClaudeCodeEffort,
   type CodexModelOptions,
   type CursorModelOptions,
+  type DeepSeekModelOptions,
+  type DeepSeekReasoningEffort,
   type GrokModelOptions,
   type GrokReasoningEffort,
   type ModelCapabilities,
@@ -63,7 +65,7 @@ function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
   return Object.prototype.hasOwnProperty.call(DEFAULT_MODEL_BY_ENGINE, engine);
 }
 
-export function getDefaultModel(engine: "oa" | "pi"): null;
+export function getDefaultModel(engine: "pi"): null;
 export function getDefaultModel(engine: EngineWithDefaultModel): ModelSlug;
 export function getDefaultModel(engine: EngineKind): ModelSlug | null;
 export function getDefaultModel(engine: EngineKind): ModelSlug | null {
@@ -281,7 +283,7 @@ function reasoningDescriptorId(engine: EngineKind): string {
   if (engine === "kilo" || engine === "opencode") {
     return "variant";
   }
-  if (engine === "pi" || engine === "oa") {
+  if (engine === "pi") {
     return "thinkingLevel";
   }
   return "reasoningEffort";
@@ -723,6 +725,21 @@ export function normalizeGrokModelOptions(
     return undefined;
   }
   return { reasoningEffort: reasoningEffort as GrokReasoningEffort };
+}
+
+export function normalizeDeepSeekModelOptions(
+  model: string | null | undefined,
+  modelOptions: DeepSeekModelOptions | null | undefined,
+): DeepSeekModelOptions | undefined {
+  const caps = getModelCapabilities("deepseek", model);
+  const reasoningEffort = trimOrNull(modelOptions?.reasoningEffort);
+  if (!reasoningEffort || !hasEffortLevel(caps, reasoningEffort)) {
+    return undefined;
+  }
+  if (reasoningEffort === getDefaultEffort(caps)) {
+    return undefined;
+  }
+  return { reasoningEffort: reasoningEffort as DeepSeekReasoningEffort };
 }
 
 export function normalizeAntigravityModelOptions(
