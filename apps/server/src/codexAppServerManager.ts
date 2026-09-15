@@ -3070,24 +3070,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private handleTransportFailure(context: CodexSessionContext, cause: unknown): void {
     if (context.stopping) return;
-    // A process that exits while its stdin is being flushed can emit EPIPE
-    // before the `exit` event (and its captured stderr) is delivered. Give the
-    // child a turn to publish the authoritative exit diagnostic first.
-    if (
-      (cause as NodeJS.ErrnoException | null)?.code === "EPIPE" &&
-      !context.transportFailureDeferred
-    ) {
-      context.transportFailureDeferred = true;
-      setTimeout(() => {
-        if (
-          context.stopping ||
-          context.child.exitCode !== null ||
-          context.child.signalCode !== null
-        ) {
-          return;
-        }
-        this.handleTransportFailure(context, cause);
-      }, 0);
+    if ((cause as NodeJS.ErrnoException | null)?.code === "EPIPE") {
+      // The pending write reports EPIPE to the startup request; the child exit
+      // handler owns the authoritative diagnostic and lifecycle event.
       return;
     }
     const error =
