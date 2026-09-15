@@ -223,7 +223,7 @@ const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE = {
 } as const satisfies Partial<Record<EngineKind, readonly string[]>>;
 
 function agentMentionAliasesForEngine(
-  engine: EngineKind,
+  engine: EngineKind | null,
 ): Readonly<Record<string, AgentAliasDefinition>> {
   return (
     AGENT_MENTION_ALIASES_BY_ENGINE[engine as keyof typeof AGENT_MENTION_ALIASES_BY_ENGINE] ??
@@ -231,7 +231,7 @@ function agentMentionAliasesForEngine(
   );
 }
 
-function agentMentionAutocompleteAliasesForEngine(engine: EngineKind): readonly string[] {
+function agentMentionAutocompleteAliasesForEngine(engine: EngineKind | null): readonly string[] {
   return (
     AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE[
       engine as keyof typeof AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE
@@ -262,7 +262,10 @@ export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[
 /**
  * Get the preferred aliases shown in autocomplete for a engine.
  */
-export function getAgentMentionAutocompleteAliases(engine: EngineKind): ResolvedAgentAlias[] {
+export function getAgentMentionAutocompleteAliases(
+  engine: EngineKind | null,
+): ResolvedAgentAlias[] {
+  if (!engine) return [];
   const definitions = agentMentionAliasesForEngine(engine);
   return agentMentionAutocompleteAliasesForEngine(engine).map((alias) => {
     const definition = definitions[alias];

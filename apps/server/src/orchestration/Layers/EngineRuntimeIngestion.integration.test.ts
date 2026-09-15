@@ -91,7 +91,6 @@ function createEngineServiceHarness() {
   const unsupported = () => Effect.die(new Error("Unsupported engine call in test")) as never;
   const service: EngineServiceShape = {
     startSession: () => unsupported(),
-    reloadSessionResources: () => unsupported(),
     sendTurn: () => unsupported(),
     steerTurn: () => unsupported(),
     startReview: () => unsupported(),

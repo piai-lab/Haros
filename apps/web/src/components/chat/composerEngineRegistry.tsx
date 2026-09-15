@@ -32,7 +32,7 @@ import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./co
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 export type ComposerEngineStateInput = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: ModelSlug | null;
   runtimeModel?: EngineModelDescriptor | undefined;
   prompt: string;
@@ -40,7 +40,7 @@ export type ComposerEngineStateInput = {
 };
 
 export type ComposerEngineState = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   promptEffort: string | null;
   modelOptionsForDispatch: EngineOptions | undefined;
   composerFrameClassName?: string;
@@ -113,6 +113,13 @@ function renderTraitsPickerForEngine(
 
 function getEngineStateFromCapabilities(input: ComposerEngineStateInput): ComposerEngineState {
   const { engine, model, runtimeModel, prompt, modelOptions } = input;
+  if (!engine) {
+    return {
+      engine: null,
+      promptEffort: null,
+      modelOptionsForDispatch: undefined,
+    };
+  }
   const caps = getRuntimeAwareModelCapabilities({ engine, model, runtimeModel });
 
   let rawEffort: string | null = null;
@@ -257,7 +264,7 @@ export function getComposerEngineState(input: ComposerEngineStateInput): Compose
 }
 
 export function renderEngineTraitsMenuContent(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   threadId: ThreadId;
   model: ModelSlug;
   runtimeModel?: EngineModelDescriptor | undefined;
@@ -269,6 +276,7 @@ export function renderEngineTraitsMenuContent(input: {
   onPromptChange: (prompt: string) => void;
   onSelectionComplete?: () => void;
 }): ReactNode {
+  if (!input.engine) return null;
   const selection = getComposerTraitSelection(
     input.engine,
     input.model,

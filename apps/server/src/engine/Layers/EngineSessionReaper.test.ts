@@ -84,7 +84,6 @@ describe("EngineSessionReaperLive", () => {
     };
     const engineService: EngineServiceShape = {
       startSession: () => unsupported(),
-      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),
@@ -159,7 +158,6 @@ describe("EngineSessionReaperLive", () => {
     };
     const engineService: EngineServiceShape = {
       startSession: () => unsupported(),
-      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),
@@ -230,7 +228,6 @@ describe("EngineSessionReaperLive", () => {
     };
     const engineService = {
       startSession: () => unsupported(),
-      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),

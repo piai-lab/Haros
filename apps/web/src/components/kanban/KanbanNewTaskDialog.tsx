@@ -190,7 +190,7 @@ export function KanbanNewTaskDialog({
     [engineStatuses],
   );
   const modelHintByEngine = useMemo<Partial<Record<EngineKind, string | null>>>(
-    () => ({ [selectedEngine]: selectedModel }),
+    () => (selectedEngine ? { [selectedEngine]: selectedModel } : {}),
     [selectedEngine, selectedModel],
   );
   const {
@@ -322,6 +322,7 @@ export function KanbanNewTaskDialog({
     if (selectedModel !== null) {
       return;
     }
+    if (!selectedEngine) return;
     const firstOption = modelOptionsByEngine[selectedEngine][0];
     if (firstOption) {
       useComposerDraftStore.getState().setEngineSelection(
@@ -562,7 +563,7 @@ export function KanbanNewTaskDialog({
                   />
                   <RuntimeUsageControls
                     engineSelection={
-                      selectedModel
+                      selectedEngine && selectedModel
                         ? buildEngineSelection(
                             selectedEngine,
                             selectedModel,
@@ -580,46 +581,50 @@ export function KanbanNewTaskDialog({
                 <div className="flex shrink-0 items-center gap-1.5">
                   {/* Same split controls as a fresh chat composer: model picker plus
                       the separate effort/thinking/speed picker. */}
-                  <EngineModelPicker
-                    compact
-                    engine={selectedEngine}
-                    model={selectedModel}
-                    lockedEngine={null}
-                    engines={engineStatuses}
-                    modelOptionsByEngine={modelOptionsByEngine}
-                    catalogStateByEngine={catalogStateByEngine}
-                    loadingEngineModels={loadingEngineModels}
-                    hiddenEngines={preferences.hiddenEngines}
-                    engineOrder={preferences.engineOrder}
-                    onEngineModelChange={handleProviderModelChange}
-                    open={isModelPickerOpen}
-                    onOpenChange={(open) => {
-                      setIsModelPickerOpen(open);
-                      if (!open) {
-                        setPiDiscoveryRequested(false);
-                        setPrefetchEngines([]);
-                      }
-                    }}
-                    onEngineBrowse={(engine) => {
-                      setPrefetchEngines((current) =>
-                        current.includes(engine) ? current : [...current, engine],
-                      );
-                      if (engine === "pi") setPiDiscoveryRequested(true);
-                    }}
-                  />
-                  <TraitsPicker
-                    engine={selectedEngine}
-                    threadId={scratchThreadId}
-                    model={selectedModel}
-                    runtimeModel={selectedRuntimeModel}
-                    runtimeModels={runtimeModelsByEngine[selectedEngine]}
-                    runtimeAgents={selectedRuntimeAgents}
-                    modelOptions={selectedEngineModelOptions}
-                    prompt={prompt}
-                    onPromptChange={setPrompt}
-                    open={isTraitsPickerOpen}
-                    onOpenChange={setIsTraitsPickerOpen}
-                  />
+                  {selectedEngine ? (
+                    <>
+                      <EngineModelPicker
+                        compact
+                        engine={selectedEngine}
+                        model={selectedModel}
+                        lockedEngine={null}
+                        engines={engineStatuses}
+                        modelOptionsByEngine={modelOptionsByEngine}
+                        catalogStateByEngine={catalogStateByEngine}
+                        loadingEngineModels={loadingEngineModels}
+                        hiddenEngines={preferences.hiddenEngines}
+                        engineOrder={preferences.engineOrder}
+                        onEngineModelChange={handleProviderModelChange}
+                        open={isModelPickerOpen}
+                        onOpenChange={(open) => {
+                          setIsModelPickerOpen(open);
+                          if (!open) {
+                            setPiDiscoveryRequested(false);
+                            setPrefetchEngines([]);
+                          }
+                        }}
+                        onEngineBrowse={(engine) => {
+                          setPrefetchEngines((current) =>
+                            current.includes(engine) ? current : [...current, engine],
+                          );
+                          if (engine === "pi") setPiDiscoveryRequested(true);
+                        }}
+                      />
+                      <TraitsPicker
+                        engine={selectedEngine}
+                        threadId={scratchThreadId}
+                        model={selectedModel}
+                        runtimeModel={selectedRuntimeModel}
+                        runtimeModels={runtimeModelsByEngine[selectedEngine]}
+                        runtimeAgents={selectedRuntimeAgents}
+                        modelOptions={selectedEngineModelOptions}
+                        prompt={prompt}
+                        onPromptChange={setPrompt}
+                        open={isTraitsPickerOpen}
+                        onOpenChange={setIsTraitsPickerOpen}
+                      />
+                    </>
+                  ) : null}
                 </div>
               </div>
             )}

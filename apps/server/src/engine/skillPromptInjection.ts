@@ -67,9 +67,6 @@ export function shouldInlineSkillForProvider(engine: EngineKind, skillPath: stri
       // Pi loads its own skill set; anything resolved from a cross-engine
       // folder is portable and must be inlined.
       return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
-    case "deepseek":
-      // DeepSeek Harness SDK has no native Haros skill discovery.
-      return true;
     default:
       // Antigravity/Grok/Droid/Kilo/OpenCode have no native skill support.
       return true;

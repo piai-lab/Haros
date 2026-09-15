@@ -76,7 +76,7 @@ describe("HostGateway MCP protocol", () => {
     assert.deepEqual(result.capabilities, { tools: { listChanged: false } });
     assert.equal(result.instructions, "use the tools");
     assert.deepEqual(result.serverInfo, {
-      name: "oa",
+      name: "haros",
       title: "Haros App Control",
       version: "1.2.3",
     });

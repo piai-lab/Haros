@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import * as pi from "@earendil-works/pi-coding-agent";
+import * as stock from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 const roots: string[] = [];
@@ -29,61 +29,44 @@ afterEach(() => {
 });
 
 describe("Pi runtime physical isolation", () => {
-  it("keeps sessions and package roots inside the explicit agentDir rather than a forked OA runtime", async () => {
+  it("keeps stock Pi module identity, resources, sessions, and package roots on .pi", async () => {
     const root = makeRoot();
     const cwd = path.join(root, "project");
-    const firstAgentDir = path.join(root, "first-agent");
-    const secondAgentDir = path.join(root, "second-agent");
+    const stockAgentDir = path.join(root, "stock-agent");
     mkdirSync(cwd, { recursive: true });
 
-    expect(pi.VERSION).toBe("0.84.4");
-    expect(pi.CONFIG_DIR_NAME).toBe(".pi");
+    expect(stock.VERSION).toBe("0.84.4");
+    expect(stock.CONFIG_DIR_NAME).toBe(".pi");
 
-    writeSkill(path.join(firstAgentDir, "skills"), "first-global");
-    writeSkill(path.join(secondAgentDir, "skills"), "second-global");
-    writeSkill(path.join(cwd, ".pi", "skills"), "project-skill");
+    writeSkill(path.join(stockAgentDir, "skills"), "stock-global");
+    writeSkill(path.join(cwd, ".pi", "skills"), "stock-project");
 
-    const firstLoader = new pi.DefaultResourceLoader({
+    const stockLoader = new stock.DefaultResourceLoader({
       cwd,
-      agentDir: firstAgentDir,
+      agentDir: stockAgentDir,
       noExtensions: true,
       noPromptTemplates: true,
       noThemes: true,
       noContextFiles: true,
     });
-    const secondLoader = new pi.DefaultResourceLoader({
+    await stockLoader.reload();
+
+    const stockSkillNames = stockLoader.getSkills().skills.map((skill) => skill.name);
+    expect(stockSkillNames).toEqual(expect.arrayContaining(["stock-global", "stock-project"]));
+
+    const stockSessionDir = path.join(stockAgentDir, "sessions", "test");
+    const stockSession = stock.SessionManager.create(cwd, stockSessionDir);
+    expect(stockSession.getSessionFile()).toContain(stockSessionDir);
+
+    const stockPackagePath = path.join(cwd, ".pi", "npm", "node_modules", "example");
+    mkdirSync(stockPackagePath, { recursive: true });
+    const stockPackages = new stock.DefaultPackageManager({
       cwd,
-      agentDir: secondAgentDir,
-      noExtensions: true,
-      noPromptTemplates: true,
-      noThemes: true,
-      noContextFiles: true,
-    });
-    await Promise.all([firstLoader.reload(), secondLoader.reload()]);
-
-    const firstSkillNames = firstLoader.getSkills().skills.map((skill) => skill.name);
-    const secondSkillNames = secondLoader.getSkills().skills.map((skill) => skill.name);
-    expect(firstSkillNames).toEqual(expect.arrayContaining(["first-global", "project-skill"]));
-    expect(firstSkillNames).not.toContain("second-global");
-    expect(secondSkillNames).toEqual(expect.arrayContaining(["second-global", "project-skill"]));
-    expect(secondSkillNames).not.toContain("first-global");
-
-    const firstSessionDir = path.join(firstAgentDir, "sessions", "test");
-    const secondSessionDir = path.join(secondAgentDir, "sessions", "test");
-    const firstSession = pi.SessionManager.create(cwd, firstSessionDir);
-    const secondSession = pi.SessionManager.create(cwd, secondSessionDir);
-    expect(firstSession.getSessionFile()).toContain(firstSessionDir);
-    expect(secondSession.getSessionFile()).toContain(secondSessionDir);
-
-    const firstPackagePath = path.join(cwd, ".pi", "npm", "node_modules", "example");
-    mkdirSync(firstPackagePath, { recursive: true });
-    const firstPackages = new pi.DefaultPackageManager({
-      cwd,
-      agentDir: firstAgentDir,
-      settingsManager: pi.SettingsManager.create(cwd, firstAgentDir, {
+      agentDir: stockAgentDir,
+      settingsManager: stock.SettingsManager.create(cwd, stockAgentDir, {
         projectTrusted: true,
       }),
     });
-    expect(firstPackages.getInstalledPath("npm:example", "project")).toBe(firstPackagePath);
+    expect(stockPackages.getInstalledPath("npm:example", "project")).toBe(stockPackagePath);
   });
 });

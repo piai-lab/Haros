@@ -79,7 +79,7 @@ export function skillDisplayName(skill: EngineSkillDescriptor): string {
 }
 
 export function isHarosSkillSource(skill: EngineSkillDescriptor): boolean {
-  return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
+  return skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
 export function engineDisplayName(engine: EngineKind): string {

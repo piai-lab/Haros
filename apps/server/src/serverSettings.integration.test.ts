@@ -136,104 +136,6 @@ describe("ServerSettingsService", () => {
     });
   });
 
-  it("retires old Haros model and prompt fields on the next normal settings save", async () => {
-    const retiredKey = ["custom", "Models"].join("");
-    const result = await runWithSettings(
-      Effect.gen(function* () {
-        const service = yield* ServerSettingsService;
-        const { settingsPath } = yield* ServerConfig;
-        const fs = yield* FileSystem.FileSystem;
-        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
-        yield* fs.writeFileString(
-          settingsPath,
-          JSON.stringify({
-            revision: 4,
-            migrationVersion: 4,
-            settings: {
-              enableAssistantStreaming: true,
-              enableEngineUpdateChecks: false,
-              addProjectBaseDirectory: "/tmp/harnessos-projects",
-              engines: {
-                codex: { customModels: ["custom/codex-model"] },
-              },
-              agentTools: { builtInGroupOverrides: {} },
-            },
-          }),
-        );
-
-        yield* service.start;
-        const rawAfterRead = yield* fs.readFileString(settingsPath);
-        const view = yield* service.getSettingsView;
-        const internal = yield* service.getSettings;
-        yield* service.updateSettings({ enableAssistantStreaming: false });
-        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
-          revision: number;
-          migrationVersion: number;
-          settings: Record<string, unknown> & {
-            engines: Record<string, unknown> & {
-              codex: { customModels: string[] };
-            };
-          };
-        };
-        return { rawAfterRead, view, internal, persisted };
-      }),
-    );
-
-    expect(result.persisted).toMatchObject({
-      revision: 5,
-      migrationVersion: 4,
-      settings: {
-        enableAssistantStreaming: false,
-        enableEngineUpdateChecks: false,
-        addProjectBaseDirectory: "/tmp/harnessos-projects",
-        engines: {
-          codex: { customModels: ["custom/codex-model"] },
-        },
-        agentTools: { builtInGroupOverrides: {} },
-      },
-    });
-    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
-  });
-
-  it("migrates a retired OA default engine onto Pi and drops the OA engine block", async () => {
-    const result = await runWithSettings(
-      Effect.gen(function* () {
-        const service = yield* ServerSettingsService;
-        const { settingsPath } = yield* ServerConfig;
-        const fs = yield* FileSystem.FileSystem;
-        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
-        yield* fs.writeFileString(
-          settingsPath,
-          JSON.stringify({
-            revision: 2,
-            migrationVersion: 4,
-            settings: {
-              defaultEngine: "oa",
-              engines: {
-                oa: { enabled: true },
-                pi: { enabled: true, binaryPath: "pi", customModels: [], agentDir: "" },
-              },
-            },
-          }),
-        );
-        yield* service.start;
-        const settings = yield* service.getSettings;
-        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
-          settings: {
-            defaultEngine: string;
-            engines: Record<string, unknown>;
-          };
-        };
-        return { settings, persisted };
-      }),
-    );
-
-    expect(result.settings.defaultEngine).toBe("pi");
-    expect(result.settings.engines).not.toHaveProperty("oa");
-    expect(result.persisted.settings.defaultEngine).toBe("pi");
-    expect(result.persisted.settings.engines).not.toHaveProperty("oa");
-  });
-
   it.each([
     {
       name: "an explicit legacy Device-on choice",
@@ -256,7 +158,7 @@ describe("ServerSettingsService", () => {
     },
     {
       name: "the disabled legacy Haros aggregate",
-      disabledBuiltInGroups: ["oa", "future-group"],
+      disabledBuiltInGroups: ["future-group"],
       expected: {
         agent: {
           automations: false,
@@ -498,7 +400,7 @@ describe("ServerSettingsService", () => {
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationEngineSelection: { engine: "pi" },
+            textGenerationEngineSelection: { engine: "antigravity" },
           }),
         );
         return {
@@ -746,7 +648,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultEngine).toBe("codex");
+    expect(result.reset.defaultEngine).toBe(null);
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);

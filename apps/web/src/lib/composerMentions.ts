@@ -9,7 +9,7 @@ import {
   threadIdFromThreadMentionPath,
 } from "@harnessos/shared/threadMentions";
 
-export function skillMentionPrefix(engine: string): string {
+export function skillMentionPrefix(engine: string | null): string {
   return engine === "pi" ? "/skill:" : "/";
 }
 
@@ -93,8 +93,9 @@ export function promptIncludesSkillMention(
 export function filterPromptSkillReferences(
   prompt: string,
   skills: ReadonlyArray<EngineSkillReference>,
-  engine: string,
+  engine: string | null,
 ): EngineSkillReference[] {
+  if (!engine) return [];
   return skills.filter((skill) => promptIncludesSkillMention(prompt, skill.name, engine));
 }
 

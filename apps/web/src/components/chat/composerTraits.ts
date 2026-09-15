@@ -96,7 +96,7 @@ function promptInjectedValuesForDescriptor(
 
 // Resolve the currently selected composer traits from capabilities plus draft overrides.
 export function getComposerTraitSelection(
-  engine: EngineKind,
+  engine: EngineKind | null,
   model: string | null | undefined,
   prompt: string,
   modelOptions: EngineOptions | null | undefined,

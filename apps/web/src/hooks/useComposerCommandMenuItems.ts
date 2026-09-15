@@ -259,7 +259,7 @@ export function buildSearchableModelOptions(input: {
 
 export function useComposerCommandMenuItems(input: {
   composerTrigger: ComposerTrigger | null;
-  engine: EngineKind;
+  engine: EngineKind | null;
   enginePlugins: readonly ComposerPluginSuggestion[];
   engineNativeCommands: readonly EngineNativeCommandDescriptor[];
   engineSkills: readonly EngineSkillDescriptor[];
@@ -299,7 +299,7 @@ export function useComposerCommandMenuItems(input: {
     threadMentionSources,
   } = input;
 
-  if (!composerTrigger) return [];
+  if (!composerTrigger || !engine) return [];
 
   // Keep trigger-specific discovery outside ChatView so the view mostly orchestrates state.
   if (composerTrigger.kind === "mention") {

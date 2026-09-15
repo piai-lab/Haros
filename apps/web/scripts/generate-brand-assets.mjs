@@ -17,8 +17,6 @@ const sources = {
   markMono: path.join(brandRoot, "harnessos-mark-mono.svg"),
   app: path.join(brandRoot, "harnessos-app-icon.svg"),
   appDark: path.join(brandRoot, "harnessos-app-icon-dark.svg"),
-  oaBadge: path.join(brandRoot, "oa-badge.svg"),
-  oaBadgeDark: path.join(brandRoot, "oa-badge-dark.svg"),
 };
 
 await Promise.all([
@@ -149,8 +147,6 @@ const outputs = new Map([
   [path.join(publicRoot, "brand", "harnessos-mark.svg"), sourceText.mark],
   [path.join(publicRoot, "brand", "harnessos-mark-dark.svg"), sourceText.markDark],
   [path.join(publicRoot, "brand", "harnessos-mark-mono.svg"), sourceText.markMono],
-  [path.join(publicRoot, "brand", "oa-badge.svg"), sourceText.oaBadge],
-  [path.join(publicRoot, "brand", "oa-badge-dark.svg"), sourceText.oaBadgeDark],
   [path.join(desktopRoot, "app-icon-linux.png"), appPng.get(512)],
   [path.join(desktopRoot, "app-icon-macos.png"), appPng.get(1024)],
   [path.join(desktopRoot, "app-icon-windows.ico"), appIco],

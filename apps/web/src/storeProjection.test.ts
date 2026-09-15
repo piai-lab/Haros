@@ -779,21 +779,21 @@ describe("store projection", () => {
     expect(threadsOf(next)[0]?.engineSelection.model).toBe("claude-sonnet-5");
   });
 
-  it("preserves Haros Agent as the active session engine", () => {
+  it("preserves Codex as the active session engine", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
         engineSelection: {
-          engine: "pi",
+          engine: "codex",
           model: "deepseek/deepseek-chat",
         },
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          engine: "pi",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
-          lastError: "Haros Agent credentials are not configured.",
+          lastError: "Codex credentials are not configured.",
           updatedAt: "2026-02-27T00:00:00.000Z",
         },
       }),
@@ -801,8 +801,8 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("pi");
-    expect(threadsOf(next)[0]?.session?.engine).toBe("pi");
+    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("codex");
+    expect(threadsOf(next)[0]?.session?.engine).toBe("codex");
   });
 
   it("preserves OpenCode as the active session engine", () => {

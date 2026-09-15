@@ -58,7 +58,7 @@ async function renderPanel() {
     keybindings: [],
     availableEditors: [],
     activeThreadId: null,
-    activeEngine: "pi",
+    activeEngine: "codex",
     isStudioChat: true,
     studioFolderPath: "/task/studio-folder",
     showGitActions: false,

@@ -1,6 +1,7 @@
-# Haros
+<h1 align="center">Haros</h1>
 
 <div align="center">
+  <img src="assets/brand/exports/haros-system-schematic.png" width="960" alt="Ten Engines enter Haros, which keeps shared product state in one workbench" />
   <p>
     <a href="docs/guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="docs/README.zh-CN.md">简体中文</a> ·
@@ -20,8 +21,9 @@
   </p>
 </div>
 
-Haros brings nine independent Engines—Codex, Claude, Cursor, Antigravity, Grok, Droid, Kilo, OpenCode, and Pi—into one workbench. Pick the right Engine for each turn without moving the project,
-rebuilding context, or giving up a shared history.
+Haros brings Codex, Claude, Cursor, Antigravity, Grok, Droid, Kilo, OpenCode, and Pi into one
+coherent workbench. Pick the right Engine for each turn without moving the project, rebuilding
+context, or giving up a shared history.
 
 ## Every Engine enters the same workbench
 
@@ -65,8 +67,6 @@ bun run dev
 
 Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching CLI, account, and
 local setup. A successful local build is unsigned source software, not an official release.
-
-Fresh installs open the workbench directly and default to Codex. Configure the selected Engine in Settings before sending. The bundled OA Engine and bundled web search have been removed. Settings → Model services configures credentials and custom models for the independent Pi Engine; other Engines retain their native configuration. Existing OA history remains readable but cannot execute; create a new task with another Engine.
 
 ## Go deeper
 

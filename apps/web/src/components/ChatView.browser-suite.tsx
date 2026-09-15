@@ -4,30 +4,30 @@ import "../index.css";
 import {
   ApprovalRequestId,
   AutomationId,
-  CheckpointRef,
-  CommandId,
-  DEFAULT_SERVER_SETTINGS_VIEW,
-  DEVICE_WS_METHODS,
-  ENGINE_INTERACTION_MODES,
-  EventId,
-  MessageId,
-  ORCHESTRATION_WS_METHODS,
-  OrchestrationSessionStatus,
-  ThreadId,
-  TurnId,
-  WS_METHODS,
   type AutomationCreateInput,
   type AutomationDefinition,
   type ChatAttachment,
+  CheckpointRef,
+  CommandId,
+  EventId,
+  MessageId,
+  DEVICE_WS_METHODS,
+  ORCHESTRATION_WS_METHODS,
+  ENGINE_INTERACTION_MODES,
+  type OrchestrationReadModel,
+  type ProjectId,
   type EngineExecutionCapabilities,
   type EngineKind,
   type EngineListCommandsResult,
   type EngineListModelsResult,
-  type OrchestrationReadModel,
-  type ProjectId,
   type ServerConfig,
   type ServerSettingsView,
+  DEFAULT_SERVER_SETTINGS_VIEW,
+  ThreadId,
+  TurnId,
   type WsWelcomePayload,
+  WS_METHODS,
+  OrchestrationSessionStatus,
 } from "@harnessos/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
@@ -36,43 +36,38 @@ import {
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
 import { setupWorker } from "msw/browser";
+import { page, userEvent } from "vitest/browser";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page, userEvent } from "vitest/browser";
 
+import {
+  partializeComposerDraftStoreState,
+  type ComposerFileAttachment,
+  type ComposerImageAttachment,
+  useComposerDraftStore,
+} from "../composerDraftStore";
+import { appHistory } from "../appNavigation";
+import { LOCAL_PREFERENCES_STORAGE_KEY } from "../localPreferences";
 import { THREAD_SIDEBAR_WIDTH_STORAGE_KEY } from "../appearanceMigrations";
+import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
   getScrollContainerDistanceFromBottom,
 } from "../chat-scroll";
-import {
-  partializeComposerDraftStoreState,
-  useComposerDraftStore,
-  type ComposerFileAttachment,
-  type ComposerImageAttachment,
-} from "../composerDraftStore";
-import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import { useLatestProjectStore } from "../latestProjectStore";
-import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
-import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
-import { engineModelsQueryOptions } from "../lib/engineDiscoveryReactQuery";
-import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
 import {
   INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
   type TerminalContextDraft,
 } from "../lib/terminalContext";
+import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
 import { isMacPlatform } from "../lib/utils";
-import { LOCAL_PREFERENCES_STORAGE_KEY } from "../localPreferences";
 import { readNativeApi } from "../nativeApi";
-import { useRightDockStore } from "../rightDockStore";
-import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
+import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
+import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
+import { engineModelsQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import { getRouter } from "../router";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
-import { useTerminalStateStore } from "../terminalStateStore";
-import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
-import { browserItFor, type BrowserTestKind } from "../test/browserTestKind";
 import {
   createShellSnapshotFromReadModel,
   flattenEffectRpcRequestPayload,
@@ -80,8 +75,16 @@ import {
   sendEffectRpcChunk,
   sendEffectRpcExit,
 } from "../test/effectRpcWebSocketMock";
+import { makeDomainEvent } from "../storeTestFixtures";
+import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
+import { browserItFor, type BrowserTestKind } from "../test/browserTestKind";
+import { useTemporaryThreadStore } from "../temporaryThreadStore";
+import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { useRightDockStore } from "../rightDockStore";
+import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
+import { ENGINE_OPTIONS } from "../session-logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { toastManager } from "./ui/toast";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
@@ -3930,13 +3933,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       observer.observe(sidebar, { attributes: true, attributeFilter: ["data-state"] });
       try {
         await navigate();
-        // A route change may reuse the existing dock state and therefore emit
-        // no state mutation. When it does emit one, either motion policy is
-        // valid for the first frame.
-        await new Promise((resolve) => setTimeout(resolve, 0));
-        if (transitionDurations.length > 0) {
-          expect(["0s", "0.24s"]).toContain(transitionDurations[0]?.split(",")[0]);
-        }
+        await vi.waitFor(() => expect(transitionDurations.length).toBeGreaterThan(0));
+        expect(transitionDurations[0]?.split(",")).toContain("0.24s");
       } finally {
         observer.disconnect();
       }
@@ -3949,7 +3947,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await waitForLayout();
       expect(getComputedStyle(dockGap()!).transitionDuration.split(",")).toContain("0.24s");
       const authoredOpenWidth = dockGap()!.getBoundingClientRect().width;
-      expect(authoredOpenWidth).toBeGreaterThanOrEqual(0);
+      expect(authoredOpenWidth).toBeGreaterThan(0);
 
       await recordTransitionAtNextDockState("collapsed", () =>
         mounted.router.navigate({
@@ -3968,7 +3966,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.open).toBe(true);
       // Reverse before the 240ms close completes. CSS drawer motion must remain
       // interruptible rather than finishing an obsolete route transition first.
-      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThanOrEqual(0);
+      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThan(0);
 
       await new Promise<void>((resolve) => window.setTimeout(resolve, 48));
       await recordTransitionAtNextDockState("expanded", () =>
@@ -5417,9 +5415,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
           engines: [
-            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "pi"),
+            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "codex"),
             {
-              engine: "pi",
+              engine: "codex",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5434,7 +5432,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await waitForServerConfigToApply();
       useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
-        engine: "pi",
+        engine: "codex",
         model: "deepseek/deepseek-v4-flash",
       });
       useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
@@ -7224,7 +7222,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           engines: [
             ...nextFixture.serverConfig.engines,
             {
-              engine: "pi",
+              engine: "codex",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -10362,7 +10360,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it.each(["pi", "pi"] as const)(
+  it.each(["codex", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
     async (defaultEngine) => {
       const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultEngine}`);

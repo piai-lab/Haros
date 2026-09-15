@@ -65,7 +65,7 @@ export type DeviceRuntimeState = typeof DeviceRuntimeState.Type;
  * Who owns the boot. Haros only auto-shuts down devices it booted itself;
  * anything the user started (pane picker, Simulator.app) outlives the session.
  */
-export const DeviceBootSource = Schema.Literals(["oa", "user"]);
+export const DeviceBootSource = Schema.Literals(["haros", "user"]);
 export type DeviceBootSource = typeof DeviceBootSource.Type;
 
 /**

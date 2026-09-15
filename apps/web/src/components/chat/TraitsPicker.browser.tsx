@@ -57,6 +57,7 @@ function ClaudeTraitsPickerHarness(props: {
       droid: [],
       kilo: [],
       opencode: [],
+      pi: [],
     },
     availableModelOptionsByEngine: {
       claude: [{ slug: props.model, name: props.model }],
@@ -950,9 +951,9 @@ describe("TraitsPicker (OpenCode)", () => {
 describe("TraitsPicker (Pi-backed thinking)", () => {
   it.each([
     { engine: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
-    { engine: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
+    { engine: "codex", locale: "en", trigger: "Options", label: "Thinking level" },
     { engine: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
-    { engine: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+    { engine: "codex", locale: "zh-CN", trigger: "选项", label: "思考强度" },
   ] as const)("labels $engine native options truthfully in $locale", async (testCase) => {
     i18nHarness.settings.localePreference = testCase.locale;
     const host = document.createElement("div");

@@ -250,7 +250,7 @@ describe("assistant turn provenance hot-path merge", () => {
     pendingMessageId,
     turnId: null,
     engineSelection: {
-      engine: "pi" as const,
+      engine: "codex" as const,
       model: "deepseek/deepseek-v4-pro",
     },
     requestedAt,

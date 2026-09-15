@@ -9,16 +9,17 @@ const formerWorkingName = ["Harness", "OS"].join("");
 const predecessorName = ["Omni", "Mind"].join("");
 
 const historicalProvenancePath = "docs/provenance.md";
+const identityScanExcludedPaths = [
+  "missions/",
+  "source-adoptions.json",
+  "apps/desktop/scripts/source-desktop-launch.test.mjs",
+  "docs/guide/publication/validate-run6.mjs",
+];
 const persistedMigrationPaths = new Set([
   "apps/server/src/persistence/Migrations.ts",
   "apps/server/src/persistence/Migrations.integration.test.ts",
 ]);
 const persistedMigrationToken = `${formerWorkingName}InitialSchema`;
-const internalProvenancePrefixes = ["missions/", "source-adoptions.json"];
-const internalValidationPaths = new Set([
-  "apps/desktop/scripts/source-desktop-launch.test.mjs",
-  "docs/guide/publication/validate-run6.mjs",
-]);
 
 function trackedFiles() {
   return execFileSync("git", ["ls-files", "-z"], {
@@ -40,17 +41,30 @@ function removePersistedMigrationToken(relativePath, text) {
     : text;
 }
 
+function isIdentityScanExcluded(relativePath) {
+  return (
+    relativePath === historicalProvenancePath ||
+    identityScanExcludedPaths.some((prefix) =>
+      prefix.endsWith("/") ? relativePath.startsWith(prefix) : relativePath === prefix,
+    )
+  );
+}
+
 const findings = [];
 for (const relativePath of trackedFiles()) {
-  const bytes = await readFile(path.join(repositoryRoot, relativePath));
+  let bytes;
+  try {
+    bytes = await readFile(path.join(repositoryRoot, relativePath));
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      continue;
+    }
+    throw error;
+  }
   if (bytes.includes(0)) continue;
 
   const text = bytes.toString("utf8");
-  const isInternalProvenance =
-    internalProvenancePrefixes.some(
-      (prefix) => relativePath === prefix || relativePath.startsWith(prefix),
-    ) || internalValidationPaths.has(relativePath);
-  if (relativePath !== historicalProvenancePath && !isInternalProvenance) {
+  if (!isIdentityScanExcluded(relativePath)) {
     const productScan = removePersistedMigrationToken(relativePath, text);
     const formerIndex = productScan.indexOf(formerWorkingName);
     if (formerIndex >= 0) {

@@ -72,10 +72,6 @@ function makeSettings(
         ...DEFAULT_SERVER_SETTINGS_VIEW.engines.pi,
         ...overrides.engines?.pi,
       },
-      deepseek: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.engines.deepseek,
-        ...overrides.engines?.deepseek,
-      },
     },
   };
 }
@@ -124,17 +120,6 @@ describe("resolveNewThreadModelPrefetchEngine", () => {
         defaultEngine: "claude",
       }),
     ).toBe("claude");
-  });
-
-  it("falls back to the app default when earlier candidates are missing", () => {
-    expect(
-      resolveNewThreadModelPrefetchEngine({
-        draftActiveEngine: null,
-        stickyActiveEngine: null,
-        projectDefaultEngine: null,
-        defaultEngine: "codex",
-      }),
-    ).toBe("codex");
   });
 });
 
@@ -217,6 +202,21 @@ describe("engineModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
     );
 
+    const piOptions = engineModelsPrefetchQueryOptions({
+      engine: "pi",
+      settings,
+      cwd: "/tmp/project",
+    });
+    expect(piOptions?.queryKey).toEqual(
+      engineDiscoveryQueryKeys.models(
+        "pi",
+        settings.engines.pi.binaryPath || null,
+        null,
+        settings.engines.pi.agentDir || null,
+        "/tmp/project",
+      ),
+    );
+
     const claudeOptions = engineModelsPrefetchQueryOptions({
       engine: "claude",
       settings,
@@ -232,15 +232,6 @@ describe("engineModelsPrefetchQueryOptions", () => {
     });
     expect(openCodeOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("opencode", "/bin/opencode", null, null, "/tmp/project"),
-    );
-
-    const piOptions = engineModelsPrefetchQueryOptions({
-      engine: "pi",
-      settings,
-      cwd: "/tmp/project",
-    });
-    expect(piOptions?.queryKey).toEqual(
-      engineDiscoveryQueryKeys.models("pi", "/bin/pi", null, "/tmp/pi-agent", null),
     );
 
     const antigravityOptions = engineModelsPrefetchQueryOptions({
@@ -264,15 +255,6 @@ describe("engineModelsPrefetchQueryOptions", () => {
     });
     expect(codexOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("codex", null, null, null, null),
-    );
-
-    const deepseekOptions = engineModelsPrefetchQueryOptions({
-      engine: "deepseek",
-      settings,
-      cwd: "/tmp/project",
-    });
-    expect(deepseekOptions?.queryKey).toEqual(
-      engineDiscoveryQueryKeys.models("deepseek", "dsh", null, null, null),
     );
   });
 });
@@ -326,8 +308,8 @@ describe("prefetchEngineModelsForNewThread", () => {
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
     prefetchEngineModelsForNewThread(queryClient, {
-      engine: "deepseek",
-      settings: makeSettings({ defaultEngine: "deepseek" }),
+      engine: "codex",
+      settings: makeSettings({ defaultEngine: "codex" }),
       cwd: "/tmp/project",
       enabled: false,
     });
@@ -349,15 +331,15 @@ describe("prefetchEngineModelsForNewThread", () => {
       engine: { listModels, getComposerCapabilities },
     } as unknown as NativeApi);
     const queryClient = new QueryClient();
-    const settings = makeSettings({ defaultEngine: "pi" });
+    const settings = makeSettings({ defaultEngine: "codex" });
 
     prefetchEngineModelsForNewThread(queryClient, {
-      engine: "pi",
+      engine: "codex",
       settings,
       cwd: "/tmp/project-a",
     });
     prefetchEngineModelsForNewThread(queryClient, {
-      engine: "pi",
+      engine: "codex",
       settings,
       cwd: "/tmp/project-b",
     });
@@ -367,7 +349,7 @@ describe("prefetchEngineModelsForNewThread", () => {
       expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
     });
     expect(listModels).toHaveBeenCalledWith(
-      { engine: "pi", binaryPath: "pi" },
+      { engine: "codex" },
       { signal: expect.any(AbortSignal) },
     );
   });

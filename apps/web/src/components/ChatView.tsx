@@ -1,73 +1,65 @@
 import {
-  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
-  EngineInteractionMode,
-  EventId,
-  MessageId,
-  OrchestrationThreadActivity,
-  RuntimeMode,
-  ThreadId,
-  ThreadMarkerId,
-  type ApprovalRequestId,
   type AutomationDefinition,
   type AutomationSchedule,
-  type EditorId,
-  type EngineApprovalDecision,
+  type ApprovalRequestId,
+  EventId,
+  MessageId,
+  type EngineSelection,
+  type NativeApi,
+  type OrchestrationShellSnapshot,
+  type ProjectScript,
+  type ModelSlug,
   type EngineKind,
+  type ProjectEntry,
+  type ProjectId,
+  type EngineApprovalDecision,
   type EngineMentionReference,
   type EngineNativeCommandDescriptor,
   type EnginePluginDescriptor,
   type EngineRequestKind,
-  type EngineSelection,
   type EngineSkillDescriptor,
   type EngineSkillReference,
   type EngineStartOptions,
-  type KeybindingCommand,
-  type ModelSlug,
-  type NativeApi,
-  type OrchestrationShellSnapshot,
-  type OrchestrationTurnProvenance,
   type PinnedMessage,
-  type ProjectEntry,
-  type ProjectId,
-  type ProjectScript,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerEngineStatus,
+  ThreadId,
+  ThreadMarkerId,
   type ThreadGoalAchievement,
   type ThreadMarker,
   type ThreadMarkerColor,
   type ThreadMarkerStyle,
+  type OrchestrationTurnProvenance,
   type TurnId,
+  type EditorId,
+  type KeybindingCommand,
+  OrchestrationThreadActivity,
+  EngineInteractionMode,
+  RuntimeMode,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
+import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
+import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
+import {
+  resolveLatestTailUserMessageEditTarget,
+  resolveTailUserMessageEditTarget,
+} from "@harnessos/shared/conversationEdit";
+import { threadExportBlockedReason } from "@harnessos/shared/threadExport";
+import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import {
   buildPromptThreadTitleFallback,
   GENERIC_CHAT_THREAD_TITLE,
 } from "@harnessos/shared/chatThreads";
 import {
-  resolveLatestTailUserMessageEditTarget,
-  resolveTailUserMessageEditTarget,
-} from "@harnessos/shared/conversationEdit";
-import {
-  engineOpensModelServicesSettings,
-  mapEngineDescriptors,
-} from "@harnessos/shared/engineMetadata";
-import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
-import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
-import {
-  resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd,
-  resolveThreadBranchSourceCwd,
   resolveThreadWorkspaceState,
+  resolveThreadBranchSourceCwd,
+  resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd,
 } from "@harnessos/shared/threadEnvironment";
-import { threadExportBlockedReason } from "@harnessos/shared/threadExport";
-import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import {
   deriveAssociatedWorktreeMetadata,
   workspaceRootsEqual,
 } from "@harnessos/shared/threadWorkspace";
-import { type LegendListRef } from "@legendapp/list/react";
-import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import {
   lazy,
   Suspense,
@@ -83,250 +75,97 @@ import {
   type WheelEvent,
 } from "react";
 import { flushSync } from "react-dom";
-import { useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
+import { useNavigate } from "@tanstack/react-router";
+import { type LegendListRef } from "@legendapp/list/react";
+import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
 import {
-  useDesktopTopBarTrafficLightGutterClassName,
-  useDesktopTopBarWindowControlsGutterClassName,
-} from "~/hooks/useDesktopTopBarGutter";
+  GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
+  gitCreateDetachedWorktreeMutationOptions,
+  gitGithubRepositoryQueryOptions,
+  gitBranchesQueryOptions,
+  gitStatusQueryOptions,
+} from "~/lib/gitReactQuery";
+import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
+import {
+  isEngineDiscoverySessionActive,
+  isEngineInteractionModeExecutable,
+  engineComposerCapabilitiesQueryOptions,
+  engineExecutionCapabilitiesQueryOptions,
+  engineCommandsQueryOptions,
+  engineDiscoveryQueryKeys,
+  enginePluginsQueryOptions,
+  engineSkillsQueryOptions,
+  supportsNativeSlashCommandDiscovery,
+  supportsPluginDiscovery,
+  supportsSkillDiscovery,
+  supportsThreadCompaction,
+} from "~/lib/engineDiscoveryReactQuery";
+import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
+import {
+  serverConfigQueryOptions,
+  serverQueryKeys,
+  serverSettingsQueryOptions,
+} from "~/lib/serverReactQuery";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
-import { useLocalStorage } from "~/hooks/useLocalStorage";
-import { useNowMs } from "~/hooks/useNowMs";
-import { useRepoDiffTotals } from "~/hooks/useRepoDiffTotals";
-import { useThreadRecap } from "~/hooks/useThreadRecap";
+import { reportFocusedComposerReadiness } from "~/startup/startupSplash";
+import { isTerminalStartupCatalogState } from "~/startup/startupReadiness";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
 import {
   composerMentionPathNeedsQuoting,
-  engineMentionReferencesEqual,
-  engineSkillReferencesEqual,
+  formatComposerMentionToken,
   filterPromptEngineMentionReferences,
   filterPromptSkillReferences,
-  formatComposerMentionToken,
+  engineMentionReferencesEqual,
+  engineSkillReferencesEqual,
   skillMentionPrefix,
 } from "~/lib/composerMentions";
+import { joinProjectPath } from "~/lib/projectPaths";
+import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
   findEngineStatus,
   normalizeCustomBinaryPath,
   normalizeEngineStatusForLocalConfig,
   resolveEngineSendAvailabilityWithRefresh,
 } from "~/lib/engineAvailability";
-import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
-import {
-  engineCommandsQueryOptions,
-  engineComposerCapabilitiesQueryOptions,
-  engineDiscoveryQueryKeys,
-  engineExecutionCapabilitiesQueryOptions,
-  enginePluginsQueryOptions,
-  engineSkillsQueryOptions,
-  isEngineDiscoverySessionActive,
-  isEngineInteractionModeExecutable,
-  supportsNativeSlashCommandDiscovery,
-  supportsPluginDiscovery,
-  supportsSkillDiscovery,
-  supportsThreadCompaction,
-} from "~/lib/engineDiscoveryReactQuery";
-import {
-  GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
-  gitBranchesQueryOptions,
-  gitCreateDetachedWorktreeMutationOptions,
-  gitGithubRepositoryQueryOptions,
-  gitStatusQueryOptions,
-} from "~/lib/gitReactQuery";
-import {
-  ChevronDownIcon,
-  ComposerSendArrowIcon,
-  LayoutSidebarIcon,
-  LoaderCircleIcon,
-  TemporaryThreadIcon,
-} from "~/lib/icons";
-import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
-import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
-import { joinProjectPath } from "~/lib/projectPaths";
-import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
-import { decodeProjectScriptKeybindingRule } from "~/lib/projectScriptKeybindings";
-import {
-  serverConfigQueryOptions,
-  serverQueryKeys,
-  serverSettingsQueryOptions,
-} from "~/lib/serverReactQuery";
-import {
-  deletePromotedThreadForCleanup,
-  promoteThreadCreate,
-  resolveLocalDraftPromotion,
-  type LocalDraftPromotionOwnership,
-} from "~/lib/threadCreatePromotion";
-import {
-  cn,
-  isMacPlatform,
-  newCommandId,
-  newMessageId,
-  newProjectId,
-  newThreadId,
-  randomUUID,
-} from "~/lib/utils";
-import { readNativeApi } from "~/nativeApi";
-import {
-  commandForProjectScript,
-  nextProjectScriptId,
-  projectScriptIdFromCommand,
-  projectScriptRuntimeEnv,
-  setupProjectScript,
-  type ProjectScriptRunOptions,
-  type ProjectScriptRunResult,
-} from "~/projectScripts";
-import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
-import { isTerminalStartupCatalogState } from "~/startup/startupReadiness";
-import { reportFocusedComposerReadiness } from "~/startup/startupSplash";
-import { useBrowserStateStore } from "../browserStateStore";
-import { isScrollContainerNearBottom } from "../chat-scroll";
-import {
-  clampCollapsedComposerCursor,
-  collapseExpandedComposerCursor,
-  detectComposerTrigger,
-  expandCollapsedComposerCursor,
-  replaceTextRange,
-  stripComposerTriggerText,
-  type ComposerTrigger,
-} from "../composer-logic";
-import {
-  captureComposerPromptHistorySavedDraft,
-  resolvePreferredComposerEngine,
-  resolvePreferredComposerEngineSelection,
-  useComposerDraftStore,
-  useComposerThreadDraft,
-  useEffectiveComposerModelState,
-  type BrowserAnnotationDraft,
-  type ComposerAssistantSelectionAttachment,
-  type ComposerBindingSnapshot,
-  type ComposerFileAttachment,
-  type ComposerImageAttachment,
-  type DraftThreadEnvMode,
-  type PendingDirectTurnRecovery,
-  type PersistedComposerImageAttachment,
-  type QueuedComposerChatTurn,
-  type QueuedComposerPlanFollowUp,
-  type QueuedComposerTurn,
-  type RestoredComposerSourceProposedPlan,
-} from "../composerDraftStore";
-import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
-import {
-  canOfferForkSlashCommand,
-  canOfferReviewSlashCommand,
-  canOfferSideSlashCommand,
-  engineSupportsTextNativeReviewCommand,
-  hasEngineNativeSlashCommand,
-  resolveComposerSlashRootBranch,
-} from "../composerSlashCommands";
-import {
-  ensureLeadingSpaceForReplacement,
-  extendReplacementRangeForTrailingSpace,
-} from "../composerTriggerInsertion";
 import {
   loadConfirmedCustomBinaryPaths,
   saveConfirmedCustomBinaryPaths,
 } from "../confirmedCustomBinaryPathStore";
-import { stripDiffSearchParams } from "../diffRouteSearch";
-import { buildEngineSelection, resolveModelPresentationIdentity } from "../engineModelOptions";
-import {
-  getCustomBinaryPathForEngine,
-  getEngineStartOptions,
-  resolveAssistantDeliveryMode,
-} from "../engineSettings";
 import { isElectron } from "../env";
-import { useFeatureFlags } from "../featureFlags";
+import { isScrollContainerNearBottom } from "../chat-scroll";
+import { stripDiffSearchParams } from "../diffRouteSearch";
 import { basenameOfPath } from "../file-icons";
+import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
+import { ensureHomeChatProject, isHomeChatContainerProject } from "../lib/chatProjects";
+import { isStudioContainerProject } from "../lib/studioProjects";
+import { resolveFirstSendTarget } from "../lib/chatFirstSend";
 import {
-  buildSearchableModelOptions,
-  useComposerCommandMenuItems,
-} from "../hooks/useComposerCommandMenuItems";
-import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
-import { useComposerSlashCommands } from "../hooks/useComposerSlashCommands";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
-import { useEngineModelCatalog } from "../hooks/useEngineModelCatalog";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useTheme } from "../hooks/useTheme";
-import { useThreadHandoff } from "../hooks/useThreadHandoff";
-import { useThreadUnblock } from "../hooks/useThreadUnblock";
-import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
-import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
-import { useI18n } from "../i18n";
-import { activeInteractionModePresentation } from "../interactionModePresentation";
-import {
-  formatShortcutLabel,
-  resolveShortcutCommand,
-  shortcutLabelForCommand,
-} from "../keybindings";
-import {
-  appendAssistantSelectionsToPrompt,
-  formatAssistantSelectionQueuePreview,
-  formatAssistantSelectionTitleSeed,
-} from "../lib/assistantSelections";
-import {
-  acknowledgedRiskIdsForDraft,
-  hasBlockingAutomationDraftWarnings,
-  type AutomationDraftWarning,
-  type AutomationDraftWarningId,
-} from "../lib/automationDraft";
-import { extractChatAutomationInvocation } from "../lib/automationIntent";
-import {
-  appendBrowserAnnotationsToPrompt,
-  formatBrowserAnnotationLabel,
-} from "../lib/browserAnnotations";
+  createOrRecoverProjectFromPath,
+  PROJECT_CREATE_EXISTING_SYNC_ERROR,
+  PROJECT_CREATE_SYNC_ERROR,
+} from "../lib/projectCreation";
 import {
   maybeResolveBrowserPromptAttachment,
   type BrowserPromptAttachmentResolution,
 } from "../lib/browserPromptContext";
-import { resolveFirstSendTarget } from "../lib/chatFirstSend";
-import { ensureHomeChatProject, isHomeChatContainerProject } from "../lib/chatProjects";
+import { useBrowserStateStore } from "../browserStateStore";
 import {
-  automationClarificationPrompt,
-  buildComposerAutomationDraft,
-  resolveComposerAutomationRequest,
-} from "../lib/composerAutomation";
-import { composerImageBlobKey, persistComposerImageBlob } from "../lib/composerImageBlobStore";
+  maybeResolveDevicePromptAttachment,
+  type DevicePromptAttachmentResolution,
+} from "../lib/devicePromptContext";
 import {
-  appendPastedTextsToPrompt,
-  createPastedTextDraft,
-  pastedTextTitle,
-  type PastedTextDraft,
-} from "../lib/composerPastedText";
-import {
+  stageUploadComposerAttachments,
   cloneComposerImageAttachment,
   effectiveComposerAttachmentCount,
   findPendingBlobComposerAttachments,
   formatOutgoingComposerPrompt,
   hydratePendingBlobComposerAttachments,
   readFileAsDataUrl,
-  stageUploadComposerAttachments,
 } from "../lib/composerSend";
-import {
-  deriveContextWindowSelectionStatus,
-  deriveCumulativeCostUsd,
-  deriveLatestContextWindowSnapshot,
-  deriveSelectedContextWindowSnapshot,
-} from "../lib/contextWindow";
+import { composerImageBlobKey, persistComposerImageBlob } from "../lib/composerImageBlobStore";
 import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReconciliation";
-import {
-  maybeResolveDevicePromptAttachment,
-  type DevicePromptAttachmentResolution,
-} from "../lib/devicePromptContext";
-import { isEditableEventTarget } from "../lib/editableEventTarget";
-import { engineModelsPrefetchQueryOptions } from "../lib/engineModelPrefetch";
-import {
-  appendFileCommentsToPrompt,
-  formatFileCommentLabel,
-  formatFileCommentTitleSeed,
-  type FileCommentDraft,
-} from "../lib/fileComments";
-import {
-  isDuplicateProjectCreateError,
-  waitForRecoverableProjectForDuplicateCreate,
-} from "../lib/projectCreateRecovery";
-import {
-  createOrRecoverProjectFromPath,
-  PROJECT_CREATE_EXISTING_SYNC_ERROR,
-  PROJECT_CREATE_SYNC_ERROR,
-} from "../lib/projectCreation";
 import {
   armQueuedComposerSteerGate,
   claimQueuedComposerAutoDispatch,
@@ -337,97 +176,118 @@ import {
   runLockedQueuedComposerAutoDispatch,
   tryBeginQueuedComposerAutoDispatch,
 } from "../lib/queuedComposerDrain";
-import { isStudioContainerProject } from "../lib/studioProjects";
-import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
+import { extractChatAutomationInvocation } from "../lib/automationIntent";
 import {
-  appendOriginalComposerPromptBlocks,
-  appendTerminalContextsToPrompt,
-  formatTerminalContextLabel,
-  IMAGE_ONLY_BOOTSTRAP_PROMPT,
-  insertInlineTerminalContextPlaceholder,
-  removeInlineTerminalContextPlaceholder,
-  syncTerminalContextsByIds,
-  terminalContextIdListsEqual,
-  type TerminalContextDraft,
-  type TerminalContextSelection,
-} from "../lib/terminalContext";
-import { registerTerminalContextComposerTarget } from "../lib/terminalContextComposerRegistry";
-import { isTerminalFocused } from "../lib/terminalFocus";
+  automationClarificationPrompt,
+  buildComposerAutomationDraft,
+  resolveComposerAutomationRequest,
+} from "../lib/composerAutomation";
 import {
-  resolveDiffEnvironmentState,
-  resolveThreadEnvironmentMode,
-} from "../lib/threadEnvironment";
-import {
-  canCreateThreadHandoff,
-  deriveHistoryOnlyForkableAssistantMessageIds,
-  resolveAvailableHandoffTargetEngines,
-  resolveThreadHandoffBadgeLabel,
-} from "../lib/threadHandoff";
+  acknowledgedRiskIdsForDraft,
+  hasBlockingAutomationDraftWarnings,
+  type AutomationDraftWarning,
+  type AutomationDraftWarningId,
+} from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
-import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
-import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
-import { clearPendingTurnDispatch, markPendingTurnDispatch } from "../pendingTurnDispatch";
+import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
+import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
-  buildPlanImplementationPrompt,
-  buildPlanImplementationThreadTitle,
-  proposedPlanTitle,
-  resolvePlanFollowUpSubmission,
-} from "../proposedPlan";
-import { selectRightDockState, useRightDockStore } from "../rightDockStore";
+  buildThreadBreadcrumbs,
+  buildTranscriptAutoFollowSignal,
+  buildTranscriptTailKey,
+  cleanupPreparedWorktreeBeforeTurn,
+  createRuntimeModePersistenceQueue,
+  derivePromptHistoryFromMessages,
+  desiredBindingCanPersistWithoutActiveSession,
+  enrichSubagentWorkEntries,
+  hasFileUndoSettled,
+  persistEngineSelectionBeforeRuntimeMode,
+  promptStillMatchesActiveHistoryBrowse,
+  engineSelectionsEqual,
+  type PendingFileUndo,
+  type PromptHistoryNavigationState,
+  resolveActiveThreadTitle,
+  resolveActiveTurnLiveDiffState,
+  resolveCommittedEngineModel,
+  resolveComposerStripWorkLogEntries,
+  resolveCycledModelSlug,
+  resolveGitRepoUiState,
+  resolveSettledThreadBranchMismatch,
+  resolveProjectScriptTerminalTarget,
+  resolvePromptHistoryNavigation,
+  resolveTurnStartRecoveryDisposition,
+  resolveThreadDetailHydration,
+  createOptimisticTurnProvenance,
+  mergeTimelineTurnProvenance,
+  shouldReconcileOptimisticMessage,
+  shouldHandlePromptHistoryNavigationKey,
+  shouldEnableComposerPastedTextCollapse,
+  shouldConsumePendingCustomBinaryConfirmation,
+  shouldShowActiveThreadHeaderIdentity,
+} from "./ChatView.logic";
 import {
-  acknowledgedRiskIdsForFormWarnings,
-  AutomationDialog,
-  projectEngineSelection as automationProjectEngineSelection,
-  automationQueryKey,
-  automationsForThread,
-  createInputFromForm,
-  engineOptionsForAutomationEdit,
-  formatCadence,
-  isFormSubmittable,
-  updateInputFromForm,
-  type AutomationFormState,
-} from "../routes/-automations.shared";
-import { useServerSettings } from "../serverSettings";
+  createRelevantWorkLogThreadsSelector,
+  createThreadLineageSelector,
+  localSubagentThreadId,
+} from "./ChatView.selectors";
 import {
-  buildSourceProposedPlanReference,
-  deriveActiveBackgroundTasksState,
-  deriveActiveWorkStartedAt,
+  clampCollapsedComposerCursor,
+  type ComposerTrigger,
+  collapseExpandedComposerCursor,
+  detectComposerTrigger,
+  expandCollapsedComposerCursor,
+  replaceTextRange,
+  stripComposerTriggerText,
+} from "../composer-logic";
+import {
+  ensureLeadingSpaceForReplacement,
+  extendReplacementRangeForTrailingSpace,
+} from "../composerTriggerInsertion";
+import {
+  createProjectSelector,
+  createComposerThreadMentionSourcesSelector,
+  createThreadSelector,
+} from "../storeSelectors";
+import { buildThreadSubscribeInput } from "../threadDetailResumeCursors";
+import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
+import { activeInteractionModePresentation } from "../interactionModePresentation";
+import {
+  canOfferForkSlashCommand,
+  canOfferSideSlashCommand,
+  canOfferReviewSlashCommand,
+  hasEngineNativeSlashCommand,
+  engineSupportsTextNativeReviewCommand,
+  resolveComposerSlashRootBranch,
+} from "../composerSlashCommands";
+import {
   derivePendingApprovals,
   derivePhase,
   deriveTimelineEntries,
+  deriveActiveWorkStartedAt,
   deriveVisibleActiveTaskListState,
-  deriveWorkLogEntries,
-  findLatestProposedPlan,
+  deriveActiveBackgroundTasksState,
   findSidebarProposedPlan,
+  findLatestProposedPlan,
+  deriveWorkLogEntries,
+  omitRoutedSubagentWorkEntries,
+  buildSourceProposedPlanReference,
   hasActionableProposedPlan,
   hasLiveTurnTailWork,
   isLatestTurnSettled,
-  omitRoutedSubagentWorkEntries,
   type ActiveTaskListState,
 } from "../session-logic";
-import {
-  resolveSplitViewFocusedThreadId,
-  selectSplitView,
-  useSplitViewStore,
-  type SplitViewPanePanelState,
-} from "../splitViewStore";
+import { selectRightDockState, useRightDockStore } from "../rightDockStore";
 import { useStore } from "../store";
-import {
-  createComposerThreadMentionSourcesSelector,
-  createProjectSelector,
-  createThreadSelector,
-} from "../storeSelectors";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
+import { RenameThreadDialog } from "./RenameThreadDialog";
 import { getThreadFromState } from "../threadDerivation";
-import { buildThreadSubscribeInput } from "../threadDetailResumeCursors";
-import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
+import { useWorkspacePathsStore } from "../workspacePathsStore";
 import {
-  dispatchThreadMarkerAdd,
-  dispatchThreadMarkerDoneSet,
-  dispatchThreadMarkerLabelSet,
-  dispatchThreadMarkerRemove,
-} from "../threadMarkers";
+  buildPlanImplementationThreadTitle,
+  buildPlanImplementationPrompt,
+  proposedPlanTitle,
+  resolvePlanFollowUpSubmission,
+} from "../proposedPlan";
 import { truncateTitle } from "../truncateTitle";
 import {
   DEFAULT_INTERACTION_MODE,
@@ -438,11 +298,162 @@ import {
   type Thread,
   type WorktreeSetupResolutionAction,
 } from "../types";
-import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
-import { useWorkspacePathsStore } from "../workspacePathsStore";
+
+type OptimisticChatMessage = ChatMessage & {
+  /** The admitted model is known locally before the first server event round-trip. */
+  readonly optimisticTurnProvenance?: OrchestrationTurnProvenance;
+};
+import { useTheme } from "../hooks/useTheme";
+import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
+import {
+  buildSearchableModelOptions,
+  useComposerCommandMenuItems,
+} from "../hooks/useComposerCommandMenuItems";
+import { useEngineModelCatalog } from "../hooks/useEngineModelCatalog";
+import { useThreadHandoff } from "../hooks/useThreadHandoff";
+import { useThreadUnblock } from "../hooks/useThreadUnblock";
+import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
-import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
+import { HarosLogoButton } from "./HarosLogoButton";
+import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
+import {
+  formatShortcutLabel,
+  resolveShortcutCommand,
+  shortcutLabelForCommand,
+} from "../keybindings";
+import PlanSidebar from "./PlanSidebar";
+import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
+import {
+  ChevronDownIcon,
+  ComposerSendArrowIcon,
+  LayoutSidebarIcon,
+  LoaderCircleIcon,
+  TemporaryThreadIcon,
+} from "~/lib/icons";
+import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
+import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
+import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
+import { usePendingUserInputController } from "./chat/usePendingUserInputController";
+import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
+import { runtimeModeAvailabilityMessageKeyFromError } from "./chat/RuntimeModeAvailabilityHint";
+import { Button } from "./ui/button";
+import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
+import { randomTerminalId } from "./terminal/terminalIds";
+import { cn, isMacPlatform, randomUUID } from "~/lib/utils";
+import { toastManager } from "./ui/toast";
+import { decodeProjectScriptKeybindingRule } from "~/lib/projectScriptKeybindings";
+import { type NewProjectScriptInput } from "./ProjectScriptsControl";
+import {
+  commandForProjectScript,
+  nextProjectScriptId,
+  projectScriptRuntimeEnv,
+  projectScriptIdFromCommand,
+  setupProjectScript,
+  type ProjectScriptRunOptions,
+  type ProjectScriptRunResult,
+} from "~/projectScripts";
+import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
+import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
+import { readNativeApi } from "~/nativeApi";
+import {
+  deletePromotedThreadForCleanup,
+  promoteThreadCreate,
+  resolveLocalDraftPromotion,
+  type LocalDraftPromotionOwnership,
+} from "~/lib/threadCreatePromotion";
+import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
+import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
+import {
+  getCustomBinaryPathForEngine,
+  getEngineStartOptions,
+  resolveAssistantDeliveryMode,
+} from "../engineSettings";
+import { useServerSettings } from "../serverSettings";
+import { useI18n } from "../i18n";
+import { isTerminalFocused } from "../lib/terminalFocus";
+import { isEditableEventTarget } from "../lib/editableEventTarget";
+import {
+  type ComposerFileAttachment,
+  type ComposerImageAttachment,
+  type ComposerAssistantSelectionAttachment,
+  type ComposerBindingSnapshot,
+  type BrowserAnnotationDraft,
+  type DraftThreadEnvMode,
+  type PersistedComposerImageAttachment,
+  type QueuedComposerChatTurn,
+  type QueuedComposerPlanFollowUp,
+  type QueuedComposerTurn,
+  type PendingDirectTurnRecovery,
+  type RestoredComposerSourceProposedPlan,
+  captureComposerPromptHistorySavedDraft,
+  useComposerDraftStore,
+  useComposerThreadDraft,
+  useEffectiveComposerModelState,
+} from "../composerDraftStore";
+import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
+import { useTemporaryThreadStore } from "../temporaryThreadStore";
+import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
+import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
+import {
+  appendOriginalComposerPromptBlocks,
+  appendTerminalContextsToPrompt,
+  IMAGE_ONLY_BOOTSTRAP_PROMPT,
+  formatTerminalContextLabel,
+  insertInlineTerminalContextPlaceholder,
+  removeInlineTerminalContextPlaceholder,
+  syncTerminalContextsByIds,
+  terminalContextIdListsEqual,
+  type TerminalContextDraft,
+  type TerminalContextSelection,
+} from "../lib/terminalContext";
+import { registerTerminalContextComposerTarget } from "../lib/terminalContextComposerRegistry";
+import {
+  appendPastedTextsToPrompt,
+  createPastedTextDraft,
+  pastedTextTitle,
+  type PastedTextDraft,
+} from "../lib/composerPastedText";
+import {
+  appendAssistantSelectionsToPrompt,
+  formatAssistantSelectionQueuePreview,
+  formatAssistantSelectionTitleSeed,
+} from "../lib/assistantSelections";
+import {
+  appendBrowserAnnotationsToPrompt,
+  formatBrowserAnnotationLabel,
+} from "../lib/browserAnnotations";
+import {
+  appendFileCommentsToPrompt,
+  formatFileCommentLabel,
+  formatFileCommentTitleSeed,
+  type FileCommentDraft,
+} from "../lib/fileComments";
+import {
+  deriveContextWindowSelectionStatus,
+  deriveCumulativeCostUsd,
+  deriveLatestContextWindowSnapshot,
+  deriveSelectedContextWindowSnapshot,
+} from "../lib/contextWindow";
+import { useComposerVoiceController } from "./chat/useComposerVoiceController";
+import { useComposerAttachmentController } from "./chat/useComposerAttachmentController";
+import {
+  composerFooterPlanForTier,
+  resolveNextComposerFooterTier,
+  shouldUseCompactComposerFooter,
+} from "./composerFooterLayout";
+import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
+import {
+  resolveSplitViewFocusedThreadId,
+  selectSplitView,
+  type SplitViewPanePanelState,
+  useSplitViewStore,
+} from "../splitViewStore";
+import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
+import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { ChatHeader } from "./chat/ChatHeader";
+import { EnvironmentPanel, type EnvironmentPanelProps } from "./chat/environment/EnvironmentPanel";
+import { useWorkbenchEnvironmentController } from "./chat/environment/useWorkbenchEnvironmentController";
+import { usePinnedMessageActions } from "./chat/environment/usePinnedMessageActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -450,40 +461,61 @@ import {
   CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
   ChatHeaderButton,
 } from "./chat/chatHeaderControls";
+import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
+import { SidebarHeaderTrigger } from "./ui/sidebar";
+import {
+  useDesktopTopBarTrafficLightGutterClassName,
+  useDesktopTopBarWindowControlsGutterClassName,
+} from "~/hooks/useDesktopTopBarGutter";
+import { useNowMs } from "~/hooks/useNowMs";
+import { useThreadRecap } from "~/hooks/useThreadRecap";
+import { useRepoDiffTotals } from "~/hooks/useRepoDiffTotals";
+import { useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
+import {
+  acknowledgedRiskIdsForFormWarnings,
+  AutomationDialog,
+  automationQueryKey,
+  createInputFromForm,
+  formatCadence,
+  automationsForThread,
+  isFormSubmittable,
+  engineOptionsForAutomationEdit,
+  projectEngineSelection as automationProjectEngineSelection,
+  type AutomationFormState,
+  updateInputFromForm,
+} from "../routes/-automations.shared";
 import { ChatTranscriptPane } from "./chat/ChatTranscriptPane";
-import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
-import { ComposerBranchMismatchNotice } from "./chat/ComposerBranchMismatchNotice";
-import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
-import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
+import { ThreadDetailHydrationState } from "./chat/ThreadDetailHydrationState";
+import type { MessagesTimelineController } from "./chat/MessagesTimeline";
+import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
+import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
+import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
+import { ENGINE_MODEL_OPTIONS, resolveEngineModelLabel } from "./chat/EngineModelPicker";
+import { engineModelsPrefetchQueryOptions } from "../lib/engineModelPrefetch";
+import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
-import { getComposerEngineState } from "./chat/composerEngineRegistry";
-import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
-import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
-import { ComposerInputBanners } from "./chat/ComposerInputBanners";
-import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
+import { resolveComposerModelFallbackMessageKey } from "./chat/modelCatalogPresentation";
+import { resolveTraitsTriggerSummary } from "./chat/TraitsPicker";
+import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import {
   ComposerLocalDirectoryMenu,
   type ComposerLocalDirectoryMenuHandle,
 } from "./chat/ComposerLocalDirectoryMenu";
-import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
-import { composerTranscriptBottomInsetPx, useComposerOverlayHeight } from "./chat/composerOverlay";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
+import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
+import { ContextWindowMeter } from "./chat/ContextWindowMeter";
+import { ComposerInputBanners } from "./chat/ComposerInputBanners";
+import { ComposerBranchMismatchNotice } from "./chat/ComposerBranchMismatchNotice";
 import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPanel";
-import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
-import {
-  CHAT_BACKGROUND_CLASS_NAME,
-  CHAT_COLUMN_FRAME_CLASS_NAME,
-  CHAT_COLUMN_GUTTER_CLASS_NAME,
-  COMPOSER_COLUMN_FRAME_CLASS_NAME,
-  COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME,
-  COMPOSER_EDITOR_PADDING_CLASS_NAME,
-  COMPOSER_FOOTER_ROW_CLASS_NAME,
-  COMPOSER_INPUT_SHELL_CLASS_NAME,
-  COMPOSER_INPUT_SURFACE_CLASS_NAME,
-} from "./chat/composerPickerStyles";
-import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
+import { ComposerVoiceButton } from "./chat/ComposerVoiceButton";
+import { ComposerVoiceRecorderBar } from "./chat/ComposerVoiceRecorderBar";
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
+import { ExpandedImageOverlay } from "./chat/ExpandedImageOverlay";
+import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
+import { useChatTerminalController } from "./chat/useChatTerminalController";
+import { useChatAutomationSetup } from "./chat/useChatAutomationSetup";
+import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerSubagentStrip } from "./chat/ComposerSubagentStrip";
 import {
   collectForegroundRunningSubagentStripItems,
@@ -491,153 +523,111 @@ import {
   deriveComposerSubagentStripItems,
   type ComposerSubagentStripItem,
 } from "./chat/ComposerSubagentStrip.logic";
-import { getComposerTraitSelection } from "./chat/composerTraits";
-import { ComposerVoiceButton } from "./chat/ComposerVoiceButton";
-import { ComposerVoiceRecorderBar } from "./chat/ComposerVoiceRecorderBar";
-import { ContextWindowMeter } from "./chat/ContextWindowMeter";
-import { EngineHealthBanner } from "./chat/EngineHealthBanner";
-import { ENGINE_MODEL_OPTIONS, resolveEngineModelLabel } from "./chat/EngineModelPicker";
-import { EnvironmentPanel, type EnvironmentPanelProps } from "./chat/environment/EnvironmentPanel";
-import { usePinnedMessageActions } from "./chat/environment/usePinnedMessageActions";
-import { useWorkbenchEnvironmentController } from "./chat/environment/useWorkbenchEnvironmentController";
-import { ExpandedImageOverlay } from "./chat/ExpandedImageOverlay";
-import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import type { MessagesTimelineController } from "./chat/MessagesTimeline";
-import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
-import { resolveComposerModelFallbackMessageKey } from "./chat/modelCatalogPresentation";
-import { ProjectPicker } from "./chat/ProjectPicker";
-import {
-  deriveLatestRateLimitStatus,
-  RateLimitBanner,
-  type RateLimitStatus,
-} from "./chat/RateLimitBanner";
-import { runtimeModeAvailabilityMessageKeyFromError } from "./chat/RuntimeModeAvailabilityHint";
-import {
-  getRuntimeAwareModelCapabilities,
-  resolveRuntimeModelDescriptor,
-} from "./chat/runtimeModelCapabilities";
-import { ThreadDetailHydrationState } from "./chat/ThreadDetailHydrationState";
-import { resolveTraitsTriggerSummary } from "./chat/TraitsPicker";
-import {
-  scrollTranscriptToSettledEnd,
-  stopTranscriptScrollAtCurrentOffset,
-  transcriptGestureTakesViewportOwnership,
-  type TranscriptViewportGesture,
-} from "./chat/transcriptScroll";
-import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
-import { useChatAutomationSetup } from "./chat/useChatAutomationSetup";
-import { useChatTerminalController } from "./chat/useChatTerminalController";
-import { useComposerAttachmentController } from "./chat/useComposerAttachmentController";
-import { useComposerVoiceController } from "./chat/useComposerVoiceController";
-import { usePendingUserInputController } from "./chat/usePendingUserInputController";
-import { useThreadErrorToast } from "./chat/useThreadErrorToast";
-import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
 import { WorkflowRunCard } from "./chat/WorkflowRunCard";
 import {
   buildWorkflowResumePrompt,
   deriveWorkflowRunState,
   type WorkflowSubagentThreadRef,
 } from "./chat/WorkflowRunCard.logic";
+import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
+import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
+import {
+  scrollTranscriptToSettledEnd,
+  stopTranscriptScrollAtCurrentOffset,
+  transcriptGestureTakesViewportOwnership,
+  type TranscriptViewportGesture,
+} from "./chat/transcriptScroll";
+import {
+  dispatchThreadMarkerAdd,
+  dispatchThreadMarkerDoneSet,
+  dispatchThreadMarkerLabelSet,
+  dispatchThreadMarkerRemove,
+} from "../threadMarkers";
+import { getComposerEngineState } from "./chat/composerEngineRegistry";
+import { composerTranscriptBottomInsetPx, useComposerOverlayHeight } from "./chat/composerOverlay";
+import {
+  COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME,
+  COMPOSER_INPUT_SHELL_CLASS_NAME,
+  COMPOSER_INPUT_SURFACE_CLASS_NAME,
+  COMPOSER_COLUMN_FRAME_CLASS_NAME,
+  COMPOSER_EDITOR_PADDING_CLASS_NAME,
+  COMPOSER_FOOTER_ROW_CLASS_NAME,
+  CHAT_BACKGROUND_CLASS_NAME,
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  CHAT_COLUMN_GUTTER_CLASS_NAME,
+} from "./chat/composerPickerStyles";
+import { getComposerTraitSelection } from "./chat/composerTraits";
+import {
+  getRuntimeAwareModelCapabilities,
+  resolveRuntimeModelDescriptor,
+} from "./chat/runtimeModelCapabilities";
+import { ProjectPicker } from "./chat/ProjectPicker";
+import { FolderClosed } from "./FolderClosed";
+import { EngineHealthBanner } from "./chat/EngineHealthBanner";
+import { useThreadErrorToast } from "./chat/useThreadErrorToast";
+import {
+  RateLimitBanner,
+  deriveLatestRateLimitStatus,
+  type RateLimitStatus,
+} from "./chat/RateLimitBanner";
 import {
   ACTIVE_TURN_LAYOUT_SETTLE_DELAY_MS,
   appendVoiceTranscriptToPrompt,
   awaitTurnPreparationWithWorktreeResolution,
+  shouldStartActiveTurnLayoutGrace,
   buildExpiredTerminalContextToastCopy,
   buildLocalDraftThread,
-  buildThreadBreadcrumbs,
-  buildTranscriptAutoFollowSignal,
-  buildTranscriptTailKey,
-  cleanupPreparedWorktreeBeforeTurn,
-  collectUserMessageBlobPreviewUrls,
-  createOptimisticTurnProvenance,
-  createRuntimeModePersistenceQueue,
-  createWorktreeSetupResolution,
-  deriveComposerSendState,
-  derivePromptHistoryFromMessages,
-  desiredBindingCanPersistWithoutActiveSession,
   DISMISSED_PROVIDER_HEALTH_BANNERS_KEY,
   DismissedEngineHealthBannersSchema,
+  collectUserMessageBlobPreviewUrls,
+  deriveComposerSendState,
   dispatchExactCommandWithOneReplay,
-  engineSelectionsEqual,
-  enrichSubagentWorkEntries,
   failWorktreeSetupSnapshot,
   filterSidechatTranscriptMessages,
-  hasFileUndoSettled,
   hasLiveTurnTakenOver,
   hasServerAcknowledgedLocalDispatch,
-  LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
-  LastInvokedScriptByProjectSchema,
   LOCAL_DISPATCH_ACK_TIMEOUT_MS,
   LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS,
-  mergeTimelineTurnProvenance,
-  persistEngineSelectionBeforeRuntimeMode,
-  promptStillMatchesActiveHistoryBrowse,
-  PullRequestDialogState,
-  resolveActiveThreadTitle,
-  resolveActiveTurnLiveDiffState,
-  resolveCommittedEngineModel,
-  resolveComposerStripWorkLogEntries,
-  resolveCycledModelSlug,
-  resolveGitRepoUiState,
   resolveNextLocalDispatchSnapshot,
-  resolveProjectScriptTerminalTarget,
-  resolvePromptHistoryNavigation,
-  resolveQueuedSteerGateTransition,
-  resolveRuntimeModeAfterApprovalDecision,
-  resolveSettledThreadBranchMismatch,
   resolveThreadArtifactWorkspaceRoot,
-  resolveThreadDetailHydration,
-  resolveTurnStartRecoveryDisposition,
-  revokeBlobPreviewUrl,
-  revokeUserMessagePreviewUrls,
-  runWorktreeCreationFlow,
-  shouldConsumePendingCustomBinaryConfirmation,
-  shouldEnableComposerPastedTextCollapse,
-  shouldHandlePromptHistoryNavigationKey,
-  shouldReconcileOptimisticMessage,
-  shouldRenderEngineHealthBanner,
-  shouldShowActiveThreadHeaderIdentity,
-  shouldStartActiveTurnLayoutGrace,
   WORKTREE_SETUP_ERROR_HOLD_MS,
-  WorktreeSetupCancelledError,
   worktreeSetupHasError,
+  WorktreeSetupCancelledError,
+  createWorktreeSetupResolution,
+  runWorktreeCreationFlow,
+  LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
+  LastInvokedScriptByProjectSchema,
   type LocalDispatchSnapshot,
-  type PendingFileUndo,
-  type PromptHistoryNavigationState,
-  type QueuedSteerGate,
   type WorktreeSetupDispatchOptions,
   type WorktreeSetupResolution,
+  PullRequestDialogState,
+  type QueuedSteerGate,
+  resolveQueuedSteerGateTransition,
+  shouldRenderEngineHealthBanner,
+  resolveRuntimeModeAfterApprovalDecision,
+  revokeBlobPreviewUrl,
+  revokeUserMessagePreviewUrls,
 } from "./ChatView.logic";
+import { clearPendingTurnDispatch, markPendingTurnDispatch } from "../pendingTurnDispatch";
+import { useLocalStorage } from "~/hooks/useLocalStorage";
+import { useComposerSlashCommands } from "../hooks/useComposerSlashCommands";
+import { useFeatureFlags } from "../featureFlags";
+import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import {
-  createRelevantWorkLogThreadsSelector,
-  createThreadLineageSelector,
-  localSubagentThreadId,
-} from "./ChatView.selectors";
+  canCreateThreadHandoff,
+  deriveHistoryOnlyForkableAssistantMessageIds,
+  resolveAvailableHandoffTargetEngines,
+  resolveThreadHandoffBadgeLabel,
+} from "../lib/threadHandoff";
 import {
-  composerFooterPlanForTier,
-  resolveNextComposerFooterTier,
-  shouldUseCompactComposerFooter,
-} from "./composerFooterLayout";
-import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
-import { FolderClosed } from "./FolderClosed";
-import { HarosLogoButton } from "./HarosLogoButton";
-import PlanSidebar from "./PlanSidebar";
-import { type NewProjectScriptInput } from "./ProjectScriptsControl";
-import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
-import { RenameThreadDialog } from "./RenameThreadDialog";
-import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
-import { randomTerminalId } from "./terminal/terminalIds";
-import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
-import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
-import { Button } from "./ui/button";
-import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
-import { SidebarHeaderTrigger } from "./ui/sidebar";
-import { toastManager } from "./ui/toast";
-
-type OptimisticChatMessage = ChatMessage & {
-  /** The admitted model is known locally before the first server event round-trip. */
-  readonly optimisticTurnProvenance?: OrchestrationTurnProvenance;
-};
+  resolveDiffEnvironmentState,
+  resolveThreadEnvironmentMode,
+} from "../lib/threadEnvironment";
+import { buildEngineSelection, resolveModelPresentationIdentity } from "../engineModelOptions";
+import {
+  isDuplicateProjectCreateError,
+  waitForRecoverableProjectForDuplicateCreate,
+} from "../lib/projectCreateRecovery";
 
 // The terminal drawer drags in xterm plus its addons (~223 KB gzip). Both mount points
 // are conditional, so loading it lazily keeps the terminal stack out of the initial
@@ -1121,8 +1111,6 @@ function getEngineStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(engineOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(engineOptions?.pi?.binaryPath);
-    case "deepseek":
-      return normalizeCustomBinaryPath(engineOptions?.deepseek?.binaryPath);
     default:
       return null;
   }
@@ -2023,25 +2011,26 @@ export default function ChatView({
   const localDraftError = serverThread ? null : (localDraftErrorsByThreadId[threadId] ?? null);
   const localDraftThread = useMemo(() => {
     if (!draftThread) return undefined;
-    const preferredSelection = resolvePreferredComposerEngineSelection({
-      draft: composerDraft,
-      threadEngineSelection: null,
-      projectEngineSelection: fallbackDraftProject?.defaultEngineSelection,
-      defaultEngine: serverSettingsSnapshot.defaultEngine,
-    });
-    const desiredEngine = resolvePreferredComposerEngine({
-      draft: composerDraft,
-      threadEngineSelection: null,
-      projectEngineSelection: fallbackDraftProject?.defaultEngineSelection,
-      defaultEngine: serverSettingsSnapshot.defaultEngine,
-    });
+    const desiredEngine =
+      composerDraft.activeEngine ??
+      fallbackDraftProject?.defaultEngineSelection?.engine ??
+      serverSettingsSnapshot.defaultEngine;
+    const desiredEngineSelection = desiredEngine
+      ? (composerDraft.engineSelectionByEngine[desiredEngine] ??
+        (fallbackDraftProject?.defaultEngineSelection?.engine === desiredEngine
+          ? fallbackDraftProject.defaultEngineSelection
+          : null))
+      : null;
     return buildLocalDraftThread(
       threadId,
       draftThread,
-      preferredSelection ?? {
-        engine: desiredEngine,
-        model: getDefaultModel(desiredEngine) ?? "",
-      },
+      desiredEngineSelection ??
+        (desiredEngine
+          ? {
+              engine: desiredEngine,
+              model: getDefaultModel(desiredEngine) ?? "",
+            }
+          : { engine: "codex", model: "" }),
       localDraftError,
     );
   }, [
@@ -2436,17 +2425,11 @@ export default function ChatView({
     markThreadVisited,
   ]);
 
-  const hasExecutedThreadWork =
-    (serverThread?.messages.length ?? 0) > 0 ||
-    serverThread?.latestTurn != null ||
-    serverThread?.session != null;
-  const selectedEngine: EngineKind = resolvePreferredComposerEngine({
-    draft: composerDraft,
-    threadEngineSelection: serverThread?.engineSelection,
-    projectEngineSelection: activeProject?.defaultEngineSelection,
-    defaultEngine: serverSettingsSnapshot.defaultEngine,
-    hasExecutedWork: hasExecutedThreadWork,
-  });
+  const selectedEngineByThreadId = composerDraft.activeEngine ?? null;
+  const threadEngine =
+    serverThread?.engineSelection.engine ?? activeProject?.defaultEngineSelection?.engine ?? null;
+  const selectedEngine: EngineKind | null =
+    selectedEngineByThreadId ?? threadEngine ?? serverSettingsSnapshot.defaultEngine ?? null;
   const hasActiveEngineDiscoverySession = isEngineDiscoverySessionActive({
     engine: selectedEngine,
     session: activeThread?.session,
@@ -2525,8 +2508,9 @@ export default function ChatView({
     customModelsByEngine,
     availableModelOptionsByEngine: selectableModelOptionsByEngine,
   });
-  const draftEngineSelectionForSelectedEngine =
-    composerDraft.engineSelectionByEngine[selectedEngine] ?? null;
+  const draftEngineSelectionForSelectedEngine = selectedEngine
+    ? (composerDraft.engineSelectionByEngine[selectedEngine] ?? null)
+    : null;
   const persistedClaudeSupportsAutoMode =
     selectedEngine === "claude"
       ? draftEngineSelectionForSelectedEngine?.engine === "claude" &&
@@ -2538,6 +2522,7 @@ export default function ChatView({
           : undefined
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
+    if (!selectedEngine) return undefined;
     const discovered = resolveRuntimeModelDescriptor({
       engine: selectedEngine,
       model: selectedModel,
@@ -2570,7 +2555,7 @@ export default function ChatView({
   const selectedPromptEffort = composerEngineState.promptEffort;
   const selectedModelOptionsForDispatch = composerEngineState.modelOptionsForDispatch;
   const selectedEngineSelection = useMemo<EngineSelection | null>(() => {
-    if (selectedModel === null) {
+    if (selectedModel === null || !selectedEngine) {
       return null;
     }
     return buildEngineSelection(
@@ -2586,12 +2571,18 @@ export default function ChatView({
     selectedEngine,
     selectedRuntimeModel,
   ]);
-  const executionCapabilitySelection = selectedEngineSelection ?? {
-    engine: selectedEngine,
-    model: "__unselected__",
-  };
+  const executionCapabilitySelection =
+    selectedEngineSelection ??
+    (selectedEngine
+      ? {
+          engine: selectedEngine,
+          model: "__unselected__",
+        }
+      : null);
   const executionCapabilitiesQuery = useQuery({
-    ...engineExecutionCapabilitiesQueryOptions(executionCapabilitySelection),
+    ...engineExecutionCapabilitiesQueryOptions(
+      executionCapabilitySelection ?? { engine: "codex", model: "__unselected__" },
+    ),
     enabled: selectedEngineSelection !== null,
   });
   const planModeCapability = executionCapabilitiesQuery.data?.interactionModes.plan;
@@ -2612,10 +2603,10 @@ export default function ChatView({
       ? selectedEngineSelection.model
       : selectedModel;
   const selectedModelForPickerWithCustomFallback = useMemo(() => {
-    const currentOptions = modelOptionsByEngine[selectedEngine];
-    if (selectedModelForPicker === null) {
+    if (!selectedEngine || selectedModelForPicker === null) {
       return null;
     }
+    const currentOptions = modelOptionsByEngine[selectedEngine];
     return currentOptions.some((option) => option.slug === selectedModelForPicker)
       ? selectedModelForPicker
       : (normalizeModelSlug(selectedModelForPicker, selectedEngine) ?? selectedModelForPicker);
@@ -2627,7 +2618,7 @@ export default function ChatView({
         modelOptionsByEngine: selectableModelOptionsByEngine,
         engineOrder: settings.engineOrder,
         hiddenEngines: settings.hiddenEngines,
-        protectedEngines: [selectedEngine],
+        protectedEngines: selectedEngine ? [selectedEngine] : [],
         lockedEngine: null,
       }),
     [selectableModelOptionsByEngine, selectedEngine, settings.hiddenEngines, settings.engineOrder],
@@ -3933,7 +3924,9 @@ export default function ChatView({
     [selectedModel, selectedEngine, selectedRuntimeModel],
   );
   const supportsFastSlashCommand = selectedModelCaps.supportsFastMode;
-  const currentEngineModelOptions = composerModelOptions?.[selectedEngine];
+  const currentEngineModelOptions = selectedEngine
+    ? composerModelOptions?.[selectedEngine]
+    : undefined;
   const fastModeEnabled =
     supportsFastSlashCommand &&
     (currentEngineModelOptions as { fastMode?: boolean } | undefined)?.fastMode === true;
@@ -4179,13 +4172,14 @@ export default function ChatView({
         serverSettingsSnapshot.engines as Partial<
           Record<EngineKind, { readonly enabled?: boolean }>
         >
-      )[selectedEngine]?.enabled === false ||
+      )[selectedEngine as EngineKind]?.enabled === false ||
       activeEngineStatus?.authStatus === "unauthenticated" ||
       (activeEngineStatus !== null && activeEngineStatus.available === false);
     reportFocusedComposerReadiness(
       snapshotsSettled &&
         (deterministicRecovery ||
-          isTerminalStartupCatalogState(catalogStateByEngine[selectedEngine])),
+          (selectedEngine !== null &&
+            isTerminalStartupCatalogState(catalogStateByEngine[selectedEngine]))),
     );
   }, [
     activeEngineStatus,
@@ -5925,6 +5919,7 @@ export default function ChatView({
   // Engine references are engine-specific; keep draft restores from looking like manual switches.
   useEffect(() => {
     const previous = previousSelectedEngineRef.current;
+    if (!selectedEngine) return;
     previousSelectedEngineRef.current = {
       threadId,
       engine: selectedEngine,
@@ -6621,6 +6616,7 @@ export default function ChatView({
         event.preventDefault();
         event.stopPropagation();
         const direction = command === "model.next" ? "next" : "previous";
+        if (!selectedEngine) return;
         const engineOptions = selectableModelOptionsByEngine[selectedEngine] ?? [];
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
@@ -7755,6 +7751,13 @@ export default function ChatView({
         trimmedPromptForSend = followUp.text.trim();
       } else {
         if (hasQueueableLiveTurn && dispatchMode === "queue") {
+          if (!selectedEngine) {
+            toastManager.add({
+              type: "warning",
+              title: t("composer.modelRequiredToSend"),
+            });
+            return false;
+          }
           clearComposerInput(activeThread.id);
           scheduleComposerFocus();
           enqueueQueuedComposerTurn(activeThread.id, {
@@ -7846,6 +7849,13 @@ export default function ChatView({
       return false;
     }
     if (!activeProject) return false;
+    if (!selectedEngineForSend) {
+      toastManager.add({
+        type: "warning",
+        title: t("composer.engineRequiredToSend"),
+      });
+      return false;
+    }
     if (queuedChatTurn === null && !isLivePlanFollowUpSubmission) {
       const conversation = pendingAutomationConversation;
       // While gathering missing details, fold the reply into the cleaned request so it
@@ -9457,7 +9467,7 @@ export default function ChatView({
     if (!workflowRunState?.scriptPath || !workflowRunState.runId) return;
     const lateSendHandlers = lateComposerSendHandlersRef.current;
     if (!lateSendHandlers) return;
-    if (!selectedEngineSelection) {
+    if (!selectedEngineSelection || !selectedEngine) {
       toastManager.add({
         type: "warning",
         title: t("composer.modelRequiredToSend"),
@@ -9814,7 +9824,9 @@ export default function ChatView({
     },
     [scheduleComposerFocus, setPrompt],
   );
-  const selectedEngineModelOptions = composerModelOptions?.[selectedEngine];
+  const selectedEngineModelOptions = selectedEngine
+    ? composerModelOptions?.[selectedEngine]
+    : undefined;
   const composerTraitSelection = getComposerTraitSelection(
     selectedEngine,
     selectedModel,
@@ -9852,7 +9864,11 @@ export default function ChatView({
         model: selectedModelForPickerWithCustomFallback,
         modelOptionsByEngine: selectableModelOptionsByEngine,
       })
-    : t(resolveComposerModelFallbackMessageKey(catalogStateByEngine[selectedEngine]));
+    : t(
+        resolveComposerModelFallbackMessageKey(
+          selectedEngine ? catalogStateByEngine[selectedEngine] : "idle",
+        ),
+      );
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
     engine: selectedEngine,
     model: selectedModelForPickerWithCustomFallback,
@@ -9905,7 +9921,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: engineOpensModelServicesSettings(selectedEngine) ? "models" : "engines",
+        section: "engines",
       },
     });
   }, [navigate, selectedEngine]);
@@ -9928,12 +9944,12 @@ export default function ChatView({
         hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
         engine={selectedEngine}
         model={selectedModelForPickerWithCustomFallback}
-        catalogState={catalogStateByEngine[selectedEngine]}
+        catalogState={selectedEngine ? catalogStateByEngine[selectedEngine] : "idle"}
         modelOptionsByEngine={selectableModelOptionsByEngine}
         loadingEngineModels={loadingEngineModels}
         threadId={threadId}
         runtimeModel={selectedRuntimeModel}
-        runtimeModels={runtimeModelsByEngine[selectedEngine]}
+        runtimeModels={selectedEngine ? runtimeModelsByEngine[selectedEngine] : []}
         runtimeAgents={dynamicAgents}
         modelOptions={selectedEngineModelOptions}
         prompt={prompt}
@@ -10837,7 +10853,7 @@ export default function ChatView({
         applyComposerTriggerReplacement({
           snapshot,
           trigger,
-          base: `${skillMentionPrefix(selectedEngine)}${item.skill.name} `,
+          base: `${skillMentionPrefix(selectedEngine ?? "codex")}${item.skill.name} `,
           onApplied: () => {
             updateSelectedComposerSkills((existing) => {
               const nextSkill = {

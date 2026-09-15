@@ -62,6 +62,29 @@ describe("agent tool settings contract", () => {
   });
 });
 
+describe("retired Haros prompt settings", () => {
+  it("ignores the deleted first-party engine key in persisted settings and public patches", () => {
+    const settings = Schema.decodeUnknownSync(ServerSettings)({
+      engines: {
+        oa: { enabled: false, defaultPrompt: "retired private prompt" },
+      },
+    });
+    const patch = decodePatch({
+      engines: { oa: { enabled: false } },
+    });
+
+    expect(settings.engines).not.toHaveProperty("oa");
+    expect(patch.engines).not.toHaveProperty("oa");
+  });
+
+  it("is not accepted by the public settings patch", () => {
+    const patch = decodePatch({
+      engines: { pi: { defaultPrompt: "must stay private" } },
+    });
+    expect(patch.engines?.pi).not.toHaveProperty("defaultPrompt");
+  });
+});
+
 describe("engine credential boundary", () => {
   it.each(["kilo", "opencode"] as const)(
     "rejects %s secrets from the generic ServerSettings patch",
@@ -71,11 +94,4 @@ describe("engine credential boundary", () => {
       ).toThrow();
     },
   );
-});
-
-describe("retired OA engine settings", () => {
-  it("migrates persisted defaultEngine oa onto Pi", () => {
-    const decoded = Schema.decodeUnknownSync(ServerSettings)({ defaultEngine: "oa" });
-    expect(decoded.defaultEngine).toBe("pi");
-  });
 });

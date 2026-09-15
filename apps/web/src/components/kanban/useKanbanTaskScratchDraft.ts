@@ -24,7 +24,7 @@ import {
 import { buildEngineSelection } from "../../engineModelOptions";
 import { toastManager } from "../ui/toast";
 
-export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: EngineKind }) {
+export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: EngineKind | null }) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
   const [scratchThreadId] = useState(() => newThreadId());
@@ -53,13 +53,14 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: Engin
   const stickyEngineSelectionByEngine = useComposerDraftStore(
     (state) => state.stickyEngineSelectionByEngine,
   );
-  const selectedEngine: EngineKind =
+  const selectedEngine: EngineKind | null =
     scratchDraft.activeEngine ?? stickyActiveEngine ?? input.defaultEngine;
-  const draftEngineSelection =
-    scratchDraft.engineSelectionByEngine[selectedEngine] ??
-    stickyEngineSelectionByEngine[selectedEngine];
+  const draftEngineSelection = selectedEngine
+    ? (scratchDraft.engineSelectionByEngine[selectedEngine] ??
+      stickyEngineSelectionByEngine[selectedEngine])
+    : undefined;
   const selectedModel: ModelSlug | null =
-    draftEngineSelection?.model ?? getDefaultModel(selectedEngine);
+    draftEngineSelection?.model ?? (selectedEngine ? getDefaultModel(selectedEngine) : null);
   const selectedEngineModelOptions = draftEngineSelection?.options;
   const selectedModelSupportsAutoMode =
     draftEngineSelection?.engine === "claude" ? draftEngineSelection.supportsAutoMode : undefined;
@@ -70,6 +71,7 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: Engin
   } | null>(null);
 
   useEffect(() => {
+    if (!selectedEngine) return;
     const nextSkills = filterPromptSkillReferences(prompt, composerSkills, selectedEngine);
     if (!engineSkillReferencesEqual(composerSkills, nextSkills)) {
       useComposerDraftStore.getState().setSkills(scratchThreadId, nextSkills);
@@ -84,6 +86,7 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: Engin
   }, [composerMentions, prompt, scratchThreadId]);
 
   useEffect(() => {
+    if (!selectedEngine) return;
     const previous = previousSelectedEngineRef.current;
     previousSelectedEngineRef.current = {
       threadId: scratchThreadId,

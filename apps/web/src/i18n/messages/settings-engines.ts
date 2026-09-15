@@ -6,7 +6,9 @@ const EN_MESSAGES = {
   "settings.engineInstalling": "Downloading, installing and verifying…",
   "settings.engines": "Agent engines",
   "settings.defaultEngine": "Default engine",
-  "settings.defaultEngineDescription": "Choose the engine used for new chats.",
+  "settings.defaultEngineDescription":
+    "Choose the engine used for new chats. Required before sending.",
+  "settings.noEngineConfigured": "None",
   "settings.enginesDescription":
     "Choose visible coding agents and manage their installed CLI tools.",
   "settings.serverSettingsUnavailable":
@@ -114,7 +116,8 @@ const ZH_CN_MESSAGES = {
   "settings.engineInstalling": "正在下载、安装并验证…",
   "settings.engines": "Agent 引擎",
   "settings.defaultEngine": "默认引擎",
-  "settings.defaultEngineDescription": "选择新 Chat 默认使用的引擎。",
+  "settings.defaultEngineDescription": "选择新 Chat 默认使用的引擎。发送前必须先选择。",
+  "settings.noEngineConfigured": "未选择",
   "settings.enginesDescription": "选择可见的编码 Agent，并管理已安装的 CLI 工具。",
   "settings.serverSettingsUnavailable": "共享设置正在加载或暂时不可用。请重新连接后重试。",
   "settings.engineConfigSaveFailed": "无法保存此引擎设置",

@@ -40,28 +40,11 @@ describe("packaged workspace manifests", () => {
     );
   });
 
-  it("does not stage the retired OA runtime or web access", async () => {
-    const server = await readPackage("apps/server/package.json");
-    expect(server.dependencies?.["@harnessos/oa-runtime"]).toBeUndefined();
-    expect(server.dependencies?.["@harnessos/oa-web-access"]).toBeUndefined();
+  it("has no bundled OA workspace packages after first-party Engine deletion", () => {
+    expect(PACKAGED_WORKSPACE_MANIFEST_PATHS).not.toContain("packages/oa-ask/package.json");
     expect(PACKAGED_WORKSPACE_MANIFEST_PATHS).not.toContain("packages/oa-web-access/package.json");
-  });
-
-  it("ships the Ask fork through the Server bundle without creating a second Desktop dependency", async () => {
-    expect(PACKAGED_WORKSPACE_MANIFEST_PATHS).toContain("packages/oa-ask/package.json");
-    const desktop = await readPackage("apps/desktop/package.json");
-    const server = await readPackage("apps/server/package.json");
-    expect(desktop.dependencies?.["@harnessos/oa-ask"]).toBeUndefined();
-    expect(server.dependencies?.["@harnessos/oa-ask"]).toBe("workspace:*");
-  });
-
-  it("omits only the exact workspace package proven to be bundled into the Server", () => {
-    expect(
-      omitBundledServerWorkspaceDependencies({
-        "@harnessos/oa-ask": "workspace:*",
-        marked: "15.0.12",
-      }),
-    ).toEqual({ marked: "15.0.12" });
+    const omitted = omitBundledServerWorkspaceDependencies({ marked: "15.0.12" });
+    expect(omitted).toEqual({ marked: "15.0.12" });
     expect(() =>
       omitBundledServerWorkspaceDependencies({ "@harnessos/future-runtime": "workspace:*" }),
     ).toThrow("not proven to be bundled");

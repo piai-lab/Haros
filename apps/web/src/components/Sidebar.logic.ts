@@ -70,8 +70,9 @@ export type SidebarActionBadge = {
 };
 
 export function resolveNewProjectDefaultEngineSelection(
-  engine: EngineKind,
+  engine: EngineKind | null,
 ): EngineSelection | null {
+  if (!engine) return null;
   const model = getDefaultModel(engine);
   return model ? { engine, model } : null;
 }

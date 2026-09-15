@@ -175,7 +175,7 @@ const PANEL_CONTRAST_STEP: Record<ThemeVariant, number> = {
 const THEME_PRESET_LABEL_OVERRIDES: Readonly<Record<string, string>> = {
   codex: "Codex",
   github: "GitHub",
-  oa: "Haros",
+  haros: "Haros",
   "vscode-plus": "VS Code Plus",
 };
 

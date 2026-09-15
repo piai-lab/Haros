@@ -1,6 +1,6 @@
 import type { ResolvedKeybindingsConfig } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
@@ -11,13 +11,53 @@ import {
   useState,
 } from "react";
 
-import { Schema } from "effect";
+import {
+  goBackInAppHistory,
+  goForwardInAppHistory,
+  resolveAppNavigationState,
+} from "../appNavigation";
+import ShortcutsDialog from "../components/ShortcutsDialog";
+import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
+import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
+import ThreadSidebar from "../components/Sidebar";
+import { isElectron } from "../env";
+import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
+import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useRecentViewSwitcher } from "../hooks/useRecentViewSwitcher";
+import { useLatestProjectStore } from "../latestProjectStore";
+import {
+  resolveCurrentProjectTargetId,
+  resolveLatestProjectTargetId,
+  resolveLatestProjectTargetIdWithFallback,
+  resolveNewThreadTarget,
+} from "../lib/projectShortcutTargets";
+import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
+import { isTerminalFocused } from "../lib/terminalFocus";
+import { serverConfigQueryOptions } from "../lib/serverReactQuery";
+import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
+import { isFolderBackedProject } from "../lib/projectClassification";
+import {
+  isKeyboardShortcutsHelpShortcut,
+  resolveShortcutCommand,
+  shortcutLabelForCommand,
+} from "../keybindings";
+import { useStore } from "../store";
+import { createProjectLastActivityAtSelector } from "../storeSelectors";
+import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
+import { useThreadSelectionStore } from "../threadSelectionStore";
+import { onServerMaintenanceUpdated } from "../wsNativeApi";
+import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import {
   resolveMigratedThreadSidebarWidth,
   THREAD_SIDEBAR_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
-import type { SidebarResizableOptions } from "~/components/ui/sidebar";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
   SIDEBAR_OFFCANVAS_FOCUS_FALLBACK_MS,
@@ -27,56 +67,16 @@ import {
   SidebarRail,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { toastManager } from "~/components/ui/toast";
-import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
-import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
-import { getLocalStorageItem } from "~/hooks/useLocalStorage";
+import type { SidebarResizableOptions } from "~/components/ui/sidebar";
+import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
-import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { getLocalStorageItem } from "~/hooks/useLocalStorage";
+import { Schema } from "effect";
 import {
   resolveThreadSidebarAutoSuppressed,
   resolveThreadSidebarPresentation,
   resolveThreadSidebarToggleOpen,
 } from "~/lib/responsiveWorkbench";
-import { cn } from "~/lib/utils";
-import {
-  goBackInAppHistory,
-  goForwardInAppHistory,
-  resolveAppNavigationState,
-} from "../appNavigation";
-import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
-import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
-import ShortcutsDialog from "../components/ShortcutsDialog";
-import ThreadSidebar from "../components/Sidebar";
-import { isElectron } from "../env";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useRecentViewSwitcher } from "../hooks/useRecentViewSwitcher";
-import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
-import {
-  isKeyboardShortcutsHelpShortcut,
-  resolveShortcutCommand,
-  shortcutLabelForCommand,
-} from "../keybindings";
-import { useLatestProjectStore } from "../latestProjectStore";
-import { isFolderBackedProject } from "../lib/projectClassification";
-import {
-  resolveCurrentProjectTargetId,
-  resolveLatestProjectTargetId,
-  resolveLatestProjectTargetIdWithFallback,
-  resolveNewThreadTarget,
-} from "../lib/projectShortcutTargets";
-import { serverConfigQueryOptions } from "../lib/serverReactQuery";
-import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
-import { isTerminalFocused } from "../lib/terminalFocus";
-import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
-import { useStore } from "../store";
-import { createProjectLastActivityAtSelector } from "../storeSelectors";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
-import { useThreadSelectionStore } from "../threadSelectionStore";
-import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { onServerMaintenanceUpdated } from "../wsNativeApi";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_MIN_WIDTH = THREAD_SIDEBAR_MIN_WIDTH_PX;

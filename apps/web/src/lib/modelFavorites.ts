@@ -21,8 +21,12 @@ export function supportsModelFavorites(engine: EngineKind): engine is FavoriteMo
 }
 
 // Read favorite slugs for cycle order. Failures (SSR, parse errors) return [].
-export function readFavoriteModelSlugs(engine: EngineKind): string[] {
-  if (!supportsModelFavorites(engine) || typeof globalThis.localStorage === "undefined") {
+export function readFavoriteModelSlugs(engine: EngineKind | null): string[] {
+  if (
+    !engine ||
+    !supportsModelFavorites(engine) ||
+    typeof globalThis.localStorage === "undefined"
+  ) {
     return [];
   }
   try {

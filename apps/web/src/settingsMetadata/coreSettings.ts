@@ -8,7 +8,7 @@ export const GENERAL_SETTINGS_SEARCH = {
   defaultEngine: defineSettingsSearchRow({
     id: "general:default-engine",
     titleKey: "settings.defaultEngine",
-    keywords: "Choose the engine used for new chats. agent codex claude",
+    keywords: "Choose the engine used for new chats. none required agent codex claude",
   }),
   newThreads: defineSettingsSearchRow({
     id: "general:new-threads",

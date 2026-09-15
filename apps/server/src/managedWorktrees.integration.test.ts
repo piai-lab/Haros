@@ -23,7 +23,7 @@ async function makeManagedRoot(count: number) {
   temporaryRoots.push(root);
   const paths: string[] = [];
   for (let index = 0; index < count; index += 1) {
-    const worktreePath = path.join(root, `task-${index}`, "oa");
+    const worktreePath = path.join(root, `task-${index}`, "haros");
     await fs.mkdir(worktreePath, { recursive: true });
     await fs.writeFile(path.join(worktreePath, ".git"), "gitdir: /tmp/repo/.git/worktrees/test\n");
     paths.push(await fs.realpath(worktreePath));

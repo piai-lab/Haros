@@ -226,10 +226,10 @@ describe("EngineModelPicker", () => {
 
   it("does not present a loading catalog as an empty catalog", async () => {
     const mounted = await mountPicker({
-      engine: "pi",
+      engine: "codex",
       model: "" as ModelSlug,
       lockedEngine: "pi",
-      catalogStateByEngine: { pi: "checking" },
+      catalogStateByEngine: { codex: "checking" },
     });
 
     try {
@@ -249,7 +249,7 @@ describe("EngineModelPicker", () => {
     "labels a settled %s catalog accurately without a selection",
     async (state, label) => {
       const mounted = await mountPicker({
-        engine: "pi",
+        engine: "codex",
         model: "" as ModelSlug,
         lockedEngine: "pi",
         catalogStateByEngine: { pi: state },

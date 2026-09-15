@@ -46,7 +46,7 @@ const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
 };
 
 function getEngineNativeSlashCommandAliases(
-  engine: EngineKind,
+  engine: EngineKind | null,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
@@ -57,7 +57,7 @@ function getEngineNativeSlashCommandAliases(
 }
 
 function expandEngineNativeSlashCommandNames(
-  engine: EngineKind,
+  engine: EngineKind | null,
   commandNames: ReadonlyArray<string>,
 ): string[] {
   const expandedNames = new Set<string>();
@@ -79,12 +79,12 @@ function expandEngineNativeSlashCommandNames(
  * win over listing a native "review" command. OpenCode exposes /review in its
  * command list but does not honor bare `/review` text turns (#218).
  */
-export function engineUsesAppOwnedReviewSlashCommand(engine: EngineKind): boolean {
+export function engineUsesAppOwnedReviewSlashCommand(engine: EngineKind | null): boolean {
   return engine === "codex" || engine === "opencode";
 }
 
 function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
-  engine: EngineKind,
+  engine: EngineKind | null,
   command: ComposerSlashCommand,
 ): boolean {
   return (
@@ -104,7 +104,7 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
 }
 
 export function shouldHideEngineNativeCommandFromComposerMenu(
-  engine: EngineKind,
+  engine: EngineKind | null,
   command: string,
   options: { readonly availableAppCommands?: ReadonlySet<string> } = {},
 ): boolean {
@@ -131,9 +131,10 @@ export function shouldHideEngineNativeCommandFromComposerMenu(
  * `/review` text. Codex/OpenCode use the app review UX instead (#218).
  */
 export function engineSupportsTextNativeReviewCommand(
-  engine: EngineKind,
+  engine: EngineKind | null,
   nativeCommandNames: ReadonlyArray<{ readonly name: string } | string>,
 ): boolean {
+  if (!engine) return false;
   if (engineUsesAppOwnedReviewSlashCommand(engine)) {
     return false;
   }
@@ -144,7 +145,7 @@ export function engineSupportsTextNativeReviewCommand(
 }
 
 export function getEngineNativeSlashCommandSearchTerms(
-  engine: EngineKind,
+  engine: EngineKind | null,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
@@ -304,7 +305,7 @@ export function resolveComposerSlashRootBranch(input: {
 }
 
 export function getAvailableComposerSlashCommands(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
   canOfferReviewCommand: boolean;
@@ -365,10 +366,11 @@ export function getAvailableComposerSlashCommands(input: {
 }
 
 export function hasEngineNativeSlashCommand(
-  engine: EngineKind,
+  engine: EngineKind | null,
   commandNames: ReadonlyArray<string>,
   command: string,
 ): boolean {
+  if (!engine) return false;
   const normalizedCommand = normalizeComposerSlashCommandName(command);
   return expandEngineNativeSlashCommandNames(engine, commandNames).includes(normalizedCommand);
 }
@@ -413,7 +415,7 @@ function matchSideEngineToken(token: string): EngineKind | null {
 export function parseSideSlashCommandArgs(
   args: string,
   input: {
-    currentEngine: EngineKind;
+    currentEngine: EngineKind | null;
     availableTargetEngines: ReadonlyArray<EngineKind>;
   },
 ): SideSlashCommandArgs {

@@ -22,8 +22,7 @@
     "HARNESSOS_ALLOW_INSECURE_REMOTE",
     "HARNESSOS_LOG_WS_EVENTS",
     "HARNESSOS_HOST",
-    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
-    "HARNESSOS_APP_VERSION"
+    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"
   ],
   "tasks": {
     "build": {
@@ -67,24 +66,21 @@
       "outputs": []
     },
     "@harnessos/server#test": {
-      "dependsOn": ["@harnessos/oa-ask#build"],
       "cache": false,
       "outputLogs": "errors-only",
       "outputs": []
     },
     "@harnessos/server#typecheck": {
-      "dependsOn": ["^typecheck", "@harnessos/oa-ask#build"],
+      "dependsOn": ["^typecheck"],
       "outputs": [],
       "outputLogs": "errors-only",
       "cache": true
     },
     "@harnessos/server#test:unit": {
-      "dependsOn": ["@harnessos/oa-ask#build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/web/public/**",
         "$TURBO_ROOT$/packages/contracts/src/**",
-        "$TURBO_ROOT$/packages/oa-ask/**",
         "$TURBO_ROOT$/packages/shared/src/**"
       ],
       "cache": true,
@@ -92,7 +88,6 @@
       "outputs": []
     },
     "@harnessos/server#test:integration": {
-      "dependsOn": ["@harnessos/oa-ask#build"],
       "cache": false,
       "outputLogs": "errors-only",
       "outputs": []

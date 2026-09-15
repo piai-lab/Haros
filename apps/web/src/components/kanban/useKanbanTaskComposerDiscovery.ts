@@ -53,7 +53,7 @@ const KANBAN_SUPPORTED_APP_SLASH_COMMANDS = new Set(["clear", "default", "plan"]
 
 interface UseKanbanTaskComposerDiscoveryInput {
   readonly composerTrigger: ComposerTrigger | null;
-  readonly selectedEngine: EngineKind;
+  readonly selectedEngine: EngineKind | null;
   readonly modelOptionsByEngine: Record<
     EngineKind,
     ReadonlyArray<EngineModelOption & { isCustom?: boolean }>
@@ -195,7 +195,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     modelOptionsByEngine,
     engineOrder,
     hiddenEngines,
-    protectedEngines: [selectedEngine],
+    protectedEngines: selectedEngine ? [selectedEngine] : [],
   });
   const dynamicAgents = selectedRuntimeAgents.map((agent) =>
     agent.description

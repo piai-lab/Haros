@@ -1,33 +1,30 @@
-import { HarosModelCatalogSyncLive } from "./Layers/HarosModelCatalogSync";
-import { HarosModelServicesLive } from "./Layers/HarosModelServices";
 import { Effect, Layer } from "effect";
 
+import { HostGatewayCredentialsWithSecretsLive } from "../hostGateway/Layers/HostGatewayCredentials";
 import { BrowserAutomationHostLive } from "../browserAutomation/Layers/BrowserAutomationHost";
 import { ServerConfig } from "../config";
 import {
+  makeEngineServerPasswordResolver,
   EngineCredentials,
   EngineCredentialsLive,
-  makeEngineServerPasswordResolver,
 } from "../engineCredentials";
-import { HostGatewayCredentialsWithSecretsLive } from "../hostGateway/Layers/HostGatewayCredentials";
-import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
-import { EngineRuntimeEventRepositoryLive } from "../persistence/Layers/EngineRuntimeEvents";
-import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
 import { ServerSettingsLive } from "../serverSettings";
-import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
 import { makeClaudeAdapterLive } from "./Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./Layers/CodexAdapter";
 import { makeCursorAdapterLive } from "./Layers/CursorAdapter";
-import { makeDeepSeekAdapterLive } from "./Layers/DeepSeekAdapter";
+import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
+import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
 import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
+import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
+import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
+import { makePiAdapterLive } from "./Layers/PiAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
 import { makeDurableEngineServiceLive } from "./Layers/EngineService";
 import { EngineSessionDirectoryLive } from "./Layers/EngineSessionDirectory";
-import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
-import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
-import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
-import { makePiAdapterLive } from "./Layers/PiAdapter";
+import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
+import { EngineRuntimeEventRepositoryLive } from "../persistence/Layers/EngineRuntimeEvents";
+import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
 
 export function makeServerEngineLayer(
   options: {
@@ -88,7 +85,6 @@ export function makeServerEngineLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(hostGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
-    const deepSeekAdapterLayer = makeDeepSeekAdapterLive();
     const adapterRegistryLayer = EngineAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -99,7 +95,6 @@ export function makeServerEngineLayer(
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
       Layer.provide(piAdapterLayer),
-      Layer.provide(deepSeekAdapterLayer),
       Layer.provideMerge(engineSessionDirectoryLayer),
     );
     const engineServiceLayer = makeDurableEngineServiceLive(
@@ -116,16 +111,7 @@ export function makeServerEngineLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
-    const modelServicesLayer = HarosModelServicesLive.pipe(
-      Layer.provide(engineServiceLayer),
-      Layer.provide(ServerSettingsLive),
-    );
     return Layer.mergeAll(
-      modelServicesLayer,
-      HarosModelCatalogSyncLive.pipe(
-        Layer.provide(modelServicesLayer),
-        Layer.provide(ServerSettingsLive),
-      ),
       engineServiceLayer,
       engineDiscoveryLayer,
       adapterRegistryLayer,

@@ -38,7 +38,7 @@ export interface UseComposerVoiceControllerOptions {
   activeProject: Project | undefined;
   activeThreadId: ThreadId | null;
   threadId: ThreadId;
-  selectedEngine: EngineKind;
+  selectedEngine: EngineKind | null;
   activeEngineStatus: ServerEngineStatus | null;
   pendingUserInputCount: number;
   onTranscriptReady: (transcript: string) => void;

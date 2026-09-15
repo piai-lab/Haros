@@ -104,6 +104,14 @@ export function KanbanProjectBoardView({
       return;
     }
     const targetEngine = card.engine ?? settingsSnapshot.defaultEngine;
+    if (!targetEngine) {
+      toastManager.add({
+        type: "error",
+        title: t("kanban.couldNotSend"),
+        description: t("kanban.notConnected"),
+      });
+      return;
+    }
     const sendAvailability = await resolveEngineSendAvailabilityWithRefresh({
       engine: targetEngine,
       statuses: engineStatuses,

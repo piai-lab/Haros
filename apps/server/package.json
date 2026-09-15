@@ -31,7 +31,6 @@
     "@earendil-works/pi-coding-agent": "0.84.4",
     "@effect/platform-node": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
-    "@harnessos/oa-ask": "workspace:*",
     "@opencode-ai/sdk": "^1.15.13",
     "@pierre/diffs": "^1.2.12",
     "@xterm/headless": "^6.0.0",

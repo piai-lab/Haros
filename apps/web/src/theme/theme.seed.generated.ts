@@ -137,7 +137,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, The
       surface: "#ffffff",
     },
   },
-  oa: {
+  haros: {
     dark: {
       apply: { contrast: true },
       accent: "#6073cc",

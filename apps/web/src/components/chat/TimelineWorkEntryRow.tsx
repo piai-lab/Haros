@@ -603,7 +603,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       : isHarosBrowserToolRow
         ? "browser"
         : isHarosToolRow
-          ? "oa"
+          ? "haros"
           : isMcpToolRow
             ? "mcp"
             : undefined;

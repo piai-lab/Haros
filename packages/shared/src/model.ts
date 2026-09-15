@@ -354,10 +354,11 @@ function legacyCapabilityDescriptors(
 }
 
 export function getEngineOptionDescriptors(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   caps: ModelCapabilities;
   selections?: EngineOptionSelectionsInput;
 }): ReadonlyArray<EngineOptionDescriptor> {
+  if (!input.engine) return [];
   const descriptors =
     input.caps.optionDescriptors?.map(cloneEngineOptionDescriptor) ??
     legacyCapabilityDescriptors(input.engine, input.caps);
@@ -414,9 +415,10 @@ export function buildEngineOptionSelectionsFromDescriptors(
 // ── Data-driven capability resolver ───────────────────────────────────
 
 export function getModelCapabilities(
-  engine: EngineKind,
+  engine: EngineKind | null,
   model: string | null | undefined,
 ): ModelCapabilities {
+  if (!engine) return EMPTY_MODEL_CAPABILITIES;
   const slug = normalizeModelSlug(model, engine);
   if (slug && MODEL_CAPABILITIES_INDEX[engine]?.[slug]) {
     return MODEL_CAPABILITIES_INDEX[engine][slug];

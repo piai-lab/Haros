@@ -48,21 +48,3 @@ export function HarosLogo({
     </svg>
   );
 }
-
-export function OABadge({ size = 16, className, style, ...svgProps }: HarosLogoProps) {
-  return (
-    <svg
-      {...svgProps}
-      viewBox="0 0 64 64"
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      aria-hidden={svgProps["aria-label"] ? undefined : true}
-      className={cn("shrink-0", className)}
-      style={{ display: "block", flexShrink: 0, ...style }}
-    >
-      <image href="/brand/oa-badge.svg" width="64" height="64" className="dark:hidden" />
-      <image href="/brand/oa-badge-dark.svg" width="64" height="64" className="hidden dark:block" />
-    </svg>
-  );
-}

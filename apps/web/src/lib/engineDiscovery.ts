@@ -248,9 +248,6 @@ export function formatSkillScope(scope: string | undefined, locale: AppLocale = 
   const normalized = scope.trim();
   if (normalized.length === 0) return locale === "zh-CN" ? "个人" : "Personal";
   const normalizedLower = normalized.toLowerCase();
-  if (normalizedLower === "oa") {
-    return locale === "zh-CN" ? "Haros 能力库" : "Haros Library";
-  }
   if (locale === "zh-CN") {
     const localized = {
       user: "用户",

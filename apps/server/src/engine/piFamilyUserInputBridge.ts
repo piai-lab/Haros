@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
-import { ASK_USER_TOOL_NAME, type AskUserResult, type AskUserToolInput } from "@harnessos/oa-ask";
+import { ASK_USER_TOOL_NAME, type AskUserResult, type AskUserToolInput } from "./askUserTypes.ts";
 import {
   ApprovalRequestId,
   type CanonicalUserInputResponse,

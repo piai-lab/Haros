@@ -480,7 +480,6 @@ describe("EngineCommandReactor", () => {
     const unsupported = () => Effect.die(new Error("Unsupported engine call in test")) as never;
     const service: EngineServiceShape = {
       startSession: startSession as EngineServiceShape["startSession"],
-      reloadSessionResources: () => unsupported(),
       sendTurn: sendTurn as EngineServiceShape["sendTurn"],
       steerTurn: steerTurn as EngineServiceShape["steerTurn"],
       startReview,
@@ -2783,7 +2782,7 @@ describe("EngineCommandReactor", () => {
   it("persists one deterministic Skill delivery receipt per selected Haros Skill", async () => {
     const harness = await createHarness({
       startReactor: false,
-      threadEngineSelection: { engine: "pi", model: "harnessos-test" },
+      threadEngineSelection: { engine: "codex", model: "harnessos-test" },
     });
     const skillPath = path.join(harness.stateDir, "skills", "aihot", "SKILL.md");
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
@@ -2828,7 +2827,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         messageId: "harnessos-skill-delivery-message",
         skillName: "Aihot",
-        deliveryMode: "reference",
+        deliveryMode: "inline",
       },
     });
   });
@@ -6687,7 +6686,7 @@ describe("EngineCommandReactor", () => {
 
   it("derives the bundled Haros Agent surface and canonical Project root", async () => {
     const harness = await createHarness({
-      threadEngineSelection: { engine: "pi", model: "deepseek/deepseek-chat" },
+      threadEngineSelection: { engine: "codex", model: "deepseek/deepseek-chat" },
     });
     const now = new Date().toISOString();
 
@@ -6720,7 +6719,7 @@ describe("EngineCommandReactor", () => {
 
   it("does not pass the Home chat container workspace root through as engine cwd", async () => {
     const harness = await createHarness({
-      threadEngineSelection: { engine: "pi", model: "deepseek/deepseek-chat" },
+      threadEngineSelection: { engine: "codex", model: "deepseek/deepseek-chat" },
     });
     const now = new Date().toISOString();
 
@@ -6733,7 +6732,7 @@ describe("EngineCommandReactor", () => {
         title: "Home",
         workspaceRoot: "/Users/tester",
         defaultEngineSelection: {
-          engine: "pi",
+          engine: "codex",
           model: "deepseek/deepseek-chat",
         },
         createdAt: now,
@@ -6748,7 +6747,7 @@ describe("EngineCommandReactor", () => {
         projectId: asProjectId("project-home"),
         title: "Home thread",
         engineSelection: {
-          engine: "pi",
+          engine: "codex",
           model: "deepseek/deepseek-chat",
         },
         interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
@@ -6779,7 +6778,7 @@ describe("EngineCommandReactor", () => {
     await waitFor(() => harness.startSession.mock.calls.length === 1);
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
       engineSelection: {
-        engine: "pi",
+        engine: "codex",
         model: "deepseek/deepseek-chat",
       },
       runtimeMode: "full-access",

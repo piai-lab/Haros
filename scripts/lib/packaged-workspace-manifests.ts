@@ -8,9 +8,6 @@ export const PACKAGED_WORKSPACE_MANIFEST_PATHS = [
   "apps/desktop/package.json",
   "apps/web/package.json",
   "packages/contracts/package.json",
-  // Keep the Ask fork importer available while Bun reconstructs the frozen
-  // workspace. Server tsdown owns the shipped runtime bytes via noExternal.
-  "packages/oa-ask/package.json",
   "packages/shared/package.json",
   "scripts/package.json",
 ] as const;
@@ -18,14 +15,14 @@ export const PACKAGED_WORKSPACE_MANIFEST_PATHS = [
 export const PACKAGED_LOCKFILE_PATH = "bun.lock";
 export const PACKAGED_PATCHES_PATH = "patches";
 
-export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
-  {
-    name: "@harnessos/oa-ask",
-    manifestPath: "packages/oa-ask/package.json",
-    runtimePath: "apps/server/dist/index.mjs",
-    includeInLegalClosure: true,
-  },
-] as const;
+export interface BundledWorkspaceComponent {
+  readonly name: string;
+  readonly manifestPath: string;
+  readonly runtimePath: string;
+  readonly includeInLegalClosure: boolean;
+}
+
+export const SERVER_BUNDLED_WORKSPACE_COMPONENTS: readonly BundledWorkspaceComponent[] = [];
 
 const SERVER_BUNDLED_WORKSPACE_DEPENDENCY_NAMES = new Set<string>(
   SERVER_BUNDLED_WORKSPACE_COMPONENTS.map((component) => component.name),

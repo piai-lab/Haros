@@ -173,17 +173,19 @@ export function useHandleNewThread() {
         projectCwd: project?.cwd ?? null,
         serverCwd: serverConfigQuery.data?.cwd ?? null,
       });
-      prefetchEngineModelsForNewThread(queryClient, {
-        engine,
-        settings: authoritativeSettings,
-        cwd,
-        enabled:
-          (
-            authoritativeSettings.engines as Partial<
-              Record<EngineKind, { readonly enabled?: boolean }>
-            >
-          )[engine]?.enabled !== false,
-      });
+      if (engine) {
+        prefetchEngineModelsForNewThread(queryClient, {
+          engine,
+          settings: authoritativeSettings,
+          cwd,
+          enabled:
+            (
+              authoritativeSettings.engines as Partial<
+                Record<EngineKind, { readonly enabled?: boolean }>
+              >
+            )[engine]?.enabled !== false,
+        });
+      }
     }
     // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
     const projectDefaultEngineSelection =

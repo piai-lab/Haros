@@ -112,7 +112,7 @@ function buildModelSearchText(option: EngineModelOption): string {
 }
 
 type EngineModelMenuItemsProps = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: ModelSlug | null;
   lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
@@ -163,7 +163,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   const hiddenEngines = props.hiddenEngines;
   const engineOrder = props.engineOrder;
   const hiddenEngineSet = new Set<EngineKind>(hiddenEngines ?? []);
-  const protectedEngineSet = new Set<EngineKind>([props.engine]);
+  const protectedEngineSet = new Set<EngineKind>(props.engine ? [props.engine] : []);
   if (props.lockedEngine !== null) {
     protectedEngineSet.add(props.lockedEngine);
   }
@@ -381,12 +381,13 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
 
 // Resolves the human-readable label for the currently selected model.
 export function resolveEngineModelLabel(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   lockedEngine: EngineKind | null;
   model: ModelSlug;
   modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
 }): string {
   const activeEngine = input.lockedEngine ?? input.engine;
+  if (!activeEngine) return input.model;
   return resolveSelectedModelLabel({
     engine: activeEngine,
     model: input.model,
@@ -402,7 +403,7 @@ export function getProviderIconClassName(
 }
 
 type EngineModelPickerProps = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: ModelSlug | null;
   lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
@@ -431,9 +432,10 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
   const selectionCommitTimerRef = useRef<number | null>(null);
   const isMenuOpen = open ?? uncontrolledMenuOpen;
   const activeEngine = props.lockedEngine ?? props.engine;
-  const activeCatalogState =
-    props.catalogStateByEngine?.[activeEngine] ??
-    (props.loadingEngineModels?.[activeEngine] ? "checking" : null);
+  const activeCatalogState = activeEngine
+    ? (props.catalogStateByEngine?.[activeEngine] ??
+      (props.loadingEngineModels?.[activeEngine] ? "checking" : null))
+    : null;
   const selectedModelLabel = props.model
     ? resolveEngineModelLabel({
         engine: props.engine,
@@ -444,11 +446,13 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
     : activeCatalogState
       ? t(resolveComposerModelFallbackMessageKey(activeCatalogState))
       : t("composer.noAvailableModel");
-  const selectedDescriptor = props.model
-    ? (props.modelOptionsByEngine[activeEngine]?.find((option) => option.slug === props.model) ??
-      null)
-    : null;
-  const selectedModel = props.model ? buildEngineSelection(activeEngine, props.model) : null;
+  const selectedDescriptor =
+    props.model && activeEngine
+      ? (props.modelOptionsByEngine[activeEngine]?.find((option) => option.slug === props.model) ??
+        null)
+      : null;
+  const selectedModel =
+    props.model && activeEngine ? buildEngineSelection(activeEngine, props.model) : null;
 
   const setMenuOpen = (nextOpen: boolean) => {
     if (open === undefined) {

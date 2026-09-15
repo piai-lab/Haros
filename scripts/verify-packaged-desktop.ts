@@ -924,7 +924,7 @@ async function createPackagedJourneyFixture(input: {
     threadId,
     projectId,
     title: threadTitle,
-    engineSelection: { engine: "codex", model: "gpt-5.5" },
+    engineSelection: { engine: "codex", model: "packaged-proof-offline" },
     runtimeMode: "full-access",
     interactionMode: "default",
     envMode: "local",

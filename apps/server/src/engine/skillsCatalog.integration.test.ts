@@ -122,7 +122,7 @@ describe("discoverSkillsCatalog", () => {
     const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     const byName = new Map(skills.map((skill) => [skill.name, skill]));
 
-    expect(byName.get("portable")?.scope).toBe("oa");
+    expect(byName.get("portable")?.scope).toBe("haros");
     expect(byName.get("codex-only")?.scope).toBe("codex");
     expect(byName.get("claude-only")?.scope).toBe("claude");
     expect(byName.get("cursor-only")?.scope).toBe("cursor");
@@ -393,7 +393,7 @@ describe("discoverSkillsCatalog", () => {
       engine: "claude",
     });
     const claudeShared = claudeView.find((skill) => skill.name === "shared");
-    expect(claudeShared?.scope).toBe("oa");
+    expect(claudeShared?.scope).toBe("haros");
   });
 
   it("uses documented engine alias roots before Haros fallbacks", async () => {
@@ -513,7 +513,7 @@ description: Direct Pi markdown skill
     const names = skills.map((skill) => skill.name);
     expect(names.filter((name) => name === "from-codex")).toHaveLength(1);
     expect(skills.find((skill) => skill.name === "from-codex")?.scope).toBe("codex");
-    expect(skills.find((skill) => skill.name === "portable")?.scope).toBe("oa");
+    expect(skills.find((skill) => skill.name === "portable")?.scope).toBe("haros");
   });
 
   it("dedupes same-named skills within a root deterministically", async () => {
@@ -538,12 +538,12 @@ describe("mergeSkillsIntoCatalog", () => {
   it("preserves same-named identities from different paths", () => {
     const merged = mergeSkillsIntoCatalog({
       native: [descriptor("shared", "codex-native")],
-      catalog: [descriptor("Shared", "oa"), descriptor("extra", "oa")],
+      catalog: [descriptor("Shared", "haros"), descriptor("extra", "haros")],
     });
     expect(merged).toHaveLength(3);
     expect(
       merged.filter((skill) => skill.name.toLowerCase() === "shared").map((skill) => skill.scope),
-    ).toEqual(["codex-native", "oa"]);
+    ).toEqual(["codex-native", "haros"]);
     expect(merged.some((skill) => skill.name === "extra")).toBe(true);
   });
 
@@ -585,7 +585,7 @@ describe("filterDisabledSkills", () => {
         name: "Reviewer",
         path: "/Users/test/.harnessos/skills/reviewer/SKILL.md",
         enabled: true,
-        scope: "oa",
+        scope: "haros",
       },
       {
         name: "Reviewer",
@@ -597,7 +597,7 @@ describe("filterDisabledSkills", () => {
         name: "writer",
         path: "/Users/test/.harnessos/skills/writer/SKILL.md",
         enabled: true,
-        scope: "oa",
+        scope: "haros",
       },
     ];
     expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.path)).toEqual([

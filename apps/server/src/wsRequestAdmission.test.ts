@@ -2,9 +2,50 @@ import { ORCHESTRATION_WS_METHODS, WS_METHODS } from "@harnessos/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { makeWsRequestAdmission } from "./wsRequestAdmission";
+import { classifyWsRequest, makeWsRequestAdmission } from "./wsRequestAdmission";
 
 describe("WsRequestAdmission", () => {
+  it("keeps lightweight shell reads out of the expensive lane", () => {
+    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getShellSnapshot)).toBe("standard");
+    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot)).toBe(
+      "expensive-read",
+    );
+    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getTurnDiff)).toBe("expensive-read");
+    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.projectsResolveWorkspaceFileReferences)).toBe(
+      "expensive-read",
+    );
+    expect(classifyWsRequest(WS_METHODS.engineListModels)).toBe("engine-discovery");
+    expect(classifyWsRequest(WS_METHODS.engineListAgents)).toBe("engine-discovery");
+    expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
+  });
+
+  it("admits the bounded local prompt snapshot while both expensive-read leases are occupied", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const admission = yield* makeWsRequestAdmission;
+        const first = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
+        const second = yield* admission.acquire(1, WS_METHODS.gitReadWorkingTreeDiff);
+
+        const promptSnapshot = yield* admission.acquire(1, WS_METHODS.serverGetSettings);
+        expect(promptSnapshot.requestClass).toBe("standard");
+
+        yield* admission.release(first);
+        yield* admission.release(second);
+        yield* admission.release(promptSnapshot);
+        expect(yield* admission.snapshot).toMatchObject({
+          active: 0,
+          admittedTotal: 3,
+          releasedTotal: 3,
+          rejectedTotal: 0,
+        });
+      }),
+    );
+  });
+
   it("reserves independent capacity for control traffic during an expensive-read flood", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {

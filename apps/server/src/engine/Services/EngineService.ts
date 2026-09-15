@@ -145,14 +145,6 @@ export interface EngineServiceShape {
    */
   readonly stopSession: (input: EngineStopSessionInput) => Effect.Effect<void, EngineServiceError>;
 
-  /** Reload resources only on the exact live Pi session. */
-  readonly reloadSessionResources: (input: {
-    readonly threadId: ThreadId;
-  }) => Effect.Effect<
-    { readonly state: "reloaded" | "no_active_session" | "different_engine" | "busy" },
-    EngineServiceError
-  >;
-
   /**
    * Stop only the live adapter process/session while preserving the persisted
    * engine binding and resume cursor for a subsequent restart.

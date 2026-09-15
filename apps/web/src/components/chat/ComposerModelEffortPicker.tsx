@@ -9,7 +9,6 @@ import {
   type EngineModelDescriptor,
   type ThreadId,
 } from "@harnessos/contracts";
-import { engineOpensModelServicesSettings } from "@harnessos/shared/engineMetadata";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";
@@ -33,7 +32,7 @@ import { EngineModelMenuItems, resolveEngineModelLabel } from "./EngineModelPick
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
 
 type ComposerModelEffortPickerProps = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: ModelSlug | null;
   catalogState: EngineModelCatalogState;
   modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
@@ -96,7 +95,9 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";
-  const hasSelectableModels = (props.modelOptionsByEngine[props.engine]?.length ?? 0) > 0;
+  const hasSelectableModels = props.engine
+    ? (props.modelOptionsByEngine[props.engine]?.length ?? 0) > 0
+    : false;
   const closeAndRefocus = () => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();
@@ -253,55 +254,55 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     }}
                   >
                     <SettingsIcon aria-hidden="true" className="size-3.5" />
-                    {engineOpensModelServicesSettings(props.engine)
-                      ? t("composer.openModelServices")
-                      : t("composer.openEngineSettings")}
+                    {t("composer.openEngineSettings")}
                   </MenuItem>
                 ) : null}
                 <MenuSeparator />
               </>
             ) : null}
-            {traitsContent ? (
-              <>
-                {traitsContent}
-                <MenuSeparator />
-                <MenuSub>
-                  <MenuSubTrigger>
-                    <span className="truncate">{modelLabel}</span>
-                  </MenuSubTrigger>
-                  <ComposerPickerMenuSubPopup
-                    fixedWidth
-                    className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
-                  >
-                    <EngineModelMenuItems
-                      engine={props.engine}
-                      model={props.model}
-                      lockedEngine={props.engine}
-                      modelOptionsByEngine={props.modelOptionsByEngine}
-                      {...(props.loadingEngineModels
-                        ? { loadingEngineModels: props.loadingEngineModels }
-                        : {})}
-                      onEngineModelChange={props.onEngineModelChange}
-                      onAfterSelection={closeAndRefocus}
-                    />
-                  </ComposerPickerMenuSubPopup>
-                </MenuSub>
-              </>
-            ) : (
-              <EngineModelMenuItems
-                engine={props.engine}
-                model={props.model}
-                lockedEngine={props.engine}
-                modelOptionsByEngine={props.modelOptionsByEngine}
-                {...(props.loadingEngineModels
-                  ? { loadingEngineModels: props.loadingEngineModels }
-                  : {})}
-                onEngineModelChange={props.onEngineModelChange}
-                onAfterSelection={closeAndRefocus}
-              />
-            )}
+            {props.engine ? (
+              traitsContent ? (
+                <>
+                  {traitsContent}
+                  <MenuSeparator />
+                  <MenuSub>
+                    <MenuSubTrigger>
+                      <span className="truncate">{modelLabel}</span>
+                    </MenuSubTrigger>
+                    <ComposerPickerMenuSubPopup
+                      fixedWidth
+                      className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
+                    >
+                      <EngineModelMenuItems
+                        engine={props.engine}
+                        model={props.model}
+                        lockedEngine={props.engine}
+                        modelOptionsByEngine={props.modelOptionsByEngine}
+                        {...(props.loadingEngineModels
+                          ? { loadingEngineModels: props.loadingEngineModels }
+                          : {})}
+                        onEngineModelChange={props.onEngineModelChange}
+                        onAfterSelection={closeAndRefocus}
+                      />
+                    </ComposerPickerMenuSubPopup>
+                  </MenuSub>
+                </>
+              ) : (
+                <EngineModelMenuItems
+                  engine={props.engine}
+                  model={props.model}
+                  lockedEngine={props.engine}
+                  modelOptionsByEngine={props.modelOptionsByEngine}
+                  {...(props.loadingEngineModels
+                    ? { loadingEngineModels: props.loadingEngineModels }
+                    : {})}
+                  onEngineModelChange={props.onEngineModelChange}
+                  onAfterSelection={closeAndRefocus}
+                />
+              )
+            ) : null}
           </>
-        ) : hasSelectableModels ? (
+        ) : hasSelectableModels && props.engine ? (
           <EngineModelMenuItems
             engine={props.engine}
             model={null}
@@ -358,7 +359,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   }}
                 >
                   <SettingsIcon aria-hidden="true" className="size-3.5" />
-                  {engineOpensModelServicesSettings(props.engine)
+                  {props.engine === "codex"
                     ? t("composer.openModelServices")
                     : t("composer.openEngineSettings")}
                 </MenuItem>

@@ -75,10 +75,13 @@ export function resolveRuntimeModelDescriptor(input: {
 
 // Reuses static capability flags but lets runtime-discovered models override exposed effort menus.
 export function getRuntimeAwareModelCapabilities(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: string | null | undefined;
   runtimeModel?: EngineModelDescriptor | undefined;
 }): ModelCapabilities {
+  if (!input.engine) {
+    return getModelCapabilities(null, input.model);
+  }
   const staticCapabilities = getModelCapabilities(input.engine, input.model);
   // Runtime discovery is authoritative when available; the static table is only a startup fallback.
   const supportsFastMode =
@@ -97,18 +100,7 @@ export function getRuntimeAwareModelCapabilities(input: {
     input.runtimeModel?.optionDescriptors ?? staticCapabilities.optionDescriptors;
   const runtimeEfforts = input.runtimeModel?.supportedReasoningEfforts;
   // Engines with dynamic catalogs, including Droid, expose model-specific effort ladders here.
-  if (
-    (input.engine !== "codex" &&
-      input.engine !== "cursor" &&
-      input.engine !== "antigravity" &&
-      input.engine !== "grok" &&
-      input.engine !== "droid" &&
-      input.engine !== "kilo" &&
-      input.engine !== "opencode" &&
-      input.engine !== "pi") ||
-    !runtimeEfforts ||
-    runtimeEfforts.length === 0
-  ) {
+  if (input.engine === "claude" || !runtimeEfforts || runtimeEfforts.length === 0) {
     return {
       ...staticCapabilities,
       ...(optionDescriptors ? { optionDescriptors } : {}),
