@@ -27,8 +27,8 @@ export function CreateGitHubProjectFields(props: {
   readonly submitting: boolean;
   readonly onRepositoryChange: (value: string) => void;
   readonly onDestinationParentChange: (value: string) => void;
+  readonly onDestinationBrowse: () => void;
   readonly onDirectoryNameChange: (value: string) => void;
-  readonly onBrowse: () => void;
   readonly onSubmitKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const { t } = useI18n();
@@ -98,8 +98,16 @@ export function CreateGitHubProjectFields(props: {
         </label>
         <div className="flex items-center gap-2">
           <InputGroup className={cn(PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME, "min-w-0 flex-1")}>
-            <InputGroupAddon className="w-10 self-stretch border-e border-foreground/12 ps-0">
-              <FolderClosed className="size-4 text-muted-foreground/70" aria-hidden="true" />
+            <InputGroupAddon className="w-10 self-stretch border-e border-foreground/12 p-0">
+              <button
+                type="button"
+                className="flex h-full w-full items-center justify-center text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                aria-label={t("project.browse")}
+                disabled={props.isPickingFolder || props.submitting}
+                onClick={props.onDestinationBrowse}
+              >
+                <FolderClosed className="size-4" aria-hidden="true" />
+              </button>
             </InputGroupAddon>
             <InputGroupInput
               id={props.destinationParentInputId}
@@ -112,17 +120,15 @@ export function CreateGitHubProjectFields(props: {
               onKeyDown={props.onSubmitKeyDown}
             />
           </InputGroup>
-          {props.isElectron ? (
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME, "shrink-0 px-3")}
-              disabled={props.isPickingFolder || props.submitting}
-              onClick={props.onBrowse}
-            >
-              {t("project.browse")}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME, "shrink-0 px-3")}
+            disabled={props.isPickingFolder || props.submitting}
+            onClick={props.onDestinationBrowse}
+          >
+            {t("project.browse")}
+          </Button>
         </div>
       </div>
 

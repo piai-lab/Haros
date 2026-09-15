@@ -42,6 +42,7 @@ import {
 } from "./ui/dialog";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { CentralIcon } from "~/lib/central-icons";
+import { FolderBrowserSheet } from "./FolderBrowserSheet";
 
 // Inputs share one fixed height + radius so every control in the dialog reads
 // as the same size (mirrors EditProfileDialog's field styling).
@@ -120,6 +121,7 @@ export function CreateProjectDialog(props: {
    */
   const [pickedPath, setPickedPath] = useState<string | null>(null);
   const [isPickingFolder, setIsPickingFolder] = useState(false);
+  const [isDestinationBrowserOpen, setIsDestinationBrowserOpen] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -151,6 +153,7 @@ export function CreateProjectDialog(props: {
     activeOperationIdRef.current = null;
     setPickedPath(null);
     setIsPickingFolder(false);
+    setIsDestinationBrowserOpen(false);
     setIsDropTarget(false);
     setSubmitting(false);
     setFormError(null);
@@ -499,7 +502,7 @@ export function CreateProjectDialog(props: {
                 setDirectoryNameEdited(true);
                 setFormError(null);
               }}
-              onBrowse={() => void handleBrowse()}
+              onDestinationBrowse={() => setIsDestinationBrowserOpen(true)}
               onSubmitKeyDown={submitOnEnter}
             />
           )}
@@ -544,6 +547,12 @@ export function CreateProjectDialog(props: {
           </Button>
         </DialogFooter>
       </DialogPopup>
+      <FolderBrowserSheet
+        open={isDestinationBrowserOpen}
+        initialPath={destinationParent || props.defaultCloneParent}
+        onOpenChange={setIsDestinationBrowserOpen}
+        onSelect={applyDestinationParent}
+      />
     </Dialog>
   );
 }
