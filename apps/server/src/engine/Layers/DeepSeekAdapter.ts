@@ -221,20 +221,16 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       options.resolveModelServiceEnv ??
       (async (processEnv: NodeJS.ProcessEnv) => {
         if (!serverSettings) return {};
-        try {
-          const settings = await Effect.runPromise(serverSettings.getSettings);
-          const agentDir = await resolveHarosModelServicesAgentDir({
-            requestedAgentDir: settings.engines.pi.agentDir,
-            serverBaseDir: serverConfig.baseDir,
-          });
-          return await loadHarosModelServiceChildEnv({
-            engine: ENGINE,
-            agentDir,
-            processEnv,
-          });
-        } catch {
-          return {};
-        }
+        const settings = await Effect.runPromise(serverSettings.getSettings);
+        const agentDir = await resolveHarosModelServicesAgentDir({
+          requestedAgentDir: settings.engines.pi.agentDir,
+          serverBaseDir: serverConfig.baseDir,
+        });
+        return await loadHarosModelServiceChildEnv({
+          engine: ENGINE,
+          agentDir,
+          processEnv,
+        });
       });
     const teardownProcess =
       options.teardownProcess ?? ((child: ChildProcessWithoutNullStreams) => teardownChildProcessTree(child));
@@ -583,7 +579,19 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         const model = engineSelection?.model ?? resume?.model ?? DEFAULT_MODEL;
         const provider = resume?.provider ?? DEFAULT_PROVIDER;
         const reasoningEffort = trim(engineSelection?.options?.reasoningEffort);
-        const modelServiceEnv = yield* Effect.promise(() => resolveModelServiceEnv(process.env));
+        const modelServiceEnv = yield* Effect.tryPromise({
+          try: () => resolveModelServiceEnv(process.env),
+          catch: (cause) =>
+            new EngineAdapterRequestError({
+              engine: ENGINE,
+              method: "session/start",
+              detail:
+                cause instanceof Error
+                  ? cause.message
+                  : "Failed to load model-service credentials.",
+              cause,
+            }),
+        });
         const env = buildEngineChildEnvironment({
           engine: ENGINE,
           overrides: {

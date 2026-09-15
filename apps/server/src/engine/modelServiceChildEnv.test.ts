@@ -145,4 +145,36 @@ describe("loadHarosModelServiceChildEnv", () => {
       }),
     ).resolves.toEqual({});
   });
+
+  it("treats missing credential files as empty and surfaces isolation errors", async () => {
+    const missing = Object.assign(new Error("not found"), { code: "ENOENT" });
+    await expect(
+      loadHarosModelServiceChildEnv({
+        engine: "deepseek",
+        agentDir: "/tmp/unused",
+        processEnv: {},
+        readTextFile: async () => {
+          throw missing;
+        },
+      }),
+    ).resolves.toEqual({});
+    await expect(
+      loadHarosModelServiceChildEnv({
+        engine: "deepseek",
+        agentDir: "/tmp/unused",
+        processEnv: {},
+        readTextFile: async () => {
+          throw new Error("Model-service configuration isolation could not be verified");
+        },
+      }),
+    ).rejects.toThrow(/isolation could not be verified/);
+    await expect(
+      loadHarosModelServiceChildEnv({
+        engine: "deepseek",
+        agentDir: "/tmp/unused",
+        processEnv: {},
+        readTextFile: async () => "{not-json",
+      }),
+    ).rejects.toThrow();
+  });
 });

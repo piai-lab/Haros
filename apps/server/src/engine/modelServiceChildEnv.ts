@@ -215,13 +215,6 @@ export function hasStoredDeepSeekModelServiceKey(input: {
   );
 }
 
-function emptySnapshot(): {
-  readonly storedApiKeys: ReadonlyMap<string, string>;
-  readonly providers: ReadonlyArray<HarosModelServiceProviderHint>;
-} {
-  return { storedApiKeys: new Map(), providers: [] };
-}
-
 export async function loadHarosModelServiceSnapshot(input: {
   readonly agentDir: string;
   readonly readTextFile?: (
@@ -252,7 +245,7 @@ export async function loadHarosModelServiceSnapshot(input: {
       ) {
         return undefined;
       }
-      return undefined;
+      throw error;
     }
   };
   const [authJson, modelsJson] = await Promise.all([read("auth.json"), read("models.json")]);
@@ -273,7 +266,7 @@ export async function loadHarosModelServiceChildEnv(input: {
   readonly signal?: AbortSignal;
 }): Promise<NodeJS.ProcessEnv> {
   if (!engineConsumesHarosModelServiceCredentials(input.engine)) return {};
-  const snapshot = await loadHarosModelServiceSnapshot(input).catch(() => emptySnapshot());
+  const snapshot = await loadHarosModelServiceSnapshot(input);
   return resolveHarosModelServiceChildEnv({
     engine: input.engine,
     storedApiKeys: snapshot.storedApiKeys,
