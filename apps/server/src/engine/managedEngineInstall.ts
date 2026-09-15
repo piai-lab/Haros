@@ -1,5 +1,6 @@
 import type { EngineKind } from "@harnessos/contracts";
 import { ENGINE_DESCRIPTOR_BY_KIND, type EngineDescriptor } from "@harnessos/shared/engineMetadata";
+import { resolveWindowsSystemRoot } from "@harnessos/shared/windowsProcess";
 import { Effect, Schema } from "effect";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
@@ -32,6 +33,21 @@ function checkedUrl(value: string): string {
     throw new Error("Engine source must use HTTPS (HTTP is allowed only for a local mirror).");
   }
   return url.href;
+}
+
+export function resolveEngineArchiveExtractCommand(input: {
+  readonly format: "tar.gz" | "zip";
+  readonly archivePath: string;
+  readonly directory: string;
+  readonly platform?: NodeJS.Platform;
+  readonly env?: NodeJS.ProcessEnv;
+}): { readonly command: string; readonly args: string[] } {
+  const platform = input.platform ?? process.platform;
+  const command =
+    platform === "win32" && input.format === "zip"
+      ? path.win32.join(resolveWindowsSystemRoot(input.env), "System32", "tar.exe")
+      : "tar";
+  return { command, args: ["-xf", input.archivePath, "-C", input.directory] };
 }
 
 export const installManagedEngine = Effect.fn("installManagedEngine")(function* (input: {
@@ -241,7 +257,12 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
   });
   if (artifact.format !== "binary") {
     yield* input.progress("Extracting downloaded engine");
-    const result = yield* input.run("tar", ["-xf", payload, "-C", directory]);
+    const extract = resolveEngineArchiveExtractCommand({
+      format: artifact.format,
+      archivePath: payload,
+      directory,
+    });
+    const result = yield* input.run(extract.command, extract.args);
     if (result.exitCode !== 0)
       return yield* Effect.fail(new Error(`Extraction failed: ${result.stderr}`));
     yield* request(() => fs.unlink(payload));

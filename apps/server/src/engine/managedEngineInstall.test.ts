@@ -5,9 +5,38 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installManagedEngine } from "./managedEngineInstall";
+import { installManagedEngine, resolveEngineArchiveExtractCommand } from "./managedEngineInstall";
 
 afterEach(() => vi.unstubAllEnvs());
+
+describe("managed Engine installation helpers", () => {
+  it("extracts Windows zip archives with System32 tar.exe", () => {
+    expect(
+      resolveEngineArchiveExtractCommand({
+        format: "zip",
+        archivePath: "C:\\tmp\\download.zip",
+        directory: "C:\\tmp\\out",
+        platform: "win32",
+        env: { SystemRoot: "C:\\Windows" },
+      }),
+    ).toEqual({
+      command: "C:\\Windows\\System32\\tar.exe",
+      args: ["-xf", "C:\\tmp\\download.zip", "-C", "C:\\tmp\\out"],
+    });
+    expect(
+      resolveEngineArchiveExtractCommand({
+        format: "tar.gz",
+        archivePath: "/tmp/download.tar.gz",
+        directory: "/tmp/out",
+        platform: "linux",
+      }),
+    ).toEqual({
+      command: "tar",
+      args: ["-xf", "/tmp/download.tar.gz", "-C", "/tmp/out"],
+    });
+  });
+});
+
 describe("managed Engine installation", () => {
   it("installs from a mirror, switches versions only after verification, and preserves a working version on failure", async () => {
     vi.stubEnv("NO_PROXY", "127.0.0.1");
