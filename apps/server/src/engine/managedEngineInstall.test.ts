@@ -56,7 +56,7 @@ describe("managed Engine installation helpers", () => {
     ).toBe(false);
   });
 
-  it("extracts Windows zip archives with System32 tar.exe", () => {
+  it("extracts Windows zip and tar.gz archives with System32 tar.exe", () => {
     expect(
       resolveEngineArchiveExtractCommand({
         format: "zip",
@@ -68,6 +68,18 @@ describe("managed Engine installation helpers", () => {
     ).toEqual({
       command: "C:\\Windows\\System32\\tar.exe",
       args: ["-xf", "C:\\tmp\\download.zip", "-C", "C:\\tmp\\out"],
+    });
+    expect(
+      resolveEngineArchiveExtractCommand({
+        format: "tar.gz",
+        archivePath: "C:\\tmp\\download.tar.gz",
+        directory: "C:\\tmp\\out",
+        platform: "win32",
+        env: { SystemRoot: "C:\\Windows" },
+      }),
+    ).toEqual({
+      command: "C:\\Windows\\System32\\tar.exe",
+      args: ["-xf", "C:\\tmp\\download.tar.gz", "-C", "C:\\tmp\\out"],
     });
     expect(
       resolveEngineArchiveExtractCommand({

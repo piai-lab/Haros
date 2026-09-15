@@ -77,7 +77,7 @@ export function resolveEngineArchiveExtractCommand(input: {
 }): { readonly command: string; readonly args: string[] } {
   const platform = input.platform ?? process.platform;
   const command =
-    platform === "win32" && input.format === "zip"
+    platform === "win32"
       ? path.win32.join(resolveWindowsSystemRoot(input.env), "System32", "tar.exe")
       : "tar";
   return { command, args: ["-xf", input.archivePath, "-C", input.directory] };
