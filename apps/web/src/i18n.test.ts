@@ -122,10 +122,10 @@ describe("message catalogs", () => {
     expect(translate("en", "settings.customApiDiscoverModels")).toBe("Get from service");
     expect(translate("zh-CN", "settings.customApiDiscoverModels")).toBe("从供应商获取");
     expect(translate("en", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
-      "Found 2 models. Select the ones to add.",
+      "Synced 2 model identities. Existing model settings were retained.",
     );
     expect(translate("zh-CN", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
-      "发现 2 个模型，请选择要添加的项目。",
+      "已同步 2 个模型，保留原有模型设置。",
     );
     expect(EN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
       "add a model manually",

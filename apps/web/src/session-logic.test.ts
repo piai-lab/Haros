@@ -928,7 +928,6 @@ describe("hasLiveTurnTailWork", () => {
 
 describe("ENGINE_OPTIONS", () => {
   it("lists every discoverable engine without claiming runtime availability", () => {
-    const oa = ENGINE_OPTIONS.find((option) => option.value === "pi");
     const claude = ENGINE_OPTIONS.find((option) => option.value === "claude");
     const cursor = ENGINE_OPTIONS.find((option) => option.value === "cursor");
     const grok = ENGINE_OPTIONS.find((option) => option.value === "grok");
@@ -937,7 +936,6 @@ describe("ENGINE_OPTIONS", () => {
     const opencode = ENGINE_OPTIONS.find((option) => option.value === "opencode");
     const pi = ENGINE_OPTIONS.find((option) => option.value === "pi");
     expect(ENGINE_OPTIONS).toEqual([
-      { value: "pi", label: "OA" },
       { value: "codex", label: "Codex" },
       { value: "claude", label: "Claude" },
       { value: "cursor", label: "Cursor" },
@@ -947,11 +945,8 @@ describe("ENGINE_OPTIONS", () => {
       { value: "kilo", label: "Kilo" },
       { value: "opencode", label: "OpenCode" },
       { value: "pi", label: "Pi" },
+      { value: "deepseek", label: "DeepSeek" },
     ]);
-    expect(oa).toEqual({
-      value: "pi",
-      label: "OA",
-    });
     expect(claude).toEqual({
       value: "claude",
       label: "Claude",

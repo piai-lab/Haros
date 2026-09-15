@@ -124,7 +124,13 @@ describe("mergeTimelineTurnProvenance", () => {
         persisted: [{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }],
         optimistic: [optimistic],
       }),
-    ).toEqual([{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }]);
+    ).toEqual([
+      {
+        ...persisted,
+        engineSelection: { engine: "pi", model: selection.model },
+        modelPresentationIdentity: identity,
+      },
+    ]);
   });
 });
 

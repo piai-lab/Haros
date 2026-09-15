@@ -240,7 +240,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("harnessos.svg");
     expect(markup).toContain('data-assistant-turn-identity="continuation"');
     expect(markup).toContain("DeepSeek V4 Pro");
-    expect(markup).toContain("OA ·");
+    expect(markup).toContain("Pi ·");
     expect(markup.indexOf("DeepSeek V4 Pro")).toBeLessThan(markup.indexOf("Read source"));
     expect(markup.indexOf("Read source")).toBeLessThan(markup.indexOf("Finished."));
   });
