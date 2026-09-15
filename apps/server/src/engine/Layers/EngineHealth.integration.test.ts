@@ -6,7 +6,7 @@ import { Effect, FileSystem, Layer, Path, Sink, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
 import { HARNESSOS_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { ServerConfig } from "../../config";
@@ -32,6 +32,7 @@ import {
   makeCheckCursorEngineStatus,
   makeCheckDroidEngineStatus,
   makeCheckGrokEngineStatus,
+  makeCheckDeepSeekEngineStatus,
   makeCheckKiloEngineStatus,
   makeCheckOpenCodeEngineStatus,
   makeEngineHealthLive,
@@ -1930,6 +1931,55 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
             if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
             if (joined === "auth status")
               return { stdout: "", stderr: "error: unknown command 'auth'", code: 2 };
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+  });
+
+  describe("checkDeepSeekEngineStatus", () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it.effect("warns when stored credentials cannot be read", () =>
+      Effect.gen(function* () {
+        vi.stubEnv("DEEPSEEK_API_KEY", "");
+        const status = yield* makeCheckDeepSeekEngineStatus("/custom/bin/dsh", {
+          storedKeyError: "Model-service configuration isolation could not be verified",
+        });
+        assert.strictEqual(status.engine, "deepseek");
+        assert.strictEqual(status.status, "warning");
+        assert.strictEqual(status.available, true);
+        assert.strictEqual(status.authStatus, "unknown");
+        assert.match(
+          status.message ?? "",
+          /model-service credentials could not be read: Model-service configuration isolation could not be verified/,
+        );
+      }).pipe(
+        Effect.provide(
+          mockSpawnerLayer((args, command) => {
+            assert.strictEqual(command, "/custom/bin/dsh");
+            const joined = args.join(" ");
+            if (joined === "--version") return { stdout: "dsh 0.1.0\n", stderr: "", code: 0 };
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+
+    it.effect("still reports a stored key when the snapshot loads", () =>
+      Effect.gen(function* () {
+        const status = yield* makeCheckDeepSeekEngineStatus("dsh", {
+          storedKeyAvailable: true,
+        });
+        assert.strictEqual(status.status, "ready");
+        assert.strictEqual(status.authStatus, "authenticated");
+        assert.strictEqual(status.authType, "apiKey");
+      }).pipe(
+        Effect.provide(
+          mockSpawnerLayer((args) => {
+            const joined = args.join(" ");
+            if (joined === "--version") return { stdout: "dsh 0.1.0\n", stderr: "", code: 0 };
             throw new Error(`Unexpected args: ${joined}`);
           }),
         ),

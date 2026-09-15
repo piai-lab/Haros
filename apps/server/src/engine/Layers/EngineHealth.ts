@@ -1346,7 +1346,10 @@ export const checkGrokEngineStatus = makeCheckGrokEngineStatus();
 
 export const makeCheckDeepSeekEngineStatus = (
   binaryPath?: string,
-  options: { readonly storedKeyAvailable?: boolean } = {},
+  options: {
+    readonly storedKeyAvailable?: boolean;
+    readonly storedKeyError?: string;
+  } = {},
 ): Effect.Effect<ServerEngineStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function* () {
     const checkedAt = new Date().toISOString();
@@ -1404,6 +1407,19 @@ export const makeCheckDeepSeekEngineStatus = (
     const version = versionProbe.result;
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
     const hasApiKey = hasDeepSeekApiKeyEnv() || options.storedKeyAvailable === true;
+    const storedKeyError = options.storedKeyError?.trim();
+
+    if (!hasApiKey && storedKeyError) {
+      return {
+        engine: DEEPSEEK_ENGINE,
+        status: "warning" as const,
+        available: true,
+        authStatus: "unknown" as const,
+        version: parsedVersion,
+        checkedAt,
+        message: `DeepSeek Harness is installed, but model-service credentials could not be read: ${storedKeyError}`,
+      } satisfies ServerEngineStatus;
+    }
 
     return {
       engine: DEEPSEEK_ENGINE,
@@ -2560,21 +2576,38 @@ export function makeEngineHealthLive(options?: {
                   settings,
                   DEEPSEEK_ENGINE,
                   Effect.gen(function* () {
-                    const storedKeyAvailable = yield* Effect.promise(async () => {
-                      try {
+                    const storedKey = yield* Effect.tryPromise({
+                      try: async () => {
                         const agentDir = await resolveHarosModelServicesAgentDir({
                           requestedAgentDir: settings.engines.pi.agentDir,
                           serverBaseDir: serverConfig.baseDir,
                         });
                         const snapshot = await loadHarosModelServiceSnapshot({ agentDir });
-                        return hasStoredDeepSeekModelServiceKey(snapshot);
-                      } catch {
-                        return false;
-                      }
-                    });
+                        return {
+                          storedKeyAvailable: hasStoredDeepSeekModelServiceKey(snapshot),
+                        };
+                      },
+                      catch: (cause) =>
+                        cause instanceof Error
+                          ? cause
+                          : new Error("Failed to load model-service credentials."),
+                    }).pipe(
+                      Effect.result,
+                      Effect.map((result) =>
+                        Result.isSuccess(result)
+                          ? result.success
+                          : {
+                              storedKeyAvailable: false as const,
+                              storedKeyError:
+                                result.failure instanceof Error
+                                  ? result.failure.message
+                                  : String(result.failure),
+                            },
+                      ),
+                    );
                     return yield* makeCheckDeepSeekEngineStatus(
                       settings.engines.deepseek.binaryPath,
-                      { storedKeyAvailable },
+                      storedKey,
                     );
                   }),
                 ),
