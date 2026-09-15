@@ -372,7 +372,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       });
     });
 
-    it.effect("stops a hung engine process and persists a failed update state", () =>
+    it.effect("stops a hung engine installation and persists a failed update state", () =>
       Effect.gen(function* () {
         let killed = false;
         const fileSystem = yield* FileSystem.FileSystem;
@@ -407,7 +407,17 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
             },
           },
         } satisfies typeof DEFAULT_SERVER_SETTINGS;
-        const layer = makeEngineHealthLive({ engineUpdateTimeoutMs: 20 }).pipe(
+        const layer = makeEngineHealthLive({
+          engineUpdateTimeoutMs: 20,
+          managedInstall: () =>
+            Effect.never.pipe(
+              Effect.onInterrupt(() =>
+                Effect.sync(() => {
+                  killed = true;
+                }),
+              ),
+            ),
+        }).pipe(
           Layer.provideMerge(ServerSettingsService.layerTest(settings)),
           Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
           Layer.provideMerge(
@@ -431,7 +441,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         assert.strictEqual(kilo?.updateState?.status, "failed");
         assert.strictEqual(
           kilo?.updateState?.message,
-          "Update timed out after 20 milliseconds. The engine process was stopped.",
+          "Installation timed out after 20 milliseconds. The installation was stopped.",
         );
       }),
     );
@@ -998,7 +1008,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args, command, _env, options) => {
-            assert.strictEqual(command, "C:\\Windows\\System32\\cmd.exe");
+            assert.strictEqual(command.toLowerCase(), "c:\\windows\\system32\\cmd.exe");
             assert.strictEqual(options?.windowsVerbatimArguments, true);
             const commandLine = args.at(-1) ?? "";
             if (commandLine.includes('"--version"')) {
@@ -1554,7 +1564,7 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
           const status = yield* makeCheckClaudeEngineStatus(undefined, "claude", homeDir).pipe(
             Effect.provide(
               mockSpawnerLayer((args, command, env) => {
-                assert.strictEqual(command, "claude");
+                assert.match(command, /(?:^claude$|[\\/]claude(?:\.exe)?$)/i);
                 assert.strictEqual(env?.ANTHROPIC_API_KEY, undefined);
                 assert.strictEqual(env?.ANTHROPIC_AUTH_TOKEN, undefined);
                 assert.strictEqual(env?.CLAUDE_CODE_OAUTH_TOKEN, undefined);
