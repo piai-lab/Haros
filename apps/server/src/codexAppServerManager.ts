@@ -1315,7 +1315,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }).pipe(this.runPromise);
       return { ...context.session };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to start Codex session.";
+      if ((error as NodeJS.ErrnoException | null)?.code === "EPIPE" && context) {
+        // stdin can reject before the child exit/stderr callbacks run; allow
+        // those callbacks to publish the authoritative startup diagnostic.
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      const message =
+        context && error instanceof Error
+          ? appendCodexProcessErrorTail(context, error.message)
+          : error instanceof Error
+            ? error.message
+            : "Failed to start Codex session.";
       let cleanupError: unknown;
       if (context) {
         this.updateSession(context, {
