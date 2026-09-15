@@ -45,14 +45,14 @@ import { useI18n } from "~/i18n";
 
 const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
-function defaultAgentForProvider(engine: EngineKind): string | null {
+function defaultAgentForProvider(engine: EngineKind | null): string | null {
   if (engine === "kilo") return "code";
   if (engine === "opencode") return "build";
   return null;
 }
 
 function getAgentOptions(
-  engine: EngineKind,
+  engine: EngineKind | null,
   runtimeAgents: ReadonlyArray<EngineAgentDescriptor> | null | undefined,
 ): ReadonlyArray<EngineAgentDescriptor> {
   if (engine !== "kilo" && engine !== "opencode") return [];
@@ -60,7 +60,7 @@ function getAgentOptions(
 }
 
 function getSelectedAgentValue(
-  engine: EngineKind,
+  engine: EngineKind | null,
   modelOptions: EngineOptions | null | undefined,
 ): string | null {
   const defaultAgent = defaultAgentForProvider(engine);
@@ -81,7 +81,7 @@ function findAgentLabel(
 // Mirrors the trigger label assembly so callers (e.g. the composer footer
 // width planner) can measure the summary without rendering the picker.
 export function resolveTraitsTriggerSummary(options: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: string | null | undefined;
   prompt: string;
   modelOptions: EngineOptions | null | undefined;
@@ -233,7 +233,7 @@ function TraitRadioSection({
 }
 
 export interface TraitsMenuContentProps {
-  engine: EngineKind;
+  engine: EngineKind | null;
   threadId: ThreadId;
   model: string | null | undefined;
   runtimeModel?: EngineModelDescriptor | undefined;
@@ -306,6 +306,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // The fast-mode header toggle passes `keepMenuOpen` so its state flip stays visible.
   const commitTrait = useCallback(
     (patch: Record<string, unknown>, options?: { keepMenuOpen?: boolean }) => {
+      if (!engine) return;
       setEngineModelOptions(threadId, engine, buildNextEngineOptions(engine, modelOptions, patch), {
         ...(model !== undefined ? { model } : {}),
         persistSticky: true,
@@ -344,6 +345,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
           : engine === "claude"
             ? "effort"
             : "reasoningEffort");
+    if (!engine) return;
     commitTrait(buildEngineOptionPatch(engine, optionId, nextOption.value));
   };
 

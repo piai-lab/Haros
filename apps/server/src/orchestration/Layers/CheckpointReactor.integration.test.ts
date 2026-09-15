@@ -108,7 +108,6 @@ function createEngineServiceHarness(
       : Effect.succeed([] as ReadonlyArray<EngineSession>);
   const service: EngineServiceShape = {
     startSession: () => unsupported(),
-    reloadSessionResources: () => unsupported(),
     sendTurn: () => unsupported(),
     steerTurn: () => unsupported(),
     startReview: () => unsupported(),

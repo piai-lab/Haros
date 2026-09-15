@@ -109,10 +109,6 @@ describe("resolveNewProjectDefaultEngineSelection", () => {
     expect(resolveNewProjectDefaultEngineSelection("pi")).toBeNull();
   });
 
-  it("keeps an Haros project unbound until the runtime catalog supplies an exact model", () => {
-    expect(resolveNewProjectDefaultEngineSelection("pi")).toBeNull();
-  });
-
   it("preserves the existing default for other Engines", () => {
     expect(resolveNewProjectDefaultEngineSelection("codex")).toEqual({
       engine: "codex",
@@ -482,14 +478,14 @@ describe("resolveThreadHoverCardMetadata", () => {
       }),
       project: {
         kind: "project",
-        name: "pi",
-        folderName: "pi",
+        name: "oa",
+        folderName: "oa",
         cwd: "/Users/me/Developer/harnessos",
       },
     });
 
     expect(metadata).toEqual({
-      projectName: "pi",
+      projectName: "oa",
       projectCwd: "/Users/me/Developer/harnessos",
       sourceProjectName: null,
       branch: "main",
@@ -511,8 +507,8 @@ describe("resolveThreadHoverCardMetadata", () => {
         thread,
         project: {
           kind: "project",
-          name: "pi",
-          folderName: "pi",
+          name: "oa",
+          folderName: "oa",
           cwd: "/repo",
         },
       }).branch,

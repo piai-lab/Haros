@@ -1,5 +1,5 @@
 import { createPackage, extractFile } from "@electron/asar";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -56,11 +56,6 @@ async function archiveFixture(
   }
   const components = packages.map((name) => ({ id: `${name}@0.84.4` }));
   components.push({
-    id: "@harnessos/oa-ask@5.0.0-oa.1",
-    name: "@harnessos/oa-ask",
-    locations: ["bundled:apps/server/dist/index.mjs"],
-  } as (typeof components)[number]);
-  components.push({
     id: "mermaid@11.17.2",
     name: "mermaid",
     locations: ["bundled:apps/server/dist/client/index.html"],
@@ -97,7 +92,7 @@ afterEach(() => {
 describe("packaged legal closure", () => {
   it("accepts an ASAR only when every packaged dependency is disclosed", async () => {
     const result = verifyPackagedLegalClosureArchive(await archiveFixture());
-    expect(result.componentCount).toBe(9);
+    expect(result.componentCount).toBe(8);
   });
 
   it("rejects an undisclosed dependency found in the actual ASAR", async () => {

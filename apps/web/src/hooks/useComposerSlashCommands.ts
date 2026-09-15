@@ -140,7 +140,7 @@ export function useComposerSlashCommands(input: {
   fastModeEnabled: boolean;
   engineNativeCommands: readonly EngineNativeCommandDescriptor[];
   engineCommandDiscoveryCwd: string | null;
-  selectedEngine: EngineKind;
+  selectedEngine: EngineKind | null;
   currentEngineModelOptions: EngineOptions | undefined;
   selectedEngineSelection: EngineSelection | null;
   environmentMode: string | null;
@@ -268,6 +268,7 @@ export function useComposerSlashCommands(input: {
 
   const setFastModeFromSlashCommand = useCallback(
     (enabled: boolean) => {
+      if (!selectedEngine) return;
       setComposerDraftEngineModelOptions(
         threadId,
         selectedEngine,

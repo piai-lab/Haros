@@ -274,12 +274,11 @@ describe("legal metadata", () => {
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }
-    const ask = inventory.components.find((component) => component.name === "@harnessos/oa-ask");
-    expect(ask?.locations).toEqual(["bundled:apps/server/dist/index.mjs"]);
-    expect(ask?.licenseFiles).toHaveLength(1);
-    expect(ask?.licenseFiles[0]?.provenance).toMatchObject({
-      kind: "bundled-source",
-      sourcePath: "packages/oa-ask/LICENSE",
-    });
+    expect(inventory.components.some((component) => component.name === "@harnessos/oa-ask")).toBe(
+      false,
+    );
+    expect(
+      inventory.components.some((component) => component.name === "@harnessos/oa-runtime"),
+    ).toBe(false);
   });
 });

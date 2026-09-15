@@ -518,7 +518,7 @@ const mcpIntegrationFlag = Flag.string("integration").pipe(
 // context. This avoids a duplicate `--home-dir` flag between the root command
 // and its MCP subcommands, which the Effect CLI assigns to the parent and
 // leaves the subcommand flag unset.
-const baseServerCommand = Command.make("oa", {
+const baseServerCommand = Command.make("haros", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,

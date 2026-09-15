@@ -30,7 +30,6 @@ import {
   normalizeClaudeModelOptions,
   normalizeCodexModelOptions,
   normalizeCursorModelOptions,
-  normalizeDeepSeekModelOptions,
   normalizeGrokModelOptions,
   normalizeModelSlug,
   normalizePiModelOptions,
@@ -513,6 +512,22 @@ describe("engine option descriptor helpers", () => {
       currentValue: "xhigh",
     });
     expect(descriptors.some((descriptor) => descriptor.id === "reasoningEffort")).toBe(false);
+
+    const piDescriptors = getEngineOptionDescriptors({
+      engine: "pi",
+      caps: {
+        reasoningEffortLevels: [{ value: "high", label: "High", isDefault: true }],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+      selections: { thinkingLevel: "high" },
+    });
+    expect(piDescriptors[0]).toMatchObject({
+      id: "thinkingLevel",
+      currentValue: "high",
+    });
   });
 
   it("honors explicit descriptors and serializes their current values", () => {
@@ -933,28 +948,6 @@ describe("normalizeCursorModelOptions", () => {
       reasoningEffort: "low",
       fastMode: true,
     });
-  });
-});
-
-describe("normalizeDeepSeekModelOptions", () => {
-  it("drops default DeepSeek reasoning effort options and preserves supported overrides", () => {
-    expect(
-      normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "medium" }),
-    ).toBeUndefined();
-    expect(normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "high" })).toEqual(
-      {
-        reasoningEffort: "high",
-      },
-    );
-    expect(
-      normalizeDeepSeekModelOptions("deepseek-v4-pro", { reasoningEffort: "high" }),
-    ).toBeUndefined();
-    expect(normalizeDeepSeekModelOptions("deepseek-v4-pro", { reasoningEffort: "low" })).toEqual({
-      reasoningEffort: "low",
-    });
-    expect(
-      normalizeDeepSeekModelOptions("deepseek-v4-flash", { reasoningEffort: "xhigh" as never }),
-    ).toBeUndefined();
   });
 });
 

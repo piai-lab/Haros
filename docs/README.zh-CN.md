@@ -1,6 +1,7 @@
-# Haros
+<h1 align="center">Haros</h1>
 
 <div align="center">
+  <img src="../assets/brand/exports/haros-system-schematic.png" width="960" alt="十个 Engine 进入 Haros，并在同一工作台中保留统一的产品状态" />
   <p>
     <a href="guide/README.md"><strong>Guidebook</strong></a> ·
     <a href="../README.md">English</a> ·
@@ -20,8 +21,8 @@
   </p>
 </div>
 
-Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode、Pi 九个独立
-Engine 带进同一套工作台。每轮都能选择最合适的 Engine，而不必搬走项目、重建上下文，
+Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode 和 Pi
+带进同一套工作台。每轮都能选择最合适的 Engine，而不必搬走项目、重建上下文，
 也不会失去统一的工作历史。
 
 ## 所有 Engine 进入同一套工作台
@@ -65,8 +66,6 @@ bun run dev
 
 Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
 本机配置。本机构建成功仍然只是未签名的源码软件，不代表正式发行。
-
-首次启动直接进入工作台，默认选择 Codex。发送前请在设置中配置所选引擎。内置 OA 和内置网页搜索已移除。“设置 → 模型服务”保留，可配置独立 Pi 引擎的凭据和自定义模型；其他引擎使用各自的原生配置。旧 OA 历史仍可查看，但不能继续执行，请使用其他引擎新建任务。AppSnap 欢迎介绍及其手动设置入口保留。
 
 ## 继续了解
 

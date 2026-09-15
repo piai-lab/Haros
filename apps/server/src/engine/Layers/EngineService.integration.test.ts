@@ -43,7 +43,6 @@ import {
   Stream,
 } from "effect";
 import { TestClock } from "effect/testing";
-import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import {
   EngineAdapterSessionNotFoundError,
@@ -425,7 +424,6 @@ function makeEngineServiceLayer(
   engines?: {
     readonly includeRestartRollbackDroid?: boolean;
     readonly includePi?: boolean;
-    readonly includeHaros?: boolean;
     readonly runtimeEventCapacity?: number;
   },
 ) {
@@ -451,7 +449,7 @@ function makeEngineServiceLayer(
             ? Effect.succeed(antigravity.adapter)
             : engine === "droid" && engines?.includeRestartRollbackDroid === true
               ? Effect.succeed(droid.adapter)
-              : engine === "pi" && (engines?.includePi === true || engines?.includeHaros === true)
+              : engine === "pi" && engines?.includePi === true
                 ? Effect.succeed(pi.adapter)
                 : Effect.fail(new EngineUnsupportedError({ engine })),
     listEngines: () =>
@@ -460,7 +458,7 @@ function makeEngineServiceLayer(
         "claude",
         "antigravity",
         ...(engines?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
-        ...(engines?.includePi === true || engines?.includeHaros === true ? (["pi"] as const) : []),
+        ...(engines?.includePi === true ? (["pi"] as const) : []),
       ] as const),
   };
 
@@ -493,13 +491,7 @@ function makeEngineServiceLayer(
   };
 }
 
-const routing = makeEngineServiceLayer(undefined, { includePi: true, includeHaros: true });
-const modelServiceAdmission = makeEngineServiceLayer(undefined, {
-  includePi: true,
-});
-const ecosystemReloadRouting = makeEngineServiceLayer(undefined, {
-  includePi: true,
-});
+const routing = makeEngineServiceLayer(undefined, { includePi: true });
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
 const rotationRetry = makeEngineServiceLayer({
@@ -1528,63 +1520,6 @@ bindingRetryRouting.layer("EngineServiceLive binding settlement retry", (it) => 
   );
 });
 
-ecosystemReloadRouting.layer("EngineServiceLive active resource reload", (it) => {
-  it.effect("reloads only the exact live Pi session", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-ecosystem-reload");
-      yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway/model-one" },
-        runtimeMode: "full-access",
-      });
-
-      assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
-        state: "reloaded",
-      });
-      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, 1);
-    }),
-  );
-
-  it.effect("does not start or recover a runtime when no active session exists", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-ecosystem-no-session");
-      const startCount = ecosystemReloadRouting.pi.startSession.mock.calls.length;
-      const reloadCount = ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length;
-
-      assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
-        state: "no_active_session",
-      });
-      assert.equal(ecosystemReloadRouting.pi.startSession.mock.calls.length, startCount);
-      assert.equal(ecosystemReloadRouting.pi.reloadSessionResources.mock.calls.length, reloadCount);
-    }),
-  );
-
-  it.effect("does not reload a live task owned by another Engine", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-ecosystem-codex");
-      const reloadCount = ecosystemReloadRouting.codex.reloadSessionResources.mock.calls.length;
-      yield* startTestEngineSession(engine, threadId, {
-        engine: "codex",
-        threadId,
-        engineSelection: { engine: "codex", model: "gpt-5" },
-        runtimeMode: "full-access",
-      });
-
-      assert.deepEqual(yield* engine.reloadSessionResources({ threadId }), {
-        state: "different_engine",
-      });
-      assert.equal(
-        ecosystemReloadRouting.codex.reloadSessionResources.mock.calls.length,
-        reloadCount,
-      );
-    }),
-  );
-});
-
 it.effect("EngineServiceLive keeps persisted resumable sessions on startup", () =>
   Effect.gen(function* () {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-engine-service-"));
@@ -1830,379 +1765,13 @@ it.effect(
     }).pipe(Effect.provide(NodeServices.layer)),
 );
 
-modelServiceAdmission.layer("EngineServiceLive model-service admission fence", (it) => {
-  it.effect("holds destructive mutation until an exact custom-service start is registered", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-model-service-start-first");
-      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
-      const releaseStart = yield* Deferred.make<void>();
-      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
-        Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
-      );
-
-      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
-      const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway/model-one" },
-        runtimeMode: "full-access",
-      }).pipe(Effect.forkChild);
-      yield* waitUntil(
-        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
-        500,
-        10,
-        "Haros custom-service start",
-      );
-
-      const mutationEntered = yield* Deferred.make<void>();
-      const mutationFiber = yield* engine
-        .withModelServiceMutationFence("gateway", Deferred.succeed(mutationEntered, undefined))
-        .pipe(Effect.forkChild);
-      yield* sleep(25);
-      assert.equal(yield* Deferred.isDone(mutationEntered), false);
-
-      yield* Deferred.succeed(releaseStart, undefined);
-      yield* Fiber.join(startFiber);
-      yield* Fiber.join(mutationFiber);
-      assert.equal(yield* Deferred.isDone(mutationEntered), true);
-      yield* engine.stopSession({ threadId });
-    }),
-  );
-
-  it.effect("holds an exact custom-service start until destructive mutation releases", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-model-service-delete-first");
-      const mutationEntered = yield* Deferred.make<void>();
-      const releaseMutation = yield* Deferred.make<void>();
-      const mutationFiber = yield* engine
-        .withModelServiceMutationFence(
-          "gateway",
-          Deferred.succeed(mutationEntered, undefined).pipe(
-            Effect.andThen(Deferred.await(releaseMutation)),
-          ),
-        )
-        .pipe(Effect.forkChild);
-      yield* Deferred.await(mutationEntered);
-
-      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
-      const startFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway/model-one" },
-        runtimeMode: "full-access",
-      }).pipe(Effect.forkChild);
-      yield* sleep(25);
-      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
-
-      yield* Deferred.succeed(releaseMutation, undefined);
-      yield* Fiber.join(mutationFiber);
-      yield* Fiber.join(startFiber);
-      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
-      yield* engine.stopSession({ threadId });
-    }),
-  );
-
-  it.effect("holds destructive mutation until custom-service recovery is registered", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const threadId = asThreadId("thread-model-service-recovery-first");
-      yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway/model-one" },
-        runtimeMode: "full-access",
-      });
-      yield* engine.stopRuntimeSession!({ threadId });
-
-      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
-      const releaseRecovery = yield* Deferred.make<void>();
-      modelServiceAdmission.pi.startSession.mockImplementationOnce((input) =>
-        Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
-      );
-      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
-      const recoveryFiber = yield* engine
-        .sendTurn({ threadId, input: "recover", attachments: [] })
-        .pipe(Effect.forkChild);
-      yield* waitUntil(
-        () => modelServiceAdmission.pi.startSession.mock.calls.length > startCallCount,
-        500,
-        10,
-        "Haros custom-service recovery",
-      );
-
-      const mutationEntered = yield* Deferred.make<void>();
-      const mutationFiber = yield* engine
-        .withModelServiceMutationFence("gateway", Deferred.succeed(mutationEntered, undefined))
-        .pipe(Effect.forkChild);
-      yield* sleep(25);
-      assert.equal(yield* Deferred.isDone(mutationEntered), false);
-
-      yield* Deferred.succeed(releaseRecovery, undefined);
-      yield* Fiber.join(recoveryFiber);
-      yield* Fiber.join(mutationFiber);
-      assert.equal(yield* Deferred.isDone(mutationEntered), true);
-      yield* engine.stopSession({ threadId });
-    }),
-  );
-
-  it.effect(
-    "holds both custom-service fences while a failed replacement restores the previous service",
-    () =>
-      Effect.gen(function* () {
-        const engine = yield* EngineService;
-        const threadId = asThreadId("thread-model-service-replacement-restore");
-        yield* startTestEngineSession(engine, threadId, {
-          engine: "pi",
-          threadId,
-          engineSelection: { engine: "pi", model: "gateway-a/model-one" },
-          runtimeMode: "full-access",
-        });
-
-        const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
-        if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
-        const replacementFailure = new EngineAdapterSessionNotFoundError({
-          engine: "pi",
-          threadId,
-        });
-        const restoreEntered = yield* Deferred.make<void>();
-        const releaseRestore = yield* Deferred.make<void>();
-        modelServiceAdmission.pi.startSession
-          .mockImplementationOnce(() => Effect.fail(replacementFailure))
-          .mockImplementationOnce((input) =>
-            Deferred.succeed(restoreEntered, undefined).pipe(
-              Effect.andThen(Deferred.await(releaseRestore)),
-              Effect.andThen(defaultStart(input)),
-            ),
-          );
-
-        const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-          engine: "pi",
-          threadId,
-          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
-          runtimeMode: "full-access",
-        }).pipe(Effect.result, Effect.forkChild);
-        yield* Deferred.await(restoreEntered);
-
-        const mutationEntered = yield* Deferred.make<void>();
-        const mutationFiber = yield* engine
-          .withModelServiceMutationFence("gateway-a", Deferred.succeed(mutationEntered, undefined))
-          .pipe(Effect.forkChild);
-        yield* sleep(25);
-        assert.equal(yield* Deferred.isDone(mutationEntered), false);
-
-        yield* Deferred.succeed(releaseRestore, undefined);
-        assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
-        yield* Fiber.join(mutationFiber);
-        assert.equal(yield* Deferred.isDone(mutationEntered), true);
-        yield* engine.stopSession({ threadId });
-      }),
-  );
-
-  it.effect("keeps turn persistence behind a replacement that may restore the old service", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const directory = yield* EngineSessionDirectory;
-      const threadId = asThreadId("thread-model-service-turn-persistence-fence");
-      yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
-        runtimeMode: "full-access",
-      });
-
-      const defaultHasSession = modelServiceAdmission.pi.hasSession.getMockImplementation();
-      if (!defaultHasSession) assert.fail("Expected the fake Haros session probe");
-      const lifecycleEntered = yield* Deferred.make<void>();
-      const releaseLifecycle = yield* Deferred.make<void>();
-      modelServiceAdmission.pi.hasSession.mockImplementationOnce((probedThreadId) =>
-        Deferred.succeed(lifecycleEntered, undefined).pipe(
-          Effect.andThen(Deferred.await(releaseLifecycle)),
-          Effect.andThen(defaultHasSession(probedThreadId)),
-        ),
-      );
-      if (!engine.clearSessionResumeCursor) {
-        assert.fail("Expected the runtime resume-cursor owner");
-      }
-      const lifecycleFiber = yield* engine
-        .clearSessionResumeCursor({ threadId, preserveActiveRuntime: true })
-        .pipe(Effect.forkChild);
-      yield* Deferred.await(lifecycleEntered);
-
-      const defaultStart = modelServiceAdmission.pi.startSession.getMockImplementation();
-      if (!defaultStart) assert.fail("Expected the fake Haros start implementation");
-      const replacementFailure = new EngineAdapterSessionNotFoundError({
-        engine: "pi",
-        threadId,
-      });
-      modelServiceAdmission.pi.startSession
-        .mockImplementationOnce(() => Effect.fail(replacementFailure))
-        .mockImplementationOnce(defaultStart);
-      const replacementFiber = yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
-        runtimeMode: "full-access",
-      }).pipe(Effect.result, Effect.forkChild);
-      yield* sleep(25);
-
-      const startOwnsOldFence = yield* Deferred.make<void>();
-      const fenceProbe = yield* engine
-        .withModelServiceMutationFence("gateway-a", Deferred.succeed(startOwnsOldFence, undefined))
-        .pipe(Effect.forkChild);
-      yield* sleep(25);
-      assert.equal(yield* Deferred.isDone(startOwnsOldFence), false);
-      yield* Fiber.interrupt(fenceProbe);
-
-      const sendFiber = yield* engine
-        .sendTurn({
-          threadId,
-          input: "persist model C",
-          attachments: [],
-          engineSelection: { engine: "pi", model: "gateway-c/model-three" },
-        })
-        .pipe(Effect.forkChild);
-      yield* sleep(25);
-      const bindingBeforeRelease = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      assert.equal(
-        asRuntimePayloadRecord(bindingBeforeRelease?.runtimePayload).engineSelection !==
-          undefined &&
-          (
-            asRuntimePayloadRecord(bindingBeforeRelease?.runtimePayload)
-              .engineSelection as EngineSessionStartInput["engineSelection"]
-          )?.model,
-        "gateway-a/model-one",
-      );
-
-      yield* Deferred.succeed(releaseLifecycle, undefined);
-      yield* Fiber.join(lifecycleFiber);
-      assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
-      yield* Fiber.join(sendFiber);
-
-      const restoreCall = modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0];
-      assert.equal(restoreCall?.engineSelection?.model, "gateway-a/model-one");
-      yield* engine.stopSession({ threadId });
-    }),
-  );
-
-  it.effect("rechecks the current custom service after a queued recovery acquires its fence", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const directory = yield* EngineSessionDirectory;
-      const threadId = asThreadId("thread-model-service-recovery-current-binding");
-      yield* startTestEngineSession(engine, threadId, {
-        engine: "pi",
-        threadId,
-        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
-        runtimeMode: "full-access",
-      });
-      yield* engine.stopRuntimeSession!({ threadId });
-
-      const aEntered = yield* Deferred.make<void>();
-      const releaseA = yield* Deferred.make<void>();
-      const aFenceFiber = yield* engine
-        .withModelServiceMutationFence(
-          "gateway-a",
-          Deferred.succeed(aEntered, undefined).pipe(Effect.andThen(Deferred.await(releaseA))),
-        )
-        .pipe(Effect.forkChild);
-      yield* Deferred.await(aEntered);
-
-      const startCallCount = modelServiceAdmission.pi.startSession.mock.calls.length;
-      const recoveryFiber = yield* engine
-        .sendTurn({ threadId, input: "recover current binding", attachments: [] })
-        .pipe(Effect.forkChild);
-      yield* sleep(25);
-
-      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      if (!binding) assert.fail("Expected a persisted Haros binding");
-      yield* directory.upsert({
-        ...binding,
-        runtimePayload: {
-          ...asRuntimePayloadRecord(binding.runtimePayload),
-          engineSelection: { engine: "pi", model: "gateway-b/model-two" },
-        },
-      });
-
-      const bEntered = yield* Deferred.make<void>();
-      const releaseB = yield* Deferred.make<void>();
-      const bFenceFiber = yield* engine
-        .withModelServiceMutationFence(
-          "gateway-b",
-          Deferred.succeed(bEntered, undefined).pipe(Effect.andThen(Deferred.await(releaseB))),
-        )
-        .pipe(Effect.forkChild);
-      yield* Deferred.await(bEntered);
-
-      yield* Deferred.succeed(releaseA, undefined);
-      yield* Fiber.join(aFenceFiber);
-      yield* sleep(25);
-      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount);
-
-      yield* Deferred.succeed(releaseB, undefined);
-      yield* Fiber.join(bFenceFiber);
-      yield* Fiber.join(recoveryFiber);
-      assert.equal(modelServiceAdmission.pi.startSession.mock.calls.length, startCallCount + 1);
-      assert.equal(
-        modelServiceAdmission.pi.startSession.mock.calls.at(-1)?.[0].engineSelection?.model,
-        "gateway-b/model-two",
-      );
-      yield* engine.stopSession({ threadId });
-    }),
-  );
-
-  it.effect("orders opposite custom-service replacements without deadlock", () =>
-    Effect.gen(function* () {
-      const engine = yield* EngineService;
-      const aThreadId = asThreadId("thread-model-service-a-to-b");
-      const bThreadId = asThreadId("thread-model-service-b-to-a");
-      yield* startTestEngineSession(engine, aThreadId, {
-        engine: "pi",
-        threadId: aThreadId,
-        engineSelection: { engine: "pi", model: "gateway-a/model-one" },
-        runtimeMode: "full-access",
-      });
-      yield* startTestEngineSession(engine, bThreadId, {
-        engine: "pi",
-        threadId: bThreadId,
-        engineSelection: { engine: "pi", model: "gateway-b/model-two" },
-        runtimeMode: "full-access",
-      });
-
-      const replacements = yield* Effect.all(
-        [
-          startTestEngineSession(engine, aThreadId, {
-            engine: "pi",
-            threadId: aThreadId,
-            engineSelection: { engine: "pi", model: "gateway-b/model-two" },
-            runtimeMode: "full-access",
-          }),
-          startTestEngineSession(engine, bThreadId, {
-            engine: "pi",
-            threadId: bThreadId,
-            engineSelection: { engine: "pi", model: "gateway-a/model-one" },
-            runtimeMode: "full-access",
-          }),
-        ],
-        { concurrency: "unbounded" },
-      ).pipe(Effect.timeoutOption("2 seconds"));
-      assert.equal(Option.isSome(replacements), true);
-
-      yield* engine.stopSession({ threadId: aThreadId });
-      yield* engine.stopSession({ threadId: bThreadId });
-    }),
-  );
-});
-
 routing.layer("EngineServiceLive routing", (it) => {
   it.effect("rejects unsupported Plan at final dispatch admission without silent fallback", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const piThreadId = asThreadId("thread-pi-plan-admission");
       const antigravityThreadId = asThreadId("thread-antigravity-plan-admission");
+      const extraPiThreadId = asThreadId("thread-harnessos-plan-admission");
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
@@ -2214,6 +1783,11 @@ routing.layer("EngineServiceLive routing", (it) => {
       yield* startTestEngineSession(engine, antigravityThreadId, {
         engine: "antigravity",
         threadId: antigravityThreadId,
+        runtimeMode: "full-access",
+      });
+      yield* startTestEngineSession(engine, extraPiThreadId, {
+        engine: "pi",
+        threadId: extraPiThreadId,
         runtimeMode: "full-access",
       });
 
@@ -2243,9 +1817,17 @@ routing.layer("EngineServiceLive routing", (it) => {
         attachments: [],
         interactionMode: "debug",
       });
+      yield* engine.sendTurn({
+        threadId: extraPiThreadId,
+        input: "plan this",
+        attachments: [],
+        interactionMode: "plan",
+      });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
+      assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
+      yield* engine.stopSession({ threadId: extraPiThreadId });
     }),
   );
 
@@ -3585,10 +3167,6 @@ routing.layer("EngineServiceLive routing", (it) => {
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const directory = yield* EngineSessionDirectory;
-      yield* routing.codex.stopAll();
-      yield* routing.claude.stopAll();
-      yield* routing.antigravity.stopAll();
-      yield* routing.pi.stopAll();
       routing.codex.sendTurn.mockClear();
       routing.codex.interruptTurn.mockClear();
       routing.codex.startSession.mockClear();
@@ -4551,8 +4129,6 @@ routing.layer("EngineServiceLive routing", (it) => {
 
       yield* routing.codex.stopAll();
       yield* routing.claude.stopAll();
-      yield* routing.antigravity.stopAll();
-      yield* routing.pi.stopAll();
 
       const remaining = yield* engine.listSessions();
       assert.equal(remaining.length, 0);

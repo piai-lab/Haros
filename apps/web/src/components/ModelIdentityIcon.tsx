@@ -2,19 +2,17 @@
 // Purpose: Owns model-surface identity resolution without ever falling back to an Engine icon.
 // Layer: Shared Web presentation
 
-import type {
-  EngineModelDescriptor,
-  EngineSelection,
-  ModelPresentationIdentity,
-} from "@harnessos/contracts";
+import type { ModelPresentationIdentity, EngineSelection } from "@harnessos/contracts";
 
 import type { EngineModelOption } from "~/engineModelOptions";
 import { resolveModelPresentationIdentity } from "~/engineModelOptions";
 import { ModelServiceIcon } from "./ModelServiceIcon";
 
+type ModelServiceOrigin = "models_json" | "extension" | "unknown" | "builtin";
+
 function originFromSource(
   source: ModelPresentationIdentity["source"],
-): NonNullable<EngineModelDescriptor["upstreamProviderOrigin"]> | undefined {
+): ModelServiceOrigin | undefined {
   if (source === "user-configured") return "models_json";
   if (source === "extension") return "extension";
   if (source === "unknown") return "unknown";

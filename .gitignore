@@ -51,3 +51,4 @@ __screenshots__/
 /browser-sidebar-comment-preload.js.map
 /preload.js.map
 /bootstrap.js.map
+.local/agent-work/

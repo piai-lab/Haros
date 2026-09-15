@@ -31,7 +31,7 @@ import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 interface UseKanbanTaskSubmitInput {
   readonly selectedProjectId: ProjectId | null;
   readonly hasSendableContent: boolean;
-  readonly selectedEngine: EngineKind;
+  readonly selectedEngine: EngineKind | null;
   readonly selectedModel: ModelSlug | null;
   readonly selectedModelSupportsAutoMode: boolean | undefined;
   readonly taskPreview: string;
@@ -88,6 +88,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
       !selectedProjectId ||
       !hasSendableContent ||
       selectedModel === null ||
+      !selectedEngine ||
       isCreating ||
       isCreatingRef.current
     ) {

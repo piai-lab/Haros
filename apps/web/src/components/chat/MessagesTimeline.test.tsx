@@ -185,7 +185,7 @@ describe("MessagesTimeline", () => {
             pendingMessageId,
             turnId,
             engineSelection: {
-              engine: "pi",
+              engine: "codex",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-08-27T02:21:00.000Z",
@@ -239,9 +239,9 @@ describe("MessagesTimeline", () => {
     expect(markup.toLowerCase()).toContain("%3ctitle%3edeepseek%3c/title%3e");
     expect(markup).not.toContain("harnessos.svg");
     expect(markup).toContain('data-assistant-turn-identity="continuation"');
-    expect(markup).toContain("DeepSeek V4 Pro");
-    expect(markup).toContain("Pi ·");
-    expect(markup.indexOf("DeepSeek V4 Pro")).toBeLessThan(markup.indexOf("Read source"));
+    expect(markup).toContain("deepseek/deepseek-v4-pro");
+    expect(markup).toContain("Codex ·");
+    expect(markup.indexOf("deepseek/deepseek-v4-pro")).toBeLessThan(markup.indexOf("Read source"));
     expect(markup.indexOf("Read source")).toBeLessThan(markup.indexOf("Finished."));
   });
 
@@ -3036,7 +3036,7 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(claudeMarkup).toContain('data-tool-icon="oa"');
+    expect(claudeMarkup).toContain('data-tool-icon="haros"');
     expect(claudeMarkup).not.toContain('data-tool-icon="mcp"');
     expect(claudeMarkup).toContain("Haros is creating a thread");
     expect(claudeMarkup).not.toContain("Haros__harnessos_create_thread");
@@ -3064,7 +3064,7 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(codexMarkup).toContain('data-tool-icon="oa"');
+    expect(codexMarkup).toContain('data-tool-icon="haros"');
     expect(codexMarkup).toContain("Haros listed threads");
     expect(codexMarkup).not.toContain("mcp__Haros__harnessos_list_threads");
 

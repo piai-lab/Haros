@@ -7,7 +7,6 @@
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
 import type { EngineKind, ServerSettingsView } from "@harnessos/contracts";
-import { firstRunnableEngine } from "@harnessos/shared/engineMetadata";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { resolveEngineDiscoveryCwd } from "./engineDiscovery";
@@ -25,16 +24,15 @@ export function resolveNewThreadModelPrefetchEngine(input: {
   draftActiveEngine?: EngineKind | null | undefined;
   stickyActiveEngine?: EngineKind | null | undefined;
   projectDefaultEngine?: EngineKind | null | undefined;
-  defaultEngine: EngineKind;
-}): EngineKind {
+  defaultEngine: EngineKind | null;
+}): EngineKind | null {
   return (
-    firstRunnableEngine(
-      input.engineOverride,
-      input.draftActiveEngine,
-      input.stickyActiveEngine,
-      input.projectDefaultEngine,
-      input.defaultEngine,
-    ) ?? "codex"
+    input.engineOverride ??
+    input.draftActiveEngine ??
+    input.stickyActiveEngine ??
+    input.projectDefaultEngine ??
+    input.defaultEngine ??
+    null
   );
 }
 
@@ -127,11 +125,6 @@ export function engineModelsPrefetchQueryOptions(input: {
         binaryPath: settings.engines.pi.binaryPath || null,
         agentDir: settings.engines.pi.agentDir || null,
         cwd,
-      });
-    case "deepseek":
-      return engineModelsQueryOptions({
-        engine: "deepseek",
-        binaryPath: settings.engines.deepseek.binaryPath || null,
       });
     default:
       return null;

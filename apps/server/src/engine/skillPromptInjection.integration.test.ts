@@ -137,7 +137,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(secondPath, "Keep this instruction.");
 
       const result = await buildInlineSkillInstructions({
-        engine: "pi",
+        engine: "codex",
         skills: [
           { name: "large", path: firstPath },
           { name: "small", path: secondPath },

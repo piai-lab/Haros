@@ -1,5 +1,6 @@
-import type { AskUserResult, AskUserToolInput } from "@harnessos/oa-ask";
 import type { CanonicalUserInputRequest, CanonicalUserInputResponse } from "@harnessos/contracts";
+
+import type { AskUserResult, AskUserToolInput } from "./askUserTypes.ts";
 
 export interface AskUserHostProjection {
   readonly request: CanonicalUserInputRequest;
@@ -66,7 +67,7 @@ export function resolveAskUserResponse(input: {
   ) {
     return null;
   }
-  const answers: NonNullable<AskUserResult["answers"]> = [];
+  const answers: Array<NonNullable<AskUserResult["answers"]>[number]> = [];
   for (const question of input.request.questions) {
     const answer = input.response.answers[question.id];
     if (!answer) return null;

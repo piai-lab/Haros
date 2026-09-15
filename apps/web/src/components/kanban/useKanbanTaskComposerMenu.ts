@@ -45,7 +45,7 @@ interface UseKanbanTaskComposerMenuInput {
   readonly composerSkills: readonly EngineSkillReference[];
   readonly composerMentions: readonly EngineMentionReference[];
   readonly scratchThreadId: ThreadId;
-  readonly selectedEngine: EngineKind;
+  readonly selectedEngine: EngineKind | null;
   readonly modelOptionsByEngine: Record<
     EngineKind,
     ReadonlyArray<EngineModelOption & { isCustom?: boolean }>

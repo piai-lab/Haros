@@ -48,7 +48,7 @@ describe("EngineSessionStartInput", () => {
   it("accepts the product-derived work surface and project context root", () => {
     const parsed = decodeEngineSessionStartInput({
       threadId: "thread-agent",
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/workspace/packages/app",
       admission: {
         productSurface: "agent",
@@ -68,7 +68,7 @@ describe("EngineSessionStartInput", () => {
   it("keeps Studio identity with Chat work authority", () => {
     const parsed = decodeEngineSessionStartInput({
       threadId: "thread-studio",
-      engine: "pi",
+      engine: "codex",
       admission: {
         productSurface: "studio",
         workSurface: "chat",
@@ -85,7 +85,7 @@ describe("EngineSessionStartInput", () => {
     expect(() =>
       decodeEngineSessionStartInput({
         threadId: "thread-mixed",
-        engine: "pi",
+        engine: "codex",
         admission: {
           productSurface: "chat",
           workSurface: "chat",
@@ -97,7 +97,7 @@ describe("EngineSessionStartInput", () => {
     expect(() =>
       decodeEngineSessionStartInput({
         threadId: "thread-missing",
-        engine: "pi",
+        engine: "codex",
         runtimeMode: "full-access",
       }),
     ).toThrow();

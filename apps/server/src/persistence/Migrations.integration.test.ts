@@ -159,7 +159,7 @@ admissionBackfillLayer("Engine Session admission migration", (it) => {
             thread_id, engine, adapter_key, runtime_mode, status, last_seen_at,
             resume_cursor_json, runtime_payload_json, lifecycle_generation
           ) VALUES (
-            ${threadId}, 'oa', 'oa', 'full-access', 'stopped',
+            ${threadId}, 'codex', 'codex', 'full-access', 'stopped',
             '2026-09-01T00:00:00.000Z', NULL,
             '{"workSurface":"agent","projectContextRoot":"/stale","kept":true}',
             'legacy'

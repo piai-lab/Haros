@@ -22,7 +22,7 @@ import { EngineIcon } from "../EngineIcon";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type ComposerEnginePickerProps = {
-  engine: EngineKind;
+  engine: EngineKind | null;
   engines: ReadonlyArray<ServerEngineStatus>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
@@ -87,7 +87,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
   };
 
   const hiddenEngines = new Set(props.hiddenEngines ?? []);
-  const protectedEngines = new Set<EngineKind>([props.engine]);
+  const protectedEngines = new Set<EngineKind>(props.engine ? [props.engine] : []);
   const options = filterEngineOptionsByVisibility(
     ENGINE_OPTIONS.toSorted((left, right) =>
       compareEnginesByOrder(props.engineOrder ?? [], left.value, right.value),
@@ -95,8 +95,9 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
     hiddenEngines,
     protectedEngines,
   );
-  const currentEngineLabel =
-    ENGINE_OPTIONS.find((option) => option.value === props.engine)?.label ?? props.engine;
+  const currentEngineLabel = props.engine
+    ? (ENGINE_OPTIONS.find((option) => option.value === props.engine)?.label ?? props.engine)
+    : t("composer.noEngineConfigured");
 
   const trigger = (
     <Button
@@ -141,7 +142,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
       </Tooltip>
       <ComposerPickerMenuPopup align="end" side="top" fixedWidth>
         <MenuRadioGroup
-          value={props.engine}
+          value={props.engine ?? ""}
           onValueChange={(value) => {
             const nextEngine = options.find((option) => option.value === value)?.value;
             if (!nextEngine || nextEngine === props.engine) {

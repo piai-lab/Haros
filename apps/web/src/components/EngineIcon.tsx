@@ -130,7 +130,7 @@ export function EngineOptionLabel({
   className,
   iconClassName,
 }: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   label: ReactNode;
   className?: string;
   iconClassName?: string;

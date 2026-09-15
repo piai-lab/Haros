@@ -108,7 +108,7 @@ export const EngineListSkillsResult = Schema.Struct({
 export type EngineListSkillsResult = typeof EngineListSkillsResult.Type;
 
 // Unified cross-engine skills catalog (Haros portable skills). Descriptors use
-// `scope` to carry the origin label ("oa", "codex", "claude", "cursor", ...).
+// `scope` to carry the origin label ("haros", "codex", "claude", "cursor", ...).
 export const EngineSkillsCatalogInput = Schema.Struct({
   cwd: Schema.optional(TrimmedNonEmptyString),
 });

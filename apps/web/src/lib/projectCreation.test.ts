@@ -15,7 +15,7 @@ import { createOrRecoverProjectFromPath } from "./projectCreation";
 const NOW_ISO = "2026-06-26T20:00:00.000Z";
 const WORKSPACE_ROOT = "/Users/tester/Developer/harnessos";
 const DEFAULT_PROJECT_MODEL = {
-  engine: "pi" as const,
+  engine: "codex" as const,
   model: "deepseek/deepseek-chat",
 };
 

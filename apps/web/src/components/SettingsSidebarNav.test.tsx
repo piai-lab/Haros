@@ -61,24 +61,6 @@ describe("rankSettingsSearchEntries", () => {
     );
   });
 
-  it("excludes removed OA settings from navigation and search in both languages", () => {
-    for (const section of SETTINGS_NAV_ITEMS) {
-      expect(["prompts", "web-search"]).not.toContain(section.id);
-    }
-    for (const translate of [translateEn, translateZh]) {
-      for (const query of ["Model services", "模型服务", "Personal Strategy", "Web Search"]) {
-        const results = rankSettingsSearchEntries(query, SETTINGS_SEARCH_RECORDS.length, translate);
-        expect(results.every((entry) => !["prompts", "web-search"].includes(entry.section))).toBe(
-          true,
-        );
-      }
-    }
-  });
-
-  it("keeps model services discoverable after OA retirement", () => {
-    expect(SETTINGS_NAV_ITEMS.map((item) => item.id)).toContain("models");
-  });
-
   it("indexes the system UI font row", () => {
     expect(SETTINGS_SEARCH_RECORDS.map((entry) => entry.id)).toContain("appearance:system-ui-font");
   });
@@ -209,7 +191,7 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Built-in tools");
     expect(markup).toContain("External connections");
     expect(markup).toContain("Agent engines");
-    expect(markup).not.toContain("Prompts");
+    expect(markup).toContain("Agent skills");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived tasks and chats");

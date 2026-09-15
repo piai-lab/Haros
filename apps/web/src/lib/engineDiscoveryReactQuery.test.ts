@@ -124,7 +124,7 @@ describe("isInitialModelDiscoveryPending", () => {
 });
 
 describe("engineModelsQueryOptions", () => {
-  it("shares passive Haros discovery across Projects without sending a cwd", async () => {
+  it("keeps project-scoped Engine discovery isolated by cwd", async () => {
     const catalog = {
       models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
       source: "pi.sdk",
@@ -132,21 +132,24 @@ describe("engineModelsQueryOptions", () => {
     };
     const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
     const firstProject = engineModelsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project-a",
     });
     const secondProject = engineModelsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project-b",
     });
 
-    expect(firstProject.queryKey).toEqual(secondProject.queryKey);
+    expect(firstProject.queryKey).not.toEqual(secondProject.queryKey);
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(firstProject)).resolves.toEqual(catalog);
     await expect(queryClient.fetchQuery(secondProject)).resolves.toEqual(catalog);
-    expect(listModels).toHaveBeenCalledTimes(1);
-    expect(listModels).toHaveBeenCalledWith({ engine: "pi" }, { signal: expect.any(AbortSignal) });
+    expect(listModels).toHaveBeenCalledTimes(2);
+    expect(listModels).toHaveBeenCalledWith(
+      { engine: "codex", cwd: "/tmp/project-a" },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(queryClient.getQueryState(secondProject.queryKey)).toMatchObject({ status: "success" });
   });
 
@@ -199,30 +202,30 @@ describe("engineModelsQueryOptions", () => {
       vi.fn().mockResolvedValue({ models: [], source: "pi.sdk", cached: false }),
     );
     const firstProject = engineModelsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project-a",
     });
     const secondProject = engineModelsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project-b",
     });
     const queryClient = new QueryClient();
 
     await queryClient.fetchQuery(firstProject);
     await queryClient.invalidateQueries({
-      queryKey: engineDiscoveryQueryKeys.modelsForEngine("pi"),
+      queryKey: engineDiscoveryQueryKeys.modelsForEngine("codex"),
     });
     await queryClient.fetchQuery(secondProject);
 
     expect(listModels).toHaveBeenCalledTimes(2);
     expect(listModels).toHaveBeenNthCalledWith(
       1,
-      { engine: "pi" },
+      { engine: "codex", cwd: "/tmp/project-a" },
       { signal: expect.any(AbortSignal) },
     );
     expect(listModels).toHaveBeenNthCalledWith(
       2,
-      { engine: "pi" },
+      { engine: "codex", cwd: "/tmp/project-b" },
       { signal: expect.any(AbortSignal) },
     );
   });
@@ -404,26 +407,26 @@ describe("engineModelsQueryOptions", () => {
 describe("Session-aware resource discovery keys", () => {
   it("keeps a recoverable error on the active key and changes key only after close", () => {
     const errorActive = isEngineDiscoverySessionActive({
-      engine: "pi",
-      session: { engine: "pi", status: "error" },
+      engine: "codex",
+      session: { engine: "codex", status: "error" },
     });
     const closedActive = isEngineDiscoverySessionActive({
-      engine: "pi",
-      session: { engine: "pi", status: "closed" },
+      engine: "codex",
+      session: { engine: "codex", status: "closed" },
     });
 
     expect(errorActive).toBe(true);
     expect(closedActive).toBe(false);
     expect(
       engineSkillsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/project",
         threadId: "thread-a",
         activeSession: errorActive,
       }).queryKey,
     ).not.toEqual(
       engineSkillsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/project",
         threadId: "thread-a",
         activeSession: closedActive,
@@ -433,31 +436,31 @@ describe("Session-aware resource discovery keys", () => {
 
   it("separates threads and the pre-session versus active-session resource loaders", () => {
     const skillsBeforeSession = engineSkillsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
     const skillsAfterSession = engineSkillsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: true,
     }).queryKey;
     const skillsForOtherThread = engineSkillsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project",
       threadId: "thread-b",
       activeSession: true,
     }).queryKey;
     const commandsBeforeSession = engineCommandsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
     const commandsAfterSession = engineCommandsQueryOptions({
-      engine: "pi",
+      engine: "codex",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: true,
@@ -492,7 +495,7 @@ describe("Session-aware resource discovery keys", () => {
     const observer = new QueryObserver(
       queryClient,
       engineSkillsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: true,
@@ -505,7 +508,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     observer.setOptions(
       engineSkillsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/managed-chat",
         threadId: "thread-chat",
         activeSession: false,
@@ -546,7 +549,7 @@ describe("Session-aware resource discovery keys", () => {
     const observer = new QueryObserver(
       queryClient,
       engineCommandsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: true,
@@ -559,7 +562,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     observer.setOptions(
       engineCommandsQueryOptions({
-        engine: "pi",
+        engine: "codex",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: false,

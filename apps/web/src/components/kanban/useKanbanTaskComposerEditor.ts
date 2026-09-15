@@ -57,7 +57,7 @@ interface UseKanbanTaskComposerEditorInput {
   readonly composerSkills: readonly EngineSkillReference[];
   readonly composerMentions: readonly EngineMentionReference[];
   readonly scratchThreadId: ThreadId;
-  readonly selectedEngine: EngineKind;
+  readonly selectedEngine: EngineKind | null;
   readonly handleProviderModelChange: (engine: EngineKind, model: ModelSlug) => void;
   readonly setInteractionMode: Dispatch<SetStateAction<EngineInteractionMode>>;
   readonly onCreate: () => void;

@@ -2,7 +2,6 @@ import { ThreadId, type EngineSelection } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deriveEffectiveComposerModelState,
-  resolvePreferredComposerEngine,
   resolvePreferredComposerEngineSelection,
   useComposerDraftStore,
 } from "./composerDraftStore";
@@ -80,49 +79,6 @@ describe("resolvePreferredComposerEngineSelection", () => {
         defaultEngine: "codex",
       }),
     ).toBeNull();
-  });
-
-  it("keeps an existing Pi thread engine when the composer draft has no active engine", () => {
-    expect(
-      resolvePreferredComposerEngineSelection({
-        draft: {
-          engineSelectionByEngine: {},
-          activeEngine: null,
-        },
-        threadEngineSelection: engineSelection("pi", "provider/original-model"),
-        projectEngineSelection: null,
-        defaultEngine: "codex",
-      }),
-    ).toEqual(engineSelection("pi", "provider/original-model"));
-  });
-
-  it("keeps an existing runnable thread engine when the composer draft has no active engine", () => {
-    expect(
-      resolvePreferredComposerEngine({
-        draft: {
-          engineSelectionByEngine: {},
-          activeEngine: null,
-        },
-        threadEngineSelection: engineSelection("claude", "claude-opus-4-6"),
-        projectEngineSelection: engineSelection("codex", "gpt-5.5"),
-        defaultEngine: "codex",
-        hasExecutedWork: true,
-      }),
-    ).toBe("claude");
-  });
-
-  it("keeps an unbound Pi intent as the composer engine without fabricating a model", () => {
-    expect(
-      resolvePreferredComposerEngine({
-        draft: {
-          engineSelectionByEngine: {},
-          activeEngine: "pi",
-        },
-        threadEngineSelection: engineSelection("codex", "gpt-5.5"),
-        projectEngineSelection: null,
-        defaultEngine: "codex",
-      }),
-    ).toBe("pi");
   });
 });
 
@@ -524,51 +480,31 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.selectedModel).toBeNull();
   });
 
-  it("does not silently replace a removed Haros service with another service model", () => {
+  it("selects the first Codex catalog model only when no exact selection was remembered", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: {
-        engineSelectionByEngine: {
-          pi: engineSelection("pi", "service-a/model-a"),
-        },
-        activeEngine: "pi",
-      },
-      selectedEngine: "pi",
+      draft: { engineSelectionByEngine: {}, activeEngine: "codex" },
+      selectedEngine: "codex",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {},
       availableModelOptionsByEngine: {
-        pi: [{ slug: "service-b/model-b", name: "Model B" }],
-      },
-    });
-
-    expect(state.selectedModel).toBeNull();
-  });
-
-  it("selects the first Haros catalog model only when no exact selection was remembered", () => {
-    const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeEngine: "pi" },
-      selectedEngine: "pi",
-      threadEngineSelection: null,
-      projectEngineSelection: null,
-      customModelsByEngine: {},
-      availableModelOptionsByEngine: {
-        pi: [{ slug: "service-b/model-b", name: "Model B" }],
+        codex: [{ slug: "service-b/model-b", name: "Model B" }],
       },
     });
 
     expect(state.selectedModel).toBe("service-b/model-b");
   });
 
-  it("uses an authority-selected Haros catalog fallback instead of the first catalog row", () => {
+  it("uses an authority-selected Codex catalog fallback instead of the first catalog row", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeEngine: "pi" },
-      selectedEngine: "pi",
+      draft: { engineSelectionByEngine: {}, activeEngine: "codex" },
+      selectedEngine: "codex",
       threadEngineSelection: null,
       projectEngineSelection: null,
       runtimeCatalogFallbackModel: "service-b/model-b",
       customModelsByEngine: {},
       availableModelOptionsByEngine: {
-        pi: [
+        codex: [
           { slug: "service-a/model-a", name: "Model A" },
           { slug: "service-b/model-b", name: "Model B" },
         ],
@@ -585,13 +521,13 @@ describe("composerDraftStore engineSelection", () => {
           pi: engineSelection("pi", "deepseek/deepseek-chat"),
           codex: engineSelection("codex", "gpt-5.5"),
         },
-        activeEngine: "pi",
+        activeEngine: "codex",
       },
-      selectedEngine: "pi",
+      selectedEngine: "codex",
       threadEngineSelection: engineSelection("codex", "gpt-5.4"),
       projectEngineSelection: engineSelection("codex", "gpt-5.5"),
       customModelsByEngine: {},
-      availableModelOptionsByEngine: { pi: [] },
+      availableModelOptionsByEngine: { codex: [] },
     });
 
     expect(state.selectedModel).toBeNull();

@@ -1,4 +1,4 @@
-import type { AskUserResultStatus } from "@harnessos/oa-ask";
+import type { AskUserResultStatus } from "./askUserTypes.ts";
 
 export interface AskUserMetricsSnapshot {
   readonly counters: Readonly<Record<string, number>>;

@@ -15,7 +15,7 @@ import {
 describe("formatSkillScope", () => {
   it("localizes known product scopes and preserves engine-specific identities", () => {
     expect(formatSkillScope("project", "zh-CN")).toBe("项目");
-    expect(formatSkillScope("oa", "zh-CN")).toBe("Haros 能力库");
+    expect(formatSkillScope("agents", "zh-CN")).toBe("共享资产（.agents）");
     expect(formatSkillScope("factory-plugin:reviewer", "zh-CN")).toBe("Factory-plugin:reviewer");
   });
 });

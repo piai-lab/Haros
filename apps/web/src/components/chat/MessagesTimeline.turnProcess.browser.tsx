@@ -337,7 +337,7 @@ describe("MessagesTimeline turn process approval cases", () => {
         pendingMessageId,
         turnId: TURN_ID,
         engineSelection: {
-          engine: "pi" as const,
+          engine: "codex" as const,
           model: "deepseek/deepseek-v4-pro",
         },
         requestedAt: STARTED_AT,
@@ -406,7 +406,7 @@ describe("MessagesTimeline turn process approval cases", () => {
 
       expect(document.querySelectorAll("[data-assistant-turn-identity='visible']")).toHaveLength(1);
       expect(document.body.textContent).toContain("DeepSeek V4 Pro");
-      expect(document.body.textContent).toContain("Pi ·");
+      expect(document.body.textContent).toContain("OA ·");
     } finally {
       document.documentElement.classList.remove("dark");
       await page.viewport(1_280, 720);
@@ -430,7 +430,7 @@ describe("MessagesTimeline turn process approval cases", () => {
             pendingMessageId,
             turnId: null,
             engineSelection: {
-              engine: "pi",
+              engine: "codex",
               model: "deepseek/deepseek-v4-pro",
             },
             modelPresentationIdentity: {

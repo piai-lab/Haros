@@ -365,7 +365,7 @@ export interface SkillsCatalogRootInput extends SkillsCatalogDiscoveryInput {
 }
 
 const HOME_ORIGIN_ORDER = [
-  "oa",
+  "haros",
   "codex",
   "claude",
   "cursor",
@@ -425,7 +425,7 @@ interface SkillOriginRootSpec {
 }
 
 const SKILL_ORIGIN_ROOTS = {
-  oa: {
+  haros: {
     homeRoots: (input) => [harnessosSkillsDir(input.harnessosBaseDir)],
     projectRootNames: [".harnessos"],
   },
@@ -511,11 +511,11 @@ function orderedOriginsForProvider(
 ): SkillsHomeOrigin[] {
   const preferred = preferredOriginsForProvider(engine);
   const ordered = [...preferred];
-  if (includeHarosRoot && !ordered.includes("oa")) {
-    ordered.push("oa");
+  if (includeHarosRoot && !ordered.includes("haros")) {
+    ordered.push("haros");
   }
   if (!includeRemainingOrigins) {
-    return ordered.filter((origin) => includeHarosRoot || origin !== "oa");
+    return ordered.filter((origin) => includeHarosRoot || origin !== "haros");
   }
   for (const origin of HOME_ORIGIN_ORDER) {
     // Stock Pi owns `.pi`. Do not enumerate its roots until the user has
@@ -523,7 +523,7 @@ function orderedOriginsForProvider(
     if (origin === "pi" && engine !== "pi") {
       continue;
     }
-    if (!includeHarosRoot && origin === "oa") {
+    if (!includeHarosRoot && origin === "haros") {
       continue;
     }
     if (!ordered.includes(origin)) {
@@ -679,7 +679,7 @@ export function mergeSkillsIntoCatalog(input: {
 }
 
 export function isHarosLibrarySkill(skill: EngineSkillDescriptor): boolean {
-  if (skill.scope === "oa") {
+  if (skill.scope === "haros") {
     return true;
   }
   return skill.path.split(/[\\/]+/).includes(".harnessos");

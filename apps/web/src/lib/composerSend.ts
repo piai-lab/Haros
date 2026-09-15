@@ -195,7 +195,7 @@ export function readFileAsDataUrl(file: File): Promise<string> {
 // Engine-specific prompt massaging. Claude prompt-injected efforts must be
 // applied before filtering skill/mention references and before dispatch.
 export function formatOutgoingComposerPrompt(params: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   model: string | null;
   effort: string | null;
   text: string;

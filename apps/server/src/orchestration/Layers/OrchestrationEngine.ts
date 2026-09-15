@@ -12,7 +12,7 @@ import {
   MessageId,
   OrchestrationCommand,
   ORCHESTRATION_WS_METHODS,
-  decodePersistedEngineKind,
+  EngineKind,
   type ThreadHandoffImportedMessage,
 } from "@harnessos/contracts";
 import { createHash, randomUUID } from "node:crypto";
@@ -1103,12 +1103,13 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               const thread = deciderReadModel.threads.find(
                 (candidate) => candidate.id === turnCommand.threadId,
               );
-              const sessionEngine = decodePersistedEngineKind(thread?.session?.engine);
+              const sessionEngine = thread?.session?.engine;
               const engine =
-                sessionEngine ??
-                thread?.engineSelection.engine ??
-                turnCommand.engineSelection?.engine ??
-                "codex";
+                sessionEngine !== undefined && Schema.is(EngineKind)(sessionEngine)
+                  ? sessionEngine
+                  : (thread?.engineSelection.engine ??
+                    turnCommand.engineSelection?.engine ??
+                    "codex");
               return {
                 engine,
                 supportsNativeTurnSteering: engineExecutionStructure(engine).supportsTurnSteering,

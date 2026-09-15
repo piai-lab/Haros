@@ -48,7 +48,6 @@ import {
   Scope,
   Stream,
 } from "effect";
-import { engineOwnsProviderModelServices } from "@harnessos/shared/engineMetadata";
 import { nonEmptyTrimmed } from "@harnessos/shared/text";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
@@ -284,10 +283,8 @@ function readPersistedEngineSelection(
   return Schema.is(EngineSelection)(raw) ? raw : undefined;
 }
 
-function modelServiceIdFromSelection(selection: EngineSelection | undefined): string | undefined {
-  if (!selection || !engineOwnsProviderModelServices(selection.engine)) return undefined;
-  const separatorIndex = selection.model.indexOf("/");
-  return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
+function modelServiceIdFromSelection(_selection: EngineSelection | undefined): string | undefined {
+  return undefined;
 }
 
 function unboundModelServiceAdmissionKey(threadId: ThreadId): string {
@@ -3362,45 +3359,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
     const hasLiveRuntimeTasks: NonNullable<EngineServiceShape["hasLiveRuntimeTasks"]> = (input) =>
       Effect.sync(() => (liveRuntimeTaskIds.get(input.threadId)?.size ?? 0) > 0);
 
-    const reloadSessionResources: EngineServiceShape["reloadSessionResources"] = (input) =>
-      lifecycle.runCurrent(input.threadId, () =>
-        Effect.gen(function* () {
-          const operation = "EngineService.reloadSessionResources";
-          const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
-          if (binding !== undefined) {
-            if (isReplacementRestoreFailedBinding(binding)) {
-              return yield* toValidationError(
-                operation,
-                `Cannot reload thread '${input.threadId}' because its engine ownership is not authoritative.`,
-              );
-            }
-          }
-          const adapter =
-            binding === undefined
-              ? yield* findLiveSessionAdapter(input.threadId, operation)
-              : yield* registry.getByEngine(binding.engine);
-          if (adapter === null) return { state: "no_active_session" as const };
-          if (adapter.engine !== "pi") {
-            return { state: "different_engine" as const };
-          }
-          if (!(yield* adapter.hasSession(input.threadId))) {
-            return { state: "no_active_session" as const };
-          }
-          if ((liveRuntimeTaskIds.get(input.threadId)?.size ?? 0) > 0) {
-            return { state: "busy" as const };
-          }
-          if (!adapter.reloadSessionResources) {
-            return yield* toValidationError(
-              operation,
-              "Pi does not expose active-session resource reload.",
-            );
-          }
-          return {
-            state: yield* adapter.reloadSessionResources(input.threadId),
-          };
-        }),
-      );
-
     stopIdleRuntimeSession = (threadId, generation) => {
       const stopEffect = Effect.gen(function* () {
         const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
@@ -3808,7 +3766,6 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
       respondToRequest,
       respondToUserInput,
       stopSession,
-      reloadSessionResources,
       stopRuntimeSession,
       hasLiveRuntimeTasks,
       clearSessionResumeCursor,

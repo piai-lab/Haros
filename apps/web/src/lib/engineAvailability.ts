@@ -151,16 +151,25 @@ export function engineUnavailableReason(status: ServerEngineStatus | null | unde
 
 export function findEngineStatus(
   statuses: readonly ServerEngineStatus[],
-  engine: EngineKind,
+  engine: EngineKind | null,
 ): ServerEngineStatus | null {
+  if (!engine) return null;
   return statuses.find((status) => status.engine === engine) ?? null;
 }
 
 // Shared send gate used by chat, Kanban, shortcuts, and handoff flows.
 export function resolveEngineSendAvailability(input: {
-  readonly engine: EngineKind;
+  readonly engine: EngineKind | null;
   readonly statuses: readonly ServerEngineStatus[];
 }): EngineSendAvailability {
+  if (!input.engine) {
+    return {
+      engine: "codex",
+      status: null,
+      usable: false,
+      unavailableReason: "Choose an engine in Settings before sending.",
+    };
+  }
   const status = findEngineStatus(input.statuses, input.engine);
   return {
     engine: input.engine,
@@ -178,7 +187,7 @@ function shouldRefreshBeforeBlocking(status: ServerEngineStatus | null): boolean
 
 // Re-check a blocked engine once before surfacing stale install/auth state to the user.
 export async function resolveEngineSendAvailabilityWithRefresh(input: {
-  readonly engine: EngineKind;
+  readonly engine: EngineKind | null;
   readonly statuses: readonly ServerEngineStatus[];
   readonly refreshStatuses: EngineStatusRefresh;
 }): Promise<EngineSendAvailability> {

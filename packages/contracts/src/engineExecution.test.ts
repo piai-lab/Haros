@@ -13,7 +13,7 @@ describe("EngineExecutionCapabilities", () => {
       status: "ready",
     });
     const result = decodeCapabilities({
-      engine: "pi",
+      engine: "codex",
       model: "model-test",
       supportsNativeTurnSteering: true,
       runtimeModes: {

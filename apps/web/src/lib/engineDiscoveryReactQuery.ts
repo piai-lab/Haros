@@ -12,7 +12,6 @@ import type {
   EngineSkillsCatalogResult,
 } from "@harnessos/contracts";
 import { ENGINE_MODEL_DISCOVERY_ERROR_CODES } from "@harnessos/contracts";
-import { engineHasGlobalOnlyModelCatalog } from "@harnessos/shared/engineMetadata";
 import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 
@@ -50,10 +49,14 @@ const EMPTY_PLUGINS_RESULT: EngineListPluginsResult = {
 };
 
 export function isEngineDiscoverySessionActive(input: {
-  readonly engine: EngineKind;
+  readonly engine: EngineKind | null;
   readonly session: { readonly engine: EngineKind; readonly status: string } | null | undefined;
 }): boolean {
-  return input.session?.engine === input.engine && input.session.status !== "closed";
+  return (
+    input.engine !== null &&
+    input.session?.engine === input.engine &&
+    input.session.status !== "closed"
+  );
 }
 
 export const engineDiscoveryQueryKeys = {
@@ -107,19 +110,26 @@ export const engineDiscoveryQueryKeys = {
     agentDir: string | null,
     cwd: string | null,
   ) => ["engine-discovery", "models", engine, binaryPath, apiEndpoint, agentDir, cwd] as const,
-  modelsForEngine: (engine: EngineKind) => ["engine-discovery", "models", engine] as const,
+  modelsForEngine: (engine: EngineKind | null) =>
+    ["engine-discovery", "models", engine ?? "unselected"] as const,
   agentsForEngine: (engine: EngineKind) => ["engine-discovery", "agents", engine] as const,
   agents: (engine: EngineKind, binaryPath: string | null, cwd: string | null) =>
     [...engineDiscoveryQueryKeys.agentsForEngine(engine), binaryPath, cwd] as const,
 };
 
-export function engineComposerCapabilitiesQueryOptions(engine: EngineKind) {
+export function engineComposerCapabilitiesQueryOptions(engine: EngineKind | null) {
   return queryOptions({
-    queryKey: engineDiscoveryQueryKeys.composerCapabilities(engine),
+    queryKey: engine
+      ? engineDiscoveryQueryKeys.composerCapabilities(engine)
+      : (["engine-discovery", "composer-capabilities", "unselected"] as const),
     queryFn: async () => {
+      if (!engine) {
+        throw new Error("Engine composer capability discovery is unavailable.");
+      }
       const api = ensureNativeApi();
       return api.engine.getComposerCapabilities({ engine });
     },
+    enabled: engine !== null,
     staleTime: Infinity,
   });
 }
@@ -157,7 +167,7 @@ export function isEngineInteractionModeExecutable(
 }
 
 export function engineSkillsQueryOptions(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   cwd: string | null;
   threadId?: string | null;
   activeSession?: boolean;
@@ -166,7 +176,7 @@ export function engineSkillsQueryOptions(input: {
 }) {
   return queryOptions({
     queryKey: engineDiscoveryQueryKeys.skills(
-      input.engine,
+      input.engine ?? "codex",
       input.cwd,
       input.agentDir ?? null,
       input.threadId ?? null,
@@ -174,7 +184,7 @@ export function engineSkillsQueryOptions(input: {
     ),
     queryFn: async () => {
       const api = ensureNativeApi();
-      if (!input.cwd) {
+      if (!input.engine || !input.cwd) {
         throw new Error("Skill discovery is unavailable.");
       }
       return api.engine.listSkills({
@@ -184,7 +194,7 @@ export function engineSkillsQueryOptions(input: {
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null,
+    enabled: (input.enabled ?? true) && input.engine !== null && input.cwd !== null,
     staleTime: 30_000,
     // A different Thread/session key may have a different Project trust boundary.
     // Never surface the previous key's resource names while the new key loads.
@@ -210,7 +220,7 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
 }
 
 export function engineCommandsQueryOptions(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   cwd: string | null;
   threadId?: string | null;
   activeSession?: boolean;
@@ -228,7 +238,7 @@ export function engineCommandsQueryOptions(input: {
   });
   return queryOptions({
     queryKey: engineDiscoveryQueryKeys.commands(
-      input.engine,
+      input.engine ?? "codex",
       input.cwd,
       input.agentDir ?? null,
       connectionKey,
@@ -237,7 +247,7 @@ export function engineCommandsQueryOptions(input: {
     ),
     queryFn: async () => {
       const api = ensureNativeApi();
-      if (!input.cwd) {
+      if (!input.engine || !input.cwd) {
         throw new Error("Command discovery is unavailable.");
       }
       return api.engine.listCommands({
@@ -252,7 +262,7 @@ export function engineCommandsQueryOptions(input: {
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
       });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null,
+    enabled: (input.enabled ?? true) && input.engine !== null && input.cwd !== null,
     staleTime: 30_000,
     // Prompt commands follow the same Thread/session trust boundary as Skills.
     placeholderData: EMPTY_COMMANDS_RESULT,
@@ -342,7 +352,7 @@ export function engineModelsQueryOptions(input: {
   // Keeping a Project cwd in the query identity would therefore repeat the same
   // expensive runtime catalog load for every Project and briefly replace an
   // authoritative catalog with a cold placeholder during navigation.
-  const discoveryCwd = engineHasGlobalOnlyModelCatalog(input.engine) ? null : (input.cwd ?? null);
+  const discoveryCwd = input.cwd ?? null;
   return queryOptions({
     queryKey: engineDiscoveryQueryKeys.models(
       input.engine,
@@ -415,22 +425,29 @@ export function engineAgentsQueryOptions(input: {
 }
 
 export function enginePluginsQueryOptions(input: {
-  engine: EngineKind;
+  engine: EngineKind | null;
   cwd: string | null;
   threadId?: string | null;
   enabled?: boolean;
 }) {
   return queryOptions({
-    queryKey: engineDiscoveryQueryKeys.plugins(input.engine, input.cwd, input.threadId ?? null),
+    queryKey: engineDiscoveryQueryKeys.plugins(
+      input.engine ?? "codex",
+      input.cwd,
+      input.threadId ?? null,
+    ),
     queryFn: async () => {
       const api = ensureNativeApi();
+      if (!input.engine) {
+        throw new Error("Plugin discovery is unavailable.");
+      }
       return api.engine.listPlugins({
         engine: input.engine,
         ...(input.cwd ? { cwd: input.cwd } : {}),
         ...(input.threadId ? { threadId: input.threadId } : {}),
       });
     },
-    enabled: input.enabled ?? true,
+    enabled: (input.enabled ?? true) && input.engine !== null,
     staleTime: 30_000,
     placeholderData: (previous) => previous ?? EMPTY_PLUGINS_RESULT,
   });

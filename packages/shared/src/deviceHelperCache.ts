@@ -15,8 +15,13 @@
  * @module deviceHelperCache
  */
 
-/** `~/Library/Caches/harnessos/device-helper` — callers pass their own home dir. */
-export const DEVICE_HELPER_CACHE_SEGMENTS = ["Library", "Caches", "oa", "device-helper"] as const;
+/** `~/Library/Caches/haros/device-helper` — callers pass their own home dir. */
+export const DEVICE_HELPER_CACHE_SEGMENTS = [
+  "Library",
+  "Caches",
+  "haros",
+  "device-helper",
+] as const;
 
 export const DEVICE_HELPER_BINARY_NAME = "harnessos-device-helper";
 

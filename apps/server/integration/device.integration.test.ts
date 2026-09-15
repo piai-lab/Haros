@@ -407,7 +407,7 @@ describeE2e("device pane end-to-end", () => {
     const listed = await rpc.call<DeviceListResult>(DEVICE_WS_METHODS.list, {});
     const booted = listed.devices.find((device) => device.udid === target?.udid);
     expect(booted?.state).toBe("booted");
-    expect(booted?.bootSource).toBe("oa");
+    expect(booted?.bootSource).toBe("haros");
   }, 180_000);
 
   it("attaches the thread and streams H.264 frames driven by taps", async () => {

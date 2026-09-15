@@ -90,7 +90,7 @@ function deriveCatalogState(input: {
 }
 
 export function useEngineModelCatalog(input: {
-  selectedEngine: EngineKind;
+  selectedEngine: EngineKind | null;
   /**
    * Enables discovery for the on-demand engines (cursor/grok/droid/kilo/opencode)
    * even when they are not selected — pass the picker's open state so their lists
@@ -566,11 +566,13 @@ export function useEngineModelCatalog(input: {
 
   const selectedRuntimeModel = useMemo(
     () =>
-      resolveRuntimeModelDescriptor({
-        engine: selectedEngine,
-        model: modelHintByEngine?.[selectedEngine] ?? null,
-        runtimeModels: runtimeModelsByEngine[selectedEngine],
-      }),
+      selectedEngine
+        ? resolveRuntimeModelDescriptor({
+            engine: selectedEngine,
+            model: modelHintByEngine?.[selectedEngine] ?? null,
+            runtimeModels: runtimeModelsByEngine[selectedEngine],
+          })
+        : undefined,
     [modelHintByEngine, runtimeModelsByEngine, selectedEngine],
   );
 
@@ -613,7 +615,9 @@ export function useEngineModelCatalog(input: {
     }
     return result;
   }, [catalogStateByEngine]);
-  const selectedEngineRuntimeModelDiscoveryPending = loadingEngineModels[selectedEngine];
+  const selectedEngineRuntimeModelDiscoveryPending = selectedEngine
+    ? loadingEngineModels[selectedEngine]
+    : false;
   const selectedEngineModelsLoading = selectedEngineRuntimeModelDiscoveryPending;
 
   return useMemo(

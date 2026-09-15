@@ -83,7 +83,7 @@ import { resolvePendingDirectTurnRecoveryMutation } from "../composerDraftDomain
 
 describe("mergeTimelineTurnProvenance", () => {
   const selection = {
-    engine: "pi",
+    engine: "codex",
     model: "deepseek/deepseek-v4-pro",
   } satisfies EngineSelection;
   const identity = {
@@ -124,13 +124,7 @@ describe("mergeTimelineTurnProvenance", () => {
         persisted: [{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }],
         optimistic: [optimistic],
       }),
-    ).toEqual([
-      {
-        ...persisted,
-        engineSelection: { engine: "pi", model: selection.model },
-        modelPresentationIdentity: identity,
-      },
-    ]);
+    ).toEqual([{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }]);
   });
 });
 
@@ -138,7 +132,7 @@ describe("createOptimisticTurnProvenance", () => {
   it("creates the same immutable admission snapshot for every send path", () => {
     const provenance = createOptimisticTurnProvenance({
       pendingMessageId: MessageId.makeUnsafe("pending-plan-follow-up"),
-      engineSelection: { engine: "pi", model: "deepseek/deepseek-v4-pro" },
+      engineSelection: { engine: "codex", model: "deepseek/deepseek-v4-pro" },
       modelPresentationIdentity: {
         model: "deepseek/deepseek-v4-pro",
         displayName: "DeepSeek V4 Pro",
@@ -151,7 +145,7 @@ describe("createOptimisticTurnProvenance", () => {
     expect(provenance).toEqual({
       pendingMessageId: MessageId.makeUnsafe("pending-plan-follow-up"),
       turnId: null,
-      engineSelection: { engine: "pi", model: "deepseek/deepseek-v4-pro" },
+      engineSelection: { engine: "codex", model: "deepseek/deepseek-v4-pro" },
       modelPresentationIdentity: {
         model: "deepseek/deepseek-v4-pro",
         displayName: "DeepSeek V4 Pro",
@@ -166,7 +160,7 @@ describe("createOptimisticTurnProvenance", () => {
     expect(
       createOptimisticTurnProvenance({
         pendingMessageId: MessageId.makeUnsafe("pending-mismatch"),
-        engineSelection: { engine: "pi", model: "deepseek/deepseek-v4-pro" },
+        engineSelection: { engine: "codex", model: "deepseek/deepseek-v4-pro" },
         modelPresentationIdentity: {
           model: "openai/gpt-5.5",
           displayName: "GPT-5.5",
@@ -184,7 +178,7 @@ describe("shouldReconcileOptimisticMessage", () => {
     const messageId = MessageId.makeUnsafe("pending-1");
     const provenance = createOptimisticTurnProvenance({
       pendingMessageId: messageId,
-      engineSelection: { engine: "pi", model: "deepseek/deepseek-v4-pro" },
+      engineSelection: { engine: "codex", model: "deepseek/deepseek-v4-pro" },
       requestedAt: "2026-08-29T02:00:00.000Z",
     });
     const serverMessageIds = new Set([messageId]);

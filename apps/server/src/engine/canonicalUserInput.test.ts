@@ -3,7 +3,6 @@ import {
   CANONICAL_USER_INPUT_MAX_NODES,
   CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
 } from "@harnessos/contracts";
-import { ASK_USER_MAX_NODES, ASK_USER_MAX_UTF8_BYTES } from "@harnessos/oa-ask";
 
 import {
   canonicalUserInputRequestFromQuestions,
@@ -13,9 +12,9 @@ import {
 } from "./canonicalUserInput";
 
 describe("canonical user-input Engine encoding", () => {
-  it("keeps the fork Tool and cross-Engine Product safety guards aligned", () => {
-    expect(ASK_USER_MAX_NODES).toBe(CANONICAL_USER_INPUT_MAX_NODES);
-    expect(ASK_USER_MAX_UTF8_BYTES).toBe(CANONICAL_USER_INPUT_MAX_UTF8_BYTES);
+  it("keeps Product request bounds defined", () => {
+    expect(CANONICAL_USER_INPUT_MAX_NODES).toBeGreaterThan(0);
+    expect(CANONICAL_USER_INPUT_MAX_UTF8_BYTES).toBeGreaterThan(0);
   });
 
   it("upgrades native questions through the strict versioned Product contract", () => {

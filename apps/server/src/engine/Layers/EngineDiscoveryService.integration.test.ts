@@ -199,12 +199,12 @@ describe("EngineDiscoveryService.listSkills", () => {
         Effect.gen(function* () {
           const discovery = yield* EngineDiscoveryService;
           const skills = yield* discovery.listSkills({
-            engine: "pi",
+            engine: "codex",
             cwd: forgedRendererCwd,
             threadId,
           });
           const commands = yield* discovery.listCommands({
-            engine: "pi",
+            engine: "codex",
             cwd: forgedRendererCwd,
             threadId,
           });
@@ -241,7 +241,7 @@ describe("EngineDiscoveryService.listSkills", () => {
           return Effect.succeed({ skills: [], source: "test", cached: false });
         },
       },
-      engine: "pi",
+      engine: "codex",
     });
     expect(observed[0]).toMatchObject({
       cwd: homeDir,

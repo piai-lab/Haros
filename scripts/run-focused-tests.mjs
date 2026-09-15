@@ -10,7 +10,6 @@ const vitestWorkspaces = new Set([
   "apps/desktop",
   "apps/server",
   "packages/contracts",
-  "packages/oa-ask",
   "packages/shared",
   "scripts",
 ]);
@@ -20,7 +19,6 @@ const supportedWorkspaces = [
   "apps/server",
   "apps/web",
   "packages/contracts",
-  "packages/oa-ask",
   "packages/shared",
   "scripts",
 ];

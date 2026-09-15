@@ -2,16 +2,17 @@
 // Purpose: Hosts the plugin and skill browser surfaced from engine discovery APIs.
 // Layer: Route-level screen
 // Exports: PluginLibrary
+
 import {
   ENGINE_KINDS,
+  type ThreadId,
   type EngineKind,
   type EnginePluginDescriptor,
   type EngineSkillDescriptor,
-  type ThreadId,
 } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
+import React, { useMemo, type ReactNode, useDeferredValue, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   SiCanva,
@@ -27,13 +28,9 @@ import {
   SiStripe,
   SiVercel,
 } from "react-icons/si";
+import { EngineIcon } from "./EngineIcon";
+import { useStore } from "~/store";
 import { DEFAULT_PROVIDER_ORDER } from "~/engineOrdering";
-import { useFocusedChatContext } from "~/focusedChatContext";
-import {
-  useDesktopTopBarTrafficLightGutterClassName,
-  useDesktopTopBarWindowControlsGutterClassName,
-} from "~/hooks/useDesktopTopBarGutter";
-import { useI18n } from "~/i18n";
 import {
   buildPluginSearchFields,
   buildSkillSearchFields,
@@ -44,33 +41,38 @@ import {
   resolveEngineDiscoveryCwd,
 } from "~/lib/engineDiscovery";
 import {
-  engineComposerCapabilitiesQueryOptions,
-  enginePluginsQueryOptions,
-  engineSkillsQueryOptions,
-  isEngineDiscoverySessionActive,
-  supportsPluginDiscovery,
-  supportsSkillDiscovery,
-} from "~/lib/engineDiscoveryReactQuery";
-import { CheckIcon, CircleAlertIcon, ListChecksIcon, PluginIcon, SearchIcon } from "~/lib/icons";
-import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
-import { useStore } from "~/store";
-import {
   createFirstProjectSelector,
   createProjectSelector,
   createThreadSelector,
 } from "~/storeSelectors";
-import { EngineIcon } from "./EngineIcon";
-import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
+import {
+  isEngineDiscoverySessionActive,
+  engineComposerCapabilitiesQueryOptions,
+  engineDiscoveryQueryKeys,
+  enginePluginsQueryOptions,
+  engineSkillsQueryOptions,
+  supportsPluginDiscovery,
+  supportsSkillDiscovery,
+} from "~/lib/engineDiscoveryReactQuery";
+import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { useFocusedChatContext } from "~/focusedChatContext";
+import { CheckIcon, CircleAlertIcon, ListChecksIcon, PluginIcon, SearchIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { SidebarInset } from "./ui/sidebar";
+import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
+import {
+  useDesktopTopBarTrafficLightGutterClassName,
+  useDesktopTopBarWindowControlsGutterClassName,
+} from "~/hooks/useDesktopTopBarGutter";
 import { Skeleton } from "./ui/skeleton";
+import { useI18n } from "~/i18n";
+import { ensureNativeApi } from "~/nativeApi";
+
 // ── Types ──────────────────────────────────────────────────────────────────
+
 type DiscoveryTab = "plugins" | "skills";
-type EngineCapabilities = {
-  plugins: boolean;
-  skills: boolean;
-};
+type EngineCapabilities = { plugins: boolean; skills: boolean };
 type PluginEntry = {
   marketplaceName: string;
   marketplacePath: string;
@@ -81,6 +83,9 @@ type PluginBrandArtwork = {
   color: string;
   icon: IconType;
 };
+
+// ── Constants ──────────────────────────────────────────────────────────────
+
 const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   canva: { icon: SiCanva, color: "#00C4CC" },
   figma: { icon: SiFigma, color: "#F24E1E" },
@@ -95,38 +100,48 @@ const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   stripe: { icon: SiStripe, color: "#635BFF" },
   vercel: { icon: SiVercel, color: "#111111" },
 };
+// ── Utilities ──────────────────────────────────────────────────────────────
+
 function pluginEntryKey(entry: Pick<PluginEntry, "marketplacePath" | "plugin">): string {
   return `${entry.marketplacePath}::${entry.plugin.name}`;
 }
+
 function sectionTitle(value: string, fallback: string): string {
   const n = value.trim();
   return n.length === 0 ? fallback : n;
 }
+
 function resolvePluginAccent(plugin: EnginePluginDescriptor): string | undefined {
   return plugin.interface?.brandColor?.trim() || undefined;
 }
+
 function normalizeBrandKey(value: string | undefined): string {
   return (value ?? "")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
+
 function resolvePluginLogo(plugin: EnginePluginDescriptor): string | undefined {
   return plugin.interface?.logo?.trim() || undefined;
 }
+
 function resolvePluginBrand(plugin: EnginePluginDescriptor): PluginBrandArtwork | undefined {
   const candidates = [
     plugin.interface?.composerIcon,
     plugin.interface?.displayName,
     plugin.name,
   ].map(normalizeBrandKey);
+
   for (const candidate of candidates) {
     if (!candidate) continue;
     const knownBrand = KNOWN_PLUGIN_BRANDS[candidate];
     if (knownBrand) return knownBrand;
   }
+
   return undefined;
 }
+
 /** Stable hue 0–359 from a string, for consistent per-item icon colors. */
 function nameToHue(name: string): number {
   let h = 0;
@@ -135,7 +150,9 @@ function nameToHue(name: string): number {
   }
   return Math.abs(h) % 360;
 }
+
 // ── Icon glyphs ────────────────────────────────────────────────────────────
+
 function PluginGlyph({ plugin }: { plugin: EnginePluginDescriptor }) {
   const accent = resolvePluginAccent(plugin);
   const logo = resolvePluginLogo(plugin);
@@ -151,6 +168,7 @@ function PluginGlyph({ plugin }: { plugin: EnginePluginDescriptor }) {
         background: `linear-gradient(145deg, hsl(${hue} 55% 30%), hsl(${hue} 45% 18%))`,
         boxShadow: `0 0 0 0.5px hsl(${hue} 40% 30% / 0.35)`,
       };
+
   // Prefer metadata-provided artwork so marketplace plugins keep their own branding.
   if (logo && !logoFailed) {
     return (
@@ -168,6 +186,7 @@ function PluginGlyph({ plugin }: { plugin: EnginePluginDescriptor }) {
       </span>
     );
   }
+
   if (brand) {
     const BrandIcon = brand.icon;
     return (
@@ -179,6 +198,7 @@ function PluginGlyph({ plugin }: { plugin: EnginePluginDescriptor }) {
       </span>
     );
   }
+
   return (
     <span
       className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px]"
@@ -188,6 +208,7 @@ function PluginGlyph({ plugin }: { plugin: EnginePluginDescriptor }) {
     </span>
   );
 }
+
 function SkillGlyph({ skill }: { skill: EngineSkillDescriptor }) {
   const hue = nameToHue(skill.interface?.displayName ?? skill.name);
   return (
@@ -202,7 +223,9 @@ function SkillGlyph({ skill }: { skill: EngineSkillDescriptor }) {
     </span>
   );
 }
+
 // ── UI controls ────────────────────────────────────────────────────────────
+
 function TabButton({
   label,
   active,
@@ -228,6 +251,7 @@ function TabButton({
     </button>
   );
 }
+
 function EngineToggleButton({
   label,
   active,
@@ -260,6 +284,7 @@ function EngineToggleButton({
     </button>
   );
 }
+
 function EmptyPanel({ title, description }: { title: string; description: string }) {
   return (
     <div className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 px-5 py-6 text-center">
@@ -270,6 +295,7 @@ function EmptyPanel({ title, description }: { title: string; description: string
     </div>
   );
 }
+
 function InlineWarning({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/6 px-3 py-2.5 text-xs text-muted-foreground">
@@ -278,6 +304,7 @@ function InlineWarning({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
 function InstalledStatus({ installed }: { installed: boolean }) {
   if (!installed) return null;
   return (
@@ -286,12 +313,15 @@ function InstalledStatus({ installed }: { installed: boolean }) {
     </span>
   );
 }
+
 // ── Grid items ─────────────────────────────────────────────────────────────
+
 function PluginGridItem({ entry }: { entry: PluginEntry }) {
   const description =
     entry.plugin.interface?.shortDescription ??
     entry.plugin.interface?.longDescription ??
     entry.plugin.source.path;
+
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
       <PluginGlyph plugin={entry.plugin} />
@@ -305,6 +335,7 @@ function PluginGridItem({ entry }: { entry: PluginEntry }) {
     </div>
   );
 }
+
 function localizedSkillScope(
   scope: string | undefined,
   t: ReturnType<typeof useI18n>["t"],
@@ -317,13 +348,14 @@ function localizedSkillScope(
   if (normalized === "managed") return t("library.scopeManaged");
   return formatSkillScope(scope);
 }
+
 function skillSourceLabel(
   skill: EngineSkillDescriptor,
   engineLabel: string,
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
-  if (skill.scope === "oa" || segments.has(".harnessos")) {
+  if (segments.has(".harnessos")) {
     return t("library.harnessosLibrary");
   }
   if (skill.scope === "agents") {
@@ -334,6 +366,7 @@ function skillSourceLabel(
     scope: localizedSkillScope(skill.scope, t),
   });
 }
+
 function SkillGridItem({
   skill,
   engineLabel,
@@ -344,6 +377,7 @@ function SkillGridItem({
   const { t } = useI18n();
   const description =
     skill.interface?.shortDescription ?? skill.description ?? t("library.noDescription");
+
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
       <SkillGlyph skill={skill} />
@@ -360,9 +394,13 @@ function SkillGridItem({
     </div>
   );
 }
+
 function SectionHeader({ title }: { title: string }) {
   return <h2 className="px-3 pb-1 pt-2 text-[15px] font-semibold text-foreground">{title}</h2>;
 }
+
+// ── Main component ─────────────────────────────────────────────────────────
+
 export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: ThreadId | null }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -382,7 +420,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   );
   const contextThread = activeThread ?? sourceThread ?? null;
   const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
+
   const preferredEngine = contextThread?.engineSelection.engine ?? "codex";
+
   const [selectedEngine, setSelectedEngine] = useState<EngineKind>(preferredEngine);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
@@ -390,6 +430,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const deferredPluginSearch = useDeferredValue(pluginSearch);
   const deferredSkillSearch = useDeferredValue(skillSearch);
   const nativeThreadId = focusedThreadId ?? sourceThreadId;
+
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const capabilityQueries = useQueries({
     queries: ENGINE_KINDS.map((engine) => engineComposerCapabilitiesQueryOptions(engine)),
@@ -406,6 +447,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       ];
     }),
   ) as Record<EngineKind, EngineCapabilities>;
+
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.
   const effectiveEngine = selectedEngine;
@@ -413,14 +455,17 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
     engine: effectiveEngine,
     session: contextThread?.session,
   });
+
   const discoveryCwd = resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: contextThread?.worktreePath ?? null,
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
+
   const engineLabel = ENGINE_DISPLAY_NAMES[effectiveEngine];
   const canListPlugins = engineCapabilities[effectiveEngine].plugins;
   const canListSkills = engineCapabilities[effectiveEngine].skills;
+
   const pluginsQuery = useQuery(
     enginePluginsQueryOptions({
       engine: effectiveEngine,
@@ -429,6 +474,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       enabled: selectedTab === "plugins" && canListPlugins,
     }),
   );
+
   const skillsQuery = useQuery(
     engineSkillsQueryOptions({
       engine: effectiveEngine,
@@ -438,7 +484,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       enabled: selectedTab === "skills" && canListSkills && discoveryCwd !== null,
     }),
   );
+
   const discoveredSkills = skillsQuery.data?.skills ?? [];
+
   const featuredPluginIds = new Set(pluginsQuery.data?.featuredPluginIds ?? []);
   const pluginEntries: PluginEntry[] = (pluginsQuery.data?.marketplaces ?? []).flatMap((m) =>
     m.plugins.map((plugin) => ({
@@ -448,22 +496,19 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       isFeatured: featuredPluginIds.has(plugin.id),
     })),
   );
+
   const installedPluginEntries = pluginEntries.filter((entry) =>
     isInstalledEnginePlugin(entry.plugin),
   );
+
   const pluginSearchQuery = normalizeEngineDiscoveryText(deferredPluginSearch);
   const filteredPluginEntries = pluginSearchQuery
     ? rankEngineDiscoveryItems(installedPluginEntries, pluginSearchQuery, (entry) =>
         buildPluginSearchFields(entry.plugin),
       )
     : installedPluginEntries;
-  const marketplaceSectionsByPath = new Map<
-    string,
-    {
-      title: string;
-      entries: PluginEntry[];
-    }
-  >();
+
+  const marketplaceSectionsByPath = new Map<string, { title: string; entries: PluginEntry[] }>();
   for (const entry of filteredPluginEntries) {
     const existing = marketplaceSectionsByPath.get(entry.marketplacePath);
     if (existing) {
@@ -480,11 +525,14 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
     title: v.title,
     entries: v.entries,
   }));
+
   const skillSearchQuery = normalizeEngineDiscoveryText(deferredSkillSearch);
   const filteredSkills = skillSearchQuery
     ? rankEngineDiscoveryItems(discoveredSkills, skillSearchQuery, buildSkillSearchFields)
     : discoveredSkills;
+
   // ── Render ───────────────────────────────────────────────────────────────
+
   return (
     <SidebarInset className="h-dvh min-h-0 overflow-hidden isolate">
       <div className="flex h-full flex-col">
@@ -513,7 +561,6 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
           <div
             className={cn(
               "inline-flex rounded-full border border-border/60 bg-background/60 p-0.5",
-              false,
             )}
           >
             {DEFAULT_PROVIDER_ORDER.map((engine) => {
@@ -560,23 +607,13 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                 </InputGroupText>
               </InputGroupAddon>
               <InputGroupInput
-                value={
-                  selectedTab === "plugins"
-                    ? pluginSearch
-                    : selectedTab === "skills"
-                      ? skillSearch
-                      : ""
-                }
+                value={selectedTab === "plugins" ? pluginSearch : skillSearch}
                 onChange={(e) => {
                   if (selectedTab === "plugins") setPluginSearch(e.target.value);
-                  else if (selectedTab === "skills") setSkillSearch(e.target.value);
+                  else setSkillSearch(e.target.value);
                 }}
                 placeholder={
-                  selectedTab === "plugins"
-                    ? t("library.searchPlugins")
-                    : selectedTab === "skills"
-                      ? t("library.searchSkills")
-                      : t("library.searchSkills")
+                  selectedTab === "plugins" ? t("library.searchPlugins") : t("library.searchSkills")
                 }
                 className="text-sm"
               />

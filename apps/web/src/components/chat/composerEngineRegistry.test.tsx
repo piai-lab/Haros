@@ -652,51 +652,6 @@ describe("getComposerEngineState", () => {
     });
   });
 
-  it("normalizes DeepSeek reasoning effort options for dispatch", () => {
-    const state = getComposerEngineState({
-      engine: "deepseek",
-      model: "deepseek-v4-flash",
-      prompt: "",
-      modelOptions: {
-        deepseek: {
-          reasoningEffort: "high",
-        },
-      },
-    });
-
-    expect(state).toEqual({
-      engine: "deepseek",
-      promptEffort: "high",
-      modelOptionsForDispatch: {
-        reasoningEffort: "high",
-      },
-    });
-    expect(
-      getComposerTraitSelection("deepseek", "deepseek-v4-flash", "", {
-        reasoningEffort: "high",
-      }).effortLevels.map((effort) => effort.value),
-    ).toEqual(["low", "medium", "high"]);
-  });
-
-  it("drops explicit DeepSeek default reasoning effort from dispatch", () => {
-    const state = getComposerEngineState({
-      engine: "deepseek",
-      model: "deepseek-v4-flash",
-      prompt: "",
-      modelOptions: {
-        deepseek: {
-          reasoningEffort: "medium",
-        },
-      },
-    });
-
-    expect(state).toEqual({
-      engine: "deepseek",
-      promptEffort: "medium",
-      modelOptionsForDispatch: undefined,
-    });
-  });
-
   it("exposes Grok efforts before runtime model discovery resolves", () => {
     const grok45 = getComposerTraitSelection("grok", "grok-4.5", "", undefined);
     expect(grok45.effortLevels.map((effort) => effort.value)).toEqual(["low", "medium", "high"]);
@@ -945,6 +900,31 @@ describe("getComposerEngineState", () => {
       modelOptionsForDispatch: {
         thinkingLevel: "xhigh",
       },
+    });
+  });
+
+  it("keeps Pi runtime thinking selections on the thinkingLevel field", () => {
+    const selection = getComposerTraitSelection(
+      "pi",
+      "deepseek/deepseek-v4-pro",
+      "",
+      { thinkingLevel: "xhigh" },
+      { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
+    );
+    const state = getComposerEngineState({
+      engine: "pi",
+      model: "deepseek/deepseek-v4-pro",
+      runtimeModel: { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
+      prompt: "",
+      modelOptions: { pi: { thinkingLevel: "xhigh" } },
+    });
+
+    expect(selection.primarySelectDescriptor?.id).toBe("thinkingLevel");
+    expect(selection.effort).toBe("xhigh");
+    expect(state).toEqual({
+      engine: "pi",
+      promptEffort: "xhigh",
+      modelOptionsForDispatch: { thinkingLevel: "xhigh" },
     });
   });
 

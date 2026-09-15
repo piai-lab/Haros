@@ -39,8 +39,6 @@ export function decodePersistedEngineKind(value: unknown): EngineKind | null {
   return Schema.is(LiveEngineKind)(migrated) ? migrated : null;
 }
 
-// Persist `"oa"` still decodes on handoff/runtime-event/settings fields that use
-// bare `EngineKind`. Encode keeps the live identity so writes never revive OA.
 export const EngineKind = Schema.Union([LiveEngineKind, Schema.Literal("oa")]).pipe(
   Schema.decodeTo(LiveEngineKind, {
     decode: SchemaGetter.transform(

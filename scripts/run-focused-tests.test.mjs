@@ -34,14 +34,14 @@ describe("planFocusedTestRuns", () => {
     createRepositoryFixture(root, [
       "apps/server/src/example.integration.test.ts",
       "apps/web/src/example.browser.tsx",
-      "packages/oa-ask/src/example.test.ts",
+      "packages/shared/src/example.test.ts",
     ]);
 
     const runs = planFocusedTestRuns(
       [
         "apps/server/src/example.integration.test.ts",
         "apps/web/src/example.browser.tsx",
-        "packages/oa-ask/src/example.test.ts",
+        "packages/shared/src/example.test.ts",
       ],
       root,
     );
@@ -49,11 +49,10 @@ describe("planFocusedTestRuns", () => {
     expect(runs.map((run) => run.workspace)).toEqual([
       "apps/server",
       "apps/web",
-      "packages/oa-ask",
+      "packages/shared",
     ]);
     expect(runs[0]?.args).toContain("src/example.integration.test.ts");
     expect(runs[1]?.args).toContain("focused");
-    expect(runs[2]?.args).toContain("run");
   });
 
   it("fails before spawning for missing, non-test, or ownerless paths", () => {
