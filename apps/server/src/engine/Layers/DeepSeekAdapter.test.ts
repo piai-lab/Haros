@@ -252,6 +252,47 @@ describe("DeepSeekAdapter", () => {
     }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
   });
 
+  it("tears down the session when the SDK process emits an error", async () => {
+    const child = new FakeDeepSeekProcess();
+    const layer = makeDeepSeekAdapterLive({
+      spawnProcess: () => child as never,
+      teardownProcess: async (process) => {
+        process.kill();
+      },
+    }).pipe(
+      Layer.provide(Layer.succeed(ServerConfig, serverConfig)),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.gen(function* () {
+      const adapter = yield* DeepSeekAdapter;
+      const events: Array<{ type: string }> = [];
+      yield* Stream.runForEach(adapter.streamEvents, (event) =>
+        Effect.sync(() => {
+          events.push({ type: event.type });
+        }),
+      ).pipe(Effect.forkScoped);
+      const session = yield* adapter.startSession({
+        threadId: ThreadId.makeUnsafe("thread-deepseek-spawn-error"),
+        cwd: "/tmp/project",
+        admission: {
+          productSurface: "agent",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/project",
+        },
+        runtimeMode: "full-access",
+        engineSelection: { engine: "deepseek", model: "deepseek-v4-flash" },
+      });
+      child.emit("error", new Error("spawn ENOENT dsh"));
+      yield* Effect.sleep("50 millis");
+      expect(child.killed).toBe(true);
+      expect(events.map((event) => event.type)).toEqual(
+        expect.arrayContaining(["session.started", "session.exited"]),
+      );
+      expect(yield* adapter.hasSession(session.threadId)).toBe(false);
+    }).pipe(Effect.provide(layer), Effect.scoped, Effect.runPromise);
+  });
+
   it("rejects runtime modes other than full-access", async () => {
     const child = new FakeDeepSeekProcess();
     const layer = makeDeepSeekAdapterLive({

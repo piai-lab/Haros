@@ -175,6 +175,11 @@ function spawnDeepSeekSdk(input: {
   });
 }
 
+function processErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) return error.message;
+  return "DeepSeek SDK process failed.";
+}
+
 function extractTextDelta(event: unknown): string | undefined {
   if (!isRecord(event)) return undefined;
   const nested = isRecord(event.event) ? event.event : event;
@@ -540,6 +545,10 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
           payload: { message: message.slice(0, 2_000) },
           raw: raw("process/stderr", { message: message.slice(0, 4_000) }),
         } satisfies EngineRuntimeEvent);
+      });
+      context.child.on("error", (error) => {
+        if (context.stopping) return;
+        void stopContext(context, processErrorMessage(error));
       });
       context.child.on("exit", (code, signal) => {
         if (context.stopping) return;
