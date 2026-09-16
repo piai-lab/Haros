@@ -7,7 +7,6 @@ edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
   - docs/architecture.md#engines
-  - docs/architecture.md#retired-oa-engine
   - packages/shared/src/engineMetadata.ts#ENGINE_DESCRIPTORS
   - apps/server/src/engine/executionCapabilityProjection.ts#resolveEngineExecutionCapabilities
 ---

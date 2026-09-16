@@ -8,7 +8,7 @@ edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 source_anchors:
   - apps/server/src/browserAutomation/Layers/BrowserAutomationHost.ts
   - packages/shared/src/browserAutomationCatalogue.ts
-  - docs/architecture.md#retired-oa-engine
+  - docs/architecture.md#engines
 ---
 
 # Chapter 30 — Browser Workflows and Web Access {#chapter-30}

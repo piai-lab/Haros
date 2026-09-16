@@ -38,8 +38,8 @@ The central ownership rule is strict:
 > `ENGINE_DESCRIPTORS` is the sole owner of Engine identity, registration, display name, capability
 > projection, and Settings discovery.
 
-The current source-alpha edition derives ten Engine identities from that owner: nine runnable
-Engines plus retired OA, which remains decodable for historical records and is not runnable.
+The current source-alpha edition derives ten runnable Engine identities from that owner.
+Retired first-party OA is not an Engine identity, is not decodable as Pi, and cannot be resumed.
 The number and individual entries are edition facts, not a list this chapter should duplicate.
 Contributors read the descriptor source or a generated projection when an exact matrix is needed.
 
