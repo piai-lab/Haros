@@ -1,7 +1,7 @@
 /**
  * EngineAdapterRegistryLive - In-memory engine adapter lookup layer.
  *
- * Binds engine kinds (codex/claudeAgent/...) to concrete adapter services.
+ * Binds engine kinds (codex/claude/...) to concrete adapter services.
  * This layer only performs adapter lookup; it does not route session-scoped
  * calls or own engine lifecycle workflows.
  *

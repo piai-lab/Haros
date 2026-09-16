@@ -41,6 +41,7 @@ const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = [
   "kilo",
   "opencode",
   "pi",
+  "deepseek",
 ].map((engine) => engineStatus(engine as EngineKind));
 
 async function mountPicker(input: {
@@ -240,13 +241,13 @@ describe("ComposerEnginePicker", () => {
     }
   });
 
-  it("names OA explicitly in the trigger and tooltip", async () => {
+  it("names Codex explicitly in the trigger and tooltip", async () => {
     const mounted = await mountPicker({ engine: "codex" });
     try {
-      const trigger = page.getByRole("button", { name: "Change engine. Current: OA" });
+      const trigger = page.getByRole("button", { name: "Change engine. Current: Codex" });
       await expect.element(trigger).toBeVisible();
       await userEvent.hover(trigger);
-      await expect.element(page.getByText("Engine · OA")).toBeVisible();
+      await expect.element(page.getByText("Engine · Codex")).toBeVisible();
     } finally {
       await mounted.cleanup();
     }

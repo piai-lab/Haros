@@ -41,7 +41,7 @@ extended_description: "Unavailable browser, search, or network paths must not be
 
 Explanatory job: Unavailable browser, search, or network paths must not be reported as successful interaction, results, or external claims.
 
-Reviewed sources: `packages/shared/src/browserAutomationErrors.ts`; `packages/oa-web-access/render-search-error.ts`.
+Reviewed sources: `packages/shared/src/browserAutomationErrors.ts`; `docs/architecture.md`.
 
 Final prompt contract: white-background, label-first technical relationship diagram using only the declared exact-text inventory; no fake UI, physical metaphor, people, or unlabeled glyphs.
 

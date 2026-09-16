@@ -1,5 +1,5 @@
 import { type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
-import { ENGINE_DISPLAY_NAMES, isRunnableEngine } from "@harnessos/shared/engineMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 
 export interface EngineSendAvailability {
   readonly engine: EngineKind;
@@ -174,10 +174,8 @@ export function resolveEngineSendAvailability(input: {
   return {
     engine: input.engine,
     status,
-    usable: isRunnableEngine(input.engine) && isEngineUsable(status),
-    unavailableReason: isRunnableEngine(input.engine)
-      ? engineUnavailableReason(status)
-      : "OA has been removed. Create a new task with another engine. / OA 已移除，请使用其他引擎新建任务。",
+    usable: isEngineUsable(status),
+    unavailableReason: engineUnavailableReason(status),
   };
 }
 

@@ -579,7 +579,6 @@
         "bundleDependencyResolution": "The product source keeps jsonc-parser's package-root import so unbundled Node execution uses the package's supported CommonJS entry. Only the upstream esbuild bundle resolves that exact import to the package's ESM build, preventing an external runtime stub without changing parser behavior or globally changing package resolution.",
         "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.4.patch",
         "stockPatchSha256": "330b06f6fe4474953102ada8eb4e8326067c05108a9795625e5d399d05ea6a45",
-        "generatorPath": "scripts/vendor-oa-runtime.mjs",
         "behavioralDifferences": [
           "package identity",
           "piConfig.configDir",
@@ -605,7 +604,7 @@
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE.",
       "mode": "adapt",
       "changes": "DELETED: the first-party OA Engine runtime derived from this Pi revision was removed. Haros is a unified OS for mainstream Engines only. Stock Pi remains as an independent Engine. This record now only documents the former adoption boundary.",
-      "updatePolicy": "Pinned revision, upstream npm integrity, exact product-source and stock dependency patch digests, and product archive SHA-256. Reproduction runs `node scripts/vendor-oa-runtime.mjs --source <clean-exact-pi-checkout>`: before any source build the generator verifies both committed patch identities, rejects the wrong or dirty revision, applies the sole product source patch with a conflict check, restores pinned generated model data, builds and runs focused Pi reader/mutation/runtime tests with network discovery disabled, applies the recorded identity/configDir/archive closure, verifies deterministic packing and cleans its temporary tree. Bun applies the separately hashed stock dependency patch or fails on conflict. On every Pi intake, first remove the patches if upstream exposes equivalent safe reader/provenance/persistent-mutation/store/prompt-outcome APIs; otherwise update the affected patch, its digest owner and this adoption record together, and stop loudly on any digest drift or conflict. Pi post-tag code is excluded until separately adopted. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement."
+      "updatePolicy": "Historical tombstone. Do not regenerate the deleted OA Engine runtime. Stock Pi remains an independent Engine; its live Bun patchedDependencies record owns current Pi-coding-agent intake. Provenance SHA, rights and former generation facts stay here and must not be replayed as a live generator."
     },
     {
       "id": "pi-ai-oauth-page-renderer",
@@ -722,7 +721,7 @@
       "rights": "The fixed pi-web-access source is MIT-licensed under the retained exact legal text by Nico Bailon. The former OA web-access fork has been deleted.",
       "mode": "fork-narrowly",
       "changes": "DELETED: the OA web-access fork was removed with the first-party OA Engine. This record now only documents the former adoption boundary.",
-      "updatePolicy": "Pinned to the exact current stable release and commit; maintainer-triggered updates intake the newest stable release, never unpublished main, and do not create a second fork repository. Every update restarts at docs/source-intake.md, re-runs the source-intake gate, preserves the upstream structure and author tests, regenerates the auditable upstream/P1-P6 diff inventory, and jointly revalidates Provider routing and projection, Curator protocol, config schema, source_check, proxy transport, rights, asset admission, typed presentation-context round trips, Timeline label/detail/causal-order contracts, focused Haros journeys and packaged closure. Remove the narrow fork when a lower-maintenance equivalent Pi ecosystem capability proves equal or better."
+      "updatePolicy": "Historical tombstone. Do not regenerate or fork the deleted OA web-access package. Provenance, rights and former pin facts stay here."
     },
     {
       "id": "bundled-oa-ask-user",
@@ -736,7 +735,7 @@
       "rights": "The fixed supi-ask-user source is MIT-licensed by Marcel Richter. The former OA ask-user fork has been deleted.",
       "mode": "fork-subtractively",
       "changes": "DELETED: the OA ask-user fork was removed with the first-party OA Engine. Product Ask User lifecycle remains Haros-owned. This record now only documents the former adoption boundary.",
-      "updatePolicy": "Pinned exact version, commit, npm integrity and tarball digest; no latest tracking or direct install. Every update starts at docs/source-intake.md, re-runs the retained upstream baseline, replays P1-P7, preserves the author-test disposition and removes the fork if a lower-maintenance mature runtime proves equal. TUI, supi-core, second config/lifecycle owners, arbitrary caps, trim, preselection, ordinary-text fallback and fake restart recovery remain rejected."
+      "updatePolicy": "Historical tombstone. Do not regenerate or fork the deleted OA ask-user package. Provenance, rights and former pin facts stay here."
     },
     {
       "id": "pi-agent-core-interactive-barrier",

@@ -56,7 +56,7 @@ const HARNESSOS_STUDIO_CONTRACT = [
   "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
 ].join("\n");
 
-/** Render the Host policy consumed by both OA and stock Pi. */
+/** Render the Host policy consumed by stock Pi. */
 export function makePiHostSystemPrompt(input: {
   readonly gatewayControlAvailable: boolean;
   readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;

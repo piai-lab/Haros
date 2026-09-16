@@ -5393,7 +5393,7 @@ export default function Sidebar() {
       id: "feedback",
       label: t("search.feedback"),
       description: t("search.feedbackDescription"),
-      keywords: ["feedback", "bug", "issue", "problem", "report", "support", "oa"],
+      keywords: ["feedback", "bug", "issue", "problem", "report", "support"],
     },
     {
       id: "settings",

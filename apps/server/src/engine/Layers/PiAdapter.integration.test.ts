@@ -143,9 +143,9 @@ describe("Pi native resource projection", () => {
   });
 
   it("keeps usable native tools visible when Haros MCP discovery fails", () => {
-    expect(makePiGatewayLoadWarning("OA")).toEqual({
+    expect(makePiGatewayLoadWarning("Pi")).toEqual({
       message:
-        "Haros MCP tools could not be loaded for this OA session. Engine-native tools remain available; Haros MCP actions are unavailable.",
+        "Haros MCP tools could not be loaded for this Pi session. Engine-native tools remain available; Haros MCP actions are unavailable.",
       detail: { source: "harnessos-mcp", availability: "failed" },
     });
   });

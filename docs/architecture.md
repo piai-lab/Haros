@@ -19,7 +19,8 @@ Engine is stop-first. A launch failure preserves the prompt and Queue and never 
 different Engine.
 
 Native Engine sessions are not product Threads. Haros does not copy or fabricate native
-continuation across Engines.
+continuation across Engines. Bundled OA web access is removed; public search belongs to the
+selected Engine or an explicit connector, not a Haros-owned web-access package.
 
 ## HostGateway
 
