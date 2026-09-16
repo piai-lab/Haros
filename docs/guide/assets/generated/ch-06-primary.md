@@ -61,7 +61,7 @@ extended_description: "In the Local HostGateway execution band, a project-file r
 Explanatory job: separate local HostGateway execution from connected-service execution while showing
 the decision, coordination, owner, and recorded-result responsibilities in each row.
 
-Reviewed sources: `README.md#what-the-harness-os-owns`; `docs/architecture.md#state-boundaries`;
+Reviewed sources: `README.md#what-haros-owns`; `docs/architecture.md#state-boundaries`;
 `docs/architecture.md#hostgateway`.
 
 Final prompt contract: two visibly separate warm-white responsibility bands. The top band contains

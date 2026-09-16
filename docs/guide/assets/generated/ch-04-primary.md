@@ -54,7 +54,7 @@ Explanatory job: provide the five-stage first-task journey without implying five
 states.
 
 Reviewed source anchors: `packages/contracts/src/orchestration.ts#TurnDispatchMode`;
-`apps/server/src/orchestration/decider.ts#thread.turn.start`; `README.md#what-the-harness-os-owns`.
+`apps/server/src/orchestration/decider.ts#thread.turn.start`; `README.md#what-haros-owns`.
 
 Final prompt: five equal rectangles in a strict `ASK → QUEUE → RUN → REVIEW → RECOVER` sequence;
 `PRODUCT THREAD RETAINED` spans below; no icons, fake UI, gears, lifebuoy, or extra text.

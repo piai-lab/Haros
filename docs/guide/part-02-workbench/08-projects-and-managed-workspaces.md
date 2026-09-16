@@ -6,7 +6,7 @@ language: en
 edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
-  - README.md#three-ways-into-the-harness-os
+  - README.md#three-ways-into-haros
   - docs/architecture.md#product-orchestration
   - packages/contracts/src/project.ts#ProjectKind
   - packages/contracts/src/orchestration.ts#OrchestrationProject

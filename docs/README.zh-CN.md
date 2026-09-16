@@ -18,10 +18,11 @@
     <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
     <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
     <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
+    <img alt="DeepSeek Engine" src="https://img.shields.io/badge/DeepSeek-4D6BFE?style=flat-square" />
   </p>
 </div>
 
-Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode 和 Pi
+Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode、Pi 和 DeepSeek
 带进同一套工作台。每轮都能选择最合适的 Engine，而不必搬走项目、重建上下文，
 也不会失去统一的工作历史。
 
@@ -33,7 +34,7 @@ Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode
 这条边界是有意设计的。Haros 会冻结每个排队任务选定的 Engine、模型和参数；它不会
 伪造跨 Engine continuation，也不会在启动失败时悄悄换用另一个 Engine。
 
-## Harness OS 负责什么
+## Haros 负责什么
 
 | Haros 的唯一 owner | 始终一致的事实                           |
 | ------------------ | ---------------------------------------- |
@@ -42,7 +43,7 @@ Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode
 | 本地工具           | 文件、Git、终端、浏览器与设备            |
 | 恢复               | 可供对账和恢复的已提交 prompt 与排队任务 |
 
-## 进入 Harness OS 的三种方式
+## 进入 Haros 的三种方式
 
 | 工作面 | 最适合                     | 工作区                 |
 | ------ | -------------------------- | ---------------------- |

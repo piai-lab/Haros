@@ -6,7 +6,7 @@ language: en
 edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
-  - README.md#three-ways-into-the-harness-os
+  - README.md#three-ways-into-haros
   - docs/architecture.md#product-orchestration
   - packages/shared/src/productSurface.ts#ProductSurface
   - packages/contracts/src/orchestration.ts#ProjectKind
@@ -277,7 +277,7 @@ revisit the distinction.
 
 ## Source trail
 
-- `README.md`, “Three ways into the Harness OS,” establishes the public surface promises.
+- `README.md`, “Three ways into Haros,” establishes the public surface promises.
 - `docs/architecture.md`, “Product orchestration” and “State boundaries,” establishes the shared
   product facts and Engine-private separation.
 - `packages/shared/src/productSurface.ts` owns the projection from Project kind to product surface.

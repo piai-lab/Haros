@@ -48,7 +48,7 @@ extended_description: "When an outward request fails, Haros reports failure and 
 
 Explanatory job: show that an outward failure is explicit and does not erase local product work.
 
-Reviewed source anchors: `README.md#what-the-harness-os-owns`; `docs/architecture.md#engines`;
+Reviewed source anchors: `README.md#what-haros-owns`; `docs/architecture.md#engines`;
 `docs/architecture.md#state-boundaries`.
 
 Final prompt: strict `REQUEST SENT → OUTWARD CALL FAILS → CONTROL RETURNS`; lower durable band

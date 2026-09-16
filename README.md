@@ -18,10 +18,11 @@
     <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
     <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
     <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
+    <img alt="DeepSeek Engine" src="https://img.shields.io/badge/DeepSeek-4D6BFE?style=flat-square" />
   </p>
 </div>
 
-Haros brings Codex, Claude, Cursor, Antigravity, Grok, Droid, Kilo, OpenCode, and Pi into one
+Haros brings Codex, Claude, Cursor, Antigravity, Grok, Droid, Kilo, OpenCode, Pi, and DeepSeek into one
 coherent workbench. Pick the right Engine for each turn without moving the project, rebuilding
 context, or giving up a shared history.
 
@@ -34,7 +35,7 @@ That boundary is deliberate. Haros freezes the exact Engine, model, and options 
 queued turn. It never invents continuation across Engines and never hides a launch failure by
 silently choosing another one.
 
-## What the Harness OS owns
+## What Haros owns
 
 | One Haros owner | What stays consistent                                    |
 | --------------- | -------------------------------------------------------- |
@@ -43,7 +44,7 @@ silently choosing another one.
 | Local tools     | Files, Git, terminal, browser, and devices               |
 | Recovery        | Submitted prompts and queued work remain recoverable     |
 
-## Three ways into the Harness OS
+## Three ways into Haros
 
 | Surface | Best for                                   | Workspace                    |
 | ------- | ------------------------------------------ | ---------------------------- |

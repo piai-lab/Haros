@@ -7,7 +7,7 @@ edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
   - README.md#every-engine-enters-the-same-workbench
-  - README.md#what-the-harness-os-owns
+  - README.md#what-haros-owns
   - docs/architecture.md#product-orchestration
   - docs/architecture.md#engines
   - docs/architecture.md#state-boundaries

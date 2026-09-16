@@ -46,7 +46,7 @@ extended_description: "Haros owns durable Projects, Threads, Queue, and Timeline
 
 Explanatory job: encode the central thesis as two distinct ownership layers.
 
-Reviewed source anchors: `README.md#what-the-harness-os-owns`; `docs/architecture.md#product-orchestration`;
+Reviewed source anchors: `README.md#what-haros-owns`; `docs/architecture.md#product-orchestration`;
 `docs/architecture.md#engines`.
 
 Final prompt: upper `DURABLE PRODUCT WORK` boundary contains `PROJECTS`, `THREADS`, `QUEUE`, and

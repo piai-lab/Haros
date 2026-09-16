@@ -62,7 +62,7 @@ extended_description: "Agent supports project work in a user-chosen folder and p
 Explanatory job: orient a newcomer to three different work-surface boundaries without claiming a
 shared filesystem or native Engine Session continuity.
 
-Reviewed sources: `README.md#three-ways-into-the-harness-os`;
+Reviewed sources: `README.md#three-ways-into-haros`;
 `docs/architecture.md#product-orchestration`; `packages/shared/src/productSurface.ts`.
 
 Final prompt contract: a warm-white, text-only technical matrix with one column per surface, four

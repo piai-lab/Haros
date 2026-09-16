@@ -55,7 +55,7 @@ extended_description: "Project work maps to Agent and a user-chosen folder. Focu
 Explanatory job: map each job shape to the appropriate Haros surface and truthful workspace boundary
 while preserving one product owner.
 
-Reviewed sources: `README.md#three-ways-into-the-harness-os`;
+Reviewed sources: `README.md#three-ways-into-haros`;
 `docs/architecture.md#product-orchestration`; `packages/shared/src/productSurface.ts`.
 
 Final prompt contract: a warm-white four-column decision matrix with three source-backed job rows and

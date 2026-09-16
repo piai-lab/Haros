@@ -50,7 +50,7 @@ extended_description: "Projects, Product Threads, local tools, and recovery conv
 
 Explanatory job: contrast fragmented work facts with one coherent workbench.
 
-Reviewed source anchors: `README.md#what-the-harness-os-owns`; `README.md#three-ways-into-the-harness-os`;
+Reviewed source anchors: `README.md#what-haros-owns`; `README.md#three-ways-into-haros`;
 `docs/architecture.md#product-orchestration`.
 
 Accepted composition: a warm-white technical ownership anatomy separates Durable product facts,

@@ -6,8 +6,8 @@ language: en
 edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
-  - README.md#three-ways-into-the-harness-os
-  - README.md#what-the-harness-os-owns
+  - README.md#three-ways-into-haros
+  - README.md#what-haros-owns
   - docs/architecture.md#product-orchestration
   - docs/architecture.md#engines
   - docs/architecture.md#hostgateway
@@ -287,7 +287,7 @@ home-directory access, or real private Engine state.
 
 ## Source trail
 
-- `README.md`, “Three ways into the Harness OS” and “What the Harness OS owns,” states the public continuity,
+- `README.md`, “Three ways into Haros” and “What Haros owns,” states the public continuity,
   local-tool, local-first, recovery, and replaceable-execution promises.
 - `docs/architecture.md`, “Product orchestration,” owns the durable product facts.
 - `docs/architecture.md`, “Engines” and “State boundaries,” separates Product Threads from native

@@ -42,7 +42,7 @@ extended_description: "One task moves from ask to run to review; after a disrupt
 
 Explanatory job: show one task retaining product context across execution and recovery.
 
-Reviewed source anchors: `README.md#what-the-harness-os-owns`; `docs/architecture.md#engines`;
+Reviewed source anchors: `README.md#what-haros-owns`; `docs/architecture.md#engines`;
 `docs/architecture.md#state-boundaries`.
 
 Accepted composition: a rectangle-only Ask → Run → Review sequence crosses a labeled Disruption

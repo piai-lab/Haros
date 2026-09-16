@@ -6,7 +6,7 @@ language: en
 edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
 source_anchors:
-  - README.md#what-the-harness-os-owns
+  - README.md#what-haros-owns
   - docs/architecture.md#hostgateway
   - docs/architecture.md#state-boundaries
   - apps/server/src/hostGateway/mcpInjection.ts#callHostGatewayMcpTool
@@ -282,7 +282,7 @@ directories.
 
 ## Source trail
 
-- `README.md`, “What the Harness OS owns,” states the public local-first, built-in-tool, recovery, and replaceable-
+- `README.md`, “What Haros owns,” states the public local-first, built-in-tool, recovery, and replaceable-
   execution promises.
 - `docs/architecture.md`, “State boundaries,” identifies Haros product state, Engine-private state,
   and the prohibition on importing retired namespaces.
