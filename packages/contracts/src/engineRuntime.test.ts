@@ -44,16 +44,17 @@ describe("EngineRuntimeEvent", () => {
     expect(parsed.payload.tasks[1]?.status).toBe("inProgress");
   });
 
-  it("migrates retired OA runtime events onto Pi", () => {
-    const parsed = decodeRuntimeEvent({
-      type: "session.started",
-      eventId: "event-oa-1",
-      engine: "oa",
-      createdAt: "2026-02-28T00:00:00.000Z",
-      threadId: "thread-oa",
-      payload: { message: "legacy OA session" },
-    });
-    expect(parsed.engine).toBe("pi");
+  it("rejects retired OA runtime events instead of rewriting them as Pi", () => {
+    expect(() =>
+      decodeRuntimeEvent({
+        type: "session.started",
+        eventId: "event-oa-1",
+        engine: "oa",
+        createdAt: "2026-02-28T00:00:00.000Z",
+        threadId: "thread-oa",
+        payload: { message: "legacy OA session" },
+      }),
+    ).toThrow();
   });
 
   it("decodes proposed-plan completion events", () => {

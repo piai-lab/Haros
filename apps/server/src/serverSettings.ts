@@ -13,7 +13,6 @@ import {
   DEFAULT_SERVER_SETTINGS,
   type EngineSelection,
   type EngineWithDefaultModel,
-  migrateRetiredEngineKind,
   ServerSettings,
   ServerSettingsError,
   type ServerSettingsPatch,
@@ -377,9 +376,8 @@ function migrateRetiredEngineSettings(settings: unknown): {
   let migrated = false;
   let next: Record<string, unknown> = settings;
 
-  const defaultEngine = migrateRetiredEngineKind(settings.defaultEngine);
-  if (defaultEngine !== settings.defaultEngine) {
-    next = { ...next, defaultEngine };
+  if (settings.defaultEngine === "oa") {
+    next = { ...next, defaultEngine: undefined };
     migrated = true;
   }
 

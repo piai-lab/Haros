@@ -227,47 +227,31 @@ it.effect("preserves Pi model selections when decoding model selections", () =>
   }),
 );
 
-it.effect("migrates retired OA model selections onto Pi without rewriting Pi as OA", () =>
+it.effect("rejects retired OA model selections instead of rewriting them as Pi", () =>
   Effect.gen(function* () {
-    const parsed = yield* decodeEngineSelection({
+    const result = yield* decodeEngineSelection({
       engine: "oa",
       model: "openai/gpt-5.6-terra",
       options: { thinkingLevel: "xhigh" },
-    });
+    }).pipe(Effect.result);
 
-    assert.deepStrictEqual(parsed, {
-      engine: "pi",
-      model: "openai/gpt-5.6-terra",
-      options: { thinkingLevel: "xhigh" },
-    });
-
-    const encoded = yield* Schema.encodeUnknownEffect(EngineSelection)(parsed);
-    assert.deepStrictEqual(encoded, {
-      engine: "pi",
-      model: "openai/gpt-5.6-terra",
-      options: { thinkingLevel: "xhigh" },
-    });
+    assert.equal(result._tag, "Failure");
   }),
 );
 
-it.effect("migrates retired OA onto Pi for bare EngineKind fields without encoding OA", () =>
+it.effect("rejects retired OA on bare EngineKind fields and thread handoffs", () =>
   Effect.gen(function* () {
-    assert.equal(yield* Schema.decodeUnknownEffect(EngineKind)("oa"), "pi");
+    const engineResult = yield* Schema.decodeUnknownEffect(EngineKind)("oa").pipe(Effect.result);
+    assert.equal(engineResult._tag, "Failure");
     assert.equal(yield* Schema.encodeUnknownEffect(EngineKind)("pi"), "pi");
 
-    const handoff = yield* Schema.decodeUnknownEffect(ThreadHandoff)({
+    const handoffResult = yield* Schema.decodeUnknownEffect(ThreadHandoff)({
       sourceThreadId: "thread-oa-source",
       sourceEngine: "oa",
       importedAt: "2026-02-28T00:00:00.000Z",
       bootstrapStatus: "completed",
-    });
-    assert.equal(handoff.sourceEngine, "pi");
-    assert.deepStrictEqual(yield* Schema.encodeUnknownEffect(ThreadHandoff)(handoff), {
-      sourceThreadId: "thread-oa-source",
-      sourceEngine: "pi",
-      importedAt: "2026-02-28T00:00:00.000Z",
-      bootstrapStatus: "completed",
-    });
+    }).pipe(Effect.result);
+    assert.equal(handoffResult._tag, "Failure");
   }),
 );
 

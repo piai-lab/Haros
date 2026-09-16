@@ -44,7 +44,7 @@ describe("engine identity", () => {
     expect(firstRunnableEngine()).toBeNull();
     expect(isRunnableEngine("codex")).toBe(true);
     expect(isRunnableEngine("deepseek")).toBe(true);
-    expect(decodePersistedEngineKind("oa")).toBe("pi");
+    expect(decodePersistedEngineKind("oa")).toBeNull();
     expect(decodePersistedEngineKind("pi")).toBe("pi");
     expect(decodePersistedEngineKind("unknown")).toBeNull();
   });

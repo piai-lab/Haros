@@ -1455,12 +1455,16 @@ export function normalizeThreadSession(
   if (!incoming) {
     return null;
   }
+  const engine = decodePersistedEngineKind(incoming.engine);
+  if (engine === null) {
+    return null;
+  }
   const nextLastError =
     incoming.lastError && !isNonFatalThreadErrorMessage(incoming.lastError)
       ? incoming.lastError
       : undefined;
   const nextSession = {
-    engine: toLegacyEngine(incoming.engine),
+    engine,
     status: toLegacySessionStatus(incoming.status),
     orchestrationStatus: incoming.status,
     activeTurnId: incoming.activeTurnId ?? undefined,
@@ -1960,10 +1964,6 @@ function toLegacySessionStatus(
     case "stopped":
       return "closed";
   }
-}
-
-function toLegacyEngine(engine: string | null): EngineKind {
-  return decodePersistedEngineKind(engine) ?? "codex";
 }
 
 function attachmentPreviewRoutePath(attachmentId: string): string {

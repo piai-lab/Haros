@@ -9,6 +9,7 @@ import {
   mergeReadModelThreadDetailWithLiveHotPath,
   normalizeChatMessage,
   normalizeActivities,
+  normalizeThreadSession,
   type ThreadActivityAccumulator,
 } from "./storeNormalization";
 import { makeActivity, makeReadModelThread, makeThread } from "./storeTestFixtures";
@@ -487,5 +488,38 @@ describe("createThreadActivityAccumulator", () => {
 
     expect(previous).toEqual(snapshot);
     expect(accumulator.result()).not.toBe(previous);
+  });
+});
+
+describe("normalizeThreadSession", () => {
+  it("drops retired OA and unknown session engines instead of rewriting them as Codex", () => {
+    expect(
+      normalizeThreadSession(
+        {
+          threadId: makeReadModelThread({}).id,
+          status: "ready",
+          engine: "oa",
+          runtimeMode: "full-access",
+          activeTurnId: null,
+          lastError: null,
+          updatedAt: "2026-02-27T00:00:00.000Z",
+        },
+        undefined,
+      ),
+    ).toBeNull();
+    expect(
+      normalizeThreadSession(
+        {
+          threadId: makeReadModelThread({}).id,
+          status: "ready",
+          engine: "unknown",
+          runtimeMode: "full-access",
+          activeTurnId: null,
+          lastError: null,
+          updatedAt: "2026-02-27T00:00:00.000Z",
+        },
+        undefined,
+      ),
+    ).toBeNull();
   });
 });

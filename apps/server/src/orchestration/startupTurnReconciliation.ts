@@ -36,7 +36,7 @@ import type {
   RuntimeMode,
   ThreadId,
 } from "@harnessos/contracts";
-import { CommandId, EventId } from "@harnessos/contracts";
+import { CommandId, decodePersistedEngineKind, EventId } from "@harnessos/contracts";
 import {
   buildStalePendingRequestFailureDetail,
   derivePendingThreadRequestIds,
@@ -246,7 +246,7 @@ export function planRestartTurnReconciliation(input: {
         session: {
           threadId: thread.id,
           status: thread.session?.status ?? "interrupted",
-          engine: thread.session?.engine ?? null,
+          engine: decodePersistedEngineKind(thread.session?.engine),
           runtimeMode: thread.session?.runtimeMode ?? thread.runtimeMode,
           activeTurnId: null,
           lastError: thread.session?.lastError ?? null,
@@ -263,7 +263,7 @@ export function planRestartTurnReconciliation(input: {
       session: {
         threadId: thread.id,
         status: "interrupted",
-        engine: thread.session?.engine ?? null,
+        engine: decodePersistedEngineKind(thread.session?.engine),
         // Prefer the session's own mode; fall back to the thread default when the
         // thread never had a materialized session row.
         runtimeMode: thread.session?.runtimeMode ?? thread.runtimeMode,

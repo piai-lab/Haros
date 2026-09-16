@@ -1040,7 +1040,7 @@ const make = Effect.gen(function* () {
       session: {
         threadId: input.threadId,
         status: "error",
-        engine: thread.session?.engine ?? thread.engineSelection.engine,
+        engine: decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine,
         runtimeMode: input.runtimeMode ?? thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: null,
         lastError: input.detail,
@@ -1340,8 +1340,7 @@ const make = Effect.gen(function* () {
   }) {
     const projectedThread = yield* resolveThread(input.threadId);
     const engine = projectedThread
-      ? (decodePersistedEngineKind(projectedThread.session?.engine) ??
-        projectedThread.engineSelection.engine)
+      ? (decodePersistedEngineKind(projectedThread.session?.engine) ?? undefined)
       : undefined;
     const rebuildsContext =
       engine !== undefined &&
@@ -1836,8 +1835,9 @@ const make = Effect.gen(function* () {
       // instructions, normalize skill/agent mentions, and forward the
       // structured context so the adapter can project attachments into the
       // text-only subagent steering channel.
-      const steerEngine = (engineSessionThread.session?.engine ??
-        engineSessionThread.engineSelection.engine) as EngineKind;
+      const steerEngine =
+        decodePersistedEngineKind(engineSessionThread.session?.engine) ??
+        engineSessionThread.engineSelection.engine;
       const steerSkillResult =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
@@ -1935,8 +1935,7 @@ const make = Effect.gen(function* () {
     // then fail locally without any turn being sent or a rollback owner left.
     const targetEngine = input.engineSelection?.engine ?? thread.engineSelection.engine;
     const preEnsureLiveSession = input.preEnsureLiveSession;
-    const projectedEngine =
-      decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine;
+    const projectedEngine = decodePersistedEngineKind(thread.session?.engine) ?? undefined;
     const previousEngine = preEnsureLiveSession?.engine ?? projectedEngine;
     const requiresCrossProviderTranscriptBootstrap =
       targetEngine !== previousEngine &&
@@ -2009,13 +2008,13 @@ const make = Effect.gen(function* () {
     const selectedEngine =
       input.engineSelection?.engine ??
       threadSessionEngineSelections.get(input.threadId)?.engine ??
-      thread.session?.engine ??
+      decodePersistedEngineKind(thread.session?.engine) ??
       thread.engineSelection.engine;
     // Skill aliases belong to the newly submitted user segment only. Imported
     // context is durable source material and must remain byte-exact, including
     // literal slash commands from an earlier turn.
     const normalizedLatestUserMessageText = normalizeSkillMentionTextForProvider({
-      engine: selectedEngine as EngineKind,
+      engine: selectedEngine,
       messageText: input.messageText,
       ...(input.skills !== undefined ? { skills: input.skills } : {}),
     });
@@ -2989,7 +2988,7 @@ const make = Effect.gen(function* () {
       const liveSession = yield* resolveLiveEngineSession(event.payload.threadId);
       const activeEngine =
         liveSession?.engine ??
-        thread.session?.engine ??
+        decodePersistedEngineKind(thread.session?.engine) ??
         threadSessionEngineSelections.get(event.payload.threadId)?.engine ??
         thread.engineSelection.engine;
       const targetEngine = admittedEngineSelection.engine;
@@ -3645,7 +3644,8 @@ const make = Effect.gen(function* () {
         blockedGoalContinuations.delete(thread.id);
 
         const createdAt = event.payload.createdAt;
-        const engine = thread.session?.engine ?? thread.engineSelection.engine;
+        const engine =
+          decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine;
         const turnStartSession = deriveTurnStartSession({
           threadId: thread.id,
           currentSession: thread.session,
@@ -4324,7 +4324,8 @@ const make = Effect.gen(function* () {
         session: {
           threadId: payload.threadId,
           status: "starting",
-          engine: thread.session?.engine ?? thread.engineSelection.engine,
+          engine:
+            decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine,
           runtimeMode: payload.runtimeMode,
           activeTurnId: null,
           lastError: null,
@@ -4369,7 +4370,7 @@ const make = Effect.gen(function* () {
   }) {
     const thread = yield* resolveThread(input.threadId);
     const engine = thread
-      ? (decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine)
+      ? (decodePersistedEngineKind(thread.session?.engine) ?? undefined)
       : undefined;
     const rebuildsContext =
       engine !== undefined &&
@@ -4403,7 +4404,7 @@ const make = Effect.gen(function* () {
     const activeEngine =
       liveSession?.engine ??
       decodePersistedEngineKind(engineSessionThread?.session?.engine) ??
-      thread?.engineSelection.engine;
+      undefined;
     const replacementRequirement =
       thread !== undefined
         ? yield* resolveSessionReplacementRequirement({
@@ -4451,7 +4452,8 @@ const make = Effect.gen(function* () {
         session: {
           threadId: event.payload.threadId,
           status: "starting",
-          engine: thread.session?.engine ?? thread.engineSelection.engine,
+          engine:
+            decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine,
           runtimeMode: event.payload.runtimeMode,
           activeTurnId: engineServiceOwnsReplacement ? activeTurnId : null,
           lastError: null,
@@ -4594,7 +4596,7 @@ const make = Effect.gen(function* () {
         session: {
           threadId: thread.id,
           status: "interrupted",
-          engine: thread.session.engine ?? null,
+          engine: decodePersistedEngineKind(thread.session.engine),
           runtimeMode: thread.session.runtimeMode ?? DEFAULT_RUNTIME_MODE,
           // Preserve the active turn until the engine emits the terminal child event.
           activeTurnId: thread.session.activeTurnId,
@@ -4645,7 +4647,7 @@ const make = Effect.gen(function* () {
       session: {
         threadId: thread.id,
         status: "stopped",
-        engine: thread.session?.engine ?? null,
+        engine: decodePersistedEngineKind(thread.session?.engine),
         runtimeMode: thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: null,
         lastError: thread.session?.lastError ?? null,

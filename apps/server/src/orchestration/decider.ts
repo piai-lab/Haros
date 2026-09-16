@@ -11,6 +11,7 @@ import type {
   ThreadMarker,
 } from "@harnessos/contracts";
 import {
+  decodePersistedEngineKind,
   EventId,
   MAX_PINNED_PROJECTS,
   PINNED_MESSAGES_MAX_COUNT,
@@ -1956,7 +1957,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
         createdAt: command.createdAt,
       } as const;
-      const activeEngine = targetThread.session?.engine ?? targetThread.engineSelection.engine;
+      const activeEngine =
+        decodePersistedEngineKind(targetThread.session?.engine) ??
+        targetThread.engineSelection.engine;
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
       const admittedBindingMatchesCurrent = turnStartBindingMatchesCommitted({
@@ -2411,7 +2414,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           session: {
             threadId: command.threadId,
             status: "starting",
-            engine: thread.session?.engine ?? thread.engineSelection.engine,
+            engine:
+              decodePersistedEngineKind(thread.session?.engine) ?? thread.engineSelection.engine,
             runtimeMode: command.runtimeMode,
             activeTurnId: null,
             lastError: null,

@@ -1,9 +1,4 @@
-import {
-  decodePersistedEngineKind,
-  isRetiredEngineKind,
-  type EngineKind,
-  type ThreadId,
-} from "@harnessos/contracts";
+import { decodePersistedEngineKind, type EngineKind, type ThreadId } from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { EngineSessionRuntimeRepository } from "../../persistence/Services/EngineSessionRuntime.ts";
@@ -27,22 +22,17 @@ function decodeEngineKind(
   engine: string,
   operation: string,
 ): Effect.Effect<EngineKind, EngineSessionDirectoryPersistenceError> {
-  if (isRetiredEngineKind(engine)) {
-    return Effect.fail(
-      new EngineSessionDirectoryPersistenceError({
-        operation,
-        detail: `Persisted engine '${engine}' is retired and cannot be resumed.`,
-      }),
-    );
-  }
-  const migrated = decodePersistedEngineKind(engine);
-  if (migrated !== null) {
-    return Effect.succeed(migrated);
+  const decoded = decodePersistedEngineKind(engine);
+  if (decoded !== null) {
+    return Effect.succeed(decoded);
   }
   return Effect.fail(
     new EngineSessionDirectoryPersistenceError({
       operation,
-      detail: `Unknown persisted engine '${engine}'.`,
+      detail:
+        engine === "oa"
+          ? `Persisted engine '${engine}' is retired and cannot be resumed.`
+          : `Unknown persisted engine '${engine}'.`,
     }),
   );
 }
@@ -110,18 +100,12 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
 
     const now = new Date().toISOString();
     const existingEngine =
-      existingRuntime === undefined || isRetiredEngineKind(existingRuntime.engine)
-        ? undefined
-        : decodePersistedEngineKind(existingRuntime.engine);
-    const engineChanged =
-      existingRuntime !== undefined &&
-      (isRetiredEngineKind(existingRuntime.engine) || existingEngine !== binding.engine);
+      existingRuntime === undefined ? undefined : decodePersistedEngineKind(existingRuntime.engine);
+    const engineChanged = existingRuntime !== undefined && existingEngine !== binding.engine;
     const compatibleRuntime = engineChanged ? undefined : existingRuntime;
     const existingAdapterKey = existingRuntime?.adapterKey;
-    const migratedAdapterKey = existingAdapterKey
-      ? isRetiredEngineKind(existingAdapterKey)
-        ? undefined
-        : (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
+    const decodedAdapterKey = existingAdapterKey
+      ? (decodePersistedEngineKind(existingAdapterKey) ?? existingAdapterKey)
       : undefined;
     yield* repository
       .upsert({
@@ -129,7 +113,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
         engine: binding.engine,
         adapterKey:
           binding.adapterKey ??
-          (engineChanged ? binding.engine : (migratedAdapterKey ?? binding.engine)),
+          (engineChanged ? binding.engine : (decodedAdapterKey ?? binding.engine)),
         runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
         status: binding.status ?? compatibleRuntime?.status ?? "running",
         lifecycleGeneration:

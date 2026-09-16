@@ -8,6 +8,7 @@
  * @module engineRuntimeReconciliation
  */
 import {
+  decodePersistedEngineKind,
   TurnId,
   type OrchestrationSession,
   type OrchestrationThreadShell,
@@ -102,7 +103,7 @@ function terminalProjectedSession(
       return {
         ...session,
         status: session.status,
-        engine: nonEmptyTrimmed(session.engine ?? undefined) ?? null,
+        engine: decodePersistedEngineKind(session.engine),
         lastError: nonEmptyTrimmed(session.lastError ?? undefined) ?? null,
         activeTurnId: turnIdOrNull(session.activeTurnId),
       };

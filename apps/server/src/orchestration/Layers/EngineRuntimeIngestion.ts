@@ -15,6 +15,7 @@ import {
   type OrchestrationThread,
   type OrchestrationThreadShell,
   type EngineKind,
+  decodePersistedEngineKind,
   type EngineRuntimeEvent,
 } from "@harnessos/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
@@ -3182,7 +3183,8 @@ const make = Effect.gen(function* () {
       // A native steer rides the live turn, so no later turn.started will
       // arrive to match a pending delivery-mode request — bind to the live
       // turn immediately instead.
-      const steerEngine = thread?.session?.engine ?? thread?.engineSelection.engine;
+      const steerEngine =
+        decodePersistedEngineKind(thread?.session?.engine) ?? thread?.engineSelection.engine;
       const isNativeSteer =
         event.payload.dispatchMode === "steer" &&
         steerEngine !== undefined &&

@@ -1,5 +1,4 @@
 import { Option, Schema, SchemaIssue, Struct } from "effect";
-import * as SchemaGetter from "effect/SchemaGetter";
 import {
   AntigravityModelOptions,
   ClaudeModelOptions,
@@ -22,9 +21,6 @@ export {
   ENGINE_KINDS,
   EngineKind,
   decodePersistedEngineKind,
-  migrateRetiredEngineKind,
-  isRetiredEngineKind,
-  RETIRED_ENGINE_KIND_ALIASES,
 } from "./engineIdentity";
 import { ProjectKind } from "./project";
 import {
@@ -201,39 +197,9 @@ const engineSelectionMembers = ENGINE_KINDS.map(
     }),
 );
 
-const RetiredOaEngineSelectionEncoded = Schema.Struct({
-  engine: Schema.Literal("oa"),
-  model: TrimmedNonEmptyString,
-  options: Schema.optional(PiModelOptions),
-});
-
-const RetiredOaEngineSelection = RetiredOaEngineSelectionEncoded.pipe(
-  Schema.decodeTo(PiEngineSelection, {
-    decode: SchemaGetter.transform(
-      (value): PiEngineSelection => ({
-        engine: "pi",
-        model: value.model,
-        ...(value.options === undefined ? {} : { options: value.options }),
-      }),
-    ),
-    // Encode is unused by EngineSelection: the live Pi member is earlier in the
-    // union, so persisted writes stay `engine: "pi"`.
-    encode: SchemaGetter.transform((value: PiEngineSelection) => ({
-      engine: "oa" as const,
-      model: value.model,
-      ...(value.options === undefined ? {} : { options: value.options }),
-    })),
-  }),
-);
-
-export const EngineSelection = Schema.Union([
-  ...engineSelectionMembers,
-  RetiredOaEngineSelection,
-] as unknown as readonly [
-  Schema.Top,
-  Schema.Top,
-  ...Schema.Top[],
-]) as unknown as Schema.Codec<EngineSelection>;
+export const EngineSelection = Schema.Union(
+  engineSelectionMembers as unknown as readonly [Schema.Top, Schema.Top, ...Schema.Top[]],
+) as unknown as Schema.Codec<EngineSelection>;
 
 export const CodexEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),

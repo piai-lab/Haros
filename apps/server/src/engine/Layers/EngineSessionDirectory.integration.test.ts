@@ -268,21 +268,21 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       fs.rmSync(tempDir, { recursive: true, force: true });
     }));
 
-  it("skips legacy bindings with unknown engine names when listing all bindings", () =>
+  it("skips retired OA bindings when listing all bindings", () =>
     Effect.gen(function* () {
       const directory = yield* EngineSessionDirectory;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;
 
-      const legacyThreadId = ThreadId.makeUnsafe("thread-legacy-engine");
+      const retiredThreadId = ThreadId.makeUnsafe("thread-retired-oa");
       const codexThreadId = ThreadId.makeUnsafe("thread-known-engine");
 
       yield* runtimeRepository.upsert({
-        threadId: legacyThreadId,
-        engine: "kilo",
-        adapterKey: "kilo",
+        threadId: retiredThreadId,
+        engine: "oa",
+        adapterKey: "oa",
         runtimeMode: "full-access",
         status: "running",
-        lifecycleGeneration: "legacy-test-kilo",
+        lifecycleGeneration: "legacy-test-oa",
         lastSeenAt: new Date().toISOString(),
         admission: null,
         resumeCursor: null,
@@ -297,6 +297,35 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       assert.deepEqual(
         bindings.map((binding) => binding.threadId),
         [codexThreadId],
+      );
+    }));
+
+  it("refuses to resume retired OA bindings", () =>
+    Effect.gen(function* () {
+      const directory = yield* EngineSessionDirectory;
+      const runtimeRepository = yield* EngineSessionRuntimeRepository;
+      const threadId = ThreadId.makeUnsafe("thread-oa-resume");
+
+      yield* runtimeRepository.upsert({
+        threadId,
+        engine: "oa",
+        adapterKey: "oa",
+        runtimeMode: "full-access",
+        status: "running",
+        lifecycleGeneration: "legacy-test-oa-resume",
+        lastSeenAt: new Date().toISOString(),
+        admission: null,
+        resumeCursor: null,
+        runtimePayload: null,
+      });
+
+      const result = yield* directory.getEngine(threadId).pipe(Effect.result);
+      assertFailure(
+        result,
+        new EngineSessionDirectoryPersistenceError({
+          operation: "EngineSessionDirectory.getBinding",
+          detail: "Persisted engine 'oa' is retired and cannot be resumed.",
+        }),
       );
     }));
 });

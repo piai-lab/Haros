@@ -963,7 +963,7 @@ describe("Timeline public reasoning disclosure", () => {
 
         const brain = host.querySelector<HTMLElement>("[data-central-icon-name='brain-2']");
         const github = host.querySelector<SVGElement>("[data-tool-icon='github'] svg");
-        const harnessos = host.querySelector<SVGElement>("[data-tool-icon='oa'] svg");
+        const harnessos = host.querySelector<SVGElement>("[data-tool-icon='haros'] svg");
         expect(brain?.getBoundingClientRect().width).toBeCloseTo(16, 1);
         expect(github?.getBoundingClientRect().width).toBeCloseTo(14, 1);
         // The product mark has transparent artwork padding, so its narrow icon

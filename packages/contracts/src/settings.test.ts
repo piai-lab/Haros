@@ -63,6 +63,10 @@ describe("agent tool settings contract", () => {
 });
 
 describe("retired Haros prompt settings", () => {
+  it("refuses retired OA as defaultEngine instead of rewriting it as Pi", () => {
+    expect(() => Schema.decodeUnknownSync(ServerSettings)({ defaultEngine: "oa" })).toThrow();
+  });
+
   it("ignores the deleted first-party engine key in persisted settings and public patches", () => {
     const settings = Schema.decodeUnknownSync(ServerSettings)({
       engines: {
