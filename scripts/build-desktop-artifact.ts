@@ -22,6 +22,7 @@ import {
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { resolvePackagedAppVersion } from "./lib/app-version.ts";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeLegalMetadata } from "./lib/legal-metadata.ts";
@@ -149,6 +150,22 @@ class BuildScriptError extends Data.TaggedError("BuildScriptError")<{
   readonly message: string;
   readonly cause?: unknown;
 }> {}
+
+function resolveExactHeadVersionTags(repoRoot: string): ReadonlyArray<string> {
+  const result = spawnSync("git", ["tag", "--points-at", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `Unable to list version tags on HEAD: ${result.stderr.trim() || "git failed"}.`,
+    );
+  }
+  return result.stdout
+    .split(/\r?\n/u)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
 
 function resolveGitCommitHash(repoRoot: string): string | undefined {
   const result = spawnSync("git", ["rev-parse", "HEAD"], {
@@ -894,7 +911,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       }),
   });
 
-  const appVersion = options.version ?? serverPackageJson.version;
   if (options.localApp && (options.platform !== "mac" || options.target !== "dir")) {
     return yield* new BuildScriptError({
       message: "--local-app is restricted to the unsigned macOS dir target.",
@@ -954,6 +970,26 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       message: `Packaged lockfile digest mismatch: expected ${options.lockfileSha256}, got ${resolvedLockfileSha256}.`,
     });
   }
+  const appVersion = yield* Effect.try({
+    try: () =>
+      resolvePackagedAppVersion({
+        explicitVersion: options.version,
+        headTags:
+          options.version !== undefined || options.localApp
+            ? []
+            : resolveExactHeadVersionTags(repoRoot),
+        allowPackageFallback: options.localApp,
+        packageVersion: serverPackageJson.version,
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Could not resolve a packaged desktop version from HEAD tags.",
+        cause,
+      }),
+  });
   if (hasSourceCommit && !options.localApp) {
     const gitStatus = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
       cwd: repoRoot,

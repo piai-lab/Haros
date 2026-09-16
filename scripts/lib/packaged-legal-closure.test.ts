@@ -10,13 +10,19 @@ import { verifyPackagedLegalClosureArchive } from "./packaged-legal-closure";
 const roots: string[] = [];
 const ARCHIVE_FIXTURE_READY_TIMEOUT_MS = 2_000;
 
-async function waitForArchiveInventory(archive: string): Promise<void> {
+async function waitForArchiveInventory(
+  archive: string,
+  packageManifestPaths: ReadonlyArray<string>,
+): Promise<void> {
   const inventoryPath = "apps/server/dist/client/licenses/packaged-dependencies.json";
   const deadline = Date.now() + ARCHIVE_FIXTURE_READY_TIMEOUT_MS;
   let lastError: unknown;
   while (Date.now() <= deadline) {
     try {
       JSON.parse(extractFile(archive, inventoryPath).toString("utf8"));
+      for (const packagePath of packageManifestPaths) {
+        JSON.parse(extractFile(archive, packagePath).toString("utf8"));
+      }
       return;
     } catch (error) {
       lastError = error;
@@ -81,7 +87,10 @@ async function archiveFixture(
   // @electron/asar resolves createPackage after calling Writable.end(), not
   // after the output stream's finish event. Under parallel workspace tests the
   // header can therefore be visible before the inventory payload is flushed.
-  await waitForArchiveInventory(archive);
+  await waitForArchiveInventory(
+    archive,
+    packages.map((name) => `node_modules/${name}/package.json`),
+  );
   return archive;
 }
 
