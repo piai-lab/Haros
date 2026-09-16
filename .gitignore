@@ -52,3 +52,7 @@ __screenshots__/
 /preload.js.map
 /bootstrap.js.map
 .local/agent-work/
+
+# Generated Guidebook evidence outputs; curated evidence remains tracked.
+/missions/evidence/haros-guidebook/output/
+/missions/evidence/haros-guidebook/failed-output/
