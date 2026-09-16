@@ -21,6 +21,8 @@ import { makePiAdapterLive } from "./Layers/PiAdapter";
 import { makeDeepSeekAdapterLive } from "./Layers/DeepSeekAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
+import { HarosModelCatalogSyncLive } from "./Layers/HarosModelCatalogSync";
+import { HarosModelServicesLive } from "./Layers/HarosModelServices";
 import { makeDurableEngineServiceLive } from "./Layers/EngineService";
 import { EngineSessionDirectoryLive } from "./Layers/EngineSessionDirectory";
 import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
@@ -114,11 +116,21 @@ export function makeServerEngineLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
+    const modelServicesLayer = HarosModelServicesLive.pipe(
+      Layer.provide(engineServiceLayer),
+      Layer.provide(ServerSettingsLive),
+    );
+    const modelCatalogSyncLayer = HarosModelCatalogSyncLive.pipe(
+      Layer.provide(modelServicesLayer),
+      Layer.provide(ServerSettingsLive),
+    );
     return Layer.mergeAll(
       engineServiceLayer,
       engineDiscoveryLayer,
       adapterRegistryLayer,
       engineSessionDirectoryLayer,
+      modelServicesLayer,
+      modelCatalogSyncLayer,
     );
   }).pipe(Effect.provide(EngineCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
 }

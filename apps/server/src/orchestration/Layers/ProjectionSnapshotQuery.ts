@@ -37,6 +37,7 @@ import {
   ThreadHandoff,
   ThreadForkScope,
   EngineSelection,
+  decodePersistedEngineKind,
   ModelPresentationIdentity,
 } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema, Struct } from "effect";
@@ -288,10 +289,26 @@ type ProjectionTurnProvenanceDbRow = Omit<ProjectionTurnProvenanceDbRowRaw, "eng
   readonly engineSelection: typeof EngineSelection.Type;
 };
 
+function persistedEngineKindFromSelection(value: unknown): string | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const engine = (value as { readonly engine?: unknown }).engine;
+  return typeof engine === "string" ? engine : null;
+}
+
+function isRetiredPersistedEngineSelection(value: unknown): boolean {
+  const engine = persistedEngineKindFromSelection(value);
+  return engine !== null && decodePersistedEngineKind(engine) === null;
+}
+
 function decodeProjectionProjectRow(
   row: ProjectionProjectDbRowRaw,
 ): Effect.Effect<ProjectionProjectDbRow, Schema.SchemaError> {
-  if (row.defaultEngineSelection === null) {
+  if (
+    row.defaultEngineSelection === null ||
+    isRetiredPersistedEngineSelection(row.defaultEngineSelection)
+  ) {
     return Effect.succeed({ ...row, defaultEngineSelection: null });
   }
   return decodeEngineSelection(row.defaultEngineSelection).pipe(
@@ -301,17 +318,23 @@ function decodeProjectionProjectRow(
 
 function decodeProjectionThreadRow(
   row: ProjectionThreadDbRowRaw,
-): Effect.Effect<ProjectionThreadDbRow, Schema.SchemaError> {
+): Effect.Effect<Option.Option<ProjectionThreadDbRow>, Schema.SchemaError> {
+  if (isRetiredPersistedEngineSelection(row.engineSelection)) {
+    return Effect.succeed(Option.none());
+  }
   return decodeEngineSelection(row.engineSelection).pipe(
-    Effect.map((engineSelection) => ({ ...row, engineSelection })),
+    Effect.map((engineSelection) => Option.some({ ...row, engineSelection })),
   );
 }
 
 function decodeProjectionThreadShellRow(
   row: ProjectionThreadShellDbRowRaw,
-): Effect.Effect<ProjectionThreadShellDbRow, Schema.SchemaError> {
+): Effect.Effect<Option.Option<ProjectionThreadShellDbRow>, Schema.SchemaError> {
+  if (isRetiredPersistedEngineSelection(row.engineSelection)) {
+    return Effect.succeed(Option.none());
+  }
   return decodeEngineSelection(row.engineSelection).pipe(
-    Effect.map((engineSelection) => ({ ...row, engineSelection })),
+    Effect.map((engineSelection) => Option.some({ ...row, engineSelection })),
   );
 }
 
@@ -329,6 +352,7 @@ function decodeProjectionThreadRows(
   operation: string,
 ): Effect.Effect<ReadonlyArray<ProjectionThreadDbRow>, ProjectionRepositoryError> {
   return Effect.forEach(rows, decodeProjectionThreadRow).pipe(
+    Effect.map((decoded) => decoded.flatMap((row) => (Option.isSome(row) ? [row.value] : []))),
     Effect.mapError(toPersistenceDecodeError(operation)),
   );
 }
@@ -338,6 +362,7 @@ function decodeProjectionThreadShellRows(
   operation: string,
 ): Effect.Effect<ReadonlyArray<ProjectionThreadShellDbRow>, ProjectionRepositoryError> {
   return Effect.forEach(rows, decodeProjectionThreadShellRow).pipe(
+    Effect.map((decoded) => decoded.flatMap((row) => (Option.isSome(row) ? [row.value] : []))),
     Effect.mapError(toPersistenceDecodeError(operation)),
   );
 }
@@ -346,11 +371,17 @@ function decodeProjectionTurnProvenanceRows(
   rows: ReadonlyArray<ProjectionTurnProvenanceDbRowRaw>,
   operation: string,
 ): Effect.Effect<ReadonlyArray<ProjectionTurnProvenanceDbRow>, ProjectionRepositoryError> {
-  return Effect.forEach(rows, (row) =>
-    decodeEngineSelection(row.engineSelection).pipe(
-      Effect.map((engineSelection) => ({ ...row, engineSelection })),
-    ),
-  ).pipe(Effect.mapError(toPersistenceDecodeError(operation)));
+  return Effect.forEach(rows, (row) => {
+    if (isRetiredPersistedEngineSelection(row.engineSelection)) {
+      return Effect.succeed(Option.none<ProjectionTurnProvenanceDbRow>());
+    }
+    return decodeEngineSelection(row.engineSelection).pipe(
+      Effect.map((engineSelection) => Option.some({ ...row, engineSelection })),
+    );
+  }).pipe(
+    Effect.map((decoded) => decoded.flatMap((row) => (Option.isSome(row) ? [row.value] : []))),
+    Effect.mapError(toPersistenceDecodeError(operation)),
+  );
 }
 
 function decodeProjectionProjectOption(
@@ -374,7 +405,6 @@ function decodeProjectionThreadOption(
     return Effect.succeed(Option.none());
   }
   return decodeProjectionThreadRow(option.value).pipe(
-    Effect.map(Option.some),
     Effect.mapError(toPersistenceDecodeError(operation)),
   );
 }

@@ -2595,6 +2595,57 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
     }),
   );
 
+  it.effect("skips retired OA engine selections instead of failing snapshot decode", () =>
+    Effect.gen(function* () {
+      const snapshotQuery = yield* ProjectionSnapshotQuery;
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        INSERT INTO projection_projects (
+          project_id, title, workspace_root, default_model_selection_json,
+          scripts_json, created_at, updated_at, deleted_at
+        ) VALUES (
+          'project-retired-oa', 'Retired OA', '/tmp/retired-oa',
+          '{"engine":"oa","model":"deepseek/deepseek-v4-flash-vision-exp","options":{"thinkingLevel":"low"}}',
+          '[]', '2026-09-16T00:00:00.000Z', '2026-09-16T00:00:00.000Z', NULL
+        )
+      `;
+      yield* sql`
+        INSERT INTO projection_threads (
+          thread_id, project_id, title, model_selection_json, branch, worktree_path,
+          latest_turn_id, created_at, updated_at, deleted_at
+        ) VALUES (
+          'thread-retired-oa', 'project-retired-oa', 'Retired OA',
+          '{"engine":"oa","model":"deepseek/deepseek-v4-flash-vision-exp","options":{"thinkingLevel":"low"}}',
+          NULL, NULL, NULL, '2026-09-16T00:00:01.000Z', '2026-09-16T00:00:01.000Z', NULL
+        ), (
+          'thread-live-codex', 'project-retired-oa', 'Live Codex',
+          '{"engine":"codex","model":"gpt-5.4"}',
+          NULL, NULL, NULL, '2026-09-16T00:00:02.000Z', '2026-09-16T00:00:02.000Z', NULL
+        )
+      `;
+
+      const project = yield* snapshotQuery.getProjectShellById(asProjectId("project-retired-oa"));
+      assert.isTrue(Option.isSome(project));
+      if (Option.isSome(project)) {
+        assert.equal(project.value.defaultEngineSelection, null);
+      }
+
+      const retiredDetail = yield* snapshotQuery.getThreadDetailById(
+        asThreadId("thread-retired-oa"),
+      );
+      assert.isTrue(Option.isNone(retiredDetail));
+
+      const liveDetail = yield* snapshotQuery.getThreadDetailById(asThreadId("thread-live-codex"));
+      assert.isTrue(Option.isSome(liveDetail));
+      if (Option.isSome(liveDetail)) {
+        assert.equal(liveDetail.value.engineSelection.engine, "codex");
+      }
+
+      yield* sql`DELETE FROM projection_threads WHERE project_id = 'project-retired-oa'`;
+      yield* sql`DELETE FROM projection_projects WHERE project_id = 'project-retired-oa'`;
+    }),
+  );
+
   it.effect("uses the slowest required projector as the snapshot fence", () =>
     Effect.gen(function* () {
       const snapshotQuery = yield* ProjectionSnapshotQuery;
