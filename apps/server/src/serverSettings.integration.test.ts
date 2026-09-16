@@ -158,7 +158,7 @@ describe("ServerSettingsService", () => {
     },
     {
       name: "the disabled legacy Haros aggregate",
-      disabledBuiltInGroups: ["future-group"],
+      disabledBuiltInGroups: ["oa", "future-group"],
       expected: {
         agent: {
           automations: false,
@@ -400,7 +400,7 @@ describe("ServerSettingsService", () => {
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationEngineSelection: { engine: "antigravity" },
+            textGenerationEngineSelection: { engine: "pi" },
           }),
         );
         return {
@@ -648,7 +648,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultEngine).toBe(null);
+    expect(result.reset.defaultEngine).toBe("codex");
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);

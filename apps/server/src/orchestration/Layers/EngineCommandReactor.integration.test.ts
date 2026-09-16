@@ -681,6 +681,7 @@ describe("EngineCommandReactor", () => {
       generateThreadTitle,
       captureStudioOutputBaseline,
       cancelPendingStudioOutputBaseline,
+      baseDir,
       stateDir,
       stageAttachment: async (
         attachment: {
@@ -2784,7 +2785,7 @@ describe("EngineCommandReactor", () => {
       startReactor: false,
       threadEngineSelection: { engine: "codex", model: "harnessos-test" },
     });
-    const skillPath = path.join(harness.stateDir, "skills", "aihot", "SKILL.md");
+    const skillPath = path.join(harness.baseDir, "skills", "aihot", "SKILL.md");
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
     fs.writeFileSync(skillPath, "Use the current AI news catalog.", "utf8");
     const now = new Date().toISOString();
@@ -2827,7 +2828,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         messageId: "harnessos-skill-delivery-message",
         skillName: "Aihot",
-        deliveryMode: "inline",
+        deliveryMode: "reference",
       },
     });
   });

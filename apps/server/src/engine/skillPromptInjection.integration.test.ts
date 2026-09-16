@@ -26,6 +26,12 @@ describe("shouldInlineSkillForProvider", () => {
     // Codex loads .codex roots natively and ~/.harnessos/skills via the extra
     // skill root registered at session start.
     expect(shouldInlineSkillForProvider("codex", harnessosSkillPath)).toBe(false);
+    expect(
+      shouldInlineSkillForProvider(
+        "codex",
+        "/Users/me/.harnessos/userdata/skills/reviewer/SKILL.md",
+      ),
+    ).toBe(false);
     expect(shouldInlineSkillForProvider("codex", codexSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("codex", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("codex", cursorSkillPath)).toBe(true);
@@ -50,7 +56,14 @@ describe("shouldInlineSkillForProvider", () => {
   });
 
   it("always inlines for engines without native skill support", () => {
-    for (const engine of ["antigravity", "grok", "kilo", "opencode"] as const) {
+    for (const engine of [
+      "antigravity",
+      "grok",
+      "droid",
+      "kilo",
+      "opencode",
+      "deepseek",
+    ] as const) {
       expect(shouldInlineSkillForProvider(engine, harnessosSkillPath)).toBe(true);
       expect(shouldInlineSkillForProvider(engine, claudeSkillPath)).toBe(true);
     }
@@ -137,7 +150,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(secondPath, "Keep this instruction.");
 
       const result = await buildInlineSkillInstructions({
-        engine: "codex",
+        engine: "pi",
         skills: [
           { name: "large", path: firstPath },
           { name: "small", path: secondPath },

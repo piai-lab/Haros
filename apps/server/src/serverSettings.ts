@@ -81,6 +81,13 @@ export interface ServerSettingsSnapshot {
 }
 
 const SERVER_SETTINGS_MIGRATION_VERSION = 4;
+const LEGACY_HARNESSOS_BUILT_IN_GROUP = "oa";
+const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
+  "tasks",
+  "diagnostics",
+  "goals",
+  "automations",
+] as const;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
   return {
@@ -290,6 +297,14 @@ function migrateLegacyBuiltInGroupIntent(
     migrated = true;
   } else {
     disabledBuiltInGroups = settings.agentTools.disabledBuiltInGroups;
+  }
+
+  if (migrationVersion < 3 && Array.isArray(disabledBuiltInGroups)) {
+    const expanded = disabledBuiltInGroups.flatMap((group) =>
+      group === LEGACY_HARNESSOS_BUILT_IN_GROUP ? HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS : [group],
+    );
+    if (expanded.length !== disabledBuiltInGroups.length) migrated = true;
+    disabledBuiltInGroups = expanded;
   }
 
   if (migrationVersion >= SERVER_SETTINGS_MIGRATION_VERSION) {

@@ -18,6 +18,7 @@ import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
 import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
 import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
 import { makePiAdapterLive } from "./Layers/PiAdapter";
+import { makeDeepSeekAdapterLive } from "./Layers/DeepSeekAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
 import { makeDurableEngineServiceLive } from "./Layers/EngineService";
@@ -85,6 +86,7 @@ export function makeServerEngineLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(hostGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
+    const deepSeekAdapterLayer = makeDeepSeekAdapterLive();
     const adapterRegistryLayer = EngineAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -95,6 +97,7 @@ export function makeServerEngineLayer(
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
       Layer.provide(piAdapterLayer),
+      Layer.provide(deepSeekAdapterLayer),
       Layer.provideMerge(engineSessionDirectoryLayer),
     );
     const engineServiceLayer = makeDurableEngineServiceLive(
