@@ -87,6 +87,8 @@ import {
 } from "../engineRuntimeEventPump.ts";
 import {
   HOST_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
+  HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION,
+  HOST_GATEWAY_RETIRED_TURN_ID,
   HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../hostGateway/sessionLease.ts";
 
@@ -1323,6 +1325,15 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
             ...(lastError !== undefined ? { lastError } : {}),
             ...(runtimeEventRetiredGatewayTurnAuthority(event)
               ? { [HOST_GATEWAY_CREDENTIAL_ROTATION_REQUIRED]: true }
+              : {}),
+            ...(runtimeEventRetiredGatewayTurnAuthority(event) &&
+            (event.type === "turn.completed" || event.type === "turn.aborted") &&
+            event.turnId !== undefined &&
+            event.lifecycleGeneration !== undefined
+              ? {
+                  [HOST_GATEWAY_RETIRED_TURN_ID]: String(event.turnId),
+                  [HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION]: event.lifecycleGeneration,
+                }
               : {}),
           },
         });

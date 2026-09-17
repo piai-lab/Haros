@@ -19,6 +19,8 @@ type HostGatewaySessionLeaseCredentials = Pick<
 
 export const HOST_GATEWAY_CREDENTIAL_ROTATION_REQUIRED = "hostGatewayCredentialRotationRequired";
 export const HOST_GATEWAY_TURN_AUTHORITY_RETIRED = "harnessosGatewayTurnAuthorityRetired";
+export const HOST_GATEWAY_RETIRED_TURN_ID = "hostGatewayRetiredTurnId";
+export const HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION = "hostGatewayRetiredLifecycleGeneration";
 
 /**
  * One engine runtime's ownership of one gateway credential.

@@ -70,6 +70,8 @@ import {
 } from "../../persistence/Layers/Sqlite.ts";
 import {
   HOST_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
+  HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION,
+  HOST_GATEWAY_RETIRED_TURN_ID,
   HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../hostGateway/sessionLease.ts";
 import { ENGINE_INTERRUPT_REASON } from "../engineInterruptSettlement.ts";
@@ -3531,7 +3533,12 @@ routing.layer("EngineServiceLive routing", (it) => {
                 routing.codex.stopSession.mock.calls.length === stopsBeforeRotation + 1 &&
                 routing.codex.startSession.mock.calls.length === startsBeforeRotation + 1 &&
                 asRuntimePayloadRecord(current?.runtimePayload)
-                  .hostGatewayCredentialRotationRequired === false
+                  .hostGatewayCredentialRotationRequired === false &&
+                asRuntimePayloadRecord(current?.runtimePayload)[HOST_GATEWAY_RETIRED_TURN_ID] ===
+                  String(turnA) &&
+                asRuntimePayloadRecord(current?.runtimePayload)[
+                  HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION
+                ] === lifecycleGeneration
               );
             }),
           ),
