@@ -72,6 +72,7 @@ import {
   OpenCodeRuntime,
   OpenCodeRuntimeLive,
   OpenCodeRuntimeError,
+  formatOpenCodeUnexpectedExitMessage,
   openCodeQuestionId,
   openCodeRuntimeErrorDetail,
   parseOpenCodeModelSlug,
@@ -3617,9 +3618,18 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 if (yield* Ref.get(context.stopped)) {
                   return;
                 }
+                const captured =
+                  context.server.capturedOutput !== null
+                    ? yield* context.server.capturedOutput
+                    : { stdout: "", stderr: "" };
                 yield* emitUnexpectedExit(
                   context,
-                  `${adapterConfig.displayName} server exited unexpectedly (${code}).`,
+                  formatOpenCodeUnexpectedExitMessage({
+                    displayName: adapterConfig.displayName,
+                    code,
+                    stdout: captured.stdout,
+                    stderr: captured.stderr,
+                  }),
                 );
               }),
             ),

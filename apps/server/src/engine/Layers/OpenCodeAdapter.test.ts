@@ -79,6 +79,7 @@ function createMockOpenCodeRuntime(options?: {
   readonly permissionReply?: (input: Record<string, unknown>) => Promise<unknown>;
   readonly mcpAdd?: (input: Record<string, unknown>) => Promise<unknown>;
   readonly serverExit?: Effect.Effect<number>;
+  readonly capturedOutput?: Effect.Effect<{ readonly stdout: string; readonly stderr: string }>;
   readonly sessionCreateError?: Error;
   readonly sessionUpdate?: (input: Record<string, unknown>) => Promise<unknown>;
   readonly scopeCloseDefect?: boolean;
@@ -240,6 +241,9 @@ function createMockOpenCodeRuntime(options?: {
         return {
           url: input.serverUrl ?? "http://127.0.0.1:4099",
           exitCode: options?.serverExit ?? null,
+          capturedOutput: options?.serverExit
+            ? (options.capturedOutput ?? Effect.succeed({ stdout: "", stderr: "" }))
+            : null,
           external: Boolean(input.serverUrl),
         };
       }),

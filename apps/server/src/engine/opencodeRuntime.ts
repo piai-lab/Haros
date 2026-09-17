@@ -93,14 +93,21 @@ export const KILO_CLI_SPEC: OpenCodeCompatibleCliSpec = {
   serverAuthUsername: "kilo",
 };
 
+export interface OpenCodeCapturedProcessOutput {
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
 export interface OpenCodeServerProcess {
   readonly url: string;
   readonly exitCode: Effect.Effect<number, never>;
+  readonly capturedOutput: Effect.Effect<OpenCodeCapturedProcessOutput, never>;
 }
 
 export interface OpenCodeServerConnection {
   readonly url: string;
   readonly exitCode: Effect.Effect<number, never> | null;
+  readonly capturedOutput: Effect.Effect<OpenCodeCapturedProcessOutput, never> | null;
   readonly external: boolean;
 }
 
@@ -310,6 +317,31 @@ function formatOpenCodeServerStartupDetail(input: {
     stdout ? `stdout:\n${stdout}` : "stdout: <empty>",
     stderr ? `stderr:\n${stderr}` : "stderr: <empty>",
   ].join("\n\n");
+}
+
+export function formatOpenCodeUnexpectedExitMessage(input: {
+  readonly displayName: string;
+  readonly code: number;
+  readonly stdout?: string;
+  readonly stderr?: string;
+}): string {
+  const stdout = input.stdout ? truncateStartupOutput(input.stdout) : null;
+  const stderr = input.stderr ? truncateStartupOutput(input.stderr) : null;
+  return [
+    `${input.displayName} server exited unexpectedly (${String(input.code)}).`,
+    stdout ? `stdout:\n${stdout}` : null,
+    stderr ? `stderr:\n${stderr}` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join("\n\n");
+}
+
+function appendBoundedProcessOutput(current: string, chunk: string): string {
+  const next = `${current}${chunk}`;
+  if (next.length <= OPENCODE_STARTUP_OUTPUT_MAX_CHARS) {
+    return next;
+  }
+  return next.slice(next.length - OPENCODE_STARTUP_OUTPUT_MAX_CHARS);
 }
 
 function pooledOpenCodeServerKey(input: {
@@ -1078,9 +1110,13 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
         const stdoutRef = yield* Ref.make("");
         const stderrRef = yield* Ref.make("");
         const readyDeferred = yield* Deferred.make<string, OpenCodeRuntimeError>();
+        const capturedOutput = Effect.all({
+          stdout: Ref.get(stdoutRef),
+          stderr: Ref.get(stderrRef),
+        });
 
         const setReadyFromStdoutChunk = (chunk: string) =>
-          Ref.updateAndGet(stdoutRef, (stdout) => `${stdout}${chunk}`).pipe(
+          Ref.updateAndGet(stdoutRef, (stdout) => appendBoundedProcessOutput(stdout, chunk)).pipe(
             Effect.flatMap((nextStdout) => {
               const parsed = parseServerUrlFromOutput(nextStdout, cliSpec.serverReadyPrefix);
               return parsed
@@ -1089,15 +1125,20 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
             }),
           );
 
-        const stdoutFiber = yield* child.stdout.pipe(
+        // Keep draining until the process exits. Interrupting these fibers after
+        // ready destroys Node's stdout/stderr pipes (closeOnDone), which can
+        // kill a long-lived OpenCode/Kilo server on the next log write.
+        yield* child.stdout.pipe(
           Stream.decodeText(),
           Stream.runForEach(setReadyFromStdoutChunk),
           Effect.ignore,
           Effect.forkIn(runtimeScope),
         );
-        const stderrFiber = yield* child.stderr.pipe(
+        yield* child.stderr.pipe(
           Stream.decodeText(),
-          Stream.runForEach((chunk) => Ref.update(stderrRef, (stderr) => `${stderr}${chunk}`)),
+          Stream.runForEach((chunk) =>
+            Ref.update(stderrRef, (stderr) => appendBoundedProcessOutput(stderr, chunk)),
+          ),
           Effect.ignore,
           Effect.forkIn(runtimeScope),
         );
@@ -1105,8 +1146,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
         const exitFiber = yield* child.exitCode.pipe(
           Effect.flatMap((code) =>
             Effect.gen(function* () {
-              const stdout = yield* Ref.get(stdoutRef);
-              const stderr = yield* Ref.get(stderrRef);
+              const { stdout, stderr } = yield* capturedOutput;
               const redactedStdout = redactStartupOutput(stdout);
               const redactedStderr = redactStartupOutput(stderr);
               const exitCode = Number(code);
@@ -1143,9 +1183,6 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
           Deferred.await(readyDeferred).pipe(Effect.timeoutOption(timeoutMs)),
         );
 
-        yield* Fiber.interrupt(stdoutFiber).pipe(Effect.ignore);
-        yield* Fiber.interrupt(stderrFiber).pipe(Effect.ignore);
-
         if (Exit.isFailure(readyExit)) {
           yield* Fiber.interrupt(exitFiber).pipe(Effect.ignore);
           const squashed = Cause.squash(readyExit.cause);
@@ -1162,8 +1199,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
         const readyOption = readyExit.value;
         if (Option.isNone(readyOption)) {
           yield* Fiber.interrupt(exitFiber).pipe(Effect.ignore);
-          const stdout = yield* Ref.get(stdoutRef);
-          const stderr = yield* Ref.get(stderrRef);
+          const { stdout, stderr } = yield* capturedOutput;
           const redactedStdout = redactStartupOutput(stdout);
           const redactedStderr = redactStartupOutput(stderr);
           return yield* new OpenCodeRuntimeError({
@@ -1194,6 +1230,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
             Effect.map(Number),
             Effect.orElseSucceed(() => 0),
           ),
+          capturedOutput,
         } satisfies OpenCodeServerProcess;
       });
 
@@ -1391,6 +1428,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
         return Effect.succeed({
           url: serverUrl,
           exitCode: null,
+          capturedOutput: null,
           external: true,
         });
       }
@@ -1415,6 +1453,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
         return {
           url: pooledServer.server.url,
           exitCode: pooledServer.server.exitCode,
+          capturedOutput: pooledServer.server.capturedOutput,
           external: false,
         };
       });

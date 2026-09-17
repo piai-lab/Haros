@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { Duration, Effect, Exit, Fiber, Layer, Result, Scope, Sink, Stream } from "effect";
+import { Deferred, Duration, Effect, Exit, Fiber, Layer, Result, Scope, Sink, Stream } from "effect";
 import { type ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
 import type { ChatAttachment } from "@harnessos/contracts";
@@ -28,6 +28,7 @@ import {
   OpenCodeRuntimeError,
   makeOpenCodeRuntimeLive,
   OPENCODE_LOCAL_SERVER_IDLE_TTL_MS,
+  formatOpenCodeUnexpectedExitMessage,
   parseOpenCodeCliModelsOutput,
   parseOpenCodeCredentialProviderIDs,
   resolveOpenCodeAuthFilePath,
@@ -441,6 +442,88 @@ describe("OpenCodeRuntime startup diagnostics", () => {
       expect(causeJson).not.toContain(secret);
     }
   });
+
+  it("keeps draining stdout after the server is ready", async () => {
+    const releaseExtra = Deferred.makeUnsafe<void>();
+    const extraStdout = "post-ready diagnostic line\n";
+    const spawnerLayer = Layer.succeed(
+      ChildProcessSpawner.ChildProcessSpawner,
+      ChildProcessSpawner.make(() =>
+        Effect.succeed(
+          ChildProcessSpawner.makeHandle({
+            pid: ChildProcessSpawner.ProcessId(1),
+            exitCode: Effect.never,
+            isRunning: Effect.succeed(true),
+            kill: () => Effect.void,
+            stdin: Sink.drain,
+            stdout: Stream.concat(
+              Stream.make(encoder.encode("opencode server listening on http://127.0.0.1:4096\n")),
+              Stream.fromEffect(
+                Deferred.await(releaseExtra).pipe(Effect.as(encoder.encode(extraStdout))),
+              ),
+            ),
+            stderr: Stream.empty,
+            all: Stream.empty,
+            getInputFd: () => Sink.drain,
+            getOutputFd: () => Stream.empty,
+          }),
+        ),
+      ),
+    );
+
+    const captured = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const runtime = yield* OpenCodeRuntime;
+          const server = yield* runtime.startOpenCodeServerProcess({
+            binaryPath: "opencode",
+            hostname: "127.0.0.1",
+            port: 4096,
+          });
+          Deferred.doneUnsafe(releaseExtra, Effect.void);
+          for (let attempt = 0; attempt < 50; attempt += 1) {
+            const next = yield* server.capturedOutput;
+            if (next.stdout.includes("post-ready diagnostic line")) {
+              return next;
+            }
+            yield* Effect.yieldNow;
+          }
+          return yield* server.capturedOutput;
+        }),
+      ).pipe(
+        Effect.provide(
+          makeOpenCodeRuntimeLive({
+            teardownProcessTree: async () => ({
+              escalated: false,
+              signalErrors: [],
+            }),
+          }).pipe(Layer.provide(spawnerLayer)),
+        ),
+      ),
+    );
+
+    expect(captured.stdout).toContain("opencode server listening on http://127.0.0.1:4096");
+    expect(captured.stdout).toContain("post-ready diagnostic line");
+  });
+
+  it("includes captured process output in unexpected-exit messages", () => {
+    expect(
+      formatOpenCodeUnexpectedExitMessage({
+        displayName: "OpenCode",
+        code: 3,
+        stdout: "opencode server listening on http://127.0.0.1:4096\n",
+        stderr: "plugin crashed\n",
+      }),
+    ).toContain("OpenCode server exited unexpectedly (3).");
+    expect(
+      formatOpenCodeUnexpectedExitMessage({
+        displayName: "OpenCode",
+        code: 3,
+        stdout: "",
+        stderr: "plugin crashed\n",
+      }),
+    ).toContain("stderr:\nplugin crashed");
+  });
 });
 
 describe("OpenCodeRuntime local server pool", () => {
@@ -698,6 +781,7 @@ describe("OpenCodeRuntime local server pool", () => {
           expect(connection).toMatchObject({
             url: "http://127.0.0.1:9999",
             exitCode: null,
+            capturedOutput: null,
             external: true,
           });
           expect(state.spawnUrls).toEqual([]);
