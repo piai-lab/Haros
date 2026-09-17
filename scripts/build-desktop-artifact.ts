@@ -1144,7 +1144,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     `[desktop-artifact] Locked legal metadata to ${legalInventory.componentCount} staged production components.`,
   );
 
-  if (options.platform === "linux") {
+  if (options.platform === "linux" || options.platform === "win") {
     yield* verifyStagedNodePty(stageAppDir, options.verbose);
   }
 

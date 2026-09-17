@@ -96,6 +96,7 @@ describe("createDesktopPlatformBuildConfig", () => {
 
     assert.equal(win.mac, undefined);
     assert.equal(win.extraFiles, undefined);
+    assert.equal(win.npmRebuild, false);
     assert.deepStrictEqual(win.asarUnpack, ["node_modules/node-pty/**"]);
     assert.deepStrictEqual(win.files, ["**/*", PACKAGED_LEGAL_FILES_GLOB]);
     assert.equal(WINDOWS_INSTALLER_GUID, "bf2c2d38-6ca0-58ef-892c-7b354a231883");
