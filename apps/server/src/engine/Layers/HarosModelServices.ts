@@ -68,6 +68,7 @@ import {
 } from "../harnessosOAuthCallbackPage.ts";
 import { installOfficialModelCatalog, modelDiscoveredAt } from "../officialModelCatalog.ts";
 import { publishHarosModelRuntimeMutation } from "../modelRuntimeMutation.ts";
+import { CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER } from "../codexDiscoveryCatalog.ts";
 import {
   HarosModelServices,
   type HarosModelServicesShape,
@@ -101,7 +102,7 @@ const CUSTOM_MODEL_THINKING_LEVELS = [
 ] as const;
 
 const HIDDEN_MODEL_IDS_BY_PROVIDER: Readonly<Record<string, ReadonlySet<string>>> = {
-  "openai-codex": new Set(["gpt-5.4", "gpt-5.4-mini"]),
+  "openai-codex": CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER,
 };
 
 class InvalidCustomServiceEditError extends Error {}

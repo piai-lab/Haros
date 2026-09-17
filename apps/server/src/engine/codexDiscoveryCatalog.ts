@@ -12,6 +12,11 @@ import type {
   EngineSkillDescriptor,
 } from "@harnessos/contracts";
 
+export const CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER: ReadonlySet<string> = new Set([
+  "gpt-5.4",
+  "gpt-5.4-mini",
+]);
+
 function readObject(value: unknown, key?: string): Record<string, unknown> | undefined {
   const target =
     key === undefined
@@ -327,7 +332,7 @@ export function parseCodexModelListResponse(response: unknown): EngineListModels
 
     const slug = readString(model, "id") ?? readString(model, "slug") ?? readString(model, "model");
     const trimmedSlug = slug?.trim();
-    if (!trimmedSlug) {
+    if (!trimmedSlug || CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER.has(trimmedSlug)) {
       return [];
     }
 
