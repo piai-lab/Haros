@@ -105,6 +105,17 @@ function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function normalizeManifestText(value: string): string {
+  // Windows staged installs can rewrite a single LF as CRLF without changing
+  // package identity. Hash the LF-normalized bytes so legal overrides stay
+  // bound to manifest content rather than host line endings.
+  return value.replace(/\r\n?/gu, "\n");
+}
+
+function manifestSha256(value: string): string {
+  return sha256(normalizeManifestText(value));
+}
+
 function readJson(path: string): PackageManifest {
   return JSON.parse(readFileSync(path, "utf8")) as PackageManifest;
 }
@@ -391,7 +402,7 @@ export function collectDependencyInventory(options: {
           `Legal override license mismatch for ${id}: ${override.license} != ${license}.`,
         );
       }
-      const manifestDigest = sha256(record.manifestText);
+      const manifestDigest = manifestSha256(record.manifestText);
       if (override.manifestSha256ByPackageId[id] !== manifestDigest) {
         throw new Error(`Legal override manifest digest changed for ${id}.`);
       }
@@ -432,7 +443,7 @@ export function collectDependencyInventory(options: {
       licenseFiles: new Map<string, LicenseFile>(),
       dependencies: new Set<string>(),
     };
-    current.manifestHashes.add(sha256(record.manifestText));
+    current.manifestHashes.add(manifestSha256(record.manifestText));
     current.locations.add(relativeLocation(options.packageRoot, record.packageDirectory));
     for (const file of licenseFiles) current.licenseFiles.set(file.sha256, file);
     for (const dependencyDirectory of record.dependencyDirectories) {
@@ -492,7 +503,7 @@ export function collectDependencyInventory(options: {
       author: metadataText(manifest.author),
       repository: repositoryText(manifest.repository),
       homepage: metadataText(manifest.homepage),
-      manifestHashes: new Set([sha256(manifestText)]),
+      manifestHashes: new Set([manifestSha256(manifestText)]),
       locations: new Set([`bundled:${descriptor.runtimePath}`]),
       licenseFiles: new Map(
         sourceLicenseFiles.map((file) => [
