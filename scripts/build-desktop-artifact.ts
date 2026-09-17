@@ -1176,6 +1176,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     }
     buildEnv.npm_config_msvs_version = buildEnv.npm_config_msvs_version ?? "2022";
     buildEnv.GYP_MSVS_VERSION = buildEnv.GYP_MSVS_VERSION ?? "2022";
+    // Windows 11 can set NoDefaultCurrentDirectoryInExePath=1, which makes cmd
+    // refuse current-directory .bat files. node-pty's winpty gyp then fails to
+    // run GetCommitHash.bat even though the file is present.
+    delete buildEnv.NoDefaultCurrentDirectoryInExePath;
   }
 
   yield* Effect.log(
