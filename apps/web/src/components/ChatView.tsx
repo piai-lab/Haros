@@ -9921,7 +9921,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: "engines",
+        section: selectedEngine === "codex" ? "models" : "engines",
       },
     });
   }, [navigate, selectedEngine]);

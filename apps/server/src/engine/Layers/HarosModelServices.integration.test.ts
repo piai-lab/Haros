@@ -147,6 +147,7 @@ async function loadService(input: {
   readonly loadModule?: () => Promise<ModelServicesSdk>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly intent?: "add_service";
+  readonly includeOpenaiCodex?: boolean;
 }) {
   const layer = makeTestLayer(input);
   return Effect.runPromise(
@@ -157,7 +158,12 @@ async function loadService(input: {
         serviceId: "deepseek",
         ...(input.intent ? { intent: input.intent } : {}),
       });
-      return { list, deepseek };
+      if (!input.includeOpenaiCodex) return { list, deepseek };
+      const openaiCodex = yield* service.get({
+        serviceId: "openai-codex",
+        ...(input.intent ? { intent: input.intent } : {}),
+      });
+      return { list, deepseek, openaiCodex };
     }).pipe(Effect.provide(layer)),
   );
 }
@@ -369,6 +375,22 @@ describe("HarosModelServicesLive", () => {
       ]),
     });
     expect(await readdir(agentDir)).toEqual([]);
+  });
+
+  it("hides Codex models that are not offered by the provider", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "pi-agent"), { recursive: true });
+
+    const result = await loadService({ root, includeOpenaiCodex: true });
+
+    const openaiCodex = result.openaiCodex;
+    expect(openaiCodex?.state).toBe("ready");
+    if (!openaiCodex || openaiCodex.state !== "ready" || !openaiCodex.models) return;
+    expect(openaiCodex.models.map((model) => model.modelId)).not.toEqual(
+      expect.arrayContaining(["gpt-5.4", "gpt-5.4-mini"]),
+    );
+    expect(openaiCodex.service?.knownModelCount).toBe(openaiCodex.models.length);
   });
 
   it("does not execute Extension resources for passive model-service projection", async () => {
