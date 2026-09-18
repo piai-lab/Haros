@@ -307,6 +307,15 @@ export function closePaneInState(
   };
 }
 
+// Side chats are an app-session surface. Their backing context remains internal
+// to the orchestration layer, but a closed app must never restore the pane.
+export function removeSidechatPanesInState(state: RightDockThreadState): RightDockThreadState {
+  return state.panes.reduce(
+    (next, pane) => (pane.kind === "sidechat" ? closePaneInState(next, pane.id) : next),
+    state,
+  );
+}
+
 export function setActivePaneInState(
   state: RightDockThreadState,
   paneId: string,
