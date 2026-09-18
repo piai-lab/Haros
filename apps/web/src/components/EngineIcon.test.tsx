@@ -17,6 +17,13 @@ describe("EngineIcon", () => {
     expect(markup).toContain("#FFE432");
   });
 
+  it("uses the official DeepSeek whale mark", () => {
+    const markup = renderToStaticMarkup(<EngineIcon engine="deepseek" />);
+    expect(markup).toContain('viewBox="0 0 24 24"');
+    expect(markup).toContain("M23.748 4.482");
+    expect(markup).not.toContain("M12.04 2.16");
+  });
+
   it("uses the reversed Central icon for opencode in dark mode", () => {
     const markup = renderToStaticMarkup(
       <EngineIcon engine="opencode" className="size-4 text-muted-foreground" />,
