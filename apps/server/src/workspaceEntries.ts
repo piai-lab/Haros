@@ -1179,16 +1179,30 @@ function resolveBrowseTarget(input: FilesystemBrowseInput): string {
   return path.resolve(expandHomePath(input.cwd), input.partialPath);
 }
 
-async function windowsDriveExists(fullPath: string): Promise<boolean> {
+export async function windowsDriveExists(
+  fullPath: string,
+  options: {
+    readonly timeoutMs?: number;
+    readonly probe?: (path: string) => Promise<unknown>;
+  } = {},
+): Promise<boolean> {
+  const timeoutMs = options.timeoutMs ?? WINDOWS_DRIVE_STAT_TIMEOUT_MS;
+  const probe = options.probe ?? ((candidate) => fs.stat(candidate));
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([
-      fs.stat(fullPath).then(() => true),
-      new Promise<boolean>((resolve) => {
-        setTimeout(() => resolve(false), WINDOWS_DRIVE_STAT_TIMEOUT_MS);
-      }),
-    ]);
+    const probeResult = probe(fullPath).then(
+      () => true,
+      () => false,
+    );
+    const timedOut = new Promise<boolean>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve(false), timeoutMs);
+      timeoutHandle.unref?.();
+    });
+    return await Promise.race([probeResult, timedOut]);
   } catch {
     return false;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
   }
 }
 

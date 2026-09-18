@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { WINDOWS_COMPUTER_ROOT } from "@harnessos/shared/path";
 
-import { browseWorkspaceEntries } from "./workspaceEntries";
+import { browseWorkspaceEntries, windowsDriveExists } from "./workspaceEntries";
 
 const tempDirs: string[] = [];
 
@@ -46,5 +46,26 @@ describe("browseWorkspaceEntries", () => {
     expect(result.entries.some((entry) => entry.name === "C:" && entry.fullPath === "C:\\")).toBe(
       true,
     );
+  });
+
+  it("swallows a late Windows drive probe rejection after timeout", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+    let lateReject!: (reason: Error) => void;
+    try {
+      const probe = () =>
+        new Promise<unknown>((_resolve, reject) => {
+          lateReject = reject;
+        });
+      await expect(windowsDriveExists("Z:\\", { timeoutMs: 5, probe })).resolves.toBe(false);
+      lateReject(new Error("drive went away"));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
   });
 });
