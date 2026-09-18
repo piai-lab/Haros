@@ -261,6 +261,39 @@ function requestHeaders(headers: Headers): Record<string, string> {
   return result;
 }
 
+export async function readBoundedResponseBody(
+  response: Response,
+  maxResponseBytes: number,
+): Promise<Uint8Array> {
+  if (!response.body) {
+    return new Uint8Array();
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value || value.byteLength === 0) continue;
+    size += value.byteLength;
+    if (size > maxResponseBytes) {
+      await reader.cancel();
+      throw new OutboundHttpError(
+        "response-too-large",
+        `Outbound response exceeded the ${maxResponseBytes}-byte limit.`,
+      );
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 let envProxyAgent: EnvHttpProxyAgent | undefined;
 
 function resolveEnvProxyAgent(): EnvHttpProxyAgent | undefined {
@@ -361,15 +394,22 @@ async function requestHop(input: {
         redirect: "manual",
         signal: input.signal,
       });
-      const declaredLength = Number(response.headers.get("content-length"));
-      if (Number.isFinite(declaredLength) && declaredLength > input.maxResponseBytes) {
+      const headers = (() => {
+        const next = new Headers();
+        response.headers.forEach((value, name) => next.set(name, value));
+        return next;
+      })();
+      const encoding = headers.get("content-encoding")?.trim().toLowerCase();
+      if (encoding && encoding !== "identity") {
+        await response.body?.cancel();
         throw new OutboundHttpError(
-          "response-too-large",
-          `Outbound response exceeded the ${input.maxResponseBytes}-byte limit.`,
+          "compressed-response",
+          "Compressed outbound responses are rejected so byte limits remain exact.",
         );
       }
-      const body = new Uint8Array(await response.arrayBuffer());
-      if (body.byteLength > input.maxResponseBytes) {
+      const declaredLength = Number(headers.get("content-length"));
+      if (Number.isFinite(declaredLength) && declaredLength > input.maxResponseBytes) {
+        await response.body?.cancel();
         throw new OutboundHttpError(
           "response-too-large",
           `Outbound response exceeded the ${input.maxResponseBytes}-byte limit.`,
@@ -377,12 +417,8 @@ async function requestHop(input: {
       }
       return {
         status: response.status,
-        headers: (() => {
-          const headers = new Headers();
-          response.headers.forEach((value, name) => headers.set(name, value));
-          return headers;
-        })(),
-        body,
+        headers,
+        body: await readBoundedResponseBody(response, input.maxResponseBytes),
         url: input.url.href,
       };
     } catch (cause) {

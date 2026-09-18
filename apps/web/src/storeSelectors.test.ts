@@ -147,6 +147,9 @@ describe("sidebar thread selectors", () => {
     expect(createSidebarTreeThreadsSelector()(state).map((thread) => thread.id)).toEqual([
       threadIdA,
     ]);
+    expect(
+      createComposerThreadMentionSourcesSelector()(state).map((thread) => thread.id),
+    ).toEqual([threadIdA]);
   });
 });
 

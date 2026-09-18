@@ -24,6 +24,7 @@ const sourceThread = {
   id: ThreadId.makeUnsafe("source-thread"),
   projectId: ProjectId.makeUnsafe("project-1"),
   title: "Source thread",
+  runtimeMode: "approval-required",
   envMode: "local",
   branch: "main",
   worktreePath: null,
@@ -128,7 +129,7 @@ describe("createSidechatThread", () => {
     );
   });
 
-  it("uses the shared full-access runtime mode for the fork and its first turn", async () => {
+  it("keeps the source thread runtime mode when the Engine supports it", async () => {
     const dispatchCommand = vi.fn().mockResolvedValue(undefined);
 
     await createSidechatThread({
@@ -136,6 +137,29 @@ describe("createSidechatThread", () => {
       project,
       sourceThread,
       selectedEngineSelection,
+      initialPrompt: "Investigate this",
+      openSidechat: vi.fn(),
+      syncServerShellSnapshot: vi.fn(),
+    });
+
+    expect(dispatchCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ runtimeMode: "approval-required" }),
+    );
+    expect(dispatchCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ runtimeMode: "approval-required" }),
+    );
+  });
+
+  it("falls back to a supported mode when the target Engine has no approval path", async () => {
+    const dispatchCommand = vi.fn().mockResolvedValue(undefined);
+
+    await createSidechatThread({
+      api: makeApi({ dispatchCommand }),
+      project,
+      sourceThread,
+      selectedEngineSelection: { engine: "pi", model: "pi-default" },
       initialPrompt: "Investigate this",
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),

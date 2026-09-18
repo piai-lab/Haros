@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:net";
 import { describe, expect, it } from "vitest";
 
-import { outboundHttp } from "./outboundHttp";
+import { outboundHttp, OutboundHttpError, readBoundedResponseBody } from "./outboundHttp";
 
 /**
  * A port nothing is listening on, so every connection attempt is refused.
@@ -45,6 +45,26 @@ const policyFor = (port: number) => ({
  * against a real multi-address host: the request rejected correctly, execution
  * continued, and the process then died on the second emit.
  */
+describe("bounded proxy response bodies", () => {
+  it("rejects oversized streamed bodies before assembling them", async () => {
+    const encoder = new TextEncoder();
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode("01234567"));
+          controller.enqueue(encoder.encode("overflow"));
+          controller.close();
+        },
+      }),
+    );
+
+    await expect(readBoundedResponseBody(response, 8)).rejects.toMatchObject({
+      name: "OutboundHttpError",
+      code: "response-too-large",
+    } satisfies Partial<OutboundHttpError>);
+  });
+});
+
 describe("outbound requests that cannot connect", () => {
   it("rejects rather than hanging", async () => {
     const port = await refusedPort();

@@ -676,6 +676,7 @@ export function useComposerSlashCommands(input: {
             api,
             threadId: sidechatThreadId,
             selectedEngineSelection: sidechatEngineSelection,
+            sourceRuntimeMode: activeThread.runtimeMode,
             prompt,
           }),
         onCreationResult: (result) => {

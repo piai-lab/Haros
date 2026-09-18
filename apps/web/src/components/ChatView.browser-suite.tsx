@@ -8756,7 +8756,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Side chat",
       );
       await expect
-        .element(page.getByText("Side chats are temporary and disappear when you close the app."))
+        .element(
+          page.getByText(
+            "Side chats stay out of the task list. Closing the app only forgets the panel, not the conversation.",
+          ),
+        )
         .toBeInTheDocument();
       expect(mounted.host.querySelector('[data-empty-landing-controls="true"]')).toBeNull();
       expect(mounted.host.querySelector('[data-testid="empty-landing-heading"]')).toBeNull();

@@ -480,7 +480,7 @@ describe("reachable Haros-owned product copy", () => {
       ["git.action.commitOrPush", "Commit or push", "提交或推送"],
       ["git.action.commitPush", "Commit and push", "提交并推送"],
       ["git.panel.changes", "Changes", "变更"],
-      ["workbench.sideChats", "Side chats", "侧边对话"],
+      ["workbench.sideChats", "Side chats", "侧边聊天"],
       ["environment.outputs", "Outputs", "产出"],
       ["environment.recap", "Recap", "摘要"],
       ["environment.pinnedMessages", "Pinned messages", "置顶消息"],

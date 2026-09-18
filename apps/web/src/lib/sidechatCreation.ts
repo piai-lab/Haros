@@ -9,6 +9,7 @@ import type {
   ThreadId,
 } from "@harnessos/contracts";
 import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
+import { resolveCompatibleRuntimeMode } from "@harnessos/shared/runtimeMode";
 
 import { newCommandId, newMessageId, newThreadId } from "./utils";
 import { buildThreadHandoffImportedMessages } from "./threadHandoff";
@@ -16,9 +17,6 @@ import type { Project, Thread } from "../types";
 import { resolveModelPresentationIdentity } from "../engineModelOptions";
 
 const SIDECHAT_MISSING_GRACE_MS = 15_000;
-// Side chats are a Haros-owned product surface. Use the one execution mode every
-// registered Engine exposes instead of requiring an Engine-specific approval bridge.
-const SIDECHAT_RUNTIME_MODE = "full-access" as const;
 type SidechatPaneRetention = { kind: "syncing" } | { kind: "grace"; untilMs: number };
 const sidechatPaneRetentionByThreadId = new Map<ThreadId, SidechatPaneRetention>();
 const sidechatPaneRetentionListeners = new Set<() => void>();
@@ -185,11 +183,19 @@ export function clearSidechatPaneRetention(threadId: ThreadId): void {
   }
 }
 
+function resolveSidechatRuntimeMode(input: {
+  engine: EngineSelection["engine"];
+  sourceRuntimeMode?: Thread["runtimeMode"];
+}): Thread["runtimeMode"] {
+  return resolveCompatibleRuntimeMode(input.engine, input.sourceRuntimeMode ?? "approval-required");
+}
+
 export async function sendSidechatPrompt(input: {
   api: NativeApi;
   threadId: ThreadId;
   selectedEngineSelection: EngineSelection;
   prompt: string;
+  sourceRuntimeMode?: Thread["runtimeMode"];
 }): Promise<void> {
   const prompt = input.prompt.trim();
   if (prompt.length === 0) {
@@ -209,7 +215,10 @@ export async function sendSidechatPrompt(input: {
     modelPresentationIdentity: resolveModelPresentationIdentity({
       selection: input.selectedEngineSelection,
     }),
-    runtimeMode: SIDECHAT_RUNTIME_MODE,
+    runtimeMode: resolveSidechatRuntimeMode({
+      engine: input.selectedEngineSelection.engine,
+      sourceRuntimeMode: input.sourceRuntimeMode,
+    }),
     interactionMode: "default",
     createdAt: new Date().toISOString(),
   });
@@ -241,7 +250,10 @@ export async function createSidechatThread(input: {
     projectId: input.project.id,
     title: titleSeed,
     engineSelection: input.selectedEngineSelection,
-    runtimeMode: SIDECHAT_RUNTIME_MODE,
+    runtimeMode: resolveSidechatRuntimeMode({
+      engine: input.selectedEngineSelection.engine,
+      sourceRuntimeMode: input.sourceThread.runtimeMode,
+    }),
     interactionMode: "default",
     envMode: input.sourceThread.envMode ?? (input.sourceThread.worktreePath ? "worktree" : "local"),
     branch: input.sourceThread.branch,
@@ -277,6 +289,7 @@ export async function createSidechatThread(input: {
         api: input.api,
         threadId: nextThreadId,
         selectedEngineSelection: input.selectedEngineSelection,
+        sourceRuntimeMode: input.sourceThread.runtimeMode,
         prompt: initialPrompt,
       });
       return null;

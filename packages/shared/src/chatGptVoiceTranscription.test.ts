@@ -102,4 +102,22 @@ describe("prewarmChatGptVoiceTranscriptionConnection", () => {
       }),
     );
   });
+
+  it("omits ChatGPT-Account-ID when the token payload is not a JWT claim set", async () => {
+    const request = vi.spyOn(outboundHttp, "request").mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      body: new Uint8Array(),
+      url: CHATGPT_VOICE_TRANSCRIPTION_URL,
+    });
+
+    await requestChatGptVoiceTranscription({
+      audio: Uint8Array.from([1, 2, 3]),
+      mimeType: "audio/wav",
+      token: "not-a-jwt",
+    });
+
+    const headers = request.mock.calls[0]?.[0]?.headers as Record<string, string> | undefined;
+    expect(headers?.["ChatGPT-Account-ID"]).toBeUndefined();
+  });
 });

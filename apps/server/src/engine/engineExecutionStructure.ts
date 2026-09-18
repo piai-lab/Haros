@@ -4,6 +4,7 @@ import {
   type EngineKind,
   type RuntimeMode,
 } from "@harnessos/contracts";
+import { ENGINE_SUPPORTED_RUNTIME_MODES } from "@harnessos/shared/runtimeMode";
 
 export interface EngineExecutionStructure {
   readonly supportsTurnSteering: boolean;
@@ -31,24 +32,24 @@ const PRODUCT_INTERACTION_MODES = ENGINE_INTERACTION_MODES;
  * assets and presentation remain with their existing owners.
  */
 export const ENGINE_EXECUTION_STRUCTURE = {
-  codex: defineStructure(
-    true,
-    ["full-access", "auto", "approval-required"],
+  codex: defineStructure(true, ENGINE_SUPPORTED_RUNTIME_MODES.codex, PRODUCT_INTERACTION_MODES),
+  claude: defineStructure(true, ENGINE_SUPPORTED_RUNTIME_MODES.claude, PRODUCT_INTERACTION_MODES),
+  cursor: defineStructure(false, ENGINE_SUPPORTED_RUNTIME_MODES.cursor, PRODUCT_INTERACTION_MODES),
+  antigravity: defineStructure(
+    false,
+    ENGINE_SUPPORTED_RUNTIME_MODES.antigravity,
+    HOST_INTERACTION_MODES,
+  ),
+  grok: defineStructure(false, ENGINE_SUPPORTED_RUNTIME_MODES.grok, PRODUCT_INTERACTION_MODES),
+  droid: defineStructure(false, ENGINE_SUPPORTED_RUNTIME_MODES.droid, PRODUCT_INTERACTION_MODES),
+  kilo: defineStructure(false, ENGINE_SUPPORTED_RUNTIME_MODES.kilo, PRODUCT_INTERACTION_MODES),
+  opencode: defineStructure(
+    false,
+    ENGINE_SUPPORTED_RUNTIME_MODES.opencode,
     PRODUCT_INTERACTION_MODES,
   ),
-  claude: defineStructure(
-    true,
-    ["full-access", "auto", "approval-required"],
-    PRODUCT_INTERACTION_MODES,
-  ),
-  cursor: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
-  antigravity: defineStructure(false, ["full-access"], HOST_INTERACTION_MODES),
-  grok: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
-  droid: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
-  kilo: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
-  opencode: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
-  pi: defineStructure(true, ["full-access"], HOST_INTERACTION_MODES),
-  deepseek: defineStructure(false, ["full-access"], HOST_INTERACTION_MODES),
+  pi: defineStructure(true, ENGINE_SUPPORTED_RUNTIME_MODES.pi, HOST_INTERACTION_MODES),
+  deepseek: defineStructure(false, ENGINE_SUPPORTED_RUNTIME_MODES.deepseek, HOST_INTERACTION_MODES),
 } as const satisfies Partial<Record<EngineKind, EngineExecutionStructure>>;
 
 const EMPTY_ENGINE_EXECUTION_STRUCTURE = defineStructure(false, [], []);
