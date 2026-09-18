@@ -1,6 +1,8 @@
 // FILE: chatGptVoiceTranscription.test.ts
 // Purpose: Verifies the voice transport warms the provider connection safely.
 
+import { Buffer } from "node:buffer";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -61,8 +63,36 @@ describe("prewarmChatGptVoiceTranscriptionConnection", () => {
         method: "POST",
         headers: expect.objectContaining({
           Authorization: "Bearer test-token",
+          originator: "codex_cli_rs",
           "User-Agent": expect.stringContaining("Mozilla/5.0"),
         }),
+      }),
+    );
+  });
+
+  it("forwards the ChatGPT account id from the Codex access token", async () => {
+    const request = vi.spyOn(outboundHttp, "request").mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      body: new Uint8Array(),
+      url: CHATGPT_VOICE_TRANSCRIPTION_URL,
+    });
+    const encode = (value: string) => Buffer.from(value).toString("base64url");
+    const token = `${encode("{}")}.${encode(
+      JSON.stringify({
+        "https://api.openai.com/auth": { chatgpt_account_id: "account-123" },
+      }),
+    )}.signature`;
+
+    await requestChatGptVoiceTranscription({
+      audio: Uint8Array.from([1, 2, 3]),
+      mimeType: "audio/wav",
+      token,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({ "ChatGPT-Account-ID": "account-123" }),
       }),
     );
   });
