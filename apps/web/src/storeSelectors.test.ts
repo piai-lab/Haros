@@ -8,6 +8,8 @@ import {
   createAllThreadsMessagelessSelector,
   createComposerThreadMentionSourcesSelector,
   createProjectLastActivityAtSelector,
+  createSidebarDisplayThreadsSelector,
+  createSidebarTreeThreadsSelector,
   createThreadExistsSelector,
   createThreadProjectIdSelector,
   createThreadShellsSelector,
@@ -120,6 +122,31 @@ describe("createComposerThreadMentionSourcesSelector", () => {
 
     expect(after).toBe(before);
     expect(summaryReads).toBe(readsAfterFirstSelection);
+  });
+});
+
+describe("sidebar thread selectors", () => {
+  it("keeps sidechats out of ordinary sidebar lists", () => {
+    const sidechatSummary = {
+      ...summaryA,
+      id: threadIdB,
+      title: "Sidechat: A",
+      sidechatSourceThreadId: threadIdA,
+    } as SidebarThreadSummary;
+    const state = makeState({
+      threadIds: [threadIdA, threadIdB],
+      sidebarThreadSummaryById: {
+        [threadIdA]: summaryA,
+        [threadIdB]: sidechatSummary,
+      },
+    });
+
+    expect(createSidebarDisplayThreadsSelector()(state).map((thread) => thread.id)).toEqual([
+      threadIdA,
+    ]);
+    expect(createSidebarTreeThreadsSelector()(state).map((thread) => thread.id)).toEqual([
+      threadIdA,
+    ]);
   });
 });
 
