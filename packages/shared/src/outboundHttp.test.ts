@@ -47,18 +47,12 @@ const policyFor = (port: number) => ({
  */
 describe("bounded proxy response bodies", () => {
   it("rejects oversized streamed bodies before assembling them", async () => {
-    const encoder = new TextEncoder();
-    const response = new Response(
-      new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode("01234567"));
-          controller.enqueue(encoder.encode("overflow"));
-          controller.close();
-        },
-      }),
-    );
+    async function* oversized(): AsyncIterable<Uint8Array> {
+      yield new TextEncoder().encode("01234567");
+      yield new TextEncoder().encode("overflow");
+    }
 
-    await expect(readBoundedResponseBody(response, 8)).rejects.toMatchObject({
+    await expect(readBoundedResponseBody(oversized(), 8)).rejects.toMatchObject({
       name: "OutboundHttpError",
       code: "response-too-large",
     } satisfies Partial<OutboundHttpError>);

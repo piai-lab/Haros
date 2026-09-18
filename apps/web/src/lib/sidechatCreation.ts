@@ -217,7 +217,7 @@ export async function sendSidechatPrompt(input: {
     }),
     runtimeMode: resolveSidechatRuntimeMode({
       engine: input.selectedEngineSelection.engine,
-      sourceRuntimeMode: input.sourceRuntimeMode,
+      ...(input.sourceRuntimeMode ? { sourceRuntimeMode: input.sourceRuntimeMode } : {}),
     }),
     interactionMode: "default",
     createdAt: new Date().toISOString(),

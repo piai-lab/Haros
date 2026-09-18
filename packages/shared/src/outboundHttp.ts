@@ -262,22 +262,18 @@ function requestHeaders(headers: Headers): Record<string, string> {
 }
 
 export async function readBoundedResponseBody(
-  response: Response,
+  source: AsyncIterable<Uint8Array> | null | undefined,
   maxResponseBytes: number,
 ): Promise<Uint8Array> {
-  if (!response.body) {
+  if (!source) {
     return new Uint8Array();
   }
-  const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value || value.byteLength === 0) continue;
+  for await (const value of source) {
+    if (value.byteLength === 0) continue;
     size += value.byteLength;
     if (size > maxResponseBytes) {
-      await reader.cancel();
       throw new OutboundHttpError(
         "response-too-large",
         `Outbound response exceeded the ${maxResponseBytes}-byte limit.`,
@@ -292,6 +288,13 @@ export async function readBoundedResponseBody(
     offset += chunk.byteLength;
   }
   return body;
+}
+
+async function* iterateUndiciResponseBody(
+  body: { [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array> } | null | undefined,
+): AsyncIterable<Uint8Array> {
+  if (!body?.[Symbol.asyncIterator]) return;
+  yield* body as AsyncIterable<Uint8Array>;
 }
 
 let envProxyAgent: EnvHttpProxyAgent | undefined;
@@ -394,11 +397,10 @@ async function requestHop(input: {
         redirect: "manual",
         signal: input.signal,
       });
-      const headers = (() => {
-        const next = new Headers();
-        response.headers.forEach((value, name) => next.set(name, value));
-        return next;
-      })();
+      const headers = new Headers();
+      response.headers.forEach((value: string, name: string) => {
+        headers.set(name, value);
+      });
       const encoding = headers.get("content-encoding")?.trim().toLowerCase();
       if (encoding && encoding !== "identity") {
         await response.body?.cancel();
@@ -418,7 +420,10 @@ async function requestHop(input: {
       return {
         status: response.status,
         headers,
-        body: await readBoundedResponseBody(response, input.maxResponseBytes),
+        body: await readBoundedResponseBody(
+          iterateUndiciResponseBody(response.body),
+          input.maxResponseBytes,
+        ),
         url: input.url.href,
       };
     } catch (cause) {
