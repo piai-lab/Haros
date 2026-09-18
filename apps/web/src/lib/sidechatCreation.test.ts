@@ -128,6 +128,29 @@ describe("createSidechatThread", () => {
     );
   });
 
+  it("uses the shared full-access runtime mode for the fork and its first turn", async () => {
+    const dispatchCommand = vi.fn().mockResolvedValue(undefined);
+
+    await createSidechatThread({
+      api: makeApi({ dispatchCommand }),
+      project,
+      sourceThread,
+      selectedEngineSelection,
+      initialPrompt: "Investigate this",
+      openSidechat: vi.fn(),
+      syncServerShellSnapshot: vi.fn(),
+    });
+
+    expect(dispatchCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ runtimeMode: "full-access" }),
+    );
+    expect(dispatchCommand).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ runtimeMode: "full-access" }),
+    );
+  });
+
   it("retains the pane without a deadline while snapshot synchronization is in flight", async () => {
     let resolveSnapshot: ((snapshot: OrchestrationShellSnapshot) => void) | undefined;
     const getShellSnapshot = vi.fn().mockImplementation(

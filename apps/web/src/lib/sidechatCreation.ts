@@ -16,6 +16,9 @@ import type { Project, Thread } from "../types";
 import { resolveModelPresentationIdentity } from "../engineModelOptions";
 
 const SIDECHAT_MISSING_GRACE_MS = 15_000;
+// Side chats are a Haros-owned product surface. Use the one execution mode every
+// registered Engine exposes instead of requiring an Engine-specific approval bridge.
+const SIDECHAT_RUNTIME_MODE = "full-access" as const;
 type SidechatPaneRetention = { kind: "syncing" } | { kind: "grace"; untilMs: number };
 const sidechatPaneRetentionByThreadId = new Map<ThreadId, SidechatPaneRetention>();
 const sidechatPaneRetentionListeners = new Set<() => void>();
@@ -206,7 +209,7 @@ export async function sendSidechatPrompt(input: {
     modelPresentationIdentity: resolveModelPresentationIdentity({
       selection: input.selectedEngineSelection,
     }),
-    runtimeMode: "approval-required",
+    runtimeMode: SIDECHAT_RUNTIME_MODE,
     interactionMode: "default",
     createdAt: new Date().toISOString(),
   });
@@ -238,7 +241,7 @@ export async function createSidechatThread(input: {
     projectId: input.project.id,
     title: titleSeed,
     engineSelection: input.selectedEngineSelection,
-    runtimeMode: "approval-required",
+    runtimeMode: SIDECHAT_RUNTIME_MODE,
     interactionMode: "default",
     envMode: input.sourceThread.envMode ?? (input.sourceThread.worktreePath ? "worktree" : "local"),
     branch: input.sourceThread.branch,
