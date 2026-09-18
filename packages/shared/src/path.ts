@@ -3,6 +3,17 @@
 // Layer: Cross-package utility
 // Exports: absolute-path predicates plus safe workspace relative path helpers
 
+/** Virtual Windows browse target for the drive list ("This PC"). Not a real path. */
+export const WINDOWS_COMPUTER_ROOT = "Computer:";
+
+export function isWindowsComputerRoot(value: string): boolean {
+  return value.trim() === WINDOWS_COMPUTER_ROOT;
+}
+
+export function isWindowsDriveRoot(value: string): boolean {
+  return /^[a-zA-Z]:[\\/]?$/.test(value.trim());
+}
+
 export function isWindowsDrivePath(value: string): boolean {
   return /^[a-zA-Z]:[/\\]/.test(value);
 }

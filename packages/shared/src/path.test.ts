@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   isLocalAbsolutePath,
+  isWindowsComputerRoot,
+  isWindowsDriveRoot,
   isWorkspaceRelativePathSafe,
   joinWorkspaceRelativePath,
+  WINDOWS_COMPUTER_ROOT,
   workspaceRelativePathOf,
 } from "./path";
 
@@ -69,6 +72,21 @@ describe("workspaceRelativePathOf", () => {
   it("returns null for empty inputs", () => {
     expect(workspaceRelativePathOf("", "/repo/app")).toBeNull();
     expect(workspaceRelativePathOf("/repo/app/file.ts", "  ")).toBeNull();
+  });
+});
+
+describe("Windows computer and drive roots", () => {
+  it("recognizes the virtual This PC browse target", () => {
+    expect(isWindowsComputerRoot(WINDOWS_COMPUTER_ROOT)).toBe(true);
+    expect(isWindowsComputerRoot(" C: ")).toBe(false);
+    expect(isWindowsComputerRoot("/")).toBe(false);
+  });
+
+  it("recognizes drive roots with or without a trailing slash", () => {
+    expect(isWindowsDriveRoot("C:")).toBe(true);
+    expect(isWindowsDriveRoot("C:\\")).toBe(true);
+    expect(isWindowsDriveRoot("d:/")).toBe(true);
+    expect(isWindowsDriveRoot("C:\\Users")).toBe(false);
   });
 });
 
