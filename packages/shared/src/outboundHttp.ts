@@ -262,12 +262,35 @@ function requestHeaders(headers: Headers): Record<string, string> {
 }
 
 export async function readBoundedResponseBody(
-  source: AsyncIterable<Uint8Array> | null | undefined,
+  source:
+    | AsyncIterable<Uint8Array>
+    | {
+        readonly getReader?: () => {
+          read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+          cancel(): Promise<void>;
+        };
+      }
+    | null
+    | undefined,
   maxResponseBytes: number,
 ): Promise<Uint8Array> {
   if (!source) {
     return new Uint8Array();
   }
+  if (Symbol.asyncIterator in source) {
+    return accumulateBoundedChunks(source, maxResponseBytes);
+  }
+  const reader = source.getReader?.();
+  if (!reader) {
+    return new Uint8Array();
+  }
+  return accumulateBoundedChunks(iterateReadableStreamReader(reader), maxResponseBytes);
+}
+
+async function accumulateBoundedChunks(
+  source: AsyncIterable<Uint8Array>,
+  maxResponseBytes: number,
+): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   let size = 0;
   for await (const value of source) {
@@ -290,11 +313,19 @@ export async function readBoundedResponseBody(
   return body;
 }
 
-async function* iterateUndiciResponseBody(
-  body: { [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array> } | null | undefined,
-): AsyncIterable<Uint8Array> {
-  if (!body?.[Symbol.asyncIterator]) return;
-  yield* body as AsyncIterable<Uint8Array>;
+async function* iterateReadableStreamReader(reader: {
+  read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+  cancel(): Promise<void>;
+}): AsyncIterable<Uint8Array> {
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (value && value.byteLength > 0) yield value;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
 }
 
 let envProxyAgent: EnvHttpProxyAgent | undefined;
@@ -420,10 +451,7 @@ async function requestHop(input: {
       return {
         status: response.status,
         headers,
-        body: await readBoundedResponseBody(
-          iterateUndiciResponseBody(response.body),
-          input.maxResponseBytes,
-        ),
+        body: await readBoundedResponseBody(response.body, input.maxResponseBytes),
         url: input.url.href,
       };
     } catch (cause) {

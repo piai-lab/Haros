@@ -51,7 +51,7 @@ const EN_MESSAGES = {
     "The side chat is open. Send the prompt again when it finishes loading.",
   "composer.sideSyncingTitle": "Side chat is still syncing",
   "composer.sideSyncingDescription":
-    "The fork succeeded and will appear as soon as the task list refreshes.",
+    "The side chat opened. It stays out of the task list while the pane finishes syncing.",
   "composer.sidePromptNotSentTitle": "Side chat prompt was not sent",
   "composer.command.statusDescription": "Show context usage and rate-limit status",
   "composer.command.subagentsDescription":
@@ -346,7 +346,8 @@ const ZH_CN_MESSAGES = {
   "composer.sideStartedWithoutPromptTitle": "侧边聊天已创建，但提示词尚未发送",
   "composer.sidePromptRetryDescription": "侧边聊天已打开；加载完成后请重新发送提示词。",
   "composer.sideSyncingTitle": "侧边聊天仍在同步",
-  "composer.sideSyncingDescription": "分支创建成功，任务列表刷新后便会显示。",
+  "composer.sideSyncingDescription":
+    "侧边聊天已打开。它不会出现在任务列表中，面板仍在同步。",
   "composer.sidePromptNotSentTitle": "侧边聊天的提示词未发送",
   "composer.command.statusDescription": "查看上下文用量和速率限制状态",
   "composer.command.subagentsDescription": "插入一条让助手委派工作的提示",

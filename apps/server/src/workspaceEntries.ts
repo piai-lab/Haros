@@ -1188,21 +1188,19 @@ export async function windowsDriveExists(
 ): Promise<boolean> {
   const timeoutMs = options.timeoutMs ?? WINDOWS_DRIVE_STAT_TIMEOUT_MS;
   const probe = options.probe ?? ((candidate) => fs.stat(candidate));
-  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   try {
     const probeResult = probe(fullPath).then(
       () => true,
       () => false,
     );
     const timedOut = new Promise<boolean>((resolve) => {
-      timeoutHandle = setTimeout(() => resolve(false), timeoutMs);
+      const timeoutHandle = setTimeout(() => resolve(false), timeoutMs);
       timeoutHandle.unref?.();
+      void probeResult.finally(() => clearTimeout(timeoutHandle));
     });
     return await Promise.race([probeResult, timedOut]);
   } catch {
     return false;
-  } finally {
-    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
   }
 }
 

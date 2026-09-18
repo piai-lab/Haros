@@ -48,6 +48,11 @@ describe("browseWorkspaceEntries", () => {
     );
   });
 
+  it("times out a hung Windows drive probe", async () => {
+    const probe = () => new Promise<unknown>(() => {});
+    await expect(windowsDriveExists("Z:\\", { timeoutMs: 20, probe })).resolves.toBe(false);
+  });
+
   it("swallows a late Windows drive probe rejection after timeout", async () => {
     const unhandled: unknown[] = [];
     const onUnhandled = (reason: unknown) => {
