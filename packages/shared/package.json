@@ -318,7 +318,8 @@
   },
   "dependencies": {
     "@harnessos/contracts": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "undici": "8.9.0"
   },
   "devDependencies": {
     "@effect/language-service": "catalog:",

@@ -8,6 +8,7 @@ import * as Dns from "node:dns/promises";
 import * as Http from "node:http";
 import * as Https from "node:https";
 import * as Net from "node:net";
+import { EnvHttpProxyAgent, fetch } from "undici";
 
 import {
   assertJsonWithinLimits,
@@ -51,6 +52,7 @@ export interface OutboundHttpPolicy {
   readonly maxConcurrent: number;
   readonly maxQueued: number;
   readonly requirePublicAddress?: boolean;
+  readonly useEnvProxy?: boolean;
 }
 
 export interface OutboundHttpRequest {
@@ -259,6 +261,23 @@ function requestHeaders(headers: Headers): Record<string, string> {
   return result;
 }
 
+let envProxyAgent: EnvHttpProxyAgent | undefined;
+
+function resolveEnvProxyAgent(): EnvHttpProxyAgent | undefined {
+  if (
+    !process.env.HTTPS_PROXY?.trim() &&
+    !process.env.https_proxy?.trim() &&
+    !process.env.HTTP_PROXY?.trim() &&
+    !process.env.http_proxy?.trim() &&
+    !process.env.ALL_PROXY?.trim() &&
+    !process.env.all_proxy?.trim()
+  ) {
+    return undefined;
+  }
+  envProxyAgent ??= new EnvHttpProxyAgent();
+  return envProxyAgent;
+}
+
 async function resolvePinnedAddress(
   url: URL,
   requirePublicAddress: boolean,
@@ -328,8 +347,50 @@ async function requestHop(input: {
   readonly body?: Uint8Array;
   readonly maxResponseBytes: number;
   readonly requirePublicAddress: boolean;
+  readonly useEnvProxy: boolean;
   readonly signal: AbortSignal;
 }): Promise<OutboundHttpResponse> {
+  const proxyAgent = input.useEnvProxy ? resolveEnvProxyAgent() : undefined;
+  if (proxyAgent) {
+    try {
+      const response = await fetch(input.url, {
+        method: input.method,
+        headers: requestHeaders(input.headers),
+        ...(input.body ? { body: input.body } : {}),
+        dispatcher: proxyAgent,
+        redirect: "manual",
+        signal: input.signal,
+      });
+      const declaredLength = Number(response.headers.get("content-length"));
+      if (Number.isFinite(declaredLength) && declaredLength > input.maxResponseBytes) {
+        throw new OutboundHttpError(
+          "response-too-large",
+          `Outbound response exceeded the ${input.maxResponseBytes}-byte limit.`,
+        );
+      }
+      const body = new Uint8Array(await response.arrayBuffer());
+      if (body.byteLength > input.maxResponseBytes) {
+        throw new OutboundHttpError(
+          "response-too-large",
+          `Outbound response exceeded the ${input.maxResponseBytes}-byte limit.`,
+        );
+      }
+      return {
+        status: response.status,
+        headers: (() => {
+          const headers = new Headers();
+          response.headers.forEach((value, name) => headers.set(name, value));
+          return headers;
+        })(),
+        body,
+        url: input.url.href,
+      };
+    } catch (cause) {
+      if (cause instanceof OutboundHttpError) throw cause;
+      throw new OutboundHttpError("request", "Outbound request failed.", cause);
+    }
+  }
+
   const pinned = await resolvePinnedAddress(input.url, input.requirePublicAddress, input.signal);
 
   return await new Promise<OutboundHttpResponse>((resolve, reject) => {
@@ -483,6 +544,7 @@ export class OutboundHttpClient {
           ...(body ? { body } : {}),
           maxResponseBytes: policy.maxResponseBytes,
           requirePublicAddress: policy.requirePublicAddress ?? true,
+          useEnvProxy: policy.useEnvProxy ?? false,
           signal: controller.signal,
         });
         if (!isRedirectStatus(response.status)) return response;

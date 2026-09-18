@@ -37,7 +37,11 @@ export async function transcribeVoiceWithChatGptSession(input: {
     ...(auth.transcriptionUrl ? { transcriptionUrl: auth.transcriptionUrl } : {}),
   });
 
-  if (response.status === 401 || response.status === 403) {
+  if (
+    response.status === 401 ||
+    (response.status === 403 &&
+      response.headers.get("cf-mitigated")?.trim().toLowerCase() !== "challenge")
+  ) {
     auth = await input.resolveAuth(true);
     response = await requestTranscription({
       audioBuffer,
@@ -120,6 +124,10 @@ async function requestTranscription(input: {
 }
 
 function readTranscriptionErrorMessage(response: OutboundHttpResponse): string {
+  if (response.headers.get("cf-mitigated")?.trim().toLowerCase() === "challenge") {
+    return "ChatGPT transcription was blocked by a Cloudflare challenge. Check the network or proxy and try again.";
+  }
+
   let errorMessage = `Transcription failed with status ${response.status}.`;
   try {
     const payload = decodeOutboundJson(response, { maxDepth: 16, maxNodes: 1_000 }) as {
