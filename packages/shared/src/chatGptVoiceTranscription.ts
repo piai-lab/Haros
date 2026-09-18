@@ -17,6 +17,7 @@ const DEFAULT_VOICE_UPLOAD_USER_AGENT =
   "(KHTML, like Gecko) Version/17.4 Safari/605.1.15";
 const VOICE_UPLOAD_USER_AGENT = resolveVoiceUploadUserAgent();
 const CHATGPT_VOICE_ORIGINATOR = "codex_cli_rs";
+const CHATGPT_VOICE_ORIGIN = "https://chatgpt.com";
 
 function resolveVoiceUploadUserAgent(): string {
   const override = process.env.HARNESSOS_VOICE_UPLOAD_USER_AGENT?.trim();
@@ -80,8 +81,14 @@ export function requestChatGptVoiceTranscription(input: {
     method: "POST",
     headers: {
       Authorization: `Bearer ${input.token}`,
+      Accept: "application/json, text/plain, */*",
       "Content-Type": multipart.contentType,
       originator: CHATGPT_VOICE_ORIGINATOR,
+      Origin: CHATGPT_VOICE_ORIGIN,
+      Referer: `${CHATGPT_VOICE_ORIGIN}/`,
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
       "User-Agent": VOICE_UPLOAD_USER_AGENT,
       ...(accountId ? { "ChatGPT-Account-ID": accountId } : {}),
     },

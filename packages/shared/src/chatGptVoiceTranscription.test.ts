@@ -63,7 +63,13 @@ describe("prewarmChatGptVoiceTranscriptionConnection", () => {
         method: "POST",
         headers: expect.objectContaining({
           Authorization: "Bearer test-token",
+          Accept: "application/json, text/plain, */*",
           originator: "codex_cli_rs",
+          Origin: "https://chatgpt.com",
+          Referer: "https://chatgpt.com/",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
           "User-Agent": expect.stringContaining("Mozilla/5.0"),
         }),
       }),
