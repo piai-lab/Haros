@@ -102,7 +102,9 @@ export interface DependencyInventory {
 }
 
 function sha256(value: string | Buffer): string {
-  return createHash("sha256").update(value).digest("hex");
+  return createHash("sha256")
+    .update(typeof value === "string" ? value.replace(/\r\n?/gu, "\n") : value)
+    .digest("hex");
 }
 
 function readJson(path: string): PackageManifest {
