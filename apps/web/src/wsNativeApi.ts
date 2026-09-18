@@ -589,7 +589,10 @@ export function createWsNativeApi(): NativeApi {
       onProvisionProgress: projectProvisionProgressListeners.subscribe,
     },
     filesystem: {
-      browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),
+      browse: (input, options) =>
+        transport.request(WS_METHODS.filesystemBrowse, input, {
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
     },
     studio: {
       listThreadOutputs: (input) => transport.request(WS_METHODS.studioListThreadOutputs, input),

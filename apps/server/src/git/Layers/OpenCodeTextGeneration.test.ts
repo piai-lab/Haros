@@ -68,12 +68,14 @@ const OpenCodeRuntimeTestDouble: OpenCodeRuntimeShape = {
       return {
         url,
         exitCode: Effect.never,
+        capturedOutput: Effect.succeed({ stdout: "", stderr: "" }),
       };
     }),
   connectToOpenCodeServer: ({ serverUrl }) =>
     Effect.succeed({
       url: serverUrl ?? "http://127.0.0.1:4301",
       exitCode: null,
+      capturedOutput: null,
       external: Boolean(serverUrl),
     }),
   runOpenCodeCommand: () =>

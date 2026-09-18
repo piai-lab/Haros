@@ -76,6 +76,7 @@ const EN_MESSAGES = {
   "project.folderBrowserSelect": "Choose this folder",
   "project.folderBrowserUnavailable": "Folder browsing is unavailable. Reconnect and try again.",
   "project.folderBrowserLoadFailed": "Could not load this folder. Try again.",
+  "project.folderBrowserComputer": "This PC",
   "project.pathRequired": "Type a folder path, or drop a folder above.",
   "project.syncPending":
     "The project was added, but it has not appeared in the sidebar yet. Try again in a moment.",
@@ -367,6 +368,7 @@ const ZH_CN_MESSAGES = {
   "project.folderBrowserSelect": "选择此文件夹",
   "project.folderBrowserUnavailable": "无法浏览文件夹。请重新连接后重试。",
   "project.folderBrowserLoadFailed": "无法加载此文件夹，请重试。",
+  "project.folderBrowserComputer": "此电脑",
   "project.pathRequired": "请输入文件夹路径，或把文件夹拖到上方。",
   "project.syncPending": "项目已添加，但尚未显示在侧栏中。请稍后重试。",
   "project.githubSyncPending": "GitHub 项目已添加，但尚未显示在侧栏中。请稍后重试。",

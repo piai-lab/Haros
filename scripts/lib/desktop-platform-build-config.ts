@@ -29,6 +29,7 @@ export interface DesktopPlatformBuildConfig {
   readonly files?: ReadonlyArray<string>;
   readonly linux?: Record<string, unknown>;
   readonly mac?: Record<string, unknown>;
+  readonly npmRebuild?: boolean;
   readonly nsis?: Record<string, unknown>;
   readonly win?: Record<string, unknown>;
 }
@@ -130,6 +131,10 @@ export function createDesktopPlatformBuildConfig(
   return {
     ...nativePackaging,
     files: ["**/*", PACKAGED_LEGAL_FILES_GLOB],
+    // node-pty already ships Windows N-API prebuilds. Rebuilding from source
+    // requires Spectre-mitigated MSVC libraries that a typical desktop VS
+    // install does not include, and is unnecessary for the packaged terminal.
+    npmRebuild: false,
     nsis: {
       guid: WINDOWS_INSTALLER_GUID,
     },

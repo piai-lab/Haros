@@ -77,6 +77,22 @@ describe("WsRequestAdmission", () => {
     );
   });
 
+  it("keeps directory browsing off the expensive-read lane", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const admission = yield* makeWsRequestAdmission;
+        const snapshot = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
+        const stats = yield* admission.acquire(1, WS_METHODS.statsGetProfileStats);
+        const browse = yield* admission.acquire(1, WS_METHODS.filesystemBrowse);
+
+        expect(browse.requestClass).toBe("standard");
+        yield* admission.release(snapshot);
+        yield* admission.release(stats);
+        yield* admission.release(browse);
+      }),
+    );
+  });
+
   it("reserves engine discovery capacity during cold shell restoration", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {

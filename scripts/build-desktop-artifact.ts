@@ -1144,7 +1144,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     `[desktop-artifact] Locked legal metadata to ${legalInventory.componentCount} staged production components.`,
   );
 
-  if (options.platform === "linux") {
+  if (options.platform === "linux" || options.platform === "win") {
     yield* verifyStagedNodePty(stageAppDir, options.verbose);
   }
 
@@ -1174,8 +1174,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       buildEnv.PYTHON = python;
       buildEnv.npm_config_python = python;
     }
-    buildEnv.npm_config_msvs_version = buildEnv.npm_config_msvs_version ?? "2022";
-    buildEnv.GYP_MSVS_VERSION = buildEnv.GYP_MSVS_VERSION ?? "2022";
+    // Do not pin MSVC 2022. A side-by-side Build Tools install would steal the
+    // rebuild from Visual Studio 2026, which node-gyp already knows how to use.
+    // Windows 11 can set NoDefaultCurrentDirectoryInExePath=1, which makes cmd
+    // refuse current-directory .bat files. node-pty's winpty gyp then fails to
+    // run GetCommitHash.bat even though the file is present.
+    delete buildEnv.NoDefaultCurrentDirectoryInExePath;
   }
 
   yield* Effect.log(

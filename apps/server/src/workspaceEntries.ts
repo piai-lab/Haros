@@ -34,7 +34,9 @@ import {
 import {
   isExplicitRelativePath,
   isWindowsAbsolutePath,
+  isWindowsComputerRoot,
   isWorkspaceRelativePathSafe,
+  WINDOWS_COMPUTER_ROOT,
 } from "@harnessos/shared/path";
 import { normalizeWorkspaceEntrySearchQuery } from "@harnessos/shared/searchQuery";
 import { isContainedPath, resolveRealPathWithinRoot } from "./workspace/realPathContainment";
@@ -1159,6 +1161,8 @@ function expandHomePath(input: string): string {
   return input;
 }
 
+const WINDOWS_DRIVE_STAT_TIMEOUT_MS = 250;
+
 function resolveBrowseTarget(input: FilesystemBrowseInput): string {
   if (process.platform !== "win32" && isWindowsAbsolutePath(input.partialPath)) {
     throw new Error("Windows-style paths are only supported on Windows.");
@@ -1175,9 +1179,56 @@ function resolveBrowseTarget(input: FilesystemBrowseInput): string {
   return path.resolve(expandHomePath(input.cwd), input.partialPath);
 }
 
+export async function windowsDriveExists(
+  fullPath: string,
+  options: {
+    readonly timeoutMs?: number;
+    readonly probe?: (path: string) => Promise<unknown>;
+  } = {},
+): Promise<boolean> {
+  const timeoutMs = options.timeoutMs ?? WINDOWS_DRIVE_STAT_TIMEOUT_MS;
+  const probe = options.probe ?? ((candidate) => fs.stat(candidate));
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const probeResult = probe(fullPath).then(
+      () => true,
+      () => false,
+    );
+    const timedOut = new Promise<boolean>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve(false), timeoutMs);
+      timeoutHandle.unref?.();
+    });
+    return await Promise.race([probeResult, timedOut]);
+  } catch {
+    return false;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+  }
+}
+
+async function listWindowsLogicalDrives(): Promise<FilesystemBrowseResult["entries"]> {
+  const entries = await Promise.all(
+    Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ", async (letter) => {
+      const fullPath = `${letter}:\\`;
+      return (await windowsDriveExists(fullPath)) ? { name: `${letter}:`, fullPath } : null;
+    }),
+  );
+  return entries.filter((entry) => entry !== null);
+}
+
 export async function browseWorkspaceEntries(
   input: FilesystemBrowseInput,
 ): Promise<FilesystemBrowseResult> {
+  if (isWindowsComputerRoot(input.partialPath)) {
+    if (process.platform !== "win32") {
+      throw new Error("Windows-style paths are only supported on Windows.");
+    }
+    return {
+      parentPath: WINDOWS_COMPUTER_ROOT,
+      entries: await listWindowsLogicalDrives(),
+    };
+  }
+
   const resolvedInputPath = resolveBrowseTarget(input);
   const endsWithSeparator = /[\\/]$/.test(input.partialPath) || input.partialPath === "~";
   const parentPath = endsWithSeparator ? resolvedInputPath : path.dirname(resolvedInputPath);

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -196,6 +196,16 @@ describe("legal metadata", () => {
     expect(() => collectDependencyInventory(fixture({ manifestDigest: "0".repeat(64) }))).toThrow(
       "override manifest digest changed",
     );
+  });
+
+  it("treats Windows CRLF package manifests as the same locked identity", () => {
+    const input = fixture();
+    const manifestPath = join(
+      input.packageRoot,
+      "node_modules/@earendil-works/pi-agent-core/package.json",
+    );
+    write(manifestPath, `${readFileSync(manifestPath, "utf8").replaceAll("\n", "\r\n")}`);
+    expect(() => collectDependencyInventory(input)).not.toThrow();
   });
 
   it("fails closed when the vendored legal text digest changes", () => {

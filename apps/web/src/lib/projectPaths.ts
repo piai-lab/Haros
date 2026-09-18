@@ -2,7 +2,10 @@ import {
   isExplicitRelativePath,
   isUncPath,
   isWindowsAbsolutePath,
+  isWindowsComputerRoot,
   isWindowsDrivePath,
+  isWindowsDriveRoot,
+  WINDOWS_COMPUTER_ROOT,
 } from "@harnessos/shared/path";
 import { isWindowsPlatform } from "./utils";
 
@@ -164,6 +167,47 @@ export function getBrowseDirectoryPath(currentPath: string): string {
   }
 
   return currentPath.slice(0, lastSeparatorIndex + 1);
+}
+
+export function getFolderBrowserParentPath(currentPath: string): string | null {
+  if (isWindowsComputerRoot(currentPath)) {
+    return null;
+  }
+  const parent = getBrowseParentPath(currentPath);
+  if (parent !== null) {
+    return parent;
+  }
+  return isWindowsDriveRoot(currentPath) ? WINDOWS_COMPUTER_ROOT : null;
+}
+
+export function toFolderBrowserBrowsePath(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return ".";
+  if (isWindowsComputerRoot(trimmed)) {
+    return WINDOWS_COMPUTER_ROOT;
+  }
+  if (trimmed === "/") {
+    return "/";
+  }
+  if (isWindowsDriveRoot(trimmed)) {
+    return /[\\/]$/.test(trimmed) ? trimmed : `${trimmed}\\`;
+  }
+  const withoutTrailing = trimmed.replace(/[\\/]+$/, "");
+  return `${withoutTrailing}${preferredPathSeparator(withoutTrailing)}`;
+}
+
+export function toFolderBrowserSelectPath(value: string): string | null {
+  if (isWindowsComputerRoot(value)) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed === "/" || isWindowsDriveRoot(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.replace(/[\\/]+$/, "");
 }
 
 export function getBrowseParentPath(currentPath: string): string | null {

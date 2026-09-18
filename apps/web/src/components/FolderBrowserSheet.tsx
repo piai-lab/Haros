@@ -1,40 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FilesystemBrowseResult } from "@harnessos/contracts";
+import { isWindowsComputerRoot } from "@harnessos/shared/path";
 
 import { readNativeApi } from "../nativeApi";
 import { ArrowLeftIcon, CheckIcon, LoaderCircleIcon } from "~/lib/icons";
+import { CentralIcon } from "~/lib/central-icons";
+import {
+  getFolderBrowserParentPath,
+  toFolderBrowserBrowsePath,
+  toFolderBrowserSelectPath,
+} from "../lib/projectPaths";
 import { cn } from "~/lib/utils";
 import { useI18n } from "../i18n";
 import { FolderClosed } from "./FolderClosed";
 import { Sheet, SheetFooter, SheetHeader, SheetPanel, SheetPopup, SheetTitle } from "./ui/sheet";
 import { Button } from "./ui/button";
 
-function trimDirectoryPath(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return ".";
-  if (trimmed === "/" || /^[A-Za-z]:[\\/]?$/.test(trimmed)) return trimmed;
-  return trimmed.replace(/[\\/]+$/, "");
-}
-
-function trailingSeparator(value: string): string {
-  return value.includes("\\") ? "\\" : "/";
-}
-
-function browsePath(value: string): string {
-  const normalized = trimDirectoryPath(value);
-  if (normalized === "/" || /^[A-Za-z]:[\\/]$/.test(normalized)) return normalized;
-  return `${normalized}${trailingSeparator(normalized)}`;
-}
-
-function parentPath(value: string): string | null {
-  const normalized = trimDirectoryPath(value);
-  if (normalized === "." || normalized === "/" || /^[A-Za-z]:[\\/]?$/.test(normalized)) {
-    return null;
-  }
-  const separatorIndex = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
-  if (separatorIndex < 0) return null;
-  if (separatorIndex === 0) return normalized.startsWith("/") ? "/" : null;
-  return normalized.slice(0, separatorIndex);
+function isBrowseRequestCancelled(cause: unknown): boolean {
+  if (typeof cause !== "object" || cause === null) return false;
+  if ("name" in cause && cause.name === "AbortError") return true;
+  return "code" in cause && cause.code === "WS_REQUEST_ABORTED";
 }
 
 export function FolderBrowserSheet(props: {
@@ -44,21 +29,21 @@ export function FolderBrowserSheet(props: {
   readonly onSelect: (path: string) => void;
 }) {
   const { t } = useI18n();
-  const [currentPath, setCurrentPath] = useState(() => browsePath(props.initialPath));
+  const [currentPath, setCurrentPath] = useState(() => toFolderBrowserBrowsePath(props.initialPath));
   const [result, setResult] = useState<FilesystemBrowseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (props.open) {
-      setCurrentPath(browsePath(props.initialPath));
+      setCurrentPath(toFolderBrowserBrowsePath(props.initialPath));
       setResult(null);
       setError(null);
     }
   }, [props.initialPath, props.open]);
 
   const load = useCallback(
-    async (path: string) => {
+    async (path: string, signal: AbortSignal) => {
       const api = readNativeApi();
       if (!api) {
         setError(t("project.folderBrowserUnavailable"));
@@ -67,13 +52,18 @@ export function FolderBrowserSheet(props: {
       setLoading(true);
       setError(null);
       try {
-        const next = await api.filesystem.browse({ partialPath: browsePath(path) });
+        const next = await api.filesystem.browse(
+          { partialPath: toFolderBrowserBrowsePath(path) },
+          { signal },
+        );
+        if (signal.aborted) return;
         setResult(next);
       } catch (cause) {
+        if (signal.aborted || isBrowseRequestCancelled(cause)) return;
         setResult(null);
         setError(cause instanceof Error ? cause.message : t("project.folderBrowserLoadFailed"));
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     },
     [t],
@@ -81,25 +71,30 @@ export function FolderBrowserSheet(props: {
 
   useEffect(() => {
     if (!props.open) return;
-    void load(currentPath);
+    const controller = new AbortController();
+    void load(currentPath, controller.signal);
+    return () => controller.abort();
   }, [currentPath, load, props.open]);
 
+  const selectedPath = toFolderBrowserSelectPath(currentPath);
   const selectCurrent = () => {
-    props.onSelect(trimDirectoryPath(currentPath));
+    if (!selectedPath) return;
+    props.onSelect(selectedPath);
     props.onOpenChange(false);
   };
 
-  const parent = parentPath(currentPath);
+  const parent = getFolderBrowserParentPath(currentPath);
+  const atComputerRoot = isWindowsComputerRoot(currentPath);
+  const displayPath = atComputerRoot
+    ? t("project.folderBrowserComputer")
+    : (selectedPath ?? currentPath);
   return (
     <Sheet open={props.open} onOpenChange={props.onOpenChange}>
       <SheetPopup side="right">
         <SheetHeader>
           <SheetTitle>{t("project.folderBrowserTitle")}</SheetTitle>
-          <p
-            className="truncate text-sm text-muted-foreground"
-            title={trimDirectoryPath(currentPath)}
-          >
-            {trimDirectoryPath(currentPath)}
+          <p className="truncate text-sm text-muted-foreground" title={displayPath}>
+            {displayPath}
           </p>
         </SheetHeader>
         <SheetPanel className="pt-2">
@@ -107,7 +102,7 @@ export function FolderBrowserSheet(props: {
             <button
               type="button"
               className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-foreground/5"
-              onClick={() => setCurrentPath(browsePath(parent))}
+              onClick={() => setCurrentPath(toFolderBrowserBrowsePath(parent))}
             >
               <ArrowLeftIcon className="size-4 text-muted-foreground" />
               {t("project.folderBrowserUp")}
@@ -132,9 +127,13 @@ export function FolderBrowserSheet(props: {
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm",
                     "hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
                   )}
-                  onClick={() => setCurrentPath(browsePath(entry.fullPath))}
+                  onClick={() => setCurrentPath(toFolderBrowserBrowsePath(entry.fullPath))}
                 >
-                  <FolderClosed className="size-4 text-muted-foreground" />
+                  {atComputerRoot ? (
+                    <CentralIcon name="storage" className="size-4 text-muted-foreground" />
+                  ) : (
+                    <FolderClosed className="size-4 text-muted-foreground" />
+                  )}
                   <span className="truncate">{entry.name}</span>
                 </button>
               ))}
@@ -146,7 +145,11 @@ export function FolderBrowserSheet(props: {
           )}
         </SheetPanel>
         <SheetFooter>
-          <Button variant="prominent" onClick={selectCurrent} disabled={loading || Boolean(error)}>
+          <Button
+            variant="prominent"
+            onClick={selectCurrent}
+            disabled={loading || Boolean(error) || selectedPath === null}
+          >
             <CheckIcon className="size-4" />
             {t("project.folderBrowserSelect")}
           </Button>
