@@ -16,6 +16,12 @@ import { FolderClosed } from "./FolderClosed";
 import { Sheet, SheetFooter, SheetHeader, SheetPanel, SheetPopup, SheetTitle } from "./ui/sheet";
 import { Button } from "./ui/button";
 
+function isBrowseRequestCancelled(cause: unknown): boolean {
+  if (typeof cause !== "object" || cause === null) return false;
+  if ("name" in cause && cause.name === "AbortError") return true;
+  return "code" in cause && cause.code === "WS_REQUEST_ABORTED";
+}
+
 export function FolderBrowserSheet(props: {
   readonly open: boolean;
   readonly initialPath: string;
@@ -37,7 +43,7 @@ export function FolderBrowserSheet(props: {
   }, [props.initialPath, props.open]);
 
   const load = useCallback(
-    async (path: string) => {
+    async (path: string, signal: AbortSignal) => {
       const api = readNativeApi();
       if (!api) {
         setError(t("project.folderBrowserUnavailable"));
@@ -46,13 +52,18 @@ export function FolderBrowserSheet(props: {
       setLoading(true);
       setError(null);
       try {
-        const next = await api.filesystem.browse({ partialPath: toFolderBrowserBrowsePath(path) });
+        const next = await api.filesystem.browse(
+          { partialPath: toFolderBrowserBrowsePath(path) },
+          { signal },
+        );
+        if (signal.aborted) return;
         setResult(next);
       } catch (cause) {
+        if (signal.aborted || isBrowseRequestCancelled(cause)) return;
         setResult(null);
         setError(cause instanceof Error ? cause.message : t("project.folderBrowserLoadFailed"));
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     },
     [t],
@@ -60,7 +71,9 @@ export function FolderBrowserSheet(props: {
 
   useEffect(() => {
     if (!props.open) return;
-    void load(currentPath);
+    const controller = new AbortController();
+    void load(currentPath, controller.signal);
+    return () => controller.abort();
   }, [currentPath, load, props.open]);
 
   const selectedPath = toFolderBrowserSelectPath(currentPath);

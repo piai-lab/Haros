@@ -863,7 +863,10 @@ export interface NativeApi {
     ) => () => void;
   };
   filesystem: {
-    browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
+    browse: (
+      input: FilesystemBrowseInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<FilesystemBrowseResult>;
   };
   studio: {
     listThreadOutputs: (
