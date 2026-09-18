@@ -54,6 +54,21 @@ describe("Codex discovery catalog", () => {
     ]);
   });
 
+  it("does not expose Codex models that the provider does not offer", () => {
+    expect(
+      parseCodexModelListResponse({
+        result: {
+          items: [
+            { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark" },
+            { id: "gpt-5.4", name: "GPT-5.4" },
+            { id: "gpt-5.4-mini", name: "GPT-5.4 mini" },
+            { id: "gpt-5.5", name: "GPT-5.5" },
+          ],
+        },
+      }).map((model) => model.slug),
+    ).toEqual(["gpt-5.3-codex-spark", "gpt-5.5"]);
+  });
+
   it("normalizes bucketed skills/list responses for the requested cwd", () => {
     expect(
       parseCodexSkillsListResponse(

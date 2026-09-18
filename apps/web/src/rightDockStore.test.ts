@@ -95,4 +95,22 @@ describe("rightDockStore visible activation", () => {
     expect(persisted).not.toHaveProperty("pendingVisibleActivationByThreadId");
     expect(persisted).not.toHaveProperty("browserPresentationByThreadId");
   });
+
+  it("does not persist a side chat pane across app restarts", () => {
+    const store = useRightDockStore.getState();
+    store.openPane(THREAD_A, { kind: "browser", paneId: "browser-pane" });
+    store.openPane(THREAD_A, {
+      kind: "sidechat",
+      paneId: "sidechat-pane",
+      threadId: ThreadId.makeUnsafe("sidechat-thread"),
+    });
+
+    const persisted = partializeRightDockStore(useRightDockStore.getState()) as {
+      dockStateByThreadId: Record<string, { panes: ReadonlyArray<{ kind: string }> }>;
+    };
+
+    expect(persisted.dockStateByThreadId[THREAD_A]?.panes.map((pane) => pane.kind)).toEqual([
+      "browser",
+    ]);
+  });
 });

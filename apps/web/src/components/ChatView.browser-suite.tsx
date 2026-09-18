@@ -429,6 +429,26 @@ function createSnapshotForTargetUser(options: {
   };
 }
 
+function createEmptySidechatSnapshot(): OrchestrationReadModel {
+  const snapshot = createSnapshotForTargetUser({
+    targetMessageId: "msg-user-sidechat-source" as MessageId,
+    targetText: "source context stays hidden from the side chat transcript",
+  });
+  const sidechatSourceThreadId = ThreadId.makeUnsafe("thread-sidechat-source");
+
+  return {
+    ...snapshot,
+    threads: snapshot.threads.map((thread) => ({
+      ...thread,
+      title: "Side chat",
+      sidechatSourceThreadId,
+      // A side chat receives the source transcript as context, but its surface
+      // starts empty. Keep this fixture faithful to that product boundary.
+      messages: thread.messages.map((message) => ({ ...message, source: "fork-import" as const })),
+    })),
+  };
+}
+
 function createSnapshotWithRespondingUserInput(): OrchestrationReadModel {
   const snapshot = createSnapshotForTargetUser({
     targetMessageId: "msg-user-responding-ask" as MessageId,
@@ -8722,6 +8742,30 @@ describe("ChatView timeline estimator parity (full app)", () => {
     } finally {
       await mounted.cleanup();
       restoreNativeApi();
+    }
+  });
+
+  it("renders a temporary side-chat landing without task workspace chrome", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createEmptySidechatSnapshot(),
+    });
+
+    try {
+      await expect.element(page.getByTestId("sidechat-empty-landing-heading")).toHaveTextContent(
+        "Side chat",
+      );
+      await expect
+        .element(
+          page.getByText(
+            "Side chats stay out of the task list. Closing the app only forgets the panel, not the conversation.",
+          ),
+        )
+        .toBeInTheDocument();
+      expect(mounted.host.querySelector('[data-empty-landing-controls="true"]')).toBeNull();
+      expect(mounted.host.querySelector('[data-testid="empty-landing-heading"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
     }
   });
 

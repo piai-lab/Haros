@@ -82,7 +82,7 @@ describe("RightDock locale projection", () => {
     await page.viewport(1280, 720);
     await render(<RightDockLocaleHarness />);
 
-    expect(page.getByText("侧边对话", { exact: true })).toBeInTheDocument();
-    expect(page.getByRole("button", { name: "关闭侧边对话" })).toBeInTheDocument();
+    expect(page.getByText("侧边聊天", { exact: true })).toBeInTheDocument();
+    expect(page.getByRole("button", { name: "关闭侧边聊天" })).toBeInTheDocument();
   });
 });

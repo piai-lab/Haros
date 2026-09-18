@@ -51,6 +51,11 @@ import {
   ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT,
 } from "../../engine/engineInterruptSettlement.ts";
 import {
+  HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION,
+  HOST_GATEWAY_RETIRED_TURN_ID,
+  HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
+} from "../../hostGateway/sessionLease.ts";
+import {
   classifyTerminalTurnApplicability,
   isStartedTurnApplicable,
 } from "../../engine/terminalTurnApplicability.ts";
@@ -2194,12 +2199,24 @@ const make = Effect.gen(function* () {
         binding.engine === event.engine &&
         bindingRuntimePayload?.lastRuntimeEvent === ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT &&
         isEngineInterruptTurnSettlement(event);
+      const retiredGatewayTurnId = asString(bindingRuntimePayload?.[HOST_GATEWAY_RETIRED_TURN_ID]);
+      const retiredGatewayLifecycleGeneration = asString(
+        bindingRuntimePayload?.[HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION],
+      );
+      const acceptsRetiredGatewayTerminal =
+        binding !== undefined &&
+        binding.engine === event.engine &&
+        (event.type === "turn.completed" || event.type === "turn.aborted") &&
+        event.lifecycleGeneration === retiredGatewayLifecycleGeneration &&
+        String(event.turnId ?? "") === retiredGatewayTurnId &&
+        asObject(event.raw?.payload)?.[HOST_GATEWAY_TURN_AUTHORITY_RETIRED] === true;
       if (
         binding === undefined ||
         (binding !== undefined &&
           (bindingRuntimePayload?.lastRuntimeEvent === ENGINE_REPLACEMENT_RESTORE_FAILED_EVENT ||
             binding.engine !== event.engine ||
             (!acceptsRetiredInterruptSettlement &&
+              !acceptsRetiredGatewayTerminal &&
               ((event.lifecycleGeneration === undefined &&
                 binding.lifecycleGeneration !== "legacy") ||
                 (event.lifecycleGeneration !== undefined &&
@@ -2964,6 +2981,17 @@ const make = Effect.gen(function* () {
           yield* clearProviderDiffPlaceholder(thread.id, exitedTurnId);
         }
         yield* clearTurnStateForSession(thread.id);
+      }
+
+      if (acceptsRetiredGatewayTerminal) {
+        yield* engineSessionDirectory.upsert({
+          threadId: thread.id,
+          engine: binding.engine,
+          runtimePayload: {
+            [HOST_GATEWAY_RETIRED_TURN_ID]: null,
+            [HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION]: null,
+          },
+        });
       }
 
       if (event.type === "runtime.error") {

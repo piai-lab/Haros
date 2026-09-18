@@ -285,6 +285,20 @@ describe("mergeDynamicModelOptions", () => {
       { slug: "custom/grok-fast", name: "custom/grok-fast", isCustom: true },
     ]);
   });
+
+  it("treats the live Codex catalog as authoritative", () => {
+    expect(
+      mergeDynamicModelOptions({
+        engine: "codex",
+        staticOptions: [
+          { slug: "gpt-5.4", name: "GPT-5.4" },
+          { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
+          { slug: "gpt-5.5", name: "GPT-5.5" },
+        ],
+        dynamicModels: [{ slug: "gpt-5.5", name: "GPT-5.5" }],
+      }).map((option) => option.slug),
+    ).toEqual(["gpt-5.5"]);
+  });
 });
 
 describe("engineModelCostMultiplierLabel", () => {

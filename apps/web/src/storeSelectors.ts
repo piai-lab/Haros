@@ -250,7 +250,7 @@ export function createComposerThreadMentionSourcesSelector(): (
 
     const nextSources = (threadIds ?? []).flatMap((threadId) => {
       const thread = summaryById[threadId];
-      return thread
+      return thread && thread.sidechatSourceThreadId == null
         ? [
             {
               id: thread.id,
@@ -305,7 +305,10 @@ export function createSidebarDisplayThreadsSelector(): (
 
     previousSummaries = sidebarSummaries;
     previousDisplaySummaries = sidebarSummaries.filter(
-      (thread) => !thread.parentThreadId && thread.archivedAt == null,
+      (thread) =>
+        !thread.parentThreadId &&
+        thread.sidechatSourceThreadId == null &&
+        thread.archivedAt == null,
     );
     return previousDisplaySummaries;
   };
@@ -329,7 +332,9 @@ export function createSidebarTreeThreadsSelector(): (
     }
 
     previousSummaries = sidebarSummaries;
-    previousTreeSummaries = sidebarSummaries.filter((thread) => thread.archivedAt == null);
+    previousTreeSummaries = sidebarSummaries.filter(
+      (thread) => thread.sidechatSourceThreadId == null && thread.archivedAt == null,
+    );
     return previousTreeSummaries;
   };
 }

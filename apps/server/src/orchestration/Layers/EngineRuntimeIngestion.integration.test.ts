@@ -22,7 +22,7 @@ import {
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
-import { Effect, Exit, Layer, ManagedRuntime, PubSub, Scope, Stream } from "effect";
+import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
@@ -42,6 +42,11 @@ import {
   ENGINE_INTERRUPT_REASON,
   ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT,
 } from "../../engine/engineInterruptSettlement.ts";
+import {
+  HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION,
+  HOST_GATEWAY_RETIRED_TURN_ID,
+  HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
+} from "../../hostGateway/sessionLease.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
@@ -707,6 +712,121 @@ describe("EngineRuntimeIngestion", () => {
         harness.runtimeEventRepository.getConsumerCursor(ENGINE_RUNTIME_INGESTION_CONSUMER),
       ),
     ).toBe(legacyRow.sequence);
+  });
+
+  it("settles a retired gateway turn after its runtime binding has advanced", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const turnId = asTurnId("turn-retired-gateway");
+    const retiredGeneration = "generation-retired-gateway";
+    const replacementGeneration = "generation-replacement-gateway";
+    const createdAt = "2026-08-12T08:10:00.000Z";
+
+    await Effect.runPromise(
+      harness.engineSessionDirectory.replace({
+        threadId,
+        engine: "codex",
+        status: "running",
+        lifecycleGeneration: retiredGeneration,
+        runtimePayload: { activeTurnId: null },
+      }),
+    );
+    await harness.startIngestion();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-retired-gateway-turn-start"),
+        threadId,
+        message: {
+          messageId: asMessageId("message-retired-gateway"),
+          role: "user",
+          text: "retired gateway turn",
+          attachments: [],
+        },
+        assistantDeliveryMode: "streaming",
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
+        runtimeMode: "full-access",
+        createdAt,
+      }),
+    );
+    await harness.drain();
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-retired-gateway-turn-started"),
+      engine: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      lifecycleGeneration: retiredGeneration,
+      payload: {},
+    });
+    await waitForThread(harness.engine, (thread) => thread.session?.activeTurnId === turnId);
+
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-retired-gateway-assistant-delta"),
+      engine: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("retired-gateway-assistant"),
+      lifecycleGeneration: retiredGeneration,
+      payload: { streamKind: "assistant_text", delta: "partial answer" },
+    });
+    await waitForThread(harness.engine, (thread) =>
+      thread.messages.some(
+        (message) => message.role === "assistant" && message.text === "partial answer",
+      ),
+    );
+
+    await Effect.runPromise(
+      harness.engineSessionDirectory.replace({
+        threadId,
+        engine: "codex",
+        status: "running",
+        lifecycleGeneration: replacementGeneration,
+        runtimePayload: {
+          activeTurnId: null,
+          [HOST_GATEWAY_RETIRED_TURN_ID]: String(turnId),
+          [HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION]: retiredGeneration,
+        },
+      }),
+    );
+    harness.emit({
+      type: "turn.completed",
+      eventId: asEventId("evt-retired-gateway-turn-completed"),
+      engine: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      lifecycleGeneration: retiredGeneration,
+      payload: { state: "completed" },
+      raw: {
+        source: "codex.app-server.notification",
+        method: "turn/completed",
+        payload: { [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true },
+      },
+    });
+    await harness.drain();
+
+    const settled = await waitForThread(harness.engine, (thread) =>
+      thread.messages.some(
+        (message) =>
+          message.role === "assistant" &&
+          message.text === "partial answer" &&
+          message.streaming === false,
+      ),
+    );
+    expect(settled.session?.status).toBe("ready");
+    const binding = await Effect.runPromise(harness.engineSessionDirectory.getBinding(threadId));
+    expect(Option.isSome(binding)).toBe(true);
+    if (Option.isSome(binding)) {
+      expect(binding.value.runtimePayload).toMatchObject({
+        [HOST_GATEWAY_RETIRED_TURN_ID]: null,
+        [HOST_GATEWAY_RETIRED_LIFECYCLE_GENERATION]: null,
+      });
+    }
   });
 
   it("keeps a generation-less row only on an explicitly legacy same-engine binding", async () => {

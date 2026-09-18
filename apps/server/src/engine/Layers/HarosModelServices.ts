@@ -68,6 +68,7 @@ import {
 } from "../harnessosOAuthCallbackPage.ts";
 import { installOfficialModelCatalog, modelDiscoveredAt } from "../officialModelCatalog.ts";
 import { publishHarosModelRuntimeMutation } from "../modelRuntimeMutation.ts";
+import { CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER } from "../codexDiscoveryCatalog.ts";
 import {
   HarosModelServices,
   type HarosModelServicesShape,
@@ -99,6 +100,10 @@ const CUSTOM_MODEL_THINKING_LEVELS = [
   "xhigh",
   "max",
 ] as const;
+
+const HIDDEN_MODEL_IDS_BY_PROVIDER: Readonly<Record<string, ReadonlySet<string>>> = {
+  "openai-codex": CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER,
+};
 
 class InvalidCustomServiceEditError extends Error {}
 
@@ -973,10 +978,8 @@ async function projectModelServices(input: {
   const modelConfigProviderIds = new Set(runtime.getModelConfigProviderIds());
   const registeredProviderIds = new Set(runtime.getRegisteredProviderIds());
 
-  const availableCounts = new Map<string, number>();
   const availableModelKeys = new Set<string>();
   for (const model of runtime.getAvailableSnapshot()) {
-    availableCounts.set(model.provider, (availableCounts.get(model.provider) ?? 0) + 1);
     availableModelKeys.add(`${model.provider}\u0000${model.id}`);
   }
 
@@ -988,33 +991,35 @@ async function projectModelServices(input: {
     if (!providerId) {
       throw new Error("Haros model-services provider identity is invalid");
     }
-    const knownModelCount = runtime.getModels(provider.id).length;
-    const projectedModels = runtime
+    const hiddenModelIds = HIDDEN_MODEL_IDS_BY_PROVIDER[provider.id];
+    const providerModels = runtime
       .getModels(provider.id)
-      .flatMap<HarosModelServiceModel>((model) => {
-        const modelId = safeModelId(model.id);
-        if (!modelId) return [];
-        return [
-          {
-            modelId,
-            displayName: safeDisplayName(model.name, "Model"),
-            available: availableModelKeys.has(`${provider.id}\u0000${model.id}`),
-            reasoning: model.reasoning,
-            input: model.input.filter(
-              (kind): kind is "text" | "image" => kind === "text" || kind === "image",
-            ),
-            contextWindow:
-              !modelDiscoveredAt(model) && Number.isFinite(model.contextWindow)
-                ? Math.max(0, Math.trunc(model.contextWindow))
-                : 0,
-            maxTokens:
-              !modelDiscoveredAt(model) && Number.isFinite(model.maxTokens)
-                ? Math.max(0, Math.trunc(model.maxTokens))
-                : 0,
-            ...(modelDiscoveredAt(model) ? { discoveredAt: modelDiscoveredAt(model) } : {}),
-          },
-        ];
-      });
+      .filter((model) => hiddenModelIds?.has(model.id) !== true);
+    const knownModelCount = providerModels.length;
+    const projectedModels = providerModels.flatMap<HarosModelServiceModel>((model) => {
+      const modelId = safeModelId(model.id);
+      if (!modelId) return [];
+      return [
+        {
+          modelId,
+          displayName: safeDisplayName(model.name, "Model"),
+          available: availableModelKeys.has(`${provider.id}\u0000${model.id}`),
+          reasoning: model.reasoning,
+          input: model.input.filter(
+            (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+          ),
+          contextWindow:
+            !modelDiscoveredAt(model) && Number.isFinite(model.contextWindow)
+              ? Math.max(0, Math.trunc(model.contextWindow))
+              : 0,
+          maxTokens:
+            !modelDiscoveredAt(model) && Number.isFinite(model.maxTokens)
+              ? Math.max(0, Math.trunc(model.maxTokens))
+              : 0,
+          ...(modelDiscoveredAt(model) ? { discoveredAt: modelDiscoveredAt(model) } : {}),
+        },
+      ];
+    });
     if (projectedModels.length > HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT) {
       throw new Error("Haros model-service catalog is too large");
     }
@@ -1034,7 +1039,11 @@ async function projectModelServices(input: {
         ? ("configured" as const)
         : ("setup_required" as const);
     const availableModelCount =
-      authState === "refresh_required" ? 0 : (availableCounts.get(provider.id) ?? 0);
+      authState === "refresh_required"
+        ? 0
+        : providerModels.filter((model) =>
+            availableModelKeys.has(`${provider.id}\u0000${model.id}`),
+          ).length;
     const hasCatalogError =
       refresh.errors.has(provider.id) || input.failedRefreshServices?.has(provider.id) === true;
     const origin = registeredProviderIds.has(provider.id)

@@ -21,10 +21,14 @@ const baseRequest: ServerVoiceTranscriptionInput = {
   audioBase64: WAV_BASE64,
 };
 
-function outboundJson(body: unknown, status = 200): OutboundHttpResponse {
+function outboundJson(
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = { "content-type": "application/json" },
+): OutboundHttpResponse {
   return {
     status,
-    headers: new Headers({ "content-type": "application/json" }),
+    headers: new Headers(headers),
     body: new TextEncoder().encode(JSON.stringify(body)),
     url: "https://chatgpt.com/backend-api/transcribe",
   };
@@ -67,6 +71,20 @@ describe("transcribeVoiceWithChatGptSession", () => {
     expect(resolveAuth).toHaveBeenNthCalledWith(1, false);
     expect(resolveAuth).toHaveBeenNthCalledWith(2, true);
     expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a Cloudflare challenge instead of treating it as an expired login", async () => {
+    const request = vi
+      .spyOn(outboundHttp, "request")
+      .mockResolvedValue(outboundJson("challenge", 403, { "cf-mitigated": "challenge" }));
+
+    await expect(
+      transcribeVoiceWithChatGptSession({
+        request: baseRequest,
+        resolveAuth: async () => ({ token: "chatgpt-token" }),
+      }),
+    ).rejects.toThrow(/Cloudflare challenge/u);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a engine-returned transcription origin before forwarding the token", async () => {

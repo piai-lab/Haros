@@ -2,6 +2,8 @@
 // Purpose: Owns the exact ChatGPT voice-upload origin, multipart, and resource policy.
 // Layer: Shared Node/Electron provider transport
 
+import { Buffer } from "node:buffer";
+
 import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@harnessos/contracts";
 
 import { encodeOutboundMultipart, outboundHttp, type OutboundHttpResponse } from "./outboundHttp";
@@ -14,6 +16,8 @@ const DEFAULT_VOICE_UPLOAD_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
   "(KHTML, like Gecko) Version/17.4 Safari/605.1.15";
 const VOICE_UPLOAD_USER_AGENT = resolveVoiceUploadUserAgent();
+const CHATGPT_VOICE_ORIGINATOR = "codex_cli_rs";
+const CHATGPT_VOICE_ORIGIN = "https://chatgpt.com";
 
 function resolveVoiceUploadUserAgent(): string {
   const override = process.env.HARNESSOS_VOICE_UPLOAD_USER_AGENT?.trim();
@@ -32,6 +36,7 @@ export async function prewarmChatGptVoiceTranscriptionConnection(): Promise<void
       maxConcurrent: 2,
       maxQueued: 4,
       requirePublicAddress: true,
+      useEnvProxy: true,
     },
     url: new URL("/", CHATGPT_VOICE_TRANSCRIPTION_URL),
     method: "HEAD",
@@ -58,6 +63,7 @@ export function requestChatGptVoiceTranscription(input: {
     { maxBytes: MAX_MULTIPART_BYTES },
   );
 
+  const accountId = readChatGptAccountId(input.token);
   return outboundHttp.request({
     policy: {
       service: "chatgpt-voice-transcription",
@@ -69,15 +75,41 @@ export function requestChatGptVoiceTranscription(input: {
       maxConcurrent: 2,
       maxQueued: 4,
       requirePublicAddress: true,
+      useEnvProxy: true,
     },
     url: input.transcriptionUrl?.trim() || CHATGPT_VOICE_TRANSCRIPTION_URL,
     method: "POST",
     headers: {
       Authorization: `Bearer ${input.token}`,
+      Accept: "application/json, text/plain, */*",
       "Content-Type": multipart.contentType,
+      originator: CHATGPT_VOICE_ORIGINATOR,
+      Origin: CHATGPT_VOICE_ORIGIN,
+      Referer: `${CHATGPT_VOICE_ORIGIN}/`,
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
       "User-Agent": VOICE_UPLOAD_USER_AGENT,
+      ...(accountId ? { "ChatGPT-Account-ID": accountId } : {}),
     },
     body: multipart.body,
     ...(input.signal ? { signal: input.signal } : {}),
   });
+}
+
+function readChatGptAccountId(token: string): string | undefined {
+  const payloadPart = token.split(".")[1];
+  if (!payloadPart) return undefined;
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8")) as {
+      readonly [key: string]: unknown;
+    };
+    const auth = payload["https://api.openai.com/auth"];
+    if (typeof auth !== "object" || auth === null) return undefined;
+    const accountId = (auth as { readonly chatgpt_account_id?: unknown }).chatgpt_account_id;
+    return typeof accountId === "string" && accountId.trim() ? accountId.trim() : undefined;
+  } catch {
+    return undefined;
+  }
 }

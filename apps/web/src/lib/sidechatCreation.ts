@@ -9,6 +9,7 @@ import type {
   ThreadId,
 } from "@harnessos/contracts";
 import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
+import { resolveCompatibleRuntimeMode } from "@harnessos/shared/runtimeMode";
 
 import { newCommandId, newMessageId, newThreadId } from "./utils";
 import { buildThreadHandoffImportedMessages } from "./threadHandoff";
@@ -182,11 +183,19 @@ export function clearSidechatPaneRetention(threadId: ThreadId): void {
   }
 }
 
+function resolveSidechatRuntimeMode(input: {
+  engine: EngineSelection["engine"];
+  sourceRuntimeMode?: Thread["runtimeMode"];
+}): Thread["runtimeMode"] {
+  return resolveCompatibleRuntimeMode(input.engine, input.sourceRuntimeMode ?? "approval-required");
+}
+
 export async function sendSidechatPrompt(input: {
   api: NativeApi;
   threadId: ThreadId;
   selectedEngineSelection: EngineSelection;
   prompt: string;
+  sourceRuntimeMode?: Thread["runtimeMode"];
 }): Promise<void> {
   const prompt = input.prompt.trim();
   if (prompt.length === 0) {
@@ -206,7 +215,10 @@ export async function sendSidechatPrompt(input: {
     modelPresentationIdentity: resolveModelPresentationIdentity({
       selection: input.selectedEngineSelection,
     }),
-    runtimeMode: "approval-required",
+    runtimeMode: resolveSidechatRuntimeMode({
+      engine: input.selectedEngineSelection.engine,
+      sourceRuntimeMode: input.sourceRuntimeMode,
+    }),
     interactionMode: "default",
     createdAt: new Date().toISOString(),
   });
@@ -238,7 +250,10 @@ export async function createSidechatThread(input: {
     projectId: input.project.id,
     title: titleSeed,
     engineSelection: input.selectedEngineSelection,
-    runtimeMode: "approval-required",
+    runtimeMode: resolveSidechatRuntimeMode({
+      engine: input.selectedEngineSelection.engine,
+      sourceRuntimeMode: input.sourceThread.runtimeMode,
+    }),
     interactionMode: "default",
     envMode: input.sourceThread.envMode ?? (input.sourceThread.worktreePath ? "worktree" : "local"),
     branch: input.sourceThread.branch,
@@ -274,6 +289,7 @@ export async function createSidechatThread(input: {
         api: input.api,
         threadId: nextThreadId,
         selectedEngineSelection: input.selectedEngineSelection,
+        sourceRuntimeMode: input.sourceThread.runtimeMode,
         prompt: initialPrompt,
       });
       return null;

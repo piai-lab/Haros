@@ -16,6 +16,7 @@ import {
   closePaneInState,
   createDefaultRightDockState,
   openPaneInState,
+  removeSidechatPanesInState,
   sanitizeRightDockStateByThreadId,
   setActivePaneInState,
   setDockOpenInState,
@@ -173,7 +174,18 @@ function projectBrowserPresentation(
 }
 
 export function partializeRightDockStore(store: RightDockStore) {
-  return { dockStateByThreadId: store.dockStateByThreadId };
+  return { dockStateByThreadId: removeSidechatPanesByThreadId(store.dockStateByThreadId) };
+}
+
+function removeSidechatPanesByThreadId(
+  dockStateByThreadId: Record<string, RightDockThreadState | undefined>,
+): Record<string, RightDockThreadState | undefined> {
+  return Object.fromEntries(
+    Object.entries(dockStateByThreadId).map(([threadId, state]) => [
+      threadId,
+      state ? removeSidechatPanesInState(state) : undefined,
+    ]),
+  );
 }
 
 export const useRightDockStore = create<RightDockStore>()(
@@ -281,8 +293,10 @@ export const useRightDockStore = create<RightDockStore>()(
       // an older app version can never crash the dock during render.
       merge: (persisted, current) => ({
         ...current,
-        dockStateByThreadId: sanitizeRightDockStateByThreadId(
-          (persisted as { dockStateByThreadId?: unknown } | undefined)?.dockStateByThreadId,
+        dockStateByThreadId: removeSidechatPanesByThreadId(
+          sanitizeRightDockStateByThreadId(
+            (persisted as { dockStateByThreadId?: unknown } | undefined)?.dockStateByThreadId,
+          ),
         ),
       }),
       partialize: partializeRightDockStore,

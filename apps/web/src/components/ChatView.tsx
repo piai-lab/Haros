@@ -324,6 +324,8 @@ import {
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
 import {
+  AddPlusIcon,
+  ChatBubbleIcon,
   ChevronDownIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
@@ -2043,6 +2045,7 @@ export default function ChatView({
     threadId,
   ]);
   const activeThread = serverThread ?? localDraftThread;
+  const isSidechat = Boolean(activeThread?.sidechatSourceThreadId);
   useEffect(() => {
     if (
       !pendingFileUndo ||
@@ -3685,9 +3688,9 @@ export default function ChatView({
   const isCenteredEmptyLanding =
     timelineEntries.length === 0 &&
     activeWorktreeSetup === null &&
-    !activeThread?.parentThreadId &&
     !isEditorRail &&
-    threadDetailHydration === "ready";
+    threadDetailHydration === "ready" &&
+    (isSidechat || !activeThread?.parentThreadId);
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
@@ -9921,7 +9924,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: "engines",
+        section: selectedEngine === "codex" ? "models" : "engines",
       },
     });
   }, [navigate, selectedEngine]);
@@ -11565,6 +11568,7 @@ export default function ChatView({
       </span>
     ) : null;
   const showEmptyLandingControls =
+    !isSidechat &&
     isCenteredEmptyLanding &&
     (showContainerChatWorkspacePicker ||
       showEmptyLandingProjectPicker ||
@@ -12380,7 +12384,7 @@ export default function ChatView({
           {...(isEditorRail
             ? { className: cn(CHAT_SURFACE_HEADER_PADDING_X_CLASS, "h-full") }
             : {})}
-          isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
+          isSidechat={isSidechat}
           hideSidebarControls={isEditorRail}
           hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
           minimalChrome={isCenteredEmptyLanding}
@@ -12571,51 +12575,76 @@ export default function ChatView({
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
-                    <HarosLogoButton
-                      size={64}
-                      aria-label={t("shortcuts.focusComposer")}
-                      className="-my-3"
-                      onClick={focusComposer}
-                    />
-                    <h2
-                      data-testid="empty-landing-heading"
-                      className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
-                    >
-                      {isEmptyChatLanding ? (
-                        t("composer.emptyChat")
-                      ) : (
-                        <>
-                          {t("composer.emptyAgentPrefix")}{" "}
-                          {showEmptyLandingProjectPicker ? (
-                            <ProjectPicker
-                              align="center"
-                              side="bottom"
-                              selectionMode="project"
-                              selectedProjectId={activeProject.id}
-                              selectedWorkspaceRoot={activeProject.cwd}
-                              showResetToHome
-                              onSelectProject={handleSelectProjectForEmptyDraft}
-                              onCreateProjectFromPath={handleCreateProjectFromPickerPath}
-                              onResetToHome={handleResetWorkspaceToHome}
-                              renderTrigger={
-                                <button
-                                  type="button"
-                                  data-testid="empty-landing-heading-project-trigger"
-                                  className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-[1.5px] underline-offset-[6px] transition-colors duration-150 ease-out hover:text-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 motion-reduce:transition-none"
-                                >
-                                  {activeProjectDisplayName ?? t("composer.thisFolder")}
-                                </button>
-                              }
-                            />
+                    {isSidechat ? (
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className="relative inline-flex size-11 items-center justify-center text-muted-foreground"
+                        >
+                          <ChatBubbleIcon className="size-9" />
+                          <AddPlusIcon className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-background p-0.5" />
+                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <h2
+                            data-testid="sidechat-empty-landing-heading"
+                            className="text-xl font-medium text-foreground"
+                          >
+                            {t("workbench.sideChatEmptyTitle")}
+                          </h2>
+                          <p className="text-sm text-muted-foreground">
+                            {t("workbench.sideChatEmptyDescription")}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <HarosLogoButton
+                          size={64}
+                          aria-label={t("shortcuts.focusComposer")}
+                          className="-my-3"
+                          onClick={focusComposer}
+                        />
+                        <h2
+                          data-testid="empty-landing-heading"
+                          className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
+                        >
+                          {isEmptyChatLanding ? (
+                            t("composer.emptyChat")
                           ) : (
-                            <span className="text-inherit">
-                              {activeProjectDisplayName ?? t("composer.thisFolder")}
-                            </span>
+                            <>
+                              {t("composer.emptyAgentPrefix")}{" "}
+                              {showEmptyLandingProjectPicker ? (
+                                <ProjectPicker
+                                  align="center"
+                                  side="bottom"
+                                  selectionMode="project"
+                                  selectedProjectId={activeProject.id}
+                                  selectedWorkspaceRoot={activeProject.cwd}
+                                  showResetToHome
+                                  onSelectProject={handleSelectProjectForEmptyDraft}
+                                  onCreateProjectFromPath={handleCreateProjectFromPickerPath}
+                                  onResetToHome={handleResetWorkspaceToHome}
+                                  renderTrigger={
+                                    <button
+                                      type="button"
+                                      data-testid="empty-landing-heading-project-trigger"
+                                      className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-[1.5px] underline-offset-[6px] transition-colors duration-150 ease-out hover:text-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 motion-reduce:transition-none"
+                                    >
+                                      {activeProjectDisplayName ?? t("composer.thisFolder")}
+                                    </button>
+                                  }
+                                />
+                              ) : (
+                                <span className="text-inherit">
+                                  {activeProjectDisplayName ?? t("composer.thisFolder")}
+                                </span>
+                              )}
+                              {t("composer.emptyAgentSuffix")}
+                            </>
                           )}
-                          {t("composer.emptyAgentSuffix")}
-                        </>
-                      )}
-                    </h2>
+                        </h2>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="w-full shrink-0 pb-3 sm:pb-4">

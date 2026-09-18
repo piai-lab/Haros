@@ -262,6 +262,7 @@ export function mergeDynamicModelOptions(input: {
   );
   const missingStaticBuiltIns =
     (input.engine === "antigravity" ||
+      input.engine === "codex" ||
       input.engine === "kilo" ||
       input.engine === "opencode" ||
       input.engine === "cursor" ||

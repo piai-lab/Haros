@@ -222,7 +222,9 @@ export async function requestDesktopVoiceTranscription(input: {
   });
 }
 
-function readVoiceResponseErrorMessage(statusCode: number, body: string): string {
+function readVoiceResponseErrorMessage(response: OutboundHttpResponse): string {
+  const statusCode = response.status;
+  const body = decodeOutboundText(response);
   try {
     const payload = JSON.parse(body) as { error?: { message?: unknown }; message?: unknown };
     const providerMessage =
@@ -232,6 +234,13 @@ function readVoiceResponseErrorMessage(statusCode: number, body: string): string
     }
   } catch {
     // Fall back to a status-based message when the upstream body is not JSON.
+  }
+
+  if (
+    statusCode === 403 &&
+    response.headers.get("cf-mitigated")?.trim().toLowerCase() === "challenge"
+  ) {
+    return "ChatGPT transcription was blocked by a Cloudflare challenge. Check the network or proxy and try again.";
   }
 
   if (statusCode === 401) {
@@ -258,7 +267,7 @@ async function transcribeVoiceViaDesktopBridge(
     transcriptionUrl: auth.transcriptionUrl,
   });
   if (response.status < 200 || response.status >= 300) {
-    throw new Error(readVoiceResponseErrorMessage(response.status, decodeOutboundText(response)));
+    throw new Error(readVoiceResponseErrorMessage(response));
   }
 
   const payload = decodeOutboundJson(response, { maxDepth: 16, maxNodes: 1_000 }) as {

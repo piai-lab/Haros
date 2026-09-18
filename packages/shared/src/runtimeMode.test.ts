@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isEngineRuntimeModeExecutable,
   isEngineRuntimeModePermanentlyUnsupported,
+  resolveCompatibleRuntimeMode,
   runtimeModeEscalatesPrivilege,
 } from "./runtimeMode";
 
@@ -58,5 +59,17 @@ describe("runtime mode compatibility", () => {
         reason: "adapter-unregistered",
       }),
     ).toBe(false);
+  });
+});
+
+describe("resolveCompatibleRuntimeMode", () => {
+  it("keeps a requested mode when the Engine structurally supports it", () => {
+    expect(resolveCompatibleRuntimeMode("codex", "approval-required")).toBe("approval-required");
+    expect(resolveCompatibleRuntimeMode("cursor", "full-access")).toBe("full-access");
+  });
+
+  it("falls back to the least privileged supported mode instead of escalating", () => {
+    expect(resolveCompatibleRuntimeMode("pi", "approval-required")).toBe("full-access");
+    expect(resolveCompatibleRuntimeMode("cursor", "auto")).toBe("approval-required");
   });
 });
