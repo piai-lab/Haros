@@ -51,7 +51,7 @@ for (const descriptor of RUNNABLE_ENGINE_DESCRIPTORS.filter(
                     [...prepared.args],
                     {
                       env,
-                      cwd: userHome,
+                      ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
                       windowsHide: true,
                       ...(prepared.windowsVerbatimArguments
                         ? { windowsVerbatimArguments: true }

@@ -33,6 +33,7 @@ export interface WindowsSafeProcessCommand {
   readonly shell: false;
   readonly windowsHide?: true;
   readonly windowsVerbatimArguments?: true;
+  readonly cwd?: string;
 }
 
 export interface WindowsWslUncPath {
@@ -197,7 +198,12 @@ export function prepareWindowsSafeProcess(
 ): WindowsSafeProcessCommand {
   const platform = input.platform ?? process.platform;
   if (platform !== "win32") {
-    return { command, args: [...args], shell: false };
+    return {
+      command,
+      args: [...args],
+      shell: false,
+      ...(input.cwd ? { cwd: input.cwd } : {}),
+    };
   }
 
   const env = input.env ?? process.env;
@@ -226,6 +232,7 @@ export function prepareWindowsSafeProcess(
       args: [...args],
       shell: false,
       windowsHide: true,
+      ...(input.cwd ? { cwd: input.cwd } : {}),
     };
   }
 
@@ -235,5 +242,6 @@ export function prepareWindowsSafeProcess(
     shell: false,
     windowsHide: true,
     windowsVerbatimArguments: true,
+    ...(input.cwd ? { cwd: input.cwd } : {}),
   };
 }

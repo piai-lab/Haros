@@ -68,6 +68,14 @@ describe("windowsProcess WSL routing", () => {
       windowsHide: true,
     });
     expect(spawnSync).not.toHaveBeenCalled();
+    expect(
+      prepareWindowsSafeProcess("copilot", ["--acp", "--stdio"], {
+        platform: "win32",
+        cwd: "\\\\wsl.localhost\\Ubuntu-24.04\\home\\dev\\repo",
+        env: { SystemRoot: "C:\\Windows" },
+        spawnSync,
+      }).cwd,
+    ).toBeUndefined();
   });
 
   it("preserves command arguments literally instead of invoking a Linux shell", () => {

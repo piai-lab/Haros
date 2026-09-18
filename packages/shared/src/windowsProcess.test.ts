@@ -26,8 +26,14 @@ describe("windowsProcess", () => {
     expect(
       prepareWindowsSafeProcess("codex", ["app-server"], {
         platform: "darwin",
+        cwd: "/Users/dev/repo",
       }),
-    ).toEqual({ command: "codex", args: ["app-server"], shell: false });
+    ).toEqual({
+      command: "codex",
+      args: ["app-server"],
+      shell: false,
+      cwd: "/Users/dev/repo",
+    });
   });
 
   it("resolves Windows PATH commands through where.exe", () => {
@@ -204,6 +210,7 @@ describe("windowsProcess", () => {
       shell: false,
       windowsHide: true,
       windowsVerbatimArguments: true,
+      cwd: "C:\\projects\\harnessos",
     });
   });
 
@@ -235,6 +242,7 @@ describe("windowsProcess", () => {
       shell: false,
       windowsHide: true,
       windowsVerbatimArguments: true,
+      cwd: "C:\\projects\\harnessos",
     });
   });
 
@@ -261,6 +269,7 @@ describe("windowsProcess", () => {
       shell: false,
       windowsHide: true,
       windowsVerbatimArguments: true,
+      cwd: "C:\\projects\\harnessos",
     });
     expect(spawnSync).not.toHaveBeenCalled();
   });
@@ -393,6 +402,7 @@ describe("windowsProcess", () => {
       args: ["--version"],
       shell: false,
       windowsHide: true,
+      cwd: "C:\\projects\\harnessos",
     });
   });
 
@@ -415,6 +425,7 @@ describe("windowsProcess", () => {
       args: ["app-server"],
       shell: false,
       windowsHide: true,
+      cwd: "C:\\projects\\harnessos",
     });
     expect(spawnSync).not.toHaveBeenCalled();
   });

@@ -518,7 +518,7 @@ function spawnOwnedClaudeCodeProcess(options: ClaudeSpawnOptions): ClaudeOwnedPr
     env: options.env,
   });
   return spawnChildProcess(prepared.command, prepared.args, {
-    ...(options.cwd ? { cwd: options.cwd } : {}),
+    ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
     env: options.env,
     signal: options.signal,
     shell: prepared.shell,
@@ -542,7 +542,7 @@ async function readInstalledClaudeCliVersion(input: {
       prepared.command,
       prepared.args,
       {
-        ...(input.cwd ? { cwd: input.cwd } : {}),
+        ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
         env: input.env,
         shell: prepared.shell,
         ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),

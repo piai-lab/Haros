@@ -135,7 +135,7 @@ export async function runProcess(
       env: options.env,
     });
     const child = spawn(prepared.command, prepared.args, {
-      cwd: options.cwd,
+      ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
       env: options.env,
       stdio: "pipe",
       shell: prepared.shell,

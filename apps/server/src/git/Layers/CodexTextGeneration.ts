@@ -344,7 +344,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
         ];
         const prepared = prepareWindowsSafeProcess(codexBinaryPath, args, { cwd, env });
         const command = ChildProcess.make(prepared.command, prepared.args, {
-          cwd,
+          ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
           env,
           shell: prepared.shell,
           ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),

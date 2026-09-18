@@ -707,7 +707,7 @@ function spawnCodexAppServer(input: {
     env: input.env,
   });
   return spawn(prepared.command, prepared.args, {
-    cwd: input.cwd,
+    ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
     env: input.env,
     stdio: ["pipe", "pipe", "pipe"],
     shell: prepared.shell,
@@ -4233,7 +4233,7 @@ function runCodexVersionCommand(input: {
     let child: ChildProcess;
     try {
       child = spawn(prepared.command, prepared.args, {
-        cwd: input.cwd,
+        ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
         env: input.env,
         stdio: ["ignore", "pipe", "pipe"],
         shell: prepared.shell,

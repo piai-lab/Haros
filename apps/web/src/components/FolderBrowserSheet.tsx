@@ -63,7 +63,7 @@ export function FolderBrowserSheet(props: {
         setResult(null);
         setError(cause instanceof Error ? cause.message : t("project.folderBrowserLoadFailed"));
       } finally {
-        if (!signal.aborted) setLoading(false);
+        setLoading(false);
       }
     },
     [t],

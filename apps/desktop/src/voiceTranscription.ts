@@ -94,7 +94,7 @@ async function resolveDesktopVoiceAuth(
       env: process.env,
     });
     const child = ChildProcess.spawn(prepared.command, prepared.args, {
-      cwd,
+      ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
       shell: prepared.shell,

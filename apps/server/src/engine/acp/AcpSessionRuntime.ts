@@ -815,7 +815,7 @@ const makeAcpSessionRuntime = (
     const child = yield* spawner
       .spawn(
         ChildProcess.make(prepared.command, prepared.args, {
-          ...(options.spawn.cwd ? { cwd: options.spawn.cwd } : {}),
+          ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
           env,
           shell: prepared.shell,
           ...(prepared.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),

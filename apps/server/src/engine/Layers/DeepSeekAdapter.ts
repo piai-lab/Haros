@@ -14,10 +14,7 @@ import {
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
-import {
-  parseWindowsWslUncPath,
-  prepareWindowsSafeProcess,
-} from "@harnessos/shared/windowsProcess";
+import { parseWindowsWslUncPath, prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -183,11 +180,8 @@ function spawnDeepSeekSdk(input: {
     cwd: input.cwd,
     env: input.env,
   });
-  const wslWorkspace = parseWindowsWslUncPath(input.cwd);
   return spawn(prepared.command, prepared.args, {
-    // wsl.exe --cd already selects the Linux workspace; a Windows UNC cwd can
-    // make Node refuse the spawn even though the child never uses it.
-    ...(wslWorkspace ? {} : { cwd: input.cwd }),
+    ...(prepared.cwd ? { cwd: prepared.cwd } : {}),
     env: input.env,
     stdio: ["pipe", "pipe", "pipe"],
     shell: prepared.shell,
