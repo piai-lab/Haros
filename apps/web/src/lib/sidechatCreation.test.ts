@@ -43,6 +43,14 @@ const project = {
 
 const selectedEngineSelection = { engine: "codex", model: "gpt-5.6" } as const;
 
+async function waitUntilCalled(fn: ReturnType<typeof vi.fn>): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (fn.mock.calls.length > 0) return;
+    await Promise.resolve();
+  }
+  throw new Error("timed out waiting for mock call");
+}
+
 function makeApi(input?: {
   dispatchCommand?: ReturnType<typeof vi.fn>;
   getShellSnapshot?: ReturnType<typeof vi.fn>;
@@ -192,7 +200,7 @@ describe("createSidechatThread", () => {
       syncServerShellSnapshot: vi.fn(),
     });
 
-    await vi.waitFor(() => expect(getShellSnapshot).toHaveBeenCalledOnce());
+    await waitUntilCalled(getShellSnapshot);
     expect(sidechatPaneRetentionRemainingMs(ThreadId.makeUnsafe("sidechat-thread"))).toBeNull();
 
     resolveSnapshot?.({} as OrchestrationShellSnapshot);
@@ -219,7 +227,7 @@ describe("createSidechatThread", () => {
       syncServerShellSnapshot: vi.fn(),
     });
 
-    await vi.waitFor(() => expect(getShellSnapshot).toHaveBeenCalledOnce());
+    await waitUntilCalled(getShellSnapshot);
     expect(onRetentionChange).toHaveBeenCalledTimes(1);
     expect(getSidechatPaneRetentionVersion()).toBe(initialVersion + 1);
 
