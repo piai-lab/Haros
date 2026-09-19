@@ -210,6 +210,8 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     setShortcut: (shortcut) => ipcRenderer.invoke(IPC.appSnap.setShortcut, shortcut),
     requestPermissions: () => ipcRenderer.invoke(IPC.appSnap.requestPermissions),
     listPendingCaptures: () => ipcRenderer.invoke(IPC.appSnap.listPendingCaptures),
+    listWindows: () => ipcRenderer.invoke(IPC.appSnap.listWindows),
+    captureWindow: (input) => ipcRenderer.invoke(IPC.appSnap.captureWindow, input),
     acknowledgeCapture: (captureId) =>
       ipcRenderer.invoke(IPC.appSnap.acknowledgeCapture, captureId),
     onCaptured: (listener) => {

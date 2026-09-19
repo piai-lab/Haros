@@ -3,12 +3,13 @@
 // Layer: Chat composer presentation
 // Depends on: shared menu primitives, icon buttons, and caller-owned composer state callbacks.
 
-import { type EngineInteractionMode } from "@harnessos/contracts";
-import { useId, useRef, type ChangeEvent } from "react";
+import { type EngineInteractionMode, type ThreadId } from "@harnessos/contracts";
+import { useId, useRef, useState, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
-import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { PaperclipIcon, PlusIcon, WindowIcon } from "~/lib/icons";
 import { useI18n } from "~/i18n";
+import { useAppSnapWindows } from "./useAppSnapWindows";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
 import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
@@ -20,10 +21,16 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   onAddFileReference?: () => void;
   onAddFolderReference?: () => void;
   onSetPlanMode: (enabled: boolean) => void;
+  threadId?: ThreadId;
 }) {
   const { t } = useI18n();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const appSnapWindows = useAppSnapWindows({
+    open: menuOpen,
+    ...(props.threadId ? { threadId: props.threadId } : {}),
+  });
 
   // Reset the hidden input so selecting the same file twice still emits a change event.
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +53,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
         className="sr-only"
         onChange={handleFileInputChange}
       />
-      <Menu>
+      <Menu open={menuOpen} onOpenChange={setMenuOpen}>
         <MenuTrigger
           render={
             <Button
@@ -79,6 +86,41 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               <PaperclipIcon className="size-4 shrink-0" />
               {t("composer.addFolderReference")}
             </MenuItem>
+          ) : null}
+          {appSnapWindows.available ? (
+            <>
+              <MenuSeparator />
+              {appSnapWindows.unavailableMessage ? (
+                <div className="px-2 py-1.5 text-muted-foreground text-xs">
+                  {appSnapWindows.unavailableMessage}
+                </div>
+              ) : appSnapWindows.windows === null ? (
+                <div className="px-2 py-1.5 text-muted-foreground text-xs">
+                  {t("composer.appSnapListingWindows")}
+                </div>
+              ) : appSnapWindows.windows.length === 0 ? (
+                <div className="px-2 py-1.5 text-muted-foreground text-xs">
+                  {t("composer.appSnapNoWindows")}
+                </div>
+              ) : (
+                appSnapWindows.windows.map((entry) => (
+                  <MenuItem
+                    key={entry.windowId}
+                    disabled={appSnapWindows.busy}
+                    onClick={() => appSnapWindows.captureWindow(entry.windowId)}
+                  >
+                    {entry.appIconDataUrl ? (
+                      <img src={entry.appIconDataUrl} alt="" className="size-4 shrink-0 rounded-[4px]" />
+                    ) : (
+                      <WindowIcon className="size-4 shrink-0" />
+                    )}
+                    <span className="min-w-0 truncate">
+                      {entry.windowTitle?.trim() || entry.appName?.trim() || t("composer.appSnapUntitledWindow")}
+                    </span>
+                  </MenuItem>
+                ))
+              )}
+            </>
           ) : null}
 
           {props.planModeAvailable || props.interactionMode === "plan" ? (

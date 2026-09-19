@@ -932,6 +932,22 @@
       "mode": "adapt",
       "changes": "Haros resolves [[workspace/path]] Markdown links relative to the workspace root through the existing ChatMarkdown remark chain and openWorkspaceFileReference. This is not an Obsidian vault. Code and inlineCode stay literal.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing remarkWikiLinks from ChatMarkdown."
+    },
+    {
+      "id": "synara-appsnap-window-picker",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "packages/contracts/src/ipc.ts",
+        "apps/desktop/src/appSnapManager.ts",
+        "apps/desktop/native/appsnap/WindowCapture.swift",
+        "apps/web/src/components/chat/useAppSnapWindows.ts",
+        "apps/web/src/components/chat/ComposerExtrasMenu.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed AppSnap window-picker mechanism.",
+      "mode": "adapt",
+      "changes": "Haros lists capturable macOS windows from the Composer + menu and captures a chosen window through the existing AppSnap helper. Picker captures use a picker- request id and do not enter the hotkey auto-attach queue. The UI hides when the desktop bridge is absent.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing listWindows/captureWindow from the AppSnap contract and Composer extras menu."
     }
   ]
 }

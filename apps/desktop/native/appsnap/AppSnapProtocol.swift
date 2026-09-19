@@ -178,7 +178,12 @@ final class NDJSONEmitter {
         emit(payload)
     }
 
-    func emitError(_ failure: AppSnapFailure, capturedAt: String, id: String? = nil) {
+    func emitError(
+        _ failure: AppSnapFailure,
+        capturedAt: String,
+        id: String? = nil,
+        requestId: String? = nil
+    ) {
         var payload: [String: Any] = [
             "type": "error",
             "code": failure.code,
@@ -188,7 +193,18 @@ final class NDJSONEmitter {
         if let id {
             payload["id"] = id
         }
+        if let requestId {
+            payload["requestId"] = requestId
+        }
         emit(payload)
+    }
+
+    func emitWindows(requestId: String, windows: [[String: Any]]) {
+        emit([
+            "type": "windows",
+            "requestId": requestId,
+            "windows": windows,
+        ])
     }
 
     func emitPermissions(inputMonitoring: Bool, screenRecording: Bool) {

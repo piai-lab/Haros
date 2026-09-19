@@ -512,6 +512,13 @@ export interface DesktopAppSnapErrorEvent {
   message: string;
   capturedAt: string;
 }
+export interface DesktopAppSnapWindowEntry {
+  windowId: number;
+  appName: string | null;
+  bundleIdentifier: string | null;
+  windowTitle: string | null;
+  appIconDataUrl: string | null;
+}
 // Pushed from the desktop main process when the in-app browser copy-link chord fires
 // while the native page (not the React chrome) holds keyboard focus.
 export interface BrowserCopyLinkEvent {
@@ -725,6 +732,8 @@ export interface DesktopBridge {
     setShortcut: (shortcut: DesktopAppSnapShortcut) => Promise<DesktopAppSnapShortcutUpdateResult>;
     requestPermissions: () => Promise<DesktopAppSnapState>;
     listPendingCaptures: () => Promise<DesktopAppSnapCapture[]>;
+    listWindows: () => Promise<DesktopAppSnapWindowEntry[]>;
+    captureWindow: (input: { windowId: number }) => Promise<DesktopAppSnapCapture>;
     acknowledgeCapture: (captureId: string) => Promise<void>;
     onCaptured: (listener: (capture: DesktopAppSnapCapture) => void) => () => void;
     onError: (listener: (error: DesktopAppSnapErrorEvent) => void) => () => void;

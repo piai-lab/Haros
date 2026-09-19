@@ -44,6 +44,8 @@ export const DESKTOP_IPC_CHANNELS = {
     setShortcut: "desktop:appsnap-set-shortcut",
     requestPermissions: "desktop:appsnap-request-permissions",
     listPendingCaptures: "desktop:appsnap-list-pending-captures",
+    listWindows: "desktop:appsnap-list-windows",
+    captureWindow: "desktop:appsnap-capture-window",
     acknowledgeCapture: "desktop:appsnap-acknowledge-capture",
     captured: "desktop:appsnap-captured",
     error: "desktop:appsnap-error",
