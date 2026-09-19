@@ -80,6 +80,7 @@ import { MessageCopyButton } from "./MessageCopyButton";
 import { AssistantSelectionsSummaryChip } from "./AssistantSelectionsSummaryChip";
 import { FileAttachmentChip } from "./FileAttachmentChip";
 import { FileCommentsSummaryChip } from "./FileCommentsSummaryChip";
+import { UserMessagePullRequestContextCard } from "./PullRequestContextCard";
 import { BrowserAnnotationStrip } from "./BrowserAnnotationStrip";
 import { UserMessagePastedTextCard } from "./PastedTextChip";
 import { prefersCompactWorkEntryRow, TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
@@ -1690,6 +1691,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   }));
             const terminalContexts = displayedUserMessage.contexts;
             const renderedFileComments = displayedUserMessage.fileComments;
+            const renderedPullRequestContexts = displayedUserMessage.pullRequestContexts;
             const renderedPastedTexts = displayedUserMessage.pastedTexts;
             const renderedBrowserAnnotations = displayedUserMessage.browserAnnotations;
             const userMessageText = displayedUserMessage.visibleText;
@@ -1713,6 +1715,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               assistantSelectionCount: renderedAssistantSelections.length,
               browserAnnotationCount: renderedBrowserAnnotations.length,
               fileCommentCount: renderedFileComments.length,
+              pullRequestContextCount: renderedPullRequestContexts.length,
               pastedTextCount: renderedPastedTexts.length,
             });
             const isTailContentRow = row.id === tailContentRowId;
@@ -1756,9 +1759,22 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         />
                       </div>
                     )}
-                    {renderedFileComments.length > 0 && (
+                     {renderedFileComments.length > 0 && (
                       <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
                         <FileCommentsSummaryChip comments={renderedFileComments} />
+                      </div>
+                    )}
+                    {renderedPullRequestContexts.length > 0 && (
+                      <div className="mb-1 flex max-w-full flex-col items-end gap-1.5 self-end">
+                        {renderedPullRequestContexts.map((context) => (
+                          <UserMessagePullRequestContextCard
+                            key={`${context.scope}-${context.prNumber}-${context.index}`}
+                            scope={context.scope}
+                            title={context.title}
+                            subtitle={context.subtitle}
+                            text={context.text}
+                          />
+                        ))}
                       </div>
                     )}
                     {renderedPastedTexts.length > 0 && (

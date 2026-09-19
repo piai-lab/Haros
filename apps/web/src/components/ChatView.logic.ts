@@ -1600,6 +1600,7 @@ export function deriveComposerSendState(options: {
   assistantSelectionCount: number;
   browserAnnotationCount: number;
   fileCommentCount: number;
+  pullRequestContextCount?: number;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): {
@@ -1626,6 +1627,7 @@ export function deriveComposerSendState(options: {
       options.assistantSelectionCount > 0 ||
       options.browserAnnotationCount > 0 ||
       options.fileCommentCount > 0 ||
+      (options.pullRequestContextCount ?? 0) > 0 ||
       sendableTerminalContexts.length > 0 ||
       sendablePastedTexts.length > 0,
   };

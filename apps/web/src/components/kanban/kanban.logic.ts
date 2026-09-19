@@ -43,7 +43,7 @@ type KanbanComposerDraftSource = Pick<
   | "fileComments"
   | "activeEngine"
 > &
-  Partial<Pick<ComposerThreadDraftState, "browserAnnotations">>;
+  Partial<Pick<ComposerThreadDraftState, "browserAnnotations" | "pullRequestContexts">>;
 
 /** Shared projection so the board build and the drop-time dispatch re-check agree. */
 export function buildKanbanComposerDraftSnapshot(
@@ -61,7 +61,8 @@ export function buildKanbanComposerDraftSnapshot(
       draft.terminalContexts.some((context) => context.text.trim().length > 0) ||
       draft.assistantSelections.length > 0 ||
       (draft.browserAnnotations?.length ?? 0) > 0 ||
-      draft.fileComments.length > 0,
+      draft.fileComments.length > 0 ||
+      (draft.pullRequestContexts?.length ?? 0) > 0,
     engine: draft.activeEngine,
   };
 }

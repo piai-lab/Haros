@@ -32,6 +32,7 @@ export interface UserTurnMediaCounts {
   readonly assistantSelectionCount: number;
   readonly browserAnnotationCount: number;
   readonly fileCommentCount: number;
+  readonly pullRequestContextCount?: number;
   readonly pastedTextCount: number;
 }
 
@@ -46,6 +47,7 @@ export function hasLeadingUserMedia(counts: UserTurnMediaCounts): boolean {
     counts.assistantSelectionCount > 0 ||
     counts.browserAnnotationCount > 0 ||
     counts.fileCommentCount > 0 ||
+    (counts.pullRequestContextCount ?? 0) > 0 ||
     counts.pastedTextCount > 0
   );
 }

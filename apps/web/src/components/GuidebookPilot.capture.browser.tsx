@@ -86,6 +86,7 @@ const queuedTurn: QueuedComposerTurn = {
   browserAnnotations: [],
   terminalContexts: [],
   fileComments: [],
+  pullRequestContexts: [],
   pastedTexts: [],
   skills: [],
   mentions: [],

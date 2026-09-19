@@ -37,6 +37,12 @@ import {
   type FileCommentSelection,
   normalizeFileCommentSelection,
 } from "./lib/fileComments";
+import {
+  type PullRequestContextDraft,
+  normalizePullRequestContext,
+  normalizePullRequestContexts,
+  pullRequestContextDedupKey,
+} from "./lib/pullRequestContext";
 import { type TerminalContextDraft, normalizeTerminalContextText } from "./lib/terminalContext";
 import {
   type ChatAssistantSelectionAttachment,
@@ -108,6 +114,7 @@ export interface ComposerPromptHistorySavedDraft {
   browserAnnotations: BrowserAnnotationDraft[];
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
+  pullRequestContexts: PullRequestContextDraft[];
   pastedTexts: PastedTextDraft[];
   skills: EngineSkillReference[];
   mentions: EngineMentionReference[];
@@ -127,6 +134,7 @@ export interface QueuedComposerChatTurn {
   browserAnnotations: BrowserAnnotationDraft[];
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
+  pullRequestContexts: PullRequestContextDraft[];
   pastedTexts: PastedTextDraft[];
   skills: EngineSkillReference[];
   mentions: EngineMentionReference[];
@@ -213,6 +221,7 @@ export interface ComposerThreadDraftState {
   browserAnnotations: BrowserAnnotationDraft[];
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
+  pullRequestContexts: PullRequestContextDraft[];
   pastedTexts: PastedTextDraft[];
   skills: EngineSkillReference[];
   mentions: EngineMentionReference[];
@@ -409,6 +418,9 @@ export interface ComposerDraftStoreState {
   addFileComment: (threadId: ThreadId, comment: FileCommentDraft) => boolean;
   removeFileComment: (threadId: ThreadId, commentId: string) => void;
   clearFileComments: (threadId: ThreadId) => void;
+  addPullRequestContext: (threadId: ThreadId, context: PullRequestContextDraft) => boolean;
+  removePullRequestContext: (threadId: ThreadId, contextId: string) => void;
+  clearPullRequestContexts: (threadId: ThreadId) => void;
   addPastedTexts: (threadId: ThreadId, pastedTexts: PastedTextDraft[]) => void;
   removePastedText: (threadId: ThreadId, pastedTextId: string) => void;
   clearPastedTexts: (threadId: ThreadId) => void;
@@ -588,6 +600,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     browserAnnotations: [],
     terminalContexts: [],
     fileComments: [],
+    pullRequestContexts: [],
     pastedTexts: [],
     skills: [],
     mentions: [],
@@ -666,6 +679,8 @@ export function normalizeFileComment(comment: FileCommentDraft): FileCommentDraf
     ...normalized,
   };
 }
+
+export { normalizePullRequestContext, normalizePullRequestContexts, pullRequestContextDedupKey };
 
 export function normalizeFileComments(
   comments: ReadonlyArray<FileCommentDraft>,
@@ -796,6 +811,7 @@ export function captureComposerPromptHistorySavedDraft(input: {
     browserAnnotations: normalizeBrowserAnnotations(draft.browserAnnotations),
     terminalContexts: normalizeTerminalContextsForThread(threadId, draft.terminalContexts),
     fileComments: normalizeFileComments(draft.fileComments),
+    pullRequestContexts: normalizePullRequestContexts(draft.pullRequestContexts),
     pastedTexts: normalizePastedTexts(draft.pastedTexts),
     skills: [...draft.skills],
     mentions: [...draft.mentions],
@@ -827,6 +843,7 @@ export function buildTransferredComposerDraft(input: {
       sourceDraft.terminalContexts,
     ),
     fileComments: normalizeFileComments(sourceDraft.fileComments),
+    pullRequestContexts: normalizePullRequestContexts(sourceDraft.pullRequestContexts),
     pastedTexts: normalizePastedTexts(sourceDraft.pastedTexts),
     skills: [...sourceDraft.skills],
     mentions: [...sourceDraft.mentions],
@@ -871,6 +888,7 @@ function clonePromptHistorySavedDraft(
       savedDraft.terminalContexts,
     ),
     fileComments: normalizeFileComments(savedDraft.fileComments),
+    pullRequestContexts: normalizePullRequestContexts(savedDraft.pullRequestContexts),
     pastedTexts: normalizePastedTexts(savedDraft.pastedTexts),
     skills: [...savedDraft.skills],
     mentions: [...savedDraft.mentions],
@@ -888,6 +906,7 @@ export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.browserAnnotations.length === 0 &&
     draft.terminalContexts.length === 0 &&
     draft.fileComments.length === 0 &&
+    draft.pullRequestContexts.length === 0 &&
     draft.pastedTexts.length === 0 &&
     draft.skills.length === 0 &&
     draft.mentions.length === 0 &&
@@ -922,6 +941,7 @@ export function resolvePendingDirectTurnRecoveryMutation(
     !Equal.equals(previous.browserAnnotations, current.browserAnnotations) ||
     !Equal.equals(previous.terminalContexts, current.terminalContexts) ||
     !Equal.equals(previous.fileComments, current.fileComments) ||
+    !Equal.equals(previous.pullRequestContexts, current.pullRequestContexts) ||
     !Equal.equals(previous.pastedTexts, current.pastedTexts) ||
     !Equal.equals(previous.skills, current.skills) ||
     !Equal.equals(previous.mentions, current.mentions)
@@ -980,6 +1000,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   browserAnnotations: EMPTY_BROWSER_ANNOTATIONS,
   terminalContexts: EMPTY_TERMINAL_CONTEXTS,
   fileComments: [],
+  pullRequestContexts: [],
   pastedTexts: EMPTY_PASTED_TEXTS,
   skills: EMPTY_SKILLS,
   mentions: EMPTY_MENTIONS,

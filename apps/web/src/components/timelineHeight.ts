@@ -28,6 +28,8 @@ const USER_ATTACHMENT_THUMBNAILS_PER_ROW = 4;
 const USER_ATTACHMENT_ROW_MARGIN_BOTTOM_PX = 4;
 const USER_PASTED_TEXT_CARD_HEIGHT_PX = 52;
 const USER_PASTED_TEXT_CARD_GAP_PX = 6;
+const USER_PULL_REQUEST_CONTEXT_CARD_HEIGHT_PX = 52;
+const USER_PULL_REQUEST_CONTEXT_CARD_GAP_PX = 6;
 const USER_MESSAGE_TOGGLE_HEIGHT_PX = 20;
 const USER_DISPATCH_CHIP_HEIGHT_PX = 24;
 const USER_DISPATCH_CHIP_MARGIN_BOTTOM_PX = 6;
@@ -306,6 +308,7 @@ export function estimateTimelineMessageHeight(
     // Prompt-serialized reference cards are not wire attachments, so count them
     // from the parsed display state to keep virtualization estimates aligned.
     const fileCommentCount = displayedUserMessage.fileComments.length;
+    const pullRequestContextCount = displayedUserMessage.pullRequestContexts.length;
     const pastedTextCount = displayedUserMessage.pastedTexts.length;
     const browserAnnotationCount = displayedUserMessage.browserAnnotations.length;
     const imageAttachmentHeight =
@@ -318,6 +321,11 @@ export function estimateTimelineMessageHeight(
     const assistantSelectionHeight = assistantSelectionCount > 0 ? 40 : 0;
     const fileAttachmentHeight = fileAttachmentCount > 0 ? 40 : 0;
     const fileCommentHeight = fileCommentCount > 0 ? 40 : 0;
+    const pullRequestContextHeight =
+      pullRequestContextCount > 0
+        ? pullRequestContextCount * USER_PULL_REQUEST_CONTEXT_CARD_HEIGHT_PX +
+          Math.max(pullRequestContextCount - 1, 0) * USER_PULL_REQUEST_CONTEXT_CARD_GAP_PX
+        : 0;
     const pastedTextHeight =
       pastedTextCount > 0
         ? pastedTextCount * USER_PASTED_TEXT_CARD_HEIGHT_PX +
@@ -332,6 +340,7 @@ export function estimateTimelineMessageHeight(
         assistantSelectionHeight +
         fileAttachmentHeight +
         fileCommentHeight +
+        pullRequestContextHeight +
         pastedTextHeight +
         browserAnnotationHeight >
       0
@@ -339,6 +348,7 @@ export function estimateTimelineMessageHeight(
           assistantSelectionHeight +
           fileAttachmentHeight +
           fileCommentHeight +
+          pullRequestContextHeight +
           pastedTextHeight +
           browserAnnotationHeight +
           (renderedText.length > 0 ? USER_ATTACHMENT_ROW_MARGIN_BOTTOM_PX : 0)
@@ -352,6 +362,7 @@ export function estimateTimelineMessageHeight(
             assistantSelectionCount,
             browserAnnotationCount,
             fileCommentCount,
+            pullRequestContextCount,
             pastedTextCount,
           })
             ? USER_DISPATCH_CHIP_WITH_MEDIA_MARGIN_BOTTOM_PX

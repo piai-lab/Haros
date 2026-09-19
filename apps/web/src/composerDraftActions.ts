@@ -51,7 +51,10 @@ import {
   normalizeDraftThreadEntryPoint,
   normalizeFileComment,
   normalizeFileComments,
+  normalizePullRequestContext,
+  normalizePullRequestContexts,
   normalizePastedTexts,
+  pullRequestContextDedupKey,
   normalizeTerminalContextForThread,
   normalizeTerminalContextsForThread,
   projectDraftThreadMappingKey,
@@ -608,6 +611,7 @@ export const createComposerDraftStoreState =
                 browserAnnotations: [],
                 terminalContexts: [],
                 fileComments: [],
+                pullRequestContexts: [],
                 pastedTexts: [],
                 skills: [],
                 mentions: [],
@@ -654,6 +658,7 @@ export const createComposerDraftStoreState =
             savedDraft.terminalContexts,
           ),
           fileComments: normalizeFileComments(savedDraft.fileComments),
+          pullRequestContexts: normalizePullRequestContexts(savedDraft.pullRequestContexts),
           pastedTexts: normalizePastedTexts(savedDraft.pastedTexts),
           skills: [...savedDraft.skills],
           mentions: [...savedDraft.mentions],
@@ -1652,6 +1657,80 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
+    addPullRequestContext: (threadId, context) => {
+      if (threadId.length === 0) {
+        return false;
+      }
+      let inserted = false;
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
+        const normalized = normalizePullRequestContext(context);
+        if (!normalized) {
+          return state;
+        }
+        const dedupKey = pullRequestContextDedupKey(normalized);
+        const kept = existing.pullRequestContexts.filter(
+          (entry) => pullRequestContextDedupKey(entry) !== dedupKey && entry.id !== normalized.id,
+        );
+        inserted = true;
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: {
+              ...existing,
+              pullRequestContexts: [...kept, normalized],
+            },
+          },
+        };
+      });
+      return inserted;
+    },
+    removePullRequestContext: (threadId, contextId) => {
+      if (threadId.length === 0 || contextId.length === 0) {
+        return;
+      }
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pullRequestContexts: current.pullRequestContexts.filter(
+            (entry) => entry.id !== contextId,
+          ),
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+    },
+    clearPullRequestContexts: (threadId) => {
+      if (threadId.length === 0) {
+        return;
+      }
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || current.pullRequestContexts.length === 0) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pullRequestContexts: [],
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+    },
     clearFileComments: (threadId) => {
       if (threadId.length === 0) {
         return;
@@ -1973,6 +2052,7 @@ export const createComposerDraftStoreState =
               browserAnnotations: [],
               terminalContexts: [],
               fileComments: [],
+              pullRequestContexts: [],
               pastedTexts: [],
               skills: [],
               mentions: [],
@@ -2101,6 +2181,7 @@ export const createComposerDraftStoreState =
           browserAnnotations: [],
           terminalContexts: [],
           fileComments: [],
+          pullRequestContexts: [],
           pastedTexts: [],
           skills: [],
           mentions: [],

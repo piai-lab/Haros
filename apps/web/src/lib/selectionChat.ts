@@ -122,6 +122,7 @@ export async function startSelectionChat(
     browserAnnotations: [],
     terminalContexts: [],
     fileComments: [],
+    pullRequestContexts: [],
     pastedTexts: [],
     skills: [],
     mentions: [],

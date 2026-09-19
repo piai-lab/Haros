@@ -33,6 +33,7 @@ import {
   normalizeAssistantSelections,
   normalizeDraftThreadEntryPoint,
   normalizeFileComments,
+  normalizePullRequestContexts,
   normalizeTerminalContextsForThread,
   projectDraftThreadEntryPointFromKey,
   projectIdFromDraftThreadMappingKey,
@@ -63,6 +64,11 @@ import {
 } from "./lib/composerImageSource";
 import { normalizePastedTextContent } from "./lib/composerPastedText";
 import { normalizeFileCommentSelection } from "./lib/fileComments";
+import {
+  isPullRequestContextScope,
+  normalizePullRequestContext,
+  type PullRequestContextDraft,
+} from "./lib/pullRequestContext";
 import {
   ensureInlineTerminalContextPlaceholders,
   normalizeTerminalContextText,
@@ -113,6 +119,19 @@ const PersistedFileCommentDraft = Schema.Struct({
 });
 
 type PersistedFileCommentDraft = typeof PersistedFileCommentDraft.Type;
+
+const PersistedPullRequestContextDraft = Schema.Struct({
+  id: Schema.String,
+  createdAt: Schema.String,
+  scope: Schema.Literals(["reference", "comments", "checks", "conflicts", "everything"]),
+  prNumber: Schema.Number,
+  prUrl: Schema.String,
+  title: Schema.String,
+  subtitle: Schema.String,
+  text: Schema.String,
+});
+
+type PersistedPullRequestContextDraft = typeof PersistedPullRequestContextDraft.Type;
 
 const PersistedPastedTextDraft = Schema.Struct({
   id: Schema.String,
@@ -171,6 +190,7 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   browserAnnotations: Schema.optionalKey(Schema.Array(PersistedBrowserAnnotationDraft)),
   terminalContexts: Schema.Array(PersistedQueuedTerminalContextDraft),
   fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
+  pullRequestContexts: Schema.optionalKey(Schema.Array(PersistedPullRequestContextDraft)),
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.Array(EngineSkillReference),
   mentions: Schema.Array(EngineMentionReference),
@@ -251,6 +271,7 @@ const PersistedComposerPromptHistorySavedDraft = Schema.Union([
     browserAnnotations: Schema.optionalKey(Schema.Array(PersistedBrowserAnnotationDraft)),
     terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
     fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
+    pullRequestContexts: Schema.optionalKey(Schema.Array(PersistedPullRequestContextDraft)),
     pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
     skills: Schema.optionalKey(Schema.Array(EngineSkillReference)),
     mentions: Schema.optionalKey(Schema.Array(EngineMentionReference)),
@@ -278,6 +299,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   browserAnnotations: Schema.optionalKey(Schema.Array(PersistedBrowserAnnotationDraft)),
   terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
   fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
+  pullRequestContexts: Schema.optionalKey(Schema.Array(PersistedPullRequestContextDraft)),
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.optionalKey(Schema.Array(EngineSkillReference)),
   mentions: Schema.optionalKey(Schema.Array(EngineMentionReference)),
@@ -409,6 +431,12 @@ function normalizePersistedPromptHistorySavedDraft(
         return normalized ? [normalized] : [];
       })
     : [];
+  const pullRequestContexts = Array.isArray(candidate.pullRequestContexts)
+    ? candidate.pullRequestContexts.flatMap((entry) => {
+        const normalized = normalizePersistedPullRequestContextDraft(entry);
+        return normalized ? [normalized] : [];
+      })
+    : [];
   const pastedTexts = Array.isArray(candidate.pastedTexts)
     ? candidate.pastedTexts.flatMap((entry) => {
         const normalized = normalizePersistedPastedTextDraft(entry);
@@ -428,6 +456,7 @@ function normalizePersistedPromptHistorySavedDraft(
     ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
     ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
     ...(fileComments.length > 0 ? { fileComments } : {}),
+    ...(pullRequestContexts.length > 0 ? { pullRequestContexts } : {}),
     ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
     ...(skills.length > 0 ? { skills } : {}),
     ...(mentions.length > 0 ? { mentions } : {}),
@@ -542,6 +571,39 @@ function normalizePersistedFileCommentDraft(value: unknown): PersistedFileCommen
   return { id, ...normalized };
 }
 
+function normalizePersistedPullRequestContextDraft(
+  value: unknown,
+): PersistedPullRequestContextDraft | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const candidate = value as Record<string, unknown>;
+  const normalized = normalizePullRequestContext({
+    id: typeof candidate.id === "string" ? candidate.id : "",
+    createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : "",
+    scope: isPullRequestContextScope(candidate.scope) ? candidate.scope : "reference",
+    prNumber: typeof candidate.prNumber === "number" ? candidate.prNumber : 0,
+    prUrl: typeof candidate.prUrl === "string" ? candidate.prUrl : "",
+    title: typeof candidate.title === "string" ? candidate.title : "",
+    subtitle: typeof candidate.subtitle === "string" ? candidate.subtitle : "",
+    text: typeof candidate.text === "string" ? candidate.text : "",
+  });
+  return normalized;
+}
+
+function toPersistedPullRequestContext(context: PullRequestContextDraft): PersistedPullRequestContextDraft {
+  return {
+    id: context.id,
+    createdAt: context.createdAt,
+    scope: context.scope,
+    prNumber: context.prNumber,
+    prUrl: context.prUrl,
+    title: context.title,
+    subtitle: context.subtitle,
+    text: context.text,
+  };
+}
+
 function normalizePersistedPastedTextDraft(value: unknown): PersistedPastedTextDraft | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -642,6 +704,12 @@ function normalizePersistedQueuedTurns(
             return normalized ? [normalized] : [];
           })
         : [];
+      const pullRequestContexts = Array.isArray(candidate.pullRequestContexts)
+        ? candidate.pullRequestContexts.flatMap((entry) => {
+            const normalized = normalizePersistedPullRequestContextDraft(entry);
+            return normalized ? [normalized] : [];
+          })
+        : [];
       const pastedTexts = Array.isArray(candidate.pastedTexts)
         ? candidate.pastedTexts.flatMap((pasted) => {
             const normalized = normalizePersistedPastedTextDraft(pasted);
@@ -675,6 +743,7 @@ function normalizePersistedQueuedTurns(
         ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
         terminalContexts,
         ...(fileComments.length > 0 ? { fileComments } : {}),
+        ...(pullRequestContexts.length > 0 ? { pullRequestContexts } : {}),
         ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
         skills: [...skills],
         mentions: [...mentions],
@@ -972,6 +1041,12 @@ function normalizePersistedDraftsByThreadId(
           return normalized ? [normalized] : [];
         })
       : [];
+    const pullRequestContexts = Array.isArray(draftCandidate.pullRequestContexts)
+      ? draftCandidate.pullRequestContexts.flatMap((entry) => {
+          const normalized = normalizePersistedPullRequestContextDraft(entry);
+          return normalized ? [normalized] : [];
+        })
+      : [];
     const pastedTexts = Array.isArray(draftCandidate.pastedTexts)
       ? draftCandidate.pastedTexts.flatMap((entry) => {
           const normalized = normalizePersistedPastedTextDraft(entry);
@@ -1062,6 +1137,7 @@ function normalizePersistedDraftsByThreadId(
       assistantSelections.length === 0 &&
       browserAnnotations.length === 0 &&
       fileComments.length === 0 &&
+      pullRequestContexts.length === 0 &&
       pastedTexts.length === 0 &&
       !hasReferenceData &&
       !hasQueuedTurns &&
@@ -1081,6 +1157,7 @@ function normalizePersistedDraftsByThreadId(
       ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
       ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
       ...(fileComments.length > 0 ? { fileComments } : {}),
+      ...(pullRequestContexts.length > 0 ? { pullRequestContexts } : {}),
       ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
       ...(skills.length > 0 ? { skills } : {}),
       ...(mentions.length > 0 ? { mentions } : {}),
@@ -1144,6 +1221,11 @@ function persistPendingDirectTurnRecovery(
             endLine: comment.endLine,
             text: comment.text,
           })),
+        }
+      : {}),
+    ...(queuedTurn.pullRequestContexts.length > 0
+      ? {
+          pullRequestContexts: queuedTurn.pullRequestContexts.map(toPersistedPullRequestContext),
         }
       : {}),
     ...(queuedTurn.pastedTexts.length > 0
@@ -1380,6 +1462,14 @@ export function partializeComposerDraftStoreState(
                     })),
                   }
                 : {}),
+              ...(draft.promptHistorySavedDraft.pullRequestContexts.length > 0
+                ? {
+                    pullRequestContexts:
+                      draft.promptHistorySavedDraft.pullRequestContexts.map(
+                        toPersistedPullRequestContext,
+                      ),
+                  }
+                : {}),
               ...(draft.promptHistorySavedDraft.pastedTexts.length > 0
                 ? {
                     pastedTexts: draft.promptHistorySavedDraft.pastedTexts.map((pasted) => ({
@@ -1435,6 +1525,11 @@ export function partializeComposerDraftStoreState(
               endLine: comment.endLine,
               text: comment.text,
             })),
+          }
+        : {}),
+      ...(draft.pullRequestContexts.length > 0
+        ? {
+            pullRequestContexts: draft.pullRequestContexts.map(toPersistedPullRequestContext),
           }
         : {}),
       ...(draft.pastedTexts.length > 0
@@ -1551,6 +1646,7 @@ function hydrateQueuedTurnsFromPersisted(
         browserAnnotations: normalizeBrowserAnnotations(queuedTurn.browserAnnotations ?? []),
         terminalContexts: normalizeTerminalContextsForThread(threadId, queuedTurn.terminalContexts),
         fileComments: normalizeFileComments(queuedTurn.fileComments ?? []),
+        pullRequestContexts: normalizePullRequestContexts(queuedTurn.pullRequestContexts ?? []),
         pastedTexts: hydratePastedTextsFromPersisted(queuedTurn.pastedTexts),
         skills: [...queuedTurn.skills],
         mentions: [...queuedTurn.mentions],
@@ -1608,6 +1704,7 @@ function hydratePromptHistorySavedDraft(
       browserAnnotations: [],
       terminalContexts: [],
       fileComments: [],
+      pullRequestContexts: [],
       pastedTexts: [],
       skills: [],
       mentions: [],
@@ -1628,6 +1725,7 @@ function hydratePromptHistorySavedDraft(
         text: "",
       })) ?? [],
     fileComments: normalizeFileComments(savedDraft.fileComments ?? []),
+    pullRequestContexts: normalizePullRequestContexts(savedDraft.pullRequestContexts ?? []),
     pastedTexts: hydratePastedTextsFromPersisted(savedDraft.pastedTexts),
     skills: [...(savedDraft.skills ?? [])],
     mentions: [...(savedDraft.mentions ?? [])],
@@ -1658,6 +1756,7 @@ export function toHydratedThreadDraft(
         text: "",
       })) ?? [],
     fileComments: normalizeFileComments(persistedDraft.fileComments ?? []),
+    pullRequestContexts: normalizePullRequestContexts(persistedDraft.pullRequestContexts ?? []),
     pastedTexts: hydratePastedTextsFromPersisted(persistedDraft.pastedTexts),
     skills: [...(persistedDraft.skills ?? [])],
     mentions: [...(persistedDraft.mentions ?? [])],

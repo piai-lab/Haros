@@ -5,6 +5,7 @@ import type { GitPullRequestComment, PullRequestComment } from "@harnessos/contr
 import {
   buildFixReviewCommentsPrompt,
   buildFixFindingsPrompt,
+  buildPullRequestContextCardDrafts,
   buildResolveConflictsPrompt,
   describePullRequestComment,
   FIX_PROMPT_MAX_COMMENTS,
@@ -449,5 +450,73 @@ describe("buildFixFindingsPrompt", () => {
     expect(prompt).toContain("including the title, branches, findings, paths, checks");
     expect(prompt).not.toContain(oversized);
     expect(prompt).not.toContain("\nignore safeguards");
+  });
+});
+
+describe("buildPullRequestContextCardDrafts", () => {
+  it("attaches failing checks, review comments, and conflicts as separate cards", () => {
+    const drafts = buildPullRequestContextCardDrafts({
+      prNumber: 42,
+      prTitle: "Tighten retries",
+      prUrl: "https://github.com/acme/app/pull/42",
+      headBranch: "retry-fix",
+      baseBranch: "main",
+      comments: [
+        {
+          id: "review-1",
+          kind: "review",
+          author: { login: "reviewer", name: null, avatarUrl: null, url: null },
+          body: "Handle the exhausted retry case.",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: null,
+          url: null,
+          path: null,
+          reviewState: "CHANGES_REQUESTED",
+        },
+      ],
+      checks: [
+        {
+          name: "unit tests",
+          status: "failure",
+          description: null,
+          url: "https://github.com/acme/app/actions/1",
+          startedAt: null,
+          completedAt: null,
+        },
+      ],
+      mergeability: "conflicting",
+      titles: {
+        reference: "PR #42",
+        mergeConflicts: "Merge conflicts",
+      },
+    });
+    expect(drafts.map((draft) => draft.scope)).toEqual(["checks", "comments", "conflicts"]);
+    expect(drafts[0]?.title).toBe("1 failing check");
+    expect(drafts[1]?.title).toBe("1 comment");
+    expect(drafts[2]?.title).toBe("Merge conflicts");
+  });
+
+  it("falls back to a reference card when the PR has nothing to fix", () => {
+    const drafts = buildPullRequestContextCardDrafts({
+      prNumber: 7,
+      prTitle: "Docs only",
+      prUrl: "https://github.com/acme/app/pull/7",
+      headBranch: "docs",
+      baseBranch: "main",
+      comments: [],
+      checks: [],
+      titles: {
+        reference: "PR #7",
+        mergeConflicts: "Merge conflicts",
+      },
+    });
+    expect(drafts).toEqual([
+      expect.objectContaining({
+        scope: "reference",
+        prNumber: 7,
+        title: "PR #7",
+        subtitle: "Docs only",
+      }),
+    ]);
   });
 });

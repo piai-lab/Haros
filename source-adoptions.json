@@ -948,6 +948,21 @@
       "mode": "adapt",
       "changes": "Haros lists capturable macOS windows from the Composer + menu and captures a chosen window through the existing AppSnap helper. Picker captures use a picker- request id and do not enter the hotkey auto-attach queue. The UI hides when the desktop bridge is absent.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing listWindows/captureWindow from the AppSnap contract and Composer extras menu."
+    },
+    {
+      "id": "synara-pull-request-context-cards",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/lib/pullRequestContext.ts",
+        "apps/web/src/components/chat/PullRequestContextCard.tsx",
+        "apps/web/src/composerDraftDomain.ts",
+        "apps/web/src/components/pullRequest/PullRequestDetailPanel.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed pull-request context-card mechanism.",
+      "mode": "adapt",
+      "changes": "Haros attaches PR checks, comments, and conflicts as Composer cards on the current thread through the existing fileComments-style draft persist, send-block, and transcript restore path. Illegal scopes are dropped. Fix findings and Resolve conflicts still open a fresh thread.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing pullRequestContexts from the composer draft owner and the PR detail Add to chat action."
     }
   ]
 }

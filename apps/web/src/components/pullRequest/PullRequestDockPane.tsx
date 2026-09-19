@@ -6,6 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestDockPane
 
+import type { ThreadId } from "@harnessos/contracts";
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { PanelStateMessage } from "~/components/chat/PanelStateMessage";
@@ -19,12 +20,14 @@ import { useI18n } from "~/i18n";
 
 export function PullRequestDockPane({
   pane,
+  threadId,
   onClose,
   onSelectPullRequest,
   stackNavigationFocus,
   pollingEnabled: pollingEnabledProp,
 }: {
   pane: RightDockPane;
+  threadId?: ThreadId;
   onClose?: (() => void) | undefined;
   onSelectPullRequest?: (number: number, direction: StackNavigationDirection) => void;
   stackNavigationFocus?: StackNavigationDirection;
@@ -42,6 +45,7 @@ export function PullRequestDockPane({
       input={input}
       initialTab={pane.pullRequestInitialTab ?? "summary"}
       pollingEnabled={pollingEnabled}
+      {...(threadId ? { threadId } : {})}
       {...(onClose ? { onClose } : {})}
       {...(onSelectPullRequest ? { onSelectPullRequest } : {})}
       {...(stackNavigationFocus ? { stackNavigationFocus } : {})}

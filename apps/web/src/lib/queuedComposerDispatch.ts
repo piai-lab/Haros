@@ -24,6 +24,7 @@ import {
 import { appendPastedTextsToPrompt, filterPastedTextsWithText } from "./composerPastedText";
 import { formatOutgoingComposerPrompt, stageUploadComposerAttachments } from "./composerSend";
 import { appendFileCommentsToPrompt } from "./fileComments";
+import { appendPullRequestContextsToPrompt } from "./pullRequestContext";
 import {
   appendTerminalContextsToPrompt,
   filterTerminalContextsWithText,
@@ -105,12 +106,15 @@ export async function dispatchQueuedComposerTurnHeadless(input: {
   const sendablePastedTexts = filterPastedTextsWithText(queuedTurn.pastedTexts);
   const messageText = appendBrowserAnnotationsToPrompt(
     appendPastedTextsToPrompt(
-      appendFileCommentsToPrompt(
-        appendTerminalContextsToPrompt(
-          appendAssistantSelectionsToPrompt(queuedTurn.prompt, queuedTurn.assistantSelections),
-          sendableTerminalContexts,
+      appendPullRequestContextsToPrompt(
+        appendFileCommentsToPrompt(
+          appendTerminalContextsToPrompt(
+            appendAssistantSelectionsToPrompt(queuedTurn.prompt, queuedTurn.assistantSelections),
+            sendableTerminalContexts,
+          ),
+          queuedTurn.fileComments,
         ),
-        queuedTurn.fileComments,
+        queuedTurn.pullRequestContexts,
       ),
       sendablePastedTexts,
     ),

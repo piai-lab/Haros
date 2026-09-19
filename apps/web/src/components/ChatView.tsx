@@ -428,6 +428,11 @@ import {
   type FileCommentDraft,
 } from "../lib/fileComments";
 import {
+  appendPullRequestContextsToPrompt,
+  formatPullRequestContextTitleSeed,
+  type PullRequestContextDraft,
+} from "../lib/pullRequestContext";
+import {
   deriveContextWindowSelectionStatus,
   deriveCumulativeCostUsd,
   deriveLatestContextWindowSnapshot,
@@ -1152,6 +1157,7 @@ function buildQueuedComposerPreviewText(input: {
   browserAnnotations: ReadonlyArray<BrowserAnnotationDraft>;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
+  pullRequestContexts?: ReadonlyArray<PullRequestContextDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): string {
   if (input.trimmedPrompt.length > 0) {
@@ -1179,6 +1185,10 @@ function buildQueuedComposerPreviewText(input: {
   const firstFileComment = input.fileComments[0];
   if (firstFileComment) {
     return formatFileCommentLabel(firstFileComment);
+  }
+  const pullRequestTitle = formatPullRequestContextTitleSeed(input.pullRequestContexts ?? []);
+  if (pullRequestTitle) {
+    return pullRequestTitle;
   }
   const pastedTitle = formatPastedTextTitleSeed(input.pastedTexts);
   if (pastedTitle) {
@@ -1405,6 +1415,7 @@ export default function ChatView({
   const composerAssistantSelections = composerDraft.assistantSelections;
   const composerBrowserAnnotations = composerDraft.browserAnnotations;
   const composerFileComments = composerDraft.fileComments;
+  const composerPullRequestContexts = composerDraft.pullRequestContexts;
   const composerTerminalContexts = composerDraft.terminalContexts;
   const composerPastedTexts = composerDraft.pastedTexts;
   const composerSkills = composerDraft.skills;
@@ -1421,6 +1432,7 @@ export default function ChatView({
         assistantSelectionCount: composerAssistantSelections.length,
         browserAnnotationCount: composerBrowserAnnotations.length,
         fileCommentCount: composerFileComments.length,
+        pullRequestContextCount: composerPullRequestContexts.length,
         terminalContexts: composerTerminalContexts,
         pastedTexts: composerPastedTexts,
       }),
@@ -1428,6 +1440,7 @@ export default function ChatView({
       composerAssistantSelections.length,
       composerBrowserAnnotations.length,
       composerFileComments.length,
+      composerPullRequestContexts.length,
       composerFiles.length,
       composerImages.length,
       composerTerminalContexts,
@@ -1477,6 +1490,12 @@ export default function ChatView({
   );
   const addComposerDraftFileComment = useComposerDraftStore((store) => store.addFileComment);
   const clearComposerDraftFileComments = useComposerDraftStore((store) => store.clearFileComments);
+  const addComposerDraftPullRequestContext = useComposerDraftStore(
+    (store) => store.addPullRequestContext,
+  );
+  const removeComposerDraftPullRequestContext = useComposerDraftStore(
+    (store) => store.removePullRequestContext,
+  );
   const insertComposerDraftTerminalContext = useComposerDraftStore(
     (store) => store.insertTerminalContext,
   );
@@ -1603,6 +1622,9 @@ export default function ChatView({
   );
   const composerTerminalContextsRef = useRef<TerminalContextDraft[]>(composerTerminalContexts);
   const composerFileCommentsRef = useRef<FileCommentDraft[]>(composerFileComments);
+  const composerPullRequestContextsRef = useRef<PullRequestContextDraft[]>(
+    composerPullRequestContexts,
+  );
   const composerPastedTextsRef = useRef<PastedTextDraft[]>(composerPastedTexts);
   const [localDraftErrorsByThreadId, setLocalDraftErrorsByThreadId] = useState<
     Record<ThreadId, string | null>
@@ -1924,6 +1946,17 @@ export default function ChatView({
     discardPromptHistoryNavigationForComposerMutation();
     clearComposerDraftFileComments(threadId);
   }, [clearComposerDraftFileComments, discardPromptHistoryNavigationForComposerMutation, threadId]);
+  const removeComposerPullRequestContextFromDraft = useCallback(
+    (contextId: string) => {
+      discardPromptHistoryNavigationForComposerMutation();
+      removeComposerDraftPullRequestContext(threadId, contextId);
+    },
+    [
+      discardPromptHistoryNavigationForComposerMutation,
+      removeComposerDraftPullRequestContext,
+      threadId,
+    ],
+  );
   const removeComposerTerminalContextFromDraft = useCallback(
     (contextId: string) => {
       discardPromptHistoryNavigationForComposerMutation();
@@ -5635,6 +5668,10 @@ export default function ChatView({
   }, [composerFileComments]);
 
   useEffect(() => {
+    composerPullRequestContextsRef.current = composerPullRequestContexts;
+  }, [composerPullRequestContexts]);
+
+  useEffect(() => {
     composerPastedTextsRef.current = composerPastedTexts;
   }, [composerPastedTexts]);
 
@@ -7238,6 +7275,8 @@ export default function ChatView({
       const restoredBrowserAnnotations =
         queuedTurn.kind === "chat" ? queuedTurn.browserAnnotations : [];
       const restoredFileComments = queuedTurn.kind === "chat" ? queuedTurn.fileComments : [];
+      const restoredPullRequestContexts =
+        queuedTurn.kind === "chat" ? queuedTurn.pullRequestContexts : [];
       promptRef.current = nextPrompt;
       clearComposerDraftContent(activeThread.id);
       setComposerDraftPrompt(activeThread.id, nextPrompt);
@@ -7266,6 +7305,9 @@ export default function ChatView({
         }
         for (const comment of restoredFileComments) {
           addComposerFileCommentToDraft(comment);
+        }
+        for (const context of restoredPullRequestContexts) {
+          addComposerDraftPullRequestContext(activeThread.id, context);
         }
         if (queuedTurn.terminalContexts.length > 0) {
           addComposerTerminalContextsToDraft(queuedTurn.terminalContexts);
@@ -7302,6 +7344,7 @@ export default function ChatView({
       activeThread,
       addComposerAssistantSelectionToDraft,
       addComposerDraftBrowserAnnotations,
+      addComposerDraftPullRequestContext,
       addComposerFileCommentToDraft,
       addComposerFilesToDraft,
       addComposerImagesToDraft,
@@ -7515,6 +7558,8 @@ export default function ChatView({
     const composerBrowserAnnotationsForSend =
       queuedChatTurn?.browserAnnotations ?? composerBrowserAnnotations;
     const composerFileCommentsForSend = queuedChatTurn?.fileComments ?? composerFileComments;
+    const composerPullRequestContextsForSend =
+      queuedChatTurn?.pullRequestContexts ?? composerPullRequestContexts;
     const composerTerminalContextsForSend =
       queuedChatTurn?.terminalContexts ?? composerTerminalContexts;
     const composerPastedTextsForSend = queuedChatTurn?.pastedTexts ?? composerPastedTexts;
@@ -7553,6 +7598,7 @@ export default function ChatView({
       assistantSelectionCount: composerAssistantSelectionsForSend.length,
       browserAnnotationCount: composerBrowserAnnotationsForSend.length,
       fileCommentCount: composerFileCommentsForSend.length,
+      pullRequestContextCount: composerPullRequestContextsForSend.length,
       terminalContexts: composerTerminalContextsForSend,
       pastedTexts: composerPastedTextsForSend,
     });
@@ -7577,6 +7623,7 @@ export default function ChatView({
       composerAssistantSelectionsForSend.length > 0 ||
       composerBrowserAnnotationsForSend.length > 0 ||
       composerFileCommentsForSend.length > 0 ||
+      composerPullRequestContextsForSend.length > 0 ||
       sendableComposerTerminalContexts.length > 0 ||
       sendableComposerPastedTexts.length > 0;
     // Queued chat turns already captured their intended mode. Live plan follow-ups
@@ -7642,6 +7689,7 @@ export default function ChatView({
       composerAssistantSelectionsForSend.length === 0 &&
       composerBrowserAnnotationsForSend.length === 0 &&
       composerFileCommentsForSend.length === 0 &&
+      composerPullRequestContextsForSend.length === 0 &&
       sendableComposerTerminalContexts.length === 0 &&
       sendableComposerPastedTexts.length === 0 &&
       // Engine mentions are structured turn metadata, and automation definitions persist text only.
@@ -7964,6 +8012,7 @@ export default function ChatView({
           browserAnnotations: composerBrowserAnnotationsForSend,
           terminalContexts: sendableComposerTerminalContexts,
           fileComments: composerFileCommentsForSend,
+          pullRequestContexts: composerPullRequestContextsForSend,
           pastedTexts: sendableComposerPastedTexts,
         }),
         prompt: promptForSend,
@@ -7972,6 +8021,7 @@ export default function ChatView({
         assistantSelections: composerAssistantSelectionsForSend,
         browserAnnotations: composerBrowserAnnotationsForSend,
         fileComments: composerFileCommentsForSend,
+        pullRequestContexts: composerPullRequestContextsForSend,
         terminalContexts: sendableComposerTerminalContexts,
         pastedTexts: sendableComposerPastedTexts,
         skills: selectedComposerSkillsForSend,
@@ -8220,6 +8270,7 @@ export default function ChatView({
       }),
     );
     const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
+    const composerPullRequestContextsSnapshot = [...composerPullRequestContextsForSend];
     const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
     const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
     const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
@@ -8230,12 +8281,15 @@ export default function ChatView({
     // extractors unwrap them in the reverse order.
     const messageTextForSend = appendBrowserAnnotationsToPrompt(
       appendPastedTextsToPrompt(
-        appendFileCommentsToPrompt(
-          appendTerminalContextsToPrompt(
-            appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
-            composerTerminalContextsSnapshot,
+        appendPullRequestContextsToPrompt(
+          appendFileCommentsToPrompt(
+            appendTerminalContextsToPrompt(
+              appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
+              composerTerminalContextsSnapshot,
+            ),
+            composerFileCommentsSnapshot,
           ),
-          composerFileCommentsSnapshot,
+          composerPullRequestContextsSnapshot,
         ),
         composerPastedTextsSnapshot,
       ),
@@ -8317,6 +8371,7 @@ export default function ChatView({
             browserAnnotations: composerBrowserAnnotationsSnapshot,
             terminalContexts: composerTerminalContextsSnapshot,
             fileComments: composerFileCommentsSnapshot,
+            pullRequestContexts: composerPullRequestContextsSnapshot,
             pastedTexts: composerPastedTextsSnapshot,
           }),
           prompt: promptForSend,
@@ -8326,6 +8381,7 @@ export default function ChatView({
           browserAnnotations: composerBrowserAnnotationsSnapshot,
           terminalContexts: composerTerminalContextsSnapshot,
           fileComments: composerFileCommentsSnapshot,
+          pullRequestContexts: composerPullRequestContextsSnapshot,
           pastedTexts: composerPastedTextsSnapshot,
           skills: composerSkillsSnapshot,
           mentions: composerMentionsSnapshot,
@@ -8904,6 +8960,7 @@ export default function ChatView({
         composerAssistantSelectionsRef.current.length === 0 &&
         composerBrowserAnnotationsRef.current.length === 0 &&
         composerFileCommentsRef.current.length === 0 &&
+        composerPullRequestContextsRef.current.length === 0 &&
         composerTerminalContextsRef.current.length === 0 &&
         composerPastedTextsRef.current.length === 0
       ) {
@@ -8933,6 +8990,9 @@ export default function ChatView({
         addComposerDraftBrowserAnnotations(threadIdForSend, composerBrowserAnnotationsSnapshot);
         for (const comment of composerFileCommentsSnapshot) {
           addComposerFileCommentToDraft(comment);
+        }
+        for (const context of composerPullRequestContextsSnapshot) {
+          addComposerDraftPullRequestContext(threadIdForSend, context);
         }
         addComposerTerminalContextsToDraft(composerTerminalContextsSnapshot);
         addComposerPastedTextsToDraft(composerPastedTextsSnapshot);
@@ -9336,6 +9396,7 @@ export default function ChatView({
       browserAnnotations: [],
       terminalContexts: [],
       fileComments: [],
+      pullRequestContexts: [],
       pastedTexts: [],
       skills: [],
       mentions: [],
@@ -11361,6 +11422,7 @@ export default function ChatView({
         onAddFileReference={() => void handleAddFileReference()}
         onAddFolderReference={() => void handleAddFolderReference()}
         onSetPlanMode={setPlanMode}
+        {...(activeThreadId ? { threadId: activeThreadId } : {})}
       />
       {!isVoiceRecording && !isVoiceTranscribing ? (
         <RuntimeUsageControls
@@ -11818,6 +11880,7 @@ export default function ChatView({
                     (composerAssistantSelections.length > 0 ||
                       composerBrowserAnnotations.length > 0 ||
                       composerFileComments.length > 0 ||
+                      composerPullRequestContexts.length > 0 ||
                       composerPastedTexts.length > 0 ||
                       composerFiles.length > 0 ||
                       composerImages.length > 0) && (
@@ -11825,6 +11888,7 @@ export default function ChatView({
                         assistantSelections={composerAssistantSelections}
                         browserAnnotations={composerBrowserAnnotations}
                         fileComments={composerFileComments}
+                        pullRequestContexts={composerPullRequestContexts}
                         pastedTexts={composerPastedTexts}
                         files={composerFiles}
                         images={composerImages}
@@ -11833,6 +11897,7 @@ export default function ChatView({
                         onRemoveAssistantSelections={clearComposerAssistantSelectionsFromDraft}
                         onRemoveBrowserAnnotation={removeComposerBrowserAnnotationFromDraft}
                         onRemoveFileComments={clearComposerFileCommentsFromDraft}
+                        onRemovePullRequestContext={removeComposerPullRequestContextFromDraft}
                         onRemovePastedText={removeComposerPastedTextFromDraft}
                         onShowPastedTextInField={showComposerPastedTextInField}
                         onRemoveFile={removeComposerFile}

@@ -9,6 +9,10 @@ import {
   type BrowserAnnotationDraft,
 } from "./browserAnnotations";
 import { extractTrailingFileComments, type ParsedFileCommentEntry } from "./fileComments";
+import {
+  extractTrailingPullRequestContexts,
+  type ParsedPullRequestContextEntry,
+} from "./pullRequestContext";
 import { extractTrailingPastedTexts, type ParsedPastedTextEntry } from "./composerPastedText";
 
 export interface TerminalContextSelection {
@@ -40,6 +44,7 @@ export interface DisplayedUserMessageState {
   contexts: ParsedTerminalContextEntry[];
   assistantSelections: ParsedAssistantSelectionEntry[];
   fileComments: ParsedFileCommentEntry[];
+  pullRequestContexts: ParsedPullRequestContextEntry[];
   pastedTexts: ParsedPastedTextEntry[];
   browserAnnotations: BrowserAnnotationDraft[];
 }
@@ -58,6 +63,7 @@ const TRAILING_TERMINAL_CONTEXT_BLOCK_PATTERN =
   /\n*<terminal_context>\n([\s\S]*?)\n<\/terminal_context>\s*$/;
 const TRAILING_SERIALIZED_COMPOSER_BLOCK_PATTERNS = [
   /\n*(<pasted_text>\n[\s\S]*?\n<\/pasted_text>)\s*$/u,
+  /\n*(<pull_request_context>\n[\s\S]*?\n<\/pull_request_context>)\s*$/u,
   /\n*(<file_comments>\n[\s\S]*?\n<\/file_comments>)\s*$/u,
   /\n*(<terminal_context>\n[\s\S]*?\n<\/terminal_context>)\s*$/u,
   /\n*(<assistant_selection>\n[\s\S]*?\n<\/assistant_selection>)\s*$/u,
@@ -350,7 +356,10 @@ export function deriveDisplayedUserMessageState(
       ? { promptText: prompt, annotations: [] }
       : extractTrailingBrowserAnnotations(prompt, options.messageId);
   const extractedPastedTexts = extractTrailingPastedTexts(extractedBrowserAnnotations.promptText);
-  const extractedFileComments = extractTrailingFileComments(extractedPastedTexts.promptText);
+  const extractedPullRequestContexts = extractTrailingPullRequestContexts(
+    extractedPastedTexts.promptText,
+  );
+  const extractedFileComments = extractTrailingFileComments(extractedPullRequestContexts.promptText);
   const extractedContexts = extractTrailingTerminalContexts(extractedFileComments.promptText);
   const extractedAssistantSelections = extractTrailingAssistantSelections(
     extractedContexts.promptText,
@@ -370,6 +379,7 @@ export function deriveDisplayedUserMessageState(
     contexts: extractedContexts.contexts,
     assistantSelections: extractedAssistantSelections.selections,
     fileComments: extractedFileComments.comments,
+    pullRequestContexts: extractedPullRequestContexts.pullRequestContexts,
     pastedTexts: extractedPastedTexts.pastedTexts,
     browserAnnotations: extractedBrowserAnnotations.annotations,
   };

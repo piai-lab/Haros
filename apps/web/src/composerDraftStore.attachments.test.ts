@@ -272,6 +272,16 @@ describe("composerDraftStore prompt history saved draft", () => {
     store.addAssistantSelection(threadId, assistantSelection);
     store.addTerminalContext(threadId, terminalContext);
     store.addFileComment(threadId, fileComment);
+    store.addPullRequestContext(threadId, {
+      id: "pr-history",
+      createdAt: "2026-03-13T12:00:00.000Z",
+      scope: "checks",
+      prNumber: 42,
+      prUrl: "https://github.com/acme/app/pull/42",
+      title: "1 failing check",
+      subtitle: "Test",
+      text: "Fix the failing checks on PR #42.",
+    });
     store.addPastedTexts(threadId, [pastedText]);
     store.setSkills(threadId, [selectedSkill]);
     store.setMentions(threadId, [selectedMention]);
@@ -290,6 +300,7 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(browsingDraft.assistantSelections).toHaveLength(0);
     expect(browsingDraft.terminalContexts).toHaveLength(0);
     expect(browsingDraft.fileComments).toHaveLength(0);
+    expect(browsingDraft.pullRequestContexts).toHaveLength(0);
     expect(browsingDraft.pastedTexts).toHaveLength(0);
     expect(browsingDraft.skills).toHaveLength(0);
     expect(browsingDraft.mentions).toHaveLength(0);
@@ -302,6 +313,9 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(browsingDraft.promptHistorySavedDraft?.fileComments.map((entry) => entry.id)).toEqual([
       "comment-history",
     ]);
+    expect(
+      browsingDraft.promptHistorySavedDraft?.pullRequestContexts.map((entry) => entry.id),
+    ).toEqual(["pr-history"]);
     expect(browsingDraft.promptHistorySavedDraft?.pastedTexts.map((entry) => entry.id)).toEqual([
       "paste-history",
     ]);
@@ -316,6 +330,7 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(restoredDraft.assistantSelections.map((entry) => entry.id)).toEqual(["sel-history"]);
     expect(restoredDraft.terminalContexts.map((entry) => entry.id)).toEqual(["ctx-history"]);
     expect(restoredDraft.fileComments.map((entry) => entry.id)).toEqual(["comment-history"]);
+    expect(restoredDraft.pullRequestContexts.map((entry) => entry.id)).toEqual(["pr-history"]);
     expect(restoredDraft.pastedTexts.map((entry) => entry.id)).toEqual(["paste-history"]);
     expect(restoredDraft.skills).toEqual([selectedSkill]);
     expect(restoredDraft.mentions).toEqual([selectedMention]);
@@ -1215,5 +1230,27 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     expect(
       persistedState.draftsByThreadId?.[threadId]?.attachments?.[0]?.source,
     ).not.toHaveProperty("appIconDataUrl");
+  });
+
+  it("clears pull-request context cards with composer content", () => {
+    const threadId = ThreadId.makeUnsafe("thread-pr-clear");
+    const store = useComposerDraftStore.getState();
+    store.addPullRequestContext(threadId, {
+      id: "pr-clear",
+      createdAt: "2026-03-13T12:00:00.000Z",
+      scope: "checks",
+      prNumber: 7,
+      prUrl: "https://github.com/acme/app/pull/7",
+      title: "1 failing check",
+      subtitle: "Test",
+      text: "Fix the failing checks on PR #7.",
+    });
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts).toHaveLength(
+      1,
+    );
+    store.clearComposerContent(threadId);
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts ?? []).toEqual(
+      [],
+    );
   });
 });

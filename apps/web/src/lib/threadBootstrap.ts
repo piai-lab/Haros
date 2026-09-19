@@ -304,6 +304,21 @@ export function shouldReuseActiveDraftThread(input: {
 }
 
 // Resolve the durable thread payload for terminal-first promotion from the most specific state.
+function resolveTerminalLastKnownPr(
+  input: ResolveTerminalThreadCreationStateInput,
+): OrchestrationThreadPullRequest | null {
+  if (input.draftThread && input.draftThread.lastKnownPr !== undefined) {
+    return input.draftThread.lastKnownPr;
+  }
+  if (input.activeThread?.projectId === input.projectId) {
+    return input.activeThread.lastKnownPr ?? null;
+  }
+  if (input.activeDraftThread?.projectId === input.projectId) {
+    return input.activeDraftThread.lastKnownPr ?? null;
+  }
+  return null;
+}
+
 export function resolveTerminalThreadCreationState(
   input: ResolveTerminalThreadCreationStateInput,
 ): TerminalThreadCreationState {
@@ -343,15 +358,7 @@ export function resolveTerminalThreadCreationState(
       // Plan mode is an explicit composer/thread choice. Do not copy it from
       // the previously active thread into a fresh session bootstrap.
       input.draftThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
-    lastKnownPr:
-      input.draftThread?.lastKnownPr ??
-      (input.activeThread?.projectId === input.projectId
-        ? (input.activeThread.lastKnownPr ?? null)
-        : null) ??
-      (input.activeDraftThread?.projectId === input.projectId
-        ? (input.activeDraftThread.lastKnownPr ?? null)
-        : null) ??
-      null,
+    lastKnownPr: resolveTerminalLastKnownPr(input),
     envMode: hasExplicitEnvModeOverride
       ? (explicitEnvMode ?? "local")
       : (inheritedEnvMode ?? "local"),

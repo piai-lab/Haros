@@ -12,6 +12,7 @@ import type {
   PullRequestDetailInput,
   PullRequestMergeExpectation,
   PullRequestMergeMethod,
+  ThreadId,
 } from "@harnessos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import {
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import {
   buildFixFindingsPrompt,
+  buildPullRequestContextCardDrafts,
   buildResolveConflictsPrompt,
 } from "~/components/chat/environment/environmentPullRequest.logic";
 import {
@@ -52,8 +54,9 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { toastManager } from "~/components/ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { appendComposerPromptText } from "~/lib/chatReferences";
+import { addChatPullRequestContext, appendComposerPromptText } from "~/lib/chatReferences";
 import {
+  ChatBubbleIcon,
   EllipsisIcon,
   ExternalLinkIcon,
   GitMergeConflictIcon,
@@ -133,6 +136,7 @@ function DetailSkeleton() {
 
 export function PullRequestDetailPanel({
   input,
+  threadId,
   initialTab: initialTabProp,
   onClose,
   onSelectPullRequest,
@@ -140,6 +144,7 @@ export function PullRequestDetailPanel({
   pollingEnabled: pollingEnabledProp,
 }: {
   input: PullRequestDetailInput;
+  threadId?: ThreadId;
   initialTab?: DetailTab;
   onClose?: () => void;
   onSelectPullRequest?: (number: number, direction: StackNavigationDirection) => void;
@@ -347,6 +352,39 @@ export function PullRequestDetailPanel({
       }),
       t("pullRequest.prepareConflictResolutionFailed"),
     );
+  };
+
+  const addPullRequestToCurrentChat = () => {
+    if (!detail || !threadId) return;
+    const cards = buildPullRequestContextCardDrafts({
+      prNumber: detail.number,
+      prTitle: detail.title,
+      prUrl: detail.url,
+      headBranch: detail.headBranch,
+      baseBranch: detail.baseBranch,
+      comments: detail.comments,
+      checks: detail.checks,
+      commentsTruncated: detail.commentsTruncated,
+      commentsIncomplete: detail.commentsIncomplete,
+      ...(detail.mergeability !== undefined ? { mergeability: detail.mergeability } : {}),
+      locale,
+      titles: {
+        reference: t("pullRequest.contextReferenceTitle", { number: detail.number }),
+        mergeConflicts: t("pullRequest.mergeConflicts"),
+      },
+    });
+    let attached = 0;
+    for (const card of cards) {
+      if (addChatPullRequestContext(threadId, card)) {
+        attached += 1;
+      }
+    }
+    if (attached === 0) {
+      toastManager.add({
+        type: "warning",
+        title: t("pullRequest.addToChatFailed"),
+      });
+    }
   };
 
   const copyPullRequestLink = async () => {
@@ -567,6 +605,12 @@ export function PullRequestDetailPanel({
                     <LinkIcon className="size-3.5 shrink-0" />
                     <span>{t("common.copyLink")}</span>
                   </MenuItem>
+                  {threadId ? (
+                    <MenuItem onClick={addPullRequestToCurrentChat}>
+                      <ChatBubbleIcon className="size-3.5 shrink-0" />
+                      <span>{t("composer.addPullRequestToChat")}</span>
+                    </MenuItem>
+                  ) : null}
                   <MenuItem onClick={fixFindings} disabled={preparingThread !== null}>
                     <HammerIcon className="size-3.5 shrink-0" />
                     <span>

@@ -249,6 +249,11 @@ Comments can quote code and contain private context. Bound and sanitize durable 
 Link directly to the relevant remote discussion when possible instead of copying an entire private
 conversation into the Product Thread.
 
+From an open PR in the current thread's dock, **Add to chat** attaches checks, comments, or
+conflicts as Composer cards on that same thread. Sending serializes them as a trailing
+`<pull_request_context>` block. **Fix findings** and **Resolve conflicts** still open a fresh
+thread. The card is a Composer attachment, not a second PR product.
+
 ## Statistics and large diffs
 
 Additions/deletions are useful scope signals but not quality measures. Generated files can dominate

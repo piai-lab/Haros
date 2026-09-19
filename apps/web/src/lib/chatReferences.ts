@@ -9,6 +9,10 @@ import { useComposerDraftStore } from "../composerDraftStore";
 import { requestComposerFocus } from "../composerFocusRequestStore";
 import { formatComposerMentionToken } from "./composerMentions";
 import { createFileCommentDraft, type FileCommentSelection } from "./fileComments";
+import {
+  createPullRequestContextDraft,
+  type PullRequestContextDraft,
+} from "./pullRequestContext";
 
 export interface ChatFileReference {
   path: string;
@@ -133,6 +137,22 @@ export function addChatFileComment(threadId: ThreadId, comment: FileCommentSelec
     return false;
   }
   useComposerDraftStore.getState().addFileComment(threadId, draft);
+  requestComposerFocus(threadId);
+  return true;
+}
+
+export function addChatPullRequestContext(
+  threadId: ThreadId,
+  context: Omit<PullRequestContextDraft, "id" | "createdAt"> & {
+    id?: string;
+    createdAt?: string;
+  },
+): boolean {
+  const draft = createPullRequestContextDraft(context);
+  if (!draft) {
+    return false;
+  }
+  useComposerDraftStore.getState().addPullRequestContext(threadId, draft);
   requestComposerFocus(threadId);
   return true;
 }
