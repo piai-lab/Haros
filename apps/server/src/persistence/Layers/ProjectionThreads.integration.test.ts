@@ -54,7 +54,6 @@ layer("ProjectionThreadRepository fork scope", (it) => {
         latestTurnId: null,
         handoff: null,
         pinnedMessages: null,
-        threadMarkers: null,
         notes: null,
         goal: null,
         latestUserMessageAt: null,

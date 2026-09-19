@@ -55,9 +55,6 @@ const EN_MESSAGES = {
   "settings.pinnedMessages": "Pinned messages",
   "settings.pinnedMessagesDescription":
     "Show the pinned-message checklist in the Environment panel.",
-  "settings.textMarkers": "Text markers",
-  "settings.textMarkersDescription":
-    "Show highlighted and underlined transcript text in the Environment panel.",
   "settings.notepad": "Notepad",
   "settings.notepadDescription": "Show the current task's notepad in the Environment panel.",
   "settings.integrationsDescription":
@@ -165,8 +162,6 @@ const ZH_CN_MESSAGES = {
   "settings.recapDescription": "在环境信息面板中显示自动生成的 Chat 摘要。",
   "settings.pinnedMessages": "置顶消息",
   "settings.pinnedMessagesDescription": "在环境信息面板中显示置顶消息清单。",
-  "settings.textMarkers": "文本标记",
-  "settings.textMarkersDescription": "在环境信息面板中显示高亮和下划线文本。",
   "settings.notepad": "记事本",
   "settings.notepadDescription": "在环境信息面板中显示当前任务的记事本。",
   "settings.integrationsDescription": "允许 Codex、Claude Code 等本地应用连接并使用 Haros。",

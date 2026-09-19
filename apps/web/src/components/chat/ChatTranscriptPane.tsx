@@ -3,7 +3,7 @@
 // Layer: Chat transcript shell
 // Depends on: MessagesTimeline and ChatView's list-owned scroll contract.
 
-import { type MessageId, ThreadId, type ThreadMarker, type TurnId } from "@harnessos/contracts";
+import { type MessageId, ThreadId, type TurnId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   useCallback,
@@ -75,7 +75,6 @@ interface ChatTranscriptPaneProps {
   onTogglePinMessage?: (messageId: MessageId) => void;
   canForkMessage?: ComponentProps<typeof MessagesTimeline>["canForkMessage"];
   onForkMessage?: ComponentProps<typeof MessagesTimeline>["onForkMessage"];
-  threadMarkers?: readonly ThreadMarker[];
   goalAchievements?: ComponentProps<typeof MessagesTimeline>["goalAchievements"];
   enteringUserMessageIds?: ComponentProps<typeof MessagesTimeline>["enteringUserMessageIds"];
   tailAnchorMessageId?: ComponentProps<typeof MessagesTimeline>["tailAnchorMessageId"];
@@ -153,7 +152,6 @@ export function ChatTranscriptPane({
   onTogglePinMessage,
   canForkMessage,
   onForkMessage,
-  threadMarkers,
   goalAchievements,
   enteringUserMessageIds,
   tailAnchorMessageId,
@@ -330,7 +328,6 @@ export function ChatTranscriptPane({
             {...(onTogglePinMessage ? { onTogglePinMessage } : {})}
             {...(canForkMessage ? { canForkMessage } : {})}
             {...(onForkMessage ? { onForkMessage } : {})}
-            {...(threadMarkers ? { threadMarkers } : {})}
             {...(goalAchievements ? { goalAchievements } : {})}
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             tailAnchorMessageId={tailAnchorMessageId ?? null}

@@ -179,8 +179,6 @@ function TranscriptSelectionHarness(props: { onAddSelection: (text: string) => v
       </div>
       <TranscriptSelectionActionLayer
         action={pendingTranscriptSelectionAction}
-        onHighlight={NOOP}
-        onUnderline={NOOP}
         onAddToChat={commitTranscriptAssistantSelection}
       />
     </>
@@ -248,11 +246,6 @@ function ExactMarkdownSelectionHarness(props: {
       </div>
       <TranscriptSelectionActionLayer
         action={pendingTranscriptSelectionAction}
-        onHighlight={() => {
-          const range = pendingTranscriptSelectionAction?.selection.markerRange;
-          if (range) props.onMarkerRange(range);
-        }}
-        onUnderline={NOOP}
         onAddToChat={commitTranscriptAssistantSelection}
       />
     </>

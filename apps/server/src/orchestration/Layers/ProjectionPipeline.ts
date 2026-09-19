@@ -5,12 +5,6 @@ import {
   setPinnedMessageDone,
   setPinnedMessageLabel,
 } from "@harnessos/shared/pinnedMessages";
-import {
-  addThreadMarker,
-  removeThreadMarker,
-  setThreadMarkerDone,
-  setThreadMarkerLabel,
-} from "@harnessos/shared/threadMarkers";
 import { isStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, FileSystem, Layer, Option, Path, Stream } from "effect";
@@ -594,7 +588,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             latestTurnId: null,
             handoff: event.payload.handoff,
             pinnedMessages: null,
-            threadMarkers: null,
             notes: null,
             goal: null,
             goalStartedAt: null,
@@ -707,9 +700,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               ...(event.payload.pinnedMessages !== undefined
                 ? { pinnedMessages: event.payload.pinnedMessages }
                 : {}),
-              ...(event.payload.threadMarkers !== undefined
-                ? { threadMarkers: event.payload.threadMarkers }
-                : {}),
               ...(event.payload.notes !== undefined ? { notes: event.payload.notes } : {}),
               ...(event.payload.goal !== undefined ? { goal: event.payload.goal } : {}),
               ...(event.payload.goalStartedAt !== undefined
@@ -758,44 +748,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               thread.pinnedMessages,
               event.payload.messageId,
               event.payload.label,
-            ),
-            updatedAt: event.payload.updatedAt,
-          }));
-
-        case "thread.marker-added":
-          return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
-            ...thread,
-            threadMarkers: addThreadMarker(thread.threadMarkers, event.payload.marker),
-            updatedAt: event.payload.updatedAt,
-          }));
-
-        case "thread.marker-removed":
-          return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
-            ...thread,
-            threadMarkers: removeThreadMarker(thread.threadMarkers, event.payload.markerId),
-            updatedAt: event.payload.updatedAt,
-          }));
-
-        case "thread.marker-done-set":
-          return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
-            ...thread,
-            threadMarkers: setThreadMarkerDone(
-              thread.threadMarkers,
-              event.payload.markerId,
-              event.payload.done,
-              event.payload.updatedAt,
-            ),
-            updatedAt: event.payload.updatedAt,
-          }));
-
-        case "thread.marker-label-set":
-          return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
-            ...thread,
-            threadMarkers: setThreadMarkerLabel(
-              thread.threadMarkers,
-              event.payload.markerId,
-              event.payload.label,
-              event.payload.updatedAt,
             ),
             updatedAt: event.payload.updatedAt,
           }));

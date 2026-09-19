@@ -4,7 +4,7 @@
 // Exports: ChatMarkdown
 
 import { TriangleAlertIcon } from "~/lib/icons";
-import type { MessageId, EngineMentionReference, ThreadMarker } from "@harnessos/contracts";
+import type { MessageId, EngineMentionReference } from "@harnessos/contracts";
 import { isLocalAbsolutePath } from "@harnessos/shared/path";
 import { useQuery } from "@tanstack/react-query";
 import "katex/dist/katex.min.css";
@@ -131,7 +131,6 @@ interface ChatMarkdownProps {
   className?: string | undefined;
   style?: CSSProperties | undefined;
   onImageExpand?: ((preview: ExpandedImagePreview) => void) | undefined;
-  markers?: readonly ThreadMarker[] | undefined;
   /**
    * "user" renders a sent prompt: GFM plus hard line breaks (single newlines
    * survive the way they were typed), no math/KaTeX and no literal-dollar
@@ -222,12 +221,11 @@ function mermaidFenceOrdinalRemarkPlugin() {
 const USER_MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [remarkGfm, remarkBreaks];
 const USER_MARKDOWN_REHYPE_PLUGINS: MarkdownRehypePlugins = [];
 const LITERAL_DOLLAR_PLACEHOLDER = "\uE000";
-// `\$` is two source characters that render as a single `$`. Collapsing it to one placeholder used
-// to shorten the protected string, which shifted every downstream offset (thread-marker positions
-// are resolved against the raw text but applied against the parsed mdast positions). A two-character
-// placeholder keeps `protectLiteralMarkdownDollars` length-preserving so those offsets stay aligned;
-// it is restored ahead of the single-char placeholder (the two share no characters, so order is
-// only for clarity).
+// `\$` is two source characters that render as a single `$`. Collapsing it to one
+// placeholder used to shorten the protected string. A two-character placeholder keeps
+// `protectLiteralMarkdownDollars` length-preserving so later parse offsets stay aligned;
+// it is restored ahead of the single-char placeholder (the two share no characters, so
+// order is only for clarity).
 const ESCAPED_DOLLAR_PLACEHOLDER = "\uE001\uE002";
 
 function restoreLiteralDollarPlaceholders(value: string): string {
@@ -309,90 +307,6 @@ type MarkdownNode =
   | MarkdownInlineCodeNode
   | MarkdownParentNode
   | Record<string, unknown>;
-type RenderableThreadMarker = ThreadMarker & { className: string };
-type ThreadMarkerFragmentContinuity = {
-  readonly continuesBefore: boolean;
-  readonly continuesAfter: boolean;
-};
-
-// The "active" ring (a transient deep-link highlight) is applied imperatively by the timeline so
-// it never re-parses the markdown tree; this className is the stable, parse-time-only part.
-function markerClassNameFor(marker: ThreadMarker) {
-  return [
-    "thread-marker",
-    marker.style === "highlight" ? "thread-marker-highlight" : "thread-marker-underline",
-    `thread-marker-${marker.color}`,
-    marker.done ? "thread-marker-done" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-// Joins marker fragments split by markdown nodes so bold/code boundaries still read as one mark.
-function markerFragmentClassNameFor(
-  marker: RenderableThreadMarker,
-  continuity: ThreadMarkerFragmentContinuity,
-): string {
-  return [
-    marker.className,
-    continuity.continuesBefore ? "thread-marker-continues-before" : "",
-    continuity.continuesAfter ? "thread-marker-continues-after" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function normalizeRenderableMarkers(input: {
-  rawText: string;
-  projection: MarkdownSourceOffsetProjection;
-  markers: readonly ThreadMarker[] | undefined;
-}): RenderableThreadMarker[] {
-  const markers = input.markers ?? [];
-  const result: RenderableThreadMarker[] = [];
-  let previousRawEnd = -1;
-  for (const marker of markers.toSorted((left, right) => left.startOffset - right.startOffset)) {
-    if (marker.startOffset < previousRawEnd) {
-      continue;
-    }
-    if (marker.endOffset <= marker.startOffset || marker.endOffset > input.rawText.length) {
-      continue;
-    }
-    if (input.rawText.slice(marker.startOffset, marker.endOffset) !== marker.selectedText) {
-      continue;
-    }
-    const renderedStartOffset = input.projection.toRenderedBoundary(marker.startOffset);
-    const renderedEndOffset = input.projection.toRenderedBoundary(marker.endOffset);
-    if (
-      renderedStartOffset === null ||
-      renderedEndOffset === null ||
-      renderedEndOffset <= renderedStartOffset
-    ) {
-      continue;
-    }
-    result.push({
-      ...marker,
-      startOffset: renderedStartOffset,
-      endOffset: renderedEndOffset,
-      className: markerClassNameFor(marker),
-    });
-    previousRawEnd = marker.endOffset;
-  }
-  return result;
-}
-
-function createThreadMarkerRemarkPlugin(input: {
-  rawText: string;
-  projection: MarkdownSourceOffsetProjection;
-  markers: readonly ThreadMarker[] | undefined;
-}) {
-  const markers = normalizeRenderableMarkers(input);
-  return () => (tree: MarkdownNode) => {
-    if (markers.length === 0) {
-      return;
-    }
-    applyThreadMarkersToNode(tree, markers);
-  };
-}
 
 function resolveLinearTextSourceRange(input: {
   node: MarkdownTextNode;
@@ -523,84 +437,6 @@ function createTranscriptSourceRemarkPlugin(input: {
   };
 }
 
-function applyThreadMarkersToNode(node: MarkdownNode, markers: readonly RenderableThreadMarker[]) {
-  if (!node || typeof node !== "object" || !("children" in node) || !Array.isArray(node.children)) {
-    return;
-  }
-
-  const parent = node as MarkdownParentNode;
-  // The guard above already proved `children` is an array; `?? []` only satisfies the optional type.
-  parent.children = (parent.children ?? []).flatMap((child) => {
-    if (child && typeof child === "object" && "type" in child && child.type === "text") {
-      return splitTextNodeWithMarkers(child as MarkdownTextNode, markers);
-    }
-    applyThreadMarkersToNode(child, markers);
-    return [child];
-  });
-}
-
-function splitTextNodeWithMarkers(
-  node: MarkdownTextNode,
-  markers: readonly RenderableThreadMarker[],
-): MarkdownNode[] {
-  const startOffset = node.position?.start?.offset;
-  const endOffset = node.position?.end?.offset;
-  if (startOffset === undefined || endOffset === undefined) {
-    return [node];
-  }
-  const overlappingMarkers: RenderableThreadMarker[] = [];
-  for (const marker of markers) {
-    if (marker.endOffset <= startOffset) {
-      continue;
-    }
-    if (marker.startOffset >= endOffset) {
-      break;
-    }
-    overlappingMarkers.push(marker);
-  }
-  if (overlappingMarkers.length === 0) {
-    return [node];
-  }
-
-  const nodes: MarkdownNode[] = [];
-  let cursor = 0;
-  for (const marker of overlappingMarkers) {
-    const markerStart = Math.max(0, marker.startOffset - startOffset);
-    const markerEnd = Math.min(node.value.length, marker.endOffset - startOffset);
-    if (markerStart < cursor || markerEnd > node.value.length) {
-      continue;
-    }
-    const absoluteFragmentStart = startOffset + markerStart;
-    const absoluteFragmentEnd = startOffset + markerEnd;
-    if (markerStart > cursor) {
-      nodes.push({
-        type: "text",
-        value: node.value.slice(cursor, markerStart),
-      });
-    }
-    nodes.push({
-      type: "threadMarker",
-      data: {
-        hName: "span",
-        hProperties: {
-          className: markerFragmentClassNameFor(marker, {
-            continuesBefore: absoluteFragmentStart > marker.startOffset,
-            continuesAfter: absoluteFragmentEnd < marker.endOffset,
-          }),
-          "data-thread-marker-id": marker.id,
-          "data-thread-marker-style": marker.style,
-          "data-thread-marker-color": marker.color,
-        },
-      },
-      children: [{ type: "text", value: node.value.slice(markerStart, markerEnd) }],
-    });
-    cursor = markerEnd;
-  }
-  if (cursor < node.value.length) {
-    nodes.push({ type: "text", value: node.value.slice(cursor) });
-  }
-  return nodes.length > 0 ? nodes : [node];
-}
 const INLINE_MATH_HINT_REGEX = /[\\^_=+\-*/<>()[\]{}]/;
 const ALL_CAPS_DOLLAR_IDENTIFIER_REGEX = /^[A-Z][A-Z0-9_]{1,31}$/;
 
@@ -1350,7 +1186,6 @@ function ChatMarkdown({
   className: classNameProp,
   style,
   onImageExpand,
-  markers,
   onTaskToggle,
   variant: variantProp,
   mentionReferences,
@@ -1404,8 +1239,6 @@ function ChatMarkdown({
   );
   // The dollar rewrite exists to disambiguate math from currency; the user
   // variant has no math, so its text must stay byte-for-byte what was typed.
-  // Table repair runs first and can change text length, so the thread-marker
-  // plugin below must resolve offsets against the same repaired text.
   const renderedText = useMemo(
     () =>
       isUserVariant
@@ -1428,21 +1261,6 @@ function ChatMarkdown({
           })
         : null,
     [isStreaming, isUserVariant, preparedAssistantMarkdown, renderedSourceText],
-  );
-  const preparedMarkerMarkdown = useMemo(() => prepareMarkdownTableDelimiters(text), [text]);
-  // Persisted marker offsets always belong to raw message text. Project their
-  // boundaries into the repaired parse source instead of validating them
-  // against a string whose delimiter repair may have shifted later nodes.
-  const threadMarkerRemarkPlugin = useMemo(
-    () =>
-      markers && markers.length > 0
-        ? createThreadMarkerRemarkPlugin({
-            rawText: text,
-            projection: preparedMarkerMarkdown.projection,
-            markers,
-          })
-        : null,
-    [markers, preparedMarkerMarkdown, text],
   );
   const composerChipsRemarkPlugin = useMemo(
     () =>
@@ -1471,7 +1289,6 @@ function ChatMarkdown({
     const assistantPlugins = [
       ...MARKDOWN_REMARK_PLUGINS,
       ...(transcriptSourceRemarkPlugin ? [transcriptSourceRemarkPlugin] : []),
-      ...(threadMarkerRemarkPlugin ? [threadMarkerRemarkPlugin] : []),
       tableIntegrityRemarkPlugin,
     ];
     return mermaidOrdinalPlugin ? [...assistantPlugins, mermaidOrdinalPlugin] : assistantPlugins;
@@ -1480,7 +1297,6 @@ function ChatMarkdown({
     mermaidOrdinalPlugin,
     tableIntegrityRemarkPlugin,
     transcriptSourceRemarkPlugin,
-    threadMarkerRemarkPlugin,
   ]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const markdownComponents = useMemo<Components>(

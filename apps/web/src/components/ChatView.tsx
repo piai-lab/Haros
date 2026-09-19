@@ -25,11 +25,7 @@ import {
   type ResolvedKeybindingsConfig,
   type ServerEngineStatus,
   ThreadId,
-  ThreadMarkerId,
   type ThreadGoalAchievement,
-  type ThreadMarker,
-  type ThreadMarkerColor,
-  type ThreadMarkerStyle,
   type OrchestrationTurnProvenance,
   type TurnId,
   type EditorId,
@@ -539,12 +535,6 @@ import {
   transcriptGestureTakesViewportOwnership,
   type TranscriptViewportGesture,
 } from "./chat/transcriptScroll";
-import {
-  dispatchThreadMarkerAdd,
-  dispatchThreadMarkerDoneSet,
-  dispatchThreadMarkerLabelSet,
-  dispatchThreadMarkerRemove,
-} from "../threadMarkers";
 import { getComposerEngineState } from "./chat/composerEngineRegistry";
 import { composerTranscriptBottomInsetPx, useComposerOverlayHeight } from "./chat/composerOverlay";
 import {
@@ -640,7 +630,6 @@ const ATTACHMENT_PREVIEW_HANDOFF_TTL_MS = 5000;
 const EMPTY_ACTIVITIES: OrchestrationThreadActivity[] = [];
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PINNED_MESSAGES: readonly PinnedMessage[] = [];
-const EMPTY_THREAD_MARKERS: readonly ThreadMarker[] = [];
 const EMPTY_GOAL_ACHIEVEMENTS: readonly ThreadGoalAchievement[] = [];
 const EMPTY_PINNED_TEXT: ReadonlyMap<MessageId, string> = new Map();
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -3537,42 +3526,24 @@ export default function ChatView({
   const tailAnchorScrollInFlightRef = useRef(false);
   // --- Pinned messages & notes (per-thread, server-synced through sidepanel commands) ---
   const pinnedMessages = activeThread?.pinnedMessages ?? EMPTY_PINNED_MESSAGES;
-  const threadMarkers = activeThread?.threadMarkers ?? EMPTY_THREAD_MARKERS;
   const goalAchievements = activeThread?.goalAchievements ?? EMPTY_GOAL_ACHIEVEMENTS;
   const threadNotes = activeThread?.notes ?? "";
   const pinnedMessageIds = useMemo(
     () => new Set(pinnedMessages.map((pin) => pin.messageId)),
     [pinnedMessages],
   );
-  const markerMessageIds = useMemo(
-    () => new Set(threadMarkers.map((marker) => marker.messageId)),
-    [threadMarkers],
-  );
-  // Resolve live text for the Environment panel in one transcript pass.
-  const { markerMessageTextById, pinnedMessageTextById } = useMemo(() => {
-    const needsPinnedText = pinnedMessageIds.size > 0;
-    const needsMarkerText = markerMessageIds.size > 0;
-    if (!needsPinnedText && !needsMarkerText) {
-      return {
-        pinnedMessageTextById: EMPTY_PINNED_TEXT,
-        markerMessageTextById: EMPTY_PINNED_TEXT,
-      };
+  const pinnedMessageTextById = useMemo(() => {
+    if (pinnedMessageIds.size === 0) {
+      return EMPTY_PINNED_TEXT;
     }
     const pinnedTextById = new Map<MessageId, string>();
-    const markerTextById = new Map<MessageId, string>();
     for (const message of timelineMessages) {
-      if (needsPinnedText && pinnedMessageIds.has(message.id)) {
+      if (pinnedMessageIds.has(message.id)) {
         pinnedTextById.set(message.id, message.text);
       }
-      if (needsMarkerText && markerMessageIds.has(message.id)) {
-        markerTextById.set(message.id, message.text);
-      }
     }
-    return {
-      pinnedMessageTextById: needsPinnedText ? pinnedTextById : EMPTY_PINNED_TEXT,
-      markerMessageTextById: needsMarkerText ? markerTextById : EMPTY_PINNED_TEXT,
-    };
-  }, [markerMessageIds, pinnedMessageIds, timelineMessages]);
+    return pinnedTextById;
+  }, [pinnedMessageIds, timelineMessages]);
   const {
     handleTogglePinMessage,
     handleTogglePinnedMessageDone,
@@ -3599,58 +3570,6 @@ export default function ChatView({
   const handleJumpToPinnedMessage = useCallback((messageId: MessageId) => {
     timelineControllerRef.current?.scrollToMessage(messageId);
   }, []);
-  const handleJumpToThreadMarker = useCallback((marker: ThreadMarker) => {
-    timelineControllerRef.current?.scrollToMarker(marker);
-  }, []);
-  const handleRemoveThreadMarker = useCallback(
-    (markerId: ThreadMarkerId) => {
-      if (!activeThreadId) {
-        return;
-      }
-      void dispatchThreadMarkerRemove(activeThreadId, markerId).catch((error) => {
-        console.error("Failed to remove thread marker", error);
-        toastManager.add({
-          type: "error",
-          title: t("conversation.markerRemoveFailed"),
-        });
-      });
-    },
-    [activeThreadId, t],
-  );
-  const handleToggleThreadMarkerDone = useCallback(
-    (markerId: ThreadMarkerId) => {
-      if (!activeThreadId) {
-        return;
-      }
-      const marker = threadMarkers.find((candidate) => candidate.id === markerId);
-      if (!marker) {
-        return;
-      }
-      void dispatchThreadMarkerDoneSet(activeThreadId, markerId, !marker.done).catch((error) => {
-        console.error("Failed to update thread marker", error);
-        toastManager.add({
-          type: "error",
-          title: t("conversation.markerUpdateFailed"),
-        });
-      });
-    },
-    [activeThreadId, t, threadMarkers],
-  );
-  const handleRenameThreadMarker = useCallback(
-    (markerId: ThreadMarkerId, label: string | null) => {
-      if (!activeThreadId) {
-        return;
-      }
-      void dispatchThreadMarkerLabelSet(activeThreadId, markerId, label).catch((error) => {
-        console.error("Failed to rename thread marker", error);
-        toastManager.add({
-          type: "error",
-          title: t("conversation.markerRenameFailed"),
-        });
-      });
-    },
-    [activeThreadId, t],
-  );
   // Before treating an empty timeline as a genuinely new thread, wait for the
   // detail snapshot: a server thread whose history has not synced yet must show
   // a loading (or failed) transcript state instead of the empty landing.
@@ -5522,91 +5441,6 @@ export default function ChatView({
     onMessagesTouchStartBase,
     onMessagesWheelBase,
   });
-  const createMarkerFromPendingSelection = useCallback(
-    (style: ThreadMarkerStyle, color: ThreadMarkerColor) => {
-      const pendingSelection = pendingTranscriptSelectionAction;
-      if (!pendingSelection || !activeThreadId) {
-        return;
-      }
-      const messageId = MessageId.makeUnsafe(pendingSelection.selection.assistantMessageId);
-      if (isPendingSetupBubbleId(messageId)) {
-        // Don't mark an ephemeral automation-setup bubble; it disappears when setup ends.
-        dismissTranscriptSelectionAction();
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      const message = timelineMessages.find((candidate) => candidate.id === messageId);
-      if (!message) {
-        toastManager.add({
-          type: "warning",
-          title: t("conversation.messageNotFound"),
-        });
-        return;
-      }
-      const range = pendingSelection.selection.markerRange;
-      if (
-        message.streaming ||
-        !range ||
-        message.text.slice(range.startOffset, range.endOffset) !== range.selectedText
-      ) {
-        dismissTranscriptSelectionAction();
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      dismissTranscriptSelectionAction();
-      window.getSelection()?.removeAllRanges();
-      const sameStyleOverlappingMarkers = threadMarkers.filter(
-        (marker) =>
-          marker.messageId === messageId &&
-          marker.style === style &&
-          marker.startOffset < range.endOffset &&
-          range.startOffset < marker.endOffset,
-      );
-      if (sameStyleOverlappingMarkers.length > 0) {
-        for (const marker of sameStyleOverlappingMarkers) {
-          void dispatchThreadMarkerRemove(activeThreadId, marker.id).catch((error) => {
-            console.error("Failed to remove thread marker", error);
-            toastManager.add({
-              type: "error",
-              title: t("conversation.markerRemoveFailed"),
-            });
-          });
-        }
-        return;
-      }
-      void dispatchThreadMarkerAdd({
-        threadId: activeThreadId,
-        markerId: ThreadMarkerId.makeUnsafe(crypto.randomUUID()),
-        messageId,
-        startOffset: range.startOffset,
-        endOffset: range.endOffset,
-        selectedText: range.selectedText,
-        style,
-        color,
-      }).catch((error) => {
-        console.error("Failed to create thread marker", error);
-        toastManager.add({
-          type: "error",
-          title: t("conversation.markerCreateFailed"),
-        });
-      });
-    },
-    [
-      activeThreadId,
-      dismissTranscriptSelectionAction,
-      isPendingSetupBubbleId,
-      pendingTranscriptSelectionAction,
-      t,
-      threadMarkers,
-      timelineMessages,
-    ],
-  );
-  const createHighlightFromPendingSelection = useCallback(() => {
-    createMarkerFromPendingSelection("highlight", "yellow");
-  }, [createMarkerFromPendingSelection]);
-  const createUnderlineFromPendingSelection = useCallback(() => {
-    createMarkerFromPendingSelection("underline", "blue");
-  }, [createMarkerFromPendingSelection]);
 
   useLayoutEffect(() => {
     if (isInactiveSplitPane) return;
@@ -11691,9 +11525,7 @@ export default function ChatView({
     branchToolbar: branchToolbarProps,
     recap: threadRecap,
     pinnedMessages,
-    threadMarkers,
     pinnedMessageTextById,
-    markerMessageTextById,
     notes: threadNotes,
     activeProjectId,
     onToggleDiff,
@@ -11703,10 +11535,6 @@ export default function ChatView({
     onTogglePinnedMessageDone: handleTogglePinnedMessageDone,
     onUnpinMessage: handleUnpinMessage,
     onRenamePinnedMessage: handleRenamePinnedMessage,
-    onJumpToThreadMarker: handleJumpToThreadMarker,
-    onToggleThreadMarkerDone: handleToggleThreadMarkerDone,
-    onRemoveThreadMarker: handleRemoveThreadMarker,
-    onRenameThreadMarker: handleRenameThreadMarker,
     onNotesChange: handleNotesChange,
     onOpenEditorView: viewModeAction?.onClick ?? null,
     onClose: closeEnvironmentPanelAfterAction,
@@ -12685,7 +12513,6 @@ export default function ChatView({
                     onTogglePinMessage={handleTogglePinMessageGuarded}
                     canForkMessage={canForkMessage}
                     onForkMessage={handleForkMessage}
-                    threadMarkers={threadMarkers}
                     goalAchievements={goalAchievements}
                     enteringUserMessageIds={enteringUserMessageIds}
                     tailAnchorMessageId={
