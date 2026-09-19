@@ -144,6 +144,10 @@
       "types": "./src/pendingInteractions.ts",
       "import": "./src/pendingInteractions.ts"
     },
+    "./claudeCache": {
+      "types": "./src/claudeCache.ts",
+      "import": "./src/claudeCache.ts"
+    },
     "./projectContainers": {
       "types": "./src/projectContainers.ts",
       "import": "./src/projectContainers.ts"

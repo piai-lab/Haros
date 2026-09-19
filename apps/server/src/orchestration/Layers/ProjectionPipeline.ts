@@ -752,6 +752,13 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             updatedAt: event.payload.updatedAt,
           }));
 
+        case "thread.claude-cache-set":
+          return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
+            ...thread,
+            claudeCacheReview: event.payload.review,
+            updatedAt: event.payload.updatedAt,
+          }));
+
         case "thread.runtime-mode-set":
           return yield* updateThreadProjection(event.payload.threadId, (thread) => ({
             ...thread,

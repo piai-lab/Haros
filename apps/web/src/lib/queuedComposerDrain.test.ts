@@ -34,6 +34,7 @@ const OPEN_GATES: QueuedComposerAutoDispatchGates = {
   hasPendingApproval: false,
   hasPendingProgress: false,
   pendingUserInputCount: 0,
+  hasClaudeCacheReview: false,
   queuedTurnCount: 1,
 };
 
@@ -74,6 +75,9 @@ describe("shouldAutoDispatchQueuedComposerTurn", () => {
       false,
     );
     expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, pendingUserInputCount: 1 })).toBe(
+      false,
+    );
+    expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, hasClaudeCacheReview: true })).toBe(
       false,
     );
     expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, queuedTurnCount: 0 })).toBe(false);

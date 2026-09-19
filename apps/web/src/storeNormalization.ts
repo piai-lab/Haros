@@ -187,6 +187,7 @@ export function threadShellsEqual(left: ThreadShell | undefined, right: ThreadSh
     left.hasPendingApprovals === right.hasPendingApprovals &&
     left.hasPendingUserInput === right.hasPendingUserInput &&
     left.hasActionableProposedPlan === right.hasActionableProposedPlan &&
+    deepEqualJson(left.claudeCacheReview ?? null, right.claudeCacheReview ?? null) &&
     left.pendingInteractions === right.pendingInteractions &&
     left.lastVisitedAt === right.lastVisitedAt
   );
@@ -1606,6 +1607,11 @@ export function normalizeThreadFromReadModel(
     typeof incoming.hasActionableProposedPlan === "boolean"
       ? incoming.hasActionableProposedPlan
       : undefined;
+  const claudeCacheReview =
+    previous?.claudeCacheReview &&
+    deepEqualJson(previous.claudeCacheReview, incoming.claudeCacheReview ?? null)
+      ? previous.claudeCacheReview
+      : (incoming.claudeCacheReview ?? null);
   const nextWorktreePath = incoming.worktreePath;
   const nextWorkingDirectory = incoming.workingDirectory ?? null;
   const nextAssociatedWorktreePath = incoming.associatedWorktreePath ?? null;
@@ -1672,6 +1678,7 @@ export function normalizeThreadFromReadModel(
     previous.hasPendingApprovals === resolvedHasPendingApprovals &&
     previous.hasPendingUserInput === resolvedHasPendingUserInput &&
     previous.hasActionableProposedPlan === resolvedHasActionableProposedPlan &&
+    previous.claudeCacheReview === claudeCacheReview &&
     (previous.forkSourceThreadId ?? null) === (incoming.forkSourceThreadId ?? null) &&
     previous.forkScope === forkScope &&
     (previous.sidechatSourceThreadId ?? null) === (incoming.sidechatSourceThreadId ?? null) &&
@@ -1750,6 +1757,7 @@ export function normalizeThreadFromReadModel(
     ...(resolvedHasActionableProposedPlan !== undefined
       ? { hasActionableProposedPlan: resolvedHasActionableProposedPlan }
       : {}),
+    ...(claudeCacheReview !== undefined ? { claudeCacheReview } : {}),
     turnDiffSummaries,
     activities,
     ...(pendingInteractions !== undefined ? { pendingInteractions } : {}),
@@ -1878,6 +1886,11 @@ export function normalizeThreadShellSnapshot(
     ...(incoming.hasActionableProposedPlan !== undefined
       ? { hasActionableProposedPlan: incoming.hasActionableProposedPlan }
       : {}),
+    ...(incoming.claudeCacheReview !== undefined
+      ? { claudeCacheReview: incoming.claudeCacheReview }
+      : previous?.claudeCacheReview !== undefined
+        ? { claudeCacheReview: previous.claudeCacheReview }
+        : {}),
     ...(previous?.pendingInteractions !== undefined
       ? { pendingInteractions: previous.pendingInteractions }
       : {}),

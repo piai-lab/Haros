@@ -24,6 +24,7 @@ import {
   ThreadId,
   SpaceId,
   TurnId,
+  PendingClaudeCacheReview,
 } from "@harnessos/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -90,6 +91,9 @@ export const ProjectionThread = Schema.Struct({
   pendingApprovalCount: NonNegativeInt,
   pendingUserInputCount: NonNegativeInt,
   hasActionableProposedPlan: NonNegativeInt,
+  claudeCacheReview: Schema.optional(Schema.NullOr(PendingClaudeCacheReview)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
   archivedAt: Schema.optional(Schema.NullOr(IsoDateTime)).pipe(

@@ -399,6 +399,7 @@ const TurnCompletedPayload = Schema.Struct({
   totalCostUsd: Schema.optional(Schema.Number),
   cumulativeCostUsd: Schema.optional(Schema.Number),
   errorMessage: Schema.optional(TrimmedNonEmptyStringSchema),
+  contextCompacted: Schema.optional(Schema.Boolean),
 });
 export type TurnCompletedPayload = typeof TurnCompletedPayload.Type;
 

@@ -3629,6 +3629,51 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         );
       });
 
+    const startClaudeCompaction: NonNullable<EngineServiceShape["startClaudeCompaction"]> = (
+      input,
+    ) =>
+      runTurnDispatch(input.threadId, (generation) =>
+        Effect.gen(function* () {
+          const routed = yield* resolveRoutableSession({
+            threadId: input.threadId,
+            operation: "EngineService.startClaudeCompaction",
+            allowRecovery: true,
+          });
+          if (!routed.adapter.startClaudeCompaction) {
+            return yield* toValidationError(
+              "EngineService.startClaudeCompaction",
+              "Native Claude compaction is unavailable.",
+            );
+          }
+          const turn = yield* routed.adapter.startClaudeCompaction(input);
+          const persistenceInput: StartedTurnPersistenceInput = {
+            threadId: input.threadId,
+            engine: routed.adapter.engine,
+            turnId: String(turn.turnId),
+            generation,
+            ...(turn.resumeCursor !== undefined ? { resumeCursor: turn.resumeCursor } : {}),
+            lastRuntimeEvent: "engine.startClaudeCompaction",
+          };
+          rememberSuccessfulTurnDispatch(persistenceInput);
+          yield* persistStartedTurn(persistenceInput);
+          return turn;
+        }),
+      );
+
+    const getClaudeCacheObservation: NonNullable<EngineServiceShape["getClaudeCacheObservation"]> = (
+      threadId,
+    ) =>
+      Effect.gen(function* () {
+        const routed = yield* resolveRoutableSession({
+          threadId,
+          operation: "EngineService.getClaudeCacheObservation",
+          allowRecovery: false,
+        });
+        return routed.adapter.getClaudeCacheObservation
+          ? yield* routed.adapter.getClaudeCacheObservation(threadId)
+          : undefined;
+      });
+
     const compactThread: EngineServiceShape["compactThread"] = (rawInput) =>
       Effect.gen(function* () {
         const input = yield* decodeInputOrValidationError({
@@ -3789,6 +3834,8 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
       getCapabilities,
       rollbackConversation,
       compactThread,
+      startClaudeCompaction,
+      getClaudeCacheObservation,
       readToolResult,
       closeRuntimeEvents,
       getRuntimeEventPumpHealth: () => Effect.sync(runtimeEventPumpHealth.snapshot),

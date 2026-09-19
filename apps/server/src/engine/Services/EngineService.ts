@@ -29,9 +29,11 @@ import type {
   EngineStopSessionInput,
   EngineStopTaskInput,
   ThreadId,
+  TurnId,
   EngineTurnStartResult,
   ToolResultReadInput,
   ToolResultFullReadResult,
+  ClaudeCacheObservation,
 } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
@@ -230,6 +232,15 @@ export interface EngineServiceShape {
   readonly compactThread: (input: {
     readonly threadId: ThreadId;
   }) => Effect.Effect<void, EngineServiceError>;
+
+  readonly startClaudeCompaction?: (input: {
+    readonly threadId: ThreadId;
+    readonly turnId: TurnId;
+  }) => Effect.Effect<EngineTurnStartResult, EngineServiceError>;
+
+  readonly getClaudeCacheObservation?: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ClaudeCacheObservation | undefined, EngineServiceError>;
 
   /** Read one full native tool result without changing Engine lifecycle. */
   readonly readToolResult: (

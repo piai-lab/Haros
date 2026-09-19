@@ -38,6 +38,7 @@ import {
   EngineSelection,
   decodePersistedEngineKind,
   ModelPresentationIdentity,
+  PendingClaudeCacheReview,
 } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema, Struct } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -117,6 +118,9 @@ const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
       Schema.NullOr(Schema.fromJsonString(ThreadGoalAchievements)),
     ).pipe(Schema.withDecodingDefault(() => null)),
     engineSelection: EngineSelectionJsonUnknown,
+    claudeCacheReview: Schema.optional(
+      Schema.NullOr(Schema.fromJsonString(PendingClaudeCacheReview)),
+    ).pipe(Schema.withDecodingDefault(() => null)),
   }),
 );
 const {
@@ -134,6 +138,9 @@ const ProjectionThreadShellDbRowSchema = Schema.Struct(ProjectionThreadShellFiel
     forkScope: Schema.NullOr(Schema.fromJsonString(ThreadForkScope)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     engineSelection: EngineSelectionJsonUnknown,
+    claudeCacheReview: Schema.optional(
+      Schema.NullOr(Schema.fromJsonString(PendingClaudeCacheReview)),
+    ).pipe(Schema.withDecodingDefault(() => null)),
   }),
 );
 /**
@@ -768,6 +775,9 @@ function toProjectedThreadShellFromStoredSummary(input: {
     hasPendingApprovals: threadRow.pendingApprovalCount > 0,
     hasPendingUserInput: threadRow.pendingUserInputCount > 0,
     hasActionableProposedPlan: threadRow.hasActionableProposedPlan > 0,
+    ...(threadRow.claudeCacheReview != null
+      ? { claudeCacheReview: threadRow.claudeCacheReview }
+      : {}),
     createdAt: threadRow.createdAt,
     updatedAt: threadRow.updatedAt,
     archivedAt: threadRow.archivedAt ?? null,
@@ -834,6 +844,9 @@ function toProjectedThread(input: {
     hasPendingApprovals: summary.hasPendingApprovals,
     hasPendingUserInput: summary.hasPendingUserInput,
     hasActionableProposedPlan: summary.hasActionableProposedPlan,
+    ...(threadRow.claudeCacheReview != null
+      ? { claudeCacheReview: threadRow.claudeCacheReview }
+      : {}),
     messages: input.messages,
     turnProvenance: input.turnProvenance,
     proposedPlans: input.proposedPlans,
@@ -989,6 +1002,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",
@@ -1043,6 +1057,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",
@@ -1632,6 +1647,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",
@@ -1691,6 +1707,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",

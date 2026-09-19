@@ -963,6 +963,23 @@
       "mode": "adapt",
       "changes": "Haros attaches PR checks, comments, and conflicts as Composer cards on the current thread through the existing fileComments-style draft persist, send-block, and transcript restore path. Illegal scopes are dropped. Fix findings and Resolve conflicts still open a fresh thread.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing pullRequestContexts from the composer draft owner and the PR detail Add to chat action."
+    },
+    {
+      "id": "synara-claude-cache-hold",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "packages/contracts/src/claudeCache.ts",
+        "packages/shared/src/claudeCache.ts",
+        "apps/server/src/engine/claudeCacheObservation.ts",
+        "apps/server/src/engine/Layers/ClaudeAdapter.ts",
+        "apps/server/src/orchestration/Layers/EngineCommandReactor.ts",
+        "apps/web/src/components/chat/ComposerClaudeCacheReviewPanel.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed Claude cache-hold mechanism.",
+      "mode": "adapt",
+      "changes": "Haros holds the next Claude send when context exceeds 100k tokens and the native cache looks expired. Continue, Compact then send, and Cancel stay on the existing thread shell projection and EngineCommandReactor. This is not merged into pendingUserInput. Stop, archive, and delete clear the review so it cannot resurrect.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing claudeCacheReview from the thread shell and the Claude adapter observation."
     }
   ]
 }

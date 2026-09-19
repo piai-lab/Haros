@@ -17,6 +17,7 @@ import type {
   OrchestrationSessionStatus,
   OrchestrationThreadActivity,
   OrchestrationTurnProvenance,
+  PendingClaudeCacheReview,
   ThreadHandoff,
   ThreadForkScope,
   ProjectScript as ContractProjectScript,
@@ -271,6 +272,7 @@ export interface Thread extends ThreadWorkspaceState {
   hasPendingApprovals?: boolean;
   hasPendingUserInput?: boolean;
   hasActionableProposedPlan?: boolean;
+  claudeCacheReview?: PendingClaudeCacheReview | null;
   pendingInteractions?: OrchestrationPendingInteraction[];
   turnDiffSummaries: TurnDiffSummary[];
   activities: OrchestrationThreadActivity[];
@@ -317,6 +319,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
   hasPendingApprovals?: boolean;
   hasPendingUserInput?: boolean;
   hasActionableProposedPlan?: boolean;
+  claudeCacheReview?: PendingClaudeCacheReview | null;
   pendingInteractions?: OrchestrationPendingInteraction[];
   lastVisitedAt?: string | undefined;
 }

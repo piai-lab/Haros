@@ -128,6 +128,9 @@ function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
     ...(thread.hasActionableProposedPlan !== undefined
       ? { hasActionableProposedPlan: thread.hasActionableProposedPlan }
       : {}),
+    ...(thread.claudeCacheReview !== undefined
+      ? { claudeCacheReview: thread.claudeCacheReview }
+      : {}),
     ...(thread.pendingInteractions !== undefined
       ? { pendingInteractions: thread.pendingInteractions }
       : {}),

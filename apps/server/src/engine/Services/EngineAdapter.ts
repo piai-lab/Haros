@@ -44,6 +44,7 @@ import type {
   ToolResultFullReadResult,
   EngineTurnStartResult,
   TurnId,
+  ClaudeCacheObservation,
 } from "@harnessos/contracts";
 import type { Effect } from "effect";
 import type { Stream } from "effect";
@@ -262,6 +263,15 @@ export interface EngineAdapterShape<TError> {
    * Trigger engine-native context compaction for a thread when supported.
    */
   readonly compactThread?: (threadId: ThreadId) => Effect.Effect<void, TError>;
+
+  readonly startClaudeCompaction?: (input: {
+    readonly threadId: ThreadId;
+    readonly turnId: TurnId;
+  }) => Effect.Effect<EngineTurnStartResult, TError>;
+
+  readonly getClaudeCacheObservation?: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ClaudeCacheObservation | undefined, TError>;
 
   /**
    * Fork one engine thread into another persisted thread cursor when supported.

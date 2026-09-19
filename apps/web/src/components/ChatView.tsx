@@ -33,6 +33,7 @@ import {
   OrchestrationThreadActivity,
   EngineInteractionMode,
   RuntimeMode,
+  type PendingClaudeCacheReview,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
@@ -511,6 +512,10 @@ import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
 import { ComposerBranchMismatchNotice } from "./chat/ComposerBranchMismatchNotice";
 import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPanel";
+import {
+  ComposerClaudeCacheReviewPanel,
+  type ClaudeCacheReviewDecision,
+} from "./chat/ComposerClaudeCacheReviewPanel";
 import { ComposerVoiceButton } from "./chat/ComposerVoiceButton";
 import { ComposerVoiceRecorderBar } from "./chat/ComposerVoiceRecorderBar";
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
@@ -2069,6 +2074,29 @@ export default function ChatView({
     threadId,
   ]);
   const activeThread = serverThread ?? localDraftThread;
+  const cacheReviewMessageId = activeThread?.claudeCacheReview?.messageId;
+  const cacheReviewMessage = cacheReviewMessageId
+    ? activeThread?.messages.find((entry) => entry.id === cacheReviewMessageId)
+    : undefined;
+  const cacheReviewIsCompactionRequest = /^\/compact(?:\s|$)/u.test(
+    cacheReviewMessage?.text.trim() ?? "",
+  );
+  const onRespondToClaudeCacheReview = useCallback(
+    async (review: PendingClaudeCacheReview, decision: ClaudeCacheReviewDecision) => {
+      const api = readNativeApi();
+      if (!api) throw new Error(t("composer.claudeCacheChoiceFailed"));
+      await api.orchestration.dispatchCommand({
+        type: "thread.claude-cache.respond",
+        commandId: newCommandId(),
+        threadId,
+        messageId: review.messageId,
+        reviewId: review.reviewId,
+        decision,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    [t, threadId],
+  );
   const isSidechat = Boolean(activeThread?.sidechatSourceThreadId);
   useEffect(() => {
     if (
@@ -9509,6 +9537,7 @@ export default function ChatView({
       activePendingApproval !== null ||
       activePendingProgress !== null ||
       pendingUserInputs.length > 0 ||
+      activeThread?.claudeCacheReview != null ||
       queuedComposerTurns.length === 0
     ) {
       return;
@@ -9552,9 +9581,10 @@ export default function ChatView({
     isConnecting,
     isAwaitingTurnStart,
     isSendBusy,
-    pendingUserInputs.length,
-    hasQueueableLiveTurn,
-    queuedAutoDispatchTick,
+      pendingUserInputs.length,
+      activeThread?.claudeCacheReview,
+      hasQueueableLiveTurn,
+      queuedAutoDispatchTick,
     queuedComposerTurns,
     queuedSteerGate,
     removeQueuedComposerTurnFromDraft,
@@ -11774,6 +11804,17 @@ export default function ChatView({
                     onPrevious={onPreviousActivePendingUserInputQuestion}
                     onCancel={onCancelActivePendingUserInput}
                     onFlushDraft={pendingUserInputController.actions.flushDraft}
+                  />
+                </div>
+              ) : null}
+              {activeThread?.claudeCacheReview ? (
+                <div className="pb-2">
+                  <ComposerClaudeCacheReviewPanel
+                    key={`${threadId}:${activeThread.claudeCacheReview.reviewId}`}
+                    review={activeThread.claudeCacheReview}
+                    compactDisabledReason={null}
+                    isCompactionRequest={cacheReviewIsCompactionRequest}
+                    onRespond={onRespondToClaudeCacheReview}
                   />
                 </div>
               ) : null}

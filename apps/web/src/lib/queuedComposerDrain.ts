@@ -29,6 +29,7 @@ export interface QueuedComposerAutoDispatchGates {
   hasPendingApproval: boolean;
   hasPendingProgress: boolean;
   pendingUserInputCount: number;
+  hasClaudeCacheReview: boolean;
   queuedTurnCount: number;
 }
 
@@ -45,6 +46,7 @@ export function shouldAutoDispatchQueuedComposerTurn(
     gates.hasPendingApproval ||
     gates.hasPendingProgress ||
     gates.pendingUserInputCount > 0 ||
+    gates.hasClaudeCacheReview ||
     gates.queuedTurnCount === 0
   );
 }
@@ -274,6 +276,8 @@ function threadDrainSignal(state: AppState, threadId: ThreadId): string {
     thread.error ?? "",
     pendingApprovalCount,
     pendingUserInputCount,
+    thread.claudeCacheReview?.reviewId ?? "",
+    thread.claudeCacheReview?.status ?? "",
   ].join("|");
 }
 
@@ -322,6 +326,7 @@ function readQueuedComposerAutoDispatchGates(threadId: ThreadId): QueuedComposer
     hasPendingApproval: pendingApprovals.length > 0,
     hasPendingProgress: pendingUserInputs.length > 0,
     pendingUserInputCount: pendingUserInputs.length,
+    hasClaudeCacheReview: thread?.claudeCacheReview != null,
     queuedTurnCount: draft?.queuedTurns.length ?? 0,
   };
 }

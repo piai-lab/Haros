@@ -1198,6 +1198,32 @@ function applyOrchestrationEvent(
       return state;
     }
 
+    case "thread.claude-cache-set":
+      return applyThreadUpdate(
+        state,
+        event.payload.threadId,
+        (thread) => {
+          const review = deepEqualJson(thread.claudeCacheReview ?? null, event.payload.review)
+            ? (thread.claudeCacheReview ?? null)
+            : event.payload.review;
+          if (review === (thread.claudeCacheReview ?? null)) {
+            return thread;
+          }
+          return {
+            ...thread,
+            claudeCacheReview: review,
+            updatedAt:
+              (thread.updatedAt ?? thread.createdAt) > event.occurredAt
+                ? thread.updatedAt
+                : event.occurredAt,
+          };
+        },
+        {
+          ...options,
+          updateSidebarSummary: true,
+        },
+      );
+
     case "thread.session-stop-requested":
       return applyThreadUpdate(
         state,
@@ -1230,6 +1256,7 @@ function applyOrchestrationEvent(
               updatedAt: event.payload.createdAt,
             },
             latestTurn,
+            claudeCacheReview: null,
             updatedAt:
               (thread.updatedAt ?? thread.createdAt) > event.occurredAt
                 ? thread.updatedAt
@@ -1584,6 +1611,7 @@ function applyOrchestrationEvent(
         (thread) => ({
           ...thread,
           archivedAt: event.payload.archivedAt ?? event.occurredAt,
+          claudeCacheReview: null,
           updatedAt: event.payload.updatedAt ?? event.occurredAt,
         }),
         {

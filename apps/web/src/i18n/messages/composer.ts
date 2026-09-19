@@ -329,6 +329,30 @@ const EN_MESSAGES = {
   "composer.goalDelete": "Delete goal",
   "composer.goalCollapse": "Collapse goal",
   "composer.goalExpand": "Expand goal",
+  "composer.claudeCacheReview": "Claude cache review",
+  "composer.claudeCacheExpiredTitle": "Claude's prompt cache likely expired",
+  "composer.claudeCacheExpiredCompactTitle": "Compaction will read the expired context",
+  "composer.claudeCacheUncertainTitle": "Request status is uncertain",
+  "composer.claudeCacheRespondingTitle": "Resuming your saved message",
+  "composer.claudeCacheCompactingTitle": "Compacting before sending",
+  "composer.claudeCacheExpiredBody":
+    "Your message is saved and on hold. Continuing may reprocess {tokens}.",
+  "composer.claudeCacheAboutTokens": "about {tokens} tokens",
+  "composer.claudeCacheContextFallback": "the conversation's context",
+  "composer.claudeCacheUncertainBody":
+    "Claude may have accepted the request. Sending is paused until its status can be confirmed.",
+  "composer.claudeCacheRespondingBody": "Waiting for Claude to accept the saved message.",
+  "composer.claudeCacheCompactingBody":
+    "Your message stays on hold until Claude confirms that compaction has finished.",
+  "composer.claudeCacheContinue": "Continue with full context",
+  "composer.claudeCacheContinueHint": "Send the saved message with the existing history",
+  "composer.claudeCacheContinueCompact": "Compact this conversation",
+  "composer.claudeCacheContinueCompactHint": "Process the existing history and save its summary",
+  "composer.claudeCacheCompact": "Compact, then send",
+  "composer.claudeCacheCompactHint": "Summarize this conversation before sending the saved message",
+  "composer.claudeCacheCancel": "Cancel this send",
+  "composer.claudeCacheCancelHint": "Keep this conversation without sending the held message",
+  "composer.claudeCacheChoiceFailed": "Could not submit this choice. Try again.",
 } as const;
 
 const ZH_CN_MESSAGES = {
@@ -640,6 +664,28 @@ const ZH_CN_MESSAGES = {
   "composer.goalDelete": "删除目标",
   "composer.goalCollapse": "收起目标",
   "composer.goalExpand": "展开目标",
+  "composer.claudeCacheReview": "Claude 缓存确认",
+  "composer.claudeCacheExpiredTitle": "Claude 的提示缓存可能已过期",
+  "composer.claudeCacheExpiredCompactTitle": "压缩会读取已过期的上下文",
+  "composer.claudeCacheUncertainTitle": "请求状态尚不确定",
+  "composer.claudeCacheRespondingTitle": "正在恢复已保存的消息",
+  "composer.claudeCacheCompactingTitle": "正在压缩后再发送",
+  "composer.claudeCacheExpiredBody": "消息已保存并暂扣。继续发送可能会重新处理 {tokens}。",
+  "composer.claudeCacheAboutTokens": "约 {tokens} tokens",
+  "composer.claudeCacheContextFallback": "这段对话的上下文",
+  "composer.claudeCacheUncertainBody":
+    "Claude 可能已经接受了这次请求。发送会暂停，直到状态可以确认。",
+  "composer.claudeCacheRespondingBody": "正在等待 Claude 接受已保存的消息。",
+  "composer.claudeCacheCompactingBody": "消息会继续暂扣，直到 Claude 确认压缩已经完成。",
+  "composer.claudeCacheContinue": "用完整上下文继续",
+  "composer.claudeCacheContinueHint": "用现有历史发送已保存的消息",
+  "composer.claudeCacheContinueCompact": "压缩这段对话",
+  "composer.claudeCacheContinueCompactHint": "处理现有历史并保存摘要",
+  "composer.claudeCacheCompact": "先压缩再发送",
+  "composer.claudeCacheCompactHint": "先总结这段对话，再发送已保存的消息",
+  "composer.claudeCacheCancel": "取消这次发送",
+  "composer.claudeCacheCancelHint": "保留这段对话，不发送被暂扣的消息",
+  "composer.claudeCacheChoiceFailed": "无法提交这个选择，请再试一次。",
 } as const;
 
 export const COMPOSER_MESSAGES = defineMessageSlice(EN_MESSAGES, ZH_CN_MESSAGES);

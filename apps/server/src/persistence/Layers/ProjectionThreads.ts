@@ -20,6 +20,7 @@ import {
   ThreadHandoff,
   ThreadForkScope,
   SpaceId,
+  PendingClaudeCacheReview,
 } from "@harnessos/contracts";
 
 const SqliteBoolean = Schema.Number.pipe(
@@ -39,6 +40,7 @@ const ProjectionThreadDbRow = ProjectionThread.mapFields(
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
     engineSelection: Schema.fromJsonString(EngineSelection),
+    claudeCacheReview: Schema.NullOr(Schema.fromJsonString(PendingClaudeCacheReview)),
   }),
 );
 type ProjectionThreadDbRow = typeof ProjectionThreadDbRow.Type;
@@ -91,6 +93,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pending_approval_count,
           pending_user_input_count,
           has_actionable_proposed_plan,
+          claude_cache_review_json,
           created_at,
           updated_at,
           archived_at,
@@ -138,6 +141,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           ${row.pendingApprovalCount},
           ${row.pendingUserInputCount},
           ${row.hasActionableProposedPlan},
+          ${row.claudeCacheReview == null ? null : JSON.stringify(row.claudeCacheReview)},
           ${row.createdAt},
           ${row.updatedAt},
           ${row.archivedAt ?? null},
@@ -185,6 +189,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pending_approval_count = excluded.pending_approval_count,
           pending_user_input_count = excluded.pending_user_input_count,
           has_actionable_proposed_plan = excluded.has_actionable_proposed_plan,
+          claude_cache_review_json = excluded.claude_cache_review_json,
           created_at = excluded.created_at,
           updated_at = excluded.updated_at,
           archived_at = excluded.archived_at,
@@ -239,6 +244,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",
@@ -295,6 +301,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
+          claude_cache_review_json AS "claudeCacheReview",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
           archived_at AS "archivedAt",

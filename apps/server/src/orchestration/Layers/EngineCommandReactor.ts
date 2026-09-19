@@ -25,6 +25,8 @@ import {
   type OrchestrationSession,
   type OrchestrationProjectShell,
   type OrchestrationThread,
+  type PendingClaudeCacheReview,
+  type ClaudeCacheObservation,
   ThreadId,
   type EngineSession,
   type RuntimeMode,
@@ -54,7 +56,9 @@ import {
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
 import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
-import { claudeSelectionRequiresRestart } from "@harnessos/shared/model";
+import { claudeSelectionRequiresRestart, resolveApiModelId } from "@harnessos/shared/model";
+import { assessClaudeCache } from "@harnessos/shared/claudeCache";
+import { claudeCacheForModel } from "../../engine/claudeCacheObservation.ts";
 import { formatEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import { turnStartBindingMatchesCommitted } from "../turnStartSession.ts";
@@ -312,6 +316,33 @@ function attachmentTitleSeed(attachment: ChatAttachment | undefined): string {
 
 const serverCommandId = (tag: string): CommandId =>
   CommandId.makeUnsafe(`server:${tag}:${crypto.randomUUID()}`);
+
+const sameClaudeCacheContext = (
+  left: ClaudeCacheObservation,
+  right: ClaudeCacheObservation,
+): boolean =>
+  left.nativeSessionId === right.nativeSessionId &&
+  left.lifecycleGeneration === right.lifecycleGeneration &&
+  left.model === right.model &&
+  left.contextTokens === right.contextTokens &&
+  left.lastResponseAt === right.lastResponseAt;
+
+const claudeCacheReviewCoversObservation = (
+  review: PendingClaudeCacheReview,
+  observation: ClaudeCacheObservation,
+): boolean => {
+  if (sameClaudeCacheContext(review.assessment, observation)) return true;
+  return (
+    (review.status === "compacting" || review.status === "uncertain") &&
+    review.compactionTurnId !== undefined &&
+    review.assessment.nativeSessionId === observation.nativeSessionId &&
+    review.assessment.lifecycleGeneration === observation.lifecycleGeneration &&
+    review.assessment.model === observation.model &&
+    review.assessment.contextTokens !== undefined &&
+    observation.contextTokens !== undefined &&
+    observation.contextTokens <= review.assessment.contextTokens
+  );
+};
 
 const turnStartKeyForEvent = (event: EngineIntentEvent): string =>
   event.commandId !== null ? `command:${event.commandId}` : `event:${event.eventId}`;
@@ -1770,6 +1801,49 @@ const make = Effect.gen(function* () {
     };
   });
 
+  const setClaudeCacheReview = (
+    threadId: ThreadId,
+    review: PendingClaudeCacheReview | null,
+    expectedReviewId: string | null,
+    hold?: { readonly sourceEventSequence: number; readonly session: OrchestrationSession },
+  ) =>
+    orchestrationEngine
+      .dispatch({
+        type: "thread.claude-cache.set",
+        commandId: serverCommandId("claude-cache-review"),
+        threadId,
+        review,
+        expectedReviewId,
+        ...(hold ? { hold } : {}),
+        createdAt: new Date().toISOString(),
+      })
+      .pipe(
+        Effect.catchTag("OrchestrationCommandInvariantError", (error) =>
+          error.detail === "Command produced no events." ? Effect.void : Effect.fail(error),
+        ),
+      );
+
+  const isClaudeReviewAuthorized = (
+    threadId: ThreadId,
+    reviewId: string,
+    status: "responding" | "compacting",
+  ) =>
+    resolveThread(threadId).pipe(
+      Effect.map((thread) => {
+        return (
+          !!thread &&
+          thread.deletedAt == null &&
+          thread.archivedAt == null &&
+          thread.claudeCacheReview?.reviewId === reviewId &&
+          thread.claudeCacheReview.status === status &&
+          thread.messages.some(
+            (message) =>
+              message.id === thread.claudeCacheReview?.messageId && message.role === "user",
+          )
+        );
+      }),
+    );
+
   const dispatchTurnForThread = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
     readonly messageId: string;
@@ -2870,6 +2944,7 @@ const make = Effect.gen(function* () {
 
   const processTurnStartRequestedWithoutLease = Effect.fnUntraced(function* (
     event: Extract<EngineIntentEvent, { type: "thread.turn-start-requested" }>,
+    acceptedCacheReviewFromCaller?: PendingClaudeCacheReview,
   ) {
     const sessionThreadId =
       (yield* resolveEngineSessionThread(event.payload.threadId))?.id ?? event.payload.threadId;
@@ -3105,6 +3180,71 @@ const make = Effect.gen(function* () {
         event.payload.dispatchMode === "steer" && !isNativeSteer
           ? "queue"
           : event.payload.dispatchMode;
+      let acceptedCacheReview = acceptedCacheReviewFromCaller;
+      if (targetEngine === "claude" && immediateDispatchMode !== "steer") {
+        const latestThread = yield* resolveThread(event.payload.threadId);
+        const pendingReview = latestThread?.claudeCacheReview;
+        if (acceptedCacheReview) {
+          if (
+            !(yield* isClaudeReviewAuthorized(
+              event.payload.threadId,
+              acceptedCacheReview.reviewId,
+              "responding",
+            ))
+          )
+            return;
+        } else if (pendingReview) return;
+        const nativeObservation = engineService.getClaudeCacheObservation
+          ? yield* engineService
+              .getClaudeCacheObservation(event.payload.threadId)
+              .pipe(Effect.catch(() => Effect.succeed(undefined)))
+          : undefined;
+        const requestedSelection = admittedEngineSelection;
+        const observation = claudeCacheForModel(
+          nativeObservation,
+          requestedSelection.engine === "claude"
+            ? resolveApiModelId(requestedSelection)
+            : undefined,
+        );
+        const assessment = assessClaudeCache(observation, Date.now());
+        if (
+          observation &&
+          assessment.requiresConfirmation &&
+          (!acceptedCacheReview ||
+            !claudeCacheReviewCoversObservation(acceptedCacheReview, observation))
+        ) {
+          const createdAt = new Date().toISOString();
+          yield* setClaudeCacheReview(
+            event.payload.threadId,
+            {
+              reviewId: `claude-cache:${event.eventId}:${crypto.randomUUID()}`,
+              messageId: MessageId.makeUnsafe(message.id),
+              sourceEventSequence: event.sequence,
+              assessment: { ...observation, state: assessment.state },
+              requestedAt: event.payload.createdAt,
+              ...(event.payload.sourceProposedPlan
+                ? { sourceProposedPlan: event.payload.sourceProposedPlan }
+                : {}),
+              status: "pending",
+              createdAt,
+            },
+            pendingReview?.reviewId ?? null,
+            {
+              sourceEventSequence: event.sequence,
+              session: {
+                threadId: event.payload.threadId,
+                runtimeMode: event.payload.runtimeMode,
+                engine: targetEngine,
+                status: "ready",
+                lastError: null,
+                activeTurnId: null,
+                updatedAt: createdAt,
+              },
+            },
+          );
+          return;
+        }
+      }
       let providerTurnAttempted = false;
       let providerTurnAccepted = false;
       const startedTurn = yield* dispatchTurnForThread({
@@ -3240,6 +3380,13 @@ const make = Effect.gen(function* () {
       if (startedTurn && isPendingQueuedDispatch) {
         yield* bindPendingQueuedDispatchToTurn(startedTurn.turnId);
       }
+      if (startedTurn && acceptedCacheReview) {
+        yield* setClaudeCacheReview(
+          event.payload.threadId,
+          null,
+          acceptedCacheReview.reviewId,
+        );
+      }
     }).pipe(
       Effect.onExit((exit) =>
         releaseOrphanedQueuedDispatchReservation(
@@ -3270,6 +3417,7 @@ const make = Effect.gen(function* () {
   // Promote the next queued message only after the active engine turn settles.
   const drainQueuedTurnsForThread = Effect.fnUntraced(function* (threadId: ThreadId) {
     const sessionThreadId = (yield* resolveEngineSessionThread(threadId))?.id ?? threadId;
+    if ((yield* resolveThread(sessionThreadId))?.claudeCacheReview) return;
     if (
       drainingQueuedTurns.has(threadId) ||
       pendingQueuedDispatchBySessionThread.has(sessionThreadId)
@@ -3578,6 +3726,275 @@ const make = Effect.gen(function* () {
     });
   });
 
+  const processClaudeCacheResponse = (
+    event: Extract<EngineIntentEvent, { type: "thread.claude-cache-response-requested" }>,
+  ) =>
+    withEngineSessionLease(
+      event.payload.threadId,
+      Effect.gen(function* () {
+        const { threadId, review, decision } = event.payload;
+        const thread = yield* resolveThread(threadId);
+        if (
+          !thread ||
+          thread.deletedAt != null ||
+          thread.claudeCacheReview?.reviewId !== review.reviewId ||
+          thread.claudeCacheReview.status !== "responding"
+        )
+          return;
+        if (thread.archivedAt != null) {
+          yield* setClaudeCacheReview(
+            threadId,
+            {
+              ...review,
+              status: "failed",
+              error: "This task is unavailable. The saved message was not sent.",
+            },
+            review.reviewId,
+          );
+          return;
+        }
+        if (decision === "cancel") {
+          yield* setClaudeCacheReview(threadId, null, review.reviewId);
+          yield* drainQueuedTurnsForSession(threadId);
+          return;
+        }
+        const source = yield* readOrchestrationEventAtSequence(review.sourceEventSequence);
+        if (
+          !source ||
+          source.type !== "thread.turn-start-requested" ||
+          source.payload.threadId !== threadId ||
+          source.payload.messageId !== review.messageId ||
+          (yield* hasLiveProviderTurn(threadId))
+        ) {
+          yield* setClaudeCacheReview(
+            threadId,
+            {
+              ...review,
+              status: "failed",
+              error: "The saved message is unavailable or Claude is busy. Nothing was sent.",
+            },
+            review.reviewId,
+          );
+          return;
+        }
+        if (decision === "compact") {
+          const message = thread.messages.find((entry) => entry.id === review.messageId);
+          const busyTasks = engineService.hasLiveRuntimeTasks
+            ? yield* engineService.hasLiveRuntimeTasks({ threadId })
+            : false;
+          const pending = yield* pendingInteractions.getPendingCountsByThreadId({ threadId });
+          if (
+            !engineService.startClaudeCompaction ||
+            !message ||
+            /^\/compact(?:\s|$)/.test(message.text.trim()) ||
+            busyTasks ||
+            pending.pendingApprovalCount > 0 ||
+            pending.pendingUserInputCount > 0
+          ) {
+            yield* setClaudeCacheReview(
+              threadId,
+              {
+                ...review,
+                status: "failed",
+                error:
+                  "Native compaction is unavailable or Claude still has active work. The saved message was not sent.",
+              },
+              review.reviewId,
+            );
+            return;
+          }
+          yield* ensureSessionForThread(threadId, event.payload.createdAt, {
+            ...(source.payload.engineSelection
+              ? { engineSelection: source.payload.engineSelection }
+              : {}),
+            ...(source.payload.engineOptions ? { engineOptions: source.payload.engineOptions } : {}),
+            runtimeMode: source.payload.runtimeMode,
+          });
+          const observation = engineService.getClaudeCacheObservation
+            ? yield* engineService.getClaudeCacheObservation(threadId)
+            : undefined;
+          if (!(yield* isClaudeReviewAuthorized(threadId, review.reviewId, "responding"))) {
+            return yield* new EngineAdapterValidationError({
+              engine: "claude",
+              operation: "thread.claude-cache.compact",
+              issue: "The saved message is no longer available for compaction.",
+            });
+          }
+          if (!observation || !sameClaudeCacheContext(review.assessment, observation)) {
+            yield* setClaudeCacheReview(
+              threadId,
+              {
+                ...review,
+                reviewId: `claude-cache:${source.eventId}:${crypto.randomUUID()}`,
+                ...(observation ? { assessment: observation } : {}),
+                status: "pending",
+                error: "Claude's context changed. Review it before compacting.",
+              },
+              review.reviewId,
+            );
+            return;
+          }
+          const turnId = TurnId.makeUnsafe(crypto.randomUUID());
+          const compactingReview: PendingClaudeCacheReview = {
+            ...review,
+            status: "compacting",
+            compactionTurnId: turnId,
+            compactionResponseEventSequence: event.sequence,
+            requestedAt: source.payload.createdAt,
+            ...(source.payload.sourceProposedPlan
+              ? { sourceProposedPlan: source.payload.sourceProposedPlan }
+              : {}),
+          };
+          yield* setClaudeCacheReview(threadId, compactingReview, review.reviewId);
+          if (!(yield* isClaudeReviewAuthorized(threadId, review.reviewId, "compacting"))) {
+            return yield* new EngineAdapterValidationError({
+              engine: "claude",
+              operation: "thread.claude-cache.compact",
+              issue: "The saved message is no longer available for compaction.",
+            });
+          }
+          yield* engineService.startClaudeCompaction!({ threadId, turnId }).pipe(
+            Effect.catchCause((cause) =>
+              Effect.gen(function* () {
+                const rejected =
+                  classifyProviderAttemptOutcome(Exit.failCause(cause))._tag === "rejected";
+                yield* setClaudeCacheReview(
+                  threadId,
+                  {
+                    ...compactingReview,
+                    status: rejected ? "failed" : "uncertain",
+                    error: `Compaction could not be confirmed. ${Cause.pretty(cause)}`,
+                  },
+                  review.reviewId,
+                );
+                if (!rejected) return yield* Effect.die(new Error(Cause.pretty(cause)));
+              }),
+            ),
+          );
+          return;
+        }
+        yield* processTurnStartRequestedWithoutLease(source, review).pipe(
+          Effect.catchCause((cause) =>
+            Effect.gen(function* () {
+              const outcome = classifyProviderAttemptOutcome(Exit.failCause(cause));
+              const rejected = outcome._tag === "rejected";
+              yield* setClaudeCacheReview(
+                threadId,
+                {
+                  ...review,
+                  status: rejected ? "failed" : "uncertain",
+                  error: rejected
+                    ? Cause.pretty(cause)
+                    : `The send could not be confirmed and was not retried. ${Cause.pretty(cause)}`,
+                },
+                review.reviewId,
+              );
+              if (!rejected) return yield* Effect.die(new Error(Cause.pretty(cause)));
+            }),
+          ),
+        );
+        const remaining = (yield* resolveThread(threadId))?.claudeCacheReview;
+        if (remaining?.reviewId === review.reviewId && remaining.status === "responding") {
+          yield* setClaudeCacheReview(
+            threadId,
+            {
+              ...review,
+              status: "failed",
+              error: "The saved send could not start. Review the message and try again.",
+            },
+            review.reviewId,
+          );
+        }
+      }).pipe(
+        Effect.catchCause((cause) =>
+          Effect.gen(function* () {
+            const current = (yield* resolveThread(event.payload.threadId))?.claudeCacheReview;
+            const rejected =
+              classifyProviderAttemptOutcome(Exit.failCause(cause))._tag === "rejected";
+            if (
+              current?.reviewId === event.payload.review.reviewId &&
+              (current.status === "responding" || (current.status === "compacting" && rejected))
+            ) {
+              yield* setClaudeCacheReview(
+                event.payload.threadId,
+                {
+                  ...current,
+                  status: rejected ? "failed" : "uncertain",
+                  error: Cause.pretty(cause),
+                },
+                current.reviewId,
+              );
+            }
+            return yield* Effect.failCause(cause);
+          }),
+        ),
+      ),
+    );
+
+  const processClaudeCompactionTerminal = Effect.fnUntraced(function* (
+    event: EngineQueueDrainEvent,
+  ) {
+    if (event.engine !== "claude") return;
+    const thread = yield* resolveThread(event.threadId);
+    const review = thread?.claudeCacheReview;
+    if (!review?.compactionTurnId || review.compactionTurnId !== event.turnId) return;
+    if (
+      !review ||
+      (review.status !== "compacting" && review.status !== "uncertain")
+    )
+      return;
+    if (
+      event.type !== "turn.completed" ||
+      event.payload.state !== "completed" ||
+      event.payload.contextCompacted !== true ||
+      thread?.archivedAt != null ||
+      thread?.deletedAt != null
+    ) {
+      yield* setClaudeCacheReview(
+        event.threadId,
+        {
+          ...review,
+          status: "failed",
+          error:
+            "Native compaction did not complete with a confirmed context boundary. The saved message was not sent.",
+        },
+        review.reviewId,
+      );
+      return;
+    }
+    yield* orchestrationEngine
+      .dispatch({
+        type: "thread.claude-cache.compacted",
+        commandId: CommandId.makeUnsafe(
+          `server:claude-cache-compacted:${review.reviewId}:${event.turnId}`,
+        ),
+        threadId: event.threadId,
+        reviewId: review.reviewId,
+        turnId: review.compactionTurnId,
+        createdAt: event.createdAt,
+      })
+      .pipe(
+        Effect.catchTag("OrchestrationCommandInvariantError", (error) =>
+          Effect.gen(function* () {
+            if (error.detail === "Command produced no events.") return;
+            const current = (yield* resolveThread(event.threadId))?.claudeCacheReview;
+            if (
+              current?.reviewId === review.reviewId &&
+              current.compactionTurnId === event.turnId &&
+              (current.status === "compacting" || current.status === "uncertain")
+            ) {
+              yield* setClaudeCacheReview(
+                event.threadId,
+                { ...current, status: "failed", error: error.detail },
+                current.reviewId,
+              );
+            }
+            return yield* Effect.fail(error);
+          }),
+        ),
+      );
+  });
+
   const goalToolsEnabledForThread = Effect.fnUntraced(function* (
     thread: Pick<OrchestrationThread, "projectId">,
   ) {
@@ -3728,6 +4145,7 @@ const make = Effect.gen(function* () {
     );
 
   const processQueueDrainEvent = Effect.fnUntraced(function* (event: EngineQueueDrainEvent) {
+    yield* processClaudeCompactionTerminal(event);
     observePendingContextBootstrapTerminalEvent(event);
     const sessionThreadId =
       (yield* resolveEngineSessionThread(event.threadId))?.id ?? event.threadId;
@@ -4867,6 +5285,9 @@ const make = Effect.gen(function* () {
           return;
         case "thread.turn-start-requested":
           yield* processTurnStartRequested(event);
+          return;
+        case "thread.claude-cache-response-requested":
+          yield* processClaudeCacheResponse(event);
           return;
         case "thread.goal-continuation-requested":
           yield* processGoalContinuationRequested(event);
