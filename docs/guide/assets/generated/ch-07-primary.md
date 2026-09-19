@@ -48,7 +48,7 @@ Explanatory job: Separate complete Engine runtime, model-service domain, exact m
 Reviewed source anchors:
 
 - `packages/shared/src/engineMetadata.ts#ENGINE_DESCRIPTORS`
-- `apps/web/src/components/onboarding/firstRunReadiness.logic.ts`
+- `apps/web/src/onboarding/OnboardingDialog.tsx`
 - `apps/server/src/engine/executionCapabilityProjection.ts`
 
 Allowed abstraction: labeled rectangles, explicit boundaries, matrices, and source-backed directional relations.

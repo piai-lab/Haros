@@ -53,8 +53,8 @@ Explanatory job: Show degraded setup and per-owner recovery without a false sequ
 
 Reviewed source anchors:
 
-- `apps/web/src/components/onboarding/firstRunReadiness.logic.ts`
-- `apps/web/src/components/onboarding/useFirstRunReadinessController.ts`
+- `apps/web/src/onboarding/OnboardingDialog.tsx`
+- `apps/server/src/engine/executionCapabilityProjection.ts`
 
 Allowed abstraction: labeled rectangles, explicit boundaries, matrices, and source-backed directional relations.
 

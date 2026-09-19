@@ -63,6 +63,65 @@ export function toggleStarredModel(
     : [...normalized, entry];
 }
 
+export function starredTraitsForModel(
+  models: ReadonlyArray<StarredModel>,
+  engine: EngineKind,
+  model: string,
+): Pick<StarredModel, "effort" | "fastMode" | "thinking"> {
+  const matching = starredModelsForEngine(models, engine).filter((entry) => entry.model === model);
+  const fallback =
+    matching.find(
+      (entry) => entry.effort !== null || entry.fastMode !== null || entry.thinking !== null,
+    ) ?? matching[0];
+  return {
+    effort: fallback?.effort ?? null,
+    fastMode: fallback?.fastMode ?? null,
+    thinking: fallback?.thinking ?? null,
+  };
+}
+
+export function buildStarredModelEntry(input: {
+  readonly engine: EngineKind;
+  readonly model: string;
+  readonly effort?: string | null;
+  readonly fastMode?: boolean | null;
+  readonly thinking?: boolean | null;
+}): StarredModel {
+  return {
+    engine: input.engine,
+    model: input.model,
+    effort: input.effort ?? null,
+    fastMode: input.fastMode ?? null,
+    thinking: input.thinking ?? null,
+  };
+}
+
+export function resolveStarredToggleEntry(input: {
+  readonly models: ReadonlyArray<StarredModel>;
+  readonly engine: EngineKind;
+  readonly model: string;
+  readonly live?: boolean;
+  readonly effort?: string | null;
+  readonly fastMode?: boolean | null;
+  readonly thinking?: boolean | null;
+}): StarredModel {
+  if (input.live) {
+    return buildStarredModelEntry({
+      engine: input.engine,
+      model: input.model,
+      effort: input.effort ?? null,
+      fastMode: input.fastMode ?? null,
+      thinking: input.thinking ?? null,
+    });
+  }
+  const stored = starredTraitsForModel(input.models, input.engine, input.model);
+  return buildStarredModelEntry({
+    engine: input.engine,
+    model: input.model,
+    ...stored,
+  });
+}
+
 export function seedStarredModelsFromLegacyFavorites(): StoredStarredModel[] {
   const engines = Object.keys(FAVORITE_MODEL_STORAGE_KEYS) as Array<
     keyof typeof FAVORITE_MODEL_STORAGE_KEYS
@@ -118,6 +177,11 @@ export function isModelStarred(
   models: ReadonlyArray<StarredModel>,
   engine: EngineKind,
   model: string,
+  traits?: Pick<StarredModel, "effort" | "fastMode" | "thinking">,
 ): boolean {
-  return models.some((entry) => entry.engine === engine && entry.model === model);
+  if (!traits) {
+    return models.some((entry) => entry.engine === engine && entry.model === model);
+  }
+  const key = starredModelKey({ engine, model, ...traits });
+  return models.some((entry) => starredModelKey(entry) === key);
 }

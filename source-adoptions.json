@@ -559,15 +559,22 @@
       "mode": "adapt",
       "changes": "Namespaced Objective-C bridge for Haros's locally built iOS Simulator helper; packaged artifacts must retain the exact license notice.",
       "updatePolicy": "Pinned revision; re-review private API compatibility and rights before changing the reference revision.",
-      "licenseFiles": ["apps/server/native/device-helper/LICENSE.facebook-idb"]
+      "licenseFiles": [
+        "apps/server/native/device-helper/LICENSE.facebook-idb"
+      ]
     },
     {
       "id": "bundled-oa-runtime",
       "url": "https://github.com/earendil-works/pi.git",
       "revision": "b8b873b9872db04a938fb4357b5e8e824ddc051c",
       "npmArtifactGitHead": "b79e4cc834970cca69daebffab7df1da7d1e52c4",
-      "paths": ["docs/provenance.md"],
-      "sourcePaths": ["packages/coding-agent", "scripts/build-coding-agent-bundle.mjs"],
+      "paths": [
+        "docs/provenance.md"
+      ],
+      "sourcePaths": [
+        "packages/coding-agent",
+        "scripts/build-coding-agent-bundle.mjs"
+      ],
       "archiveSha256": "3552baed000c1f30c6675ca7f2830e44c56eed6ddf03df09a123a14428001186",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.4",
       "upstreamPackageIntegrity": "sha512-jmOlrqUmvhh/siNWFRXjYLJzhKFIHNsAQaysRwzQPQFnPAaV/vhqHsLH/MBsIISA1Rjj7WTUFR3nJrpXoLx39w==",
@@ -611,7 +618,11 @@
       "url": "https://github.com/earendil-works/pi.git",
       "revision": "b8b873b9872db04a938fb4357b5e8e824ddc051c",
       "npmArtifactGitHead": "b79e4cc834970cca69daebffab7df1da7d1e52c4",
-      "paths": ["patches/@earendil-works%2Fpi-ai@0.84.4.patch", "package.json", "bun.lock"],
+      "paths": [
+        "patches/@earendil-works%2Fpi-ai@0.84.4.patch",
+        "package.json",
+        "bun.lock"
+      ],
       "sourcePaths": [
         "packages/ai/src/auth/types.ts",
         "packages/ai/src/auth/oauth/oauth-page.ts",
@@ -636,7 +647,9 @@
         "apps/web/public/central-icons-reversed/converge.svg",
         "apps/web/src/lib/icons.tsx"
       ],
-      "sourcePaths": ["noun-converge-3918477.svg"],
+      "sourcePaths": [
+        "noun-converge-3918477.svg"
+      ],
       "sourceSha256": "eebf4a928d2d943ecd2236fda74d57b9af4f3e193206e21d8be83f6b2057579d",
       "rights": "The maintainer supplied this Noun Project icon by Adrien Coquet and confirmed a valid royalty-free, attribution-free license for Haros adaptation and redistribution. Purchase records and personal license material remain private and are not committed.",
       "mode": "copied-adapted",
@@ -647,8 +660,13 @@
       "id": "noun-project-learn-interaction-mode-icon",
       "url": "https://thenounproject.com/icon/education-8386792/",
       "revision": "noun-project-icon-8386792",
-      "paths": ["apps/web/public/central-icons-reversed/learn.svg", "apps/web/src/lib/icons.tsx"],
-      "sourcePaths": ["noun-education-8386792.svg"],
+      "paths": [
+        "apps/web/public/central-icons-reversed/learn.svg",
+        "apps/web/src/lib/icons.tsx"
+      ],
+      "sourcePaths": [
+        "noun-education-8386792.svg"
+      ],
       "sourceSha256": "d388f71e3b27db29988a73999dff99477c92ba084a265dade5d101885677dd68",
       "rights": "The maintainer supplied this Noun Project icon by Studio Danro and confirmed a valid royalty-free, attribution-free license for Haros adaptation and redistribution. Purchase records and personal license material remain private and are not committed.",
       "mode": "copied-adapted",
@@ -713,8 +731,12 @@
       "id": "bundled-oa-web-access",
       "url": "https://github.com/nicobailon/pi-web-access.git",
       "revision": "08e347f4fe6bea807882c2363527118cce6eb539",
-      "paths": ["docs/provenance.md"],
-      "sourcePaths": ["."],
+      "paths": [
+        "docs/provenance.md"
+      ],
+      "sourcePaths": [
+        "."
+      ],
       "upstreamPackage": "pi-web-access@0.25.0",
       "upstreamPackageIntegrity": "sha512-DYOEIMEPwpC6pHElexBy3XuaYPnfMxH0ZBaGrILFsLNQzhhHJ3kJLrCQU4fnKXYXV6OEwxsLt2pBP76koK4hHg==",
       "upstreamTarballSha256": "06b3cb2b9d3118f66cd2fe84e5453dc0a8b8feaf099ae05e543ff9ebe80ae103",
@@ -727,8 +749,12 @@
       "id": "bundled-oa-ask-user",
       "url": "https://github.com/mrclrchtr/supi.git",
       "revision": "ce8af5f57304ad114319aa75c00920f029ceb8e7",
-      "paths": ["docs/provenance.md"],
-      "sourcePaths": ["packages/supi-ask-user"],
+      "paths": [
+        "docs/provenance.md"
+      ],
+      "sourcePaths": [
+        "packages/supi-ask-user"
+      ],
       "upstreamPackage": "@mrclrchtr/supi-ask-user@5.0.0",
       "upstreamPackageIntegrity": "sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==",
       "upstreamTarballSha256": "d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e",
@@ -815,8 +841,55 @@
       ],
       "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed starred-model mechanism.",
       "mode": "adapt",
-      "changes": "Haros consolidates Composer favorites onto starredModels (engine+model+effort+fast+thinking). The picker writes that owner for every Engine. Model cycling reads starred slugs only. Legacy per-engine favourite keys remain a one-time seed, not a second write path.",
+      "changes": "Haros consolidates Composer favorites onto starredModels (engine+model+effort+fast+thinking). The Composer model menu writes the live trait combo for the currently selected model, and restores a stored combo when starring another slug. Model cycling still reads starred slugs only. Legacy per-engine favourite keys remain a one-time seed, not a second write path.",
       "updatePolicy": "Pinned exact Synara revision. Do not restore per-engine favourite writers. Delete by removing the starred storage key and reverting picker star actions to a single owner."
+    },
+    {
+      "id": "synara-git-review-loop",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/server/src/git/gitBlameParsing.ts",
+        "apps/web/src/components/DiffLineBlamePopover.tsx",
+        "apps/web/src/components/DiffTruncationWarning.tsx",
+        "apps/web/src/components/DiffPanelCompareRefMenuSection.tsx",
+        "apps/web/src/repoDiffScopeStore.ts",
+        "packages/contracts/src/git.ts"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed Git review-loop mechanism.",
+      "mode": "adapt",
+      "changes": "Haros adopts blame-line lookup, per-repo compare-ref, and truncated working-tree diff warnings into the existing GitCore/GitManager and DiffPanel owners. Truncation is a truthful warning, not a second diff store. Blame stays off index and deleted sides.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the listed Git review seams without introducing a parallel Git status owner."
+    },
+    {
+      "id": "synara-shared-workspace-editor",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/lib/workspaceEditorSession.ts",
+        "apps/web/src/lib/workspaceFileEditor.ts",
+        "apps/web/src/hooks/useWorkspaceFileEditor.ts",
+        "packages/shared/src/workspaceFileWrite.ts"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed shared-editor mechanism.",
+      "mode": "adapt",
+      "changes": "Haros shares one editor session and writer per file across Explorer, preview, and send flush. Autosave is 400ms. A write conflict stops automatic retry until the user acts. Dirty unused sessions survive unmount; clean unused sessions release.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the shared session owner and returning each surface to its previous isolated writer."
+    },
+    {
+      "id": "synara-transcript-selection-routing",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/lib/selectionChat.ts",
+        "apps/web/src/components/chat/SelectionNewChatComposer.tsx",
+        "apps/web/src/components/chat/TranscriptSelectionAction.tsx",
+        "apps/web/src/components/chat/TranscriptSelectionActionLayer.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed transcript-selection routing.",
+      "mode": "adapt",
+      "changes": "Haros routes transcript selections to the current composer, an existing Side chat, or a new Chat through the existing sidechat and handleNewThread owners. It does not copy native Engine session state or invent a second selection store.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the listed selection-routing files without restoring transcript product markers."
     }
   ]
 }

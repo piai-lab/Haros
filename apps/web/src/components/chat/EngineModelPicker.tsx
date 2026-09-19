@@ -36,7 +36,7 @@ import {
   type EngineModelOption,
 } from "../../engineModelOptions";
 import { useStarredModels } from "../../hooks/useStarredModels";
-import { starredModelSlugsForEngine } from "../../lib/starredModels";
+import { resolveStarredToggleEntry, starredModelSlugsForEngine } from "../../lib/starredModels";
 import { Skeleton } from "../ui/skeleton";
 import { useI18n } from "~/i18n";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
@@ -112,6 +112,9 @@ type EngineModelMenuItemsProps = {
   // Invoked after a model selection commits so callers can close ancestor
   // menus and refocus the composer.
   onAfterSelection?: () => void;
+  starredEffort?: string | null;
+  starredFastMode?: boolean | null;
+  starredThinking?: boolean | null;
 };
 
 // Renders only the popup body of the engine/model picker. Designed to be
@@ -153,13 +156,17 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     onAfterSelection?.();
   };
   const toggleFavoriteModel = (engine: EngineKind, slug: string) => {
-    toggleStarredModel({
-      engine,
-      model: slug,
-      effort: null,
-      fastMode: null,
-      thinking: null,
-    });
+    toggleStarredModel(
+      resolveStarredToggleEntry({
+        models: starredModels,
+        engine,
+        model: slug,
+        live: engine === activeEngine && slug === (props.model ?? ""),
+        effort: props.starredEffort ?? null,
+        fastMode: props.starredFastMode ?? null,
+        thinking: props.starredThinking ?? null,
+      }),
+    );
   };
 
   const renderModelRadioGroup = (engine: EngineKind) => {
@@ -374,6 +381,9 @@ type EngineModelPickerProps = {
   shortcutLabel?: string | null;
   onEngineModelChange: (engine: EngineKind, model: ModelSlug) => void;
   onEngineBrowse?: (engine: EngineKind) => void;
+  starredEffort?: string | null;
+  starredFastMode?: boolean | null;
+  starredThinking?: boolean | null;
 };
 
 export const EngineModelPicker = function EngineModelPicker(props: EngineModelPickerProps) {
@@ -500,6 +510,9 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
           {...(props.hiddenEngines ? { hiddenEngines: props.hiddenEngines } : {})}
           {...(props.engineOrder ? { engineOrder: props.engineOrder } : {})}
           {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
+          {...(props.starredEffort !== undefined ? { starredEffort: props.starredEffort } : {})}
+          {...(props.starredFastMode !== undefined ? { starredFastMode: props.starredFastMode } : {})}
+          {...(props.starredThinking !== undefined ? { starredThinking: props.starredThinking } : {})}
           onEngineModelChange={props.onEngineModelChange}
           {...(props.onEngineBrowse ? { onEngineBrowse: props.onEngineBrowse } : {})}
           onAfterSelection={handleAfterSelection}

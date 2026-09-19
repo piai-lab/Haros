@@ -56,7 +56,7 @@ Explanatory job: Map five readiness conditions to honest status and exact next a
 
 Reviewed source anchors:
 
-- `apps/web/src/components/onboarding/firstRunReadiness.logic.ts`
+- `apps/web/src/onboarding/logic.ts`
 - `apps/server/src/engine/executionCapabilityProjection.ts`
 
 Allowed abstraction: labeled rectangles, explicit boundaries, matrices, and source-backed directional relations.
