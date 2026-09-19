@@ -3,7 +3,7 @@
 // Layer: Chat transcript interaction UI
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { MessageCircleIcon, PencilIcon, TextWrapIcon } from "~/lib/icons";
+import { MessageCircleIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { useI18n } from "../../i18n";
@@ -13,20 +13,22 @@ interface TranscriptSelectionActionProps {
   selectionTop: number;
   selectionBottom: number;
   placement: "top" | "bottom";
-  // Highlight/underline only make sense for transcript text; read-only code
-  // surfaces (file preview, diff view) omit them and get an add-only toolbar.
-  onHighlight?: (() => void) | undefined;
-  onUnderline?: (() => void) | undefined;
   onAddToChat: () => void;
+  onAddToSide?: (() => void) | undefined;
+  onAddToNewChat?: (() => void) | undefined;
+  sideDisabled?: boolean | undefined;
+  disabled?: boolean | undefined;
 }
 
 function TranscriptSelectionToolbarButton({
   label,
   onClick,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean | undefined;
   children: ReactNode;
 }) {
   return (
@@ -34,8 +36,9 @@ function TranscriptSelectionToolbarButton({
       type="button"
       aria-label={label}
       title={label}
+      disabled={disabled}
       className={cn(
-        "pointer-events-auto inline-flex h-8 min-w-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11px] font-medium text-[var(--color-text-foreground)]",
+        "pointer-events-auto inline-flex h-8 min-w-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11px] font-medium text-[var(--color-text-foreground)] disabled:pointer-events-none disabled:opacity-40",
         ELEVATED_HOVER_SURFACE_CLASS_NAME,
       )}
       onMouseDown={(event) => {
@@ -90,15 +93,7 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
         ? currentPosition
         : { left: nextLeft, top: nextTop, placement },
     );
-  }, [
-    props.anchorX,
-    props.onHighlight,
-    props.onUnderline,
-    props.placement,
-    props.selectionBottom,
-    props.selectionTop,
-    t,
-  ]);
+  }, [props.anchorX, props.placement, props.selectionBottom, props.selectionTop, t]);
   return (
     <div
       data-transcript-selection-action="true"
@@ -120,28 +115,31 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
             : "origin-top",
         )}
       >
-        {props.onHighlight ? (
-          <TranscriptSelectionToolbarButton
-            label={t("selection.highlight")}
-            onClick={props.onHighlight}
-          >
-            <PencilIcon className="size-3.5 shrink-0" />
-          </TranscriptSelectionToolbarButton>
-        ) : null}
-        {props.onUnderline ? (
-          <TranscriptSelectionToolbarButton
-            label={t("selection.underline")}
-            onClick={props.onUnderline}
-          >
-            <TextWrapIcon className="size-3.5 shrink-0" />
-          </TranscriptSelectionToolbarButton>
-        ) : null}
         <TranscriptSelectionToolbarButton
           label={t("selection.addToChat")}
           onClick={props.onAddToChat}
+          disabled={props.disabled}
         >
           <MessageCircleIcon className="size-3.5 shrink-0" />
         </TranscriptSelectionToolbarButton>
+        {props.onAddToSide ? (
+          <TranscriptSelectionToolbarButton
+            label={t("selection.addToSide")}
+            onClick={props.onAddToSide}
+            disabled={props.disabled || props.sideDisabled}
+          >
+            <MessageCircleIcon className="size-3.5 shrink-0" />
+          </TranscriptSelectionToolbarButton>
+        ) : null}
+        {props.onAddToNewChat ? (
+          <TranscriptSelectionToolbarButton
+            label={t("selection.addToNewChat")}
+            onClick={props.onAddToNewChat}
+            disabled={props.disabled}
+          >
+            <MessageCircleIcon className="size-3.5 shrink-0" />
+          </TranscriptSelectionToolbarButton>
+        ) : null}
       </div>
     </div>
   );

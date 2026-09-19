@@ -512,6 +512,7 @@ import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachment
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
 import { ExpandedImageOverlay } from "./chat/ExpandedImageOverlay";
 import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
+import { addSelectionToSide, startSelectionChat } from "~/lib/selectionChat";
 import { useChatTerminalController } from "./chat/useChatTerminalController";
 import { useChatAutomationSetup } from "./chat/useChatAutomationSetup";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
@@ -12740,9 +12741,39 @@ export default function ChatView({
       {isInactiveSplitPane ? null : (
         <TranscriptSelectionActionLayer
           action={pendingTranscriptSelectionAction}
-          onHighlight={createHighlightFromPendingSelection}
-          onUnderline={createUnderlineFromPendingSelection}
+          defaultEnvMode={envMode}
+          canUseWorktree={isGitRepo && !isContainerLandingProject}
+          canAddToSide={isServerThread && !isSidechat}
+          onDismiss={dismissTranscriptSelectionAction}
           onAddToChat={commitTranscriptAssistantSelection}
+          {...(activeProject && activeThread && selectedEngineSelection
+            ? {
+                onAddToSide: (selection) =>
+                  addSelectionToSide({
+                    selection,
+                    project: activeProject,
+                    sourceThread: activeThread,
+                    selectedEngineSelection,
+                  }),
+              }
+            : {})}
+          {...(activeProject && selectedEngineSelection
+            ? {
+                onNewChat: (selection, prompt, nextEnvMode, intent) =>
+                  startSelectionChat({
+                    projectId: activeProject.id,
+                    projectCwd: activeProject.cwd,
+                    selection,
+                    prompt,
+                    envMode: nextEnvMode,
+                    intent,
+                    engineSelection: selectedEngineSelection,
+                    selectedPromptEffort,
+                    runtimeMode,
+                    createThread: handleNewThread,
+                  }),
+              }
+            : {})}
         />
       )}
       <ExpandedImageOverlay
