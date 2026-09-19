@@ -904,6 +904,20 @@
       "mode": "adapt",
       "changes": "Haros adopts the stepped Composer effort slider into the existing composerTraits / TraitsPicker / ComposerModelEffortPicker owners. Effort semantics stay in getComposerTraitSelection and planComposerEffortChange. The slider preference lives in localPreferences.composerEffortSlider and defaults on. Ultrathink remains prompt injection. Fast mode is not a second effort ladder.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the slider primitive and card and restoring radio effort controls."
+    },
+    {
+      "id": "synara-right-dock-maximize",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/lib/responsiveWorkbench.ts",
+        "apps/web/src/components/chat/RightDock.tsx",
+        "apps/web/src/components/chat/SingleChatSurface.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed dock-maximize mechanism.",
+      "mode": "adapt",
+      "changes": "Haros synthesizes user Maximize into the existing RightDock exclusive presentation. Narrow-screen autoExclusive remains. Closing the last pane or collapsing the dock restores chat without remounting preview buffers.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the maximize button and userMaximized input from resolveWorkbenchPresentation."
     }
   ]
 }

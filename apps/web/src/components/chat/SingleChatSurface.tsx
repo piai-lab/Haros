@@ -222,6 +222,7 @@ export function SingleChatSurface(props: {
   );
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
   const [workbenchAutoExclusive, setWorkbenchAutoExclusive] = useState(false);
+  const [userMaximizedDock, setUserMaximizedDock] = useState(false);
   useEffect(() => {
     const shell = responsiveShellRef.current;
     if (!shell) return;
@@ -252,7 +253,13 @@ export function SingleChatSurface(props: {
   const workbenchPresentation = resolveWorkbenchPresentation({
     dockOpen: dockState.open,
     autoExclusive: workbenchAutoExclusive,
+    userMaximized: userMaximizedDock,
   });
+  useEffect(() => {
+    if (!dockState.open && userMaximizedDock) {
+      setUserMaximizedDock(false);
+    }
+  }, [dockState.open, userMaximizedDock]);
   const handlePlanSidebarOpenChange = useCallback((open: boolean) => {
     setPlanSidebarOpen(open);
     const shellWidth = responsiveShellRef.current?.getBoundingClientRect().width ?? 0;
@@ -325,13 +332,34 @@ export function SingleChatSurface(props: {
       return () => window.cancelAnimationFrame(frameId);
     }
 
-    if (
-      workbenchPresentation === "split" &&
-      previous === "exclusive" &&
-      document.activeElement instanceof HTMLElement &&
-      chatSurface.contains(document.activeElement)
-    ) {
+    if (workbenchPresentation === "split" && previous === "exclusive") {
+      if (
+        document.activeElement instanceof HTMLElement &&
+        chatSurface.contains(document.activeElement) &&
+        document.activeElement.getClientRects().length > 0
+      ) {
+        chatFocusReturnRef.current = null;
+        return;
+      }
+      const returnTarget = chatFocusReturnRef.current;
       chatFocusReturnRef.current = null;
+      const frameId = window.requestAnimationFrame(() => {
+        if (previousWorkbenchPresentationRef.current !== "split") return;
+        if (
+          returnTarget?.isConnected &&
+          chatSurface.contains(returnTarget) &&
+          returnTarget.getClientRects().length > 0
+        ) {
+          returnTarget.focus();
+          return;
+        }
+        chatSurface
+          .querySelector<HTMLElement>(
+            'textarea:not([disabled]), [contenteditable="true"], button:not([disabled])',
+          )
+          ?.focus();
+      });
+      return () => window.cancelAnimationFrame(frameId);
     }
   }, [workbenchPresentation]);
   const commitOpenPane = useRightDockStore((store) => store.openPane);
@@ -972,6 +1000,7 @@ export function SingleChatSurface(props: {
           >
             <PullRequestDockPane
               pane={pane}
+              threadId={props.threadId}
               pollingEnabled={context.isVisible}
               onClose={() => closePane(props.threadId, pane.id)}
             />
@@ -1285,6 +1314,8 @@ export function SingleChatSurface(props: {
             CHAT_CANVAS_MIN_WIDTH_PX + (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0)
           }
           presentation={workbenchPresentation === "exclusive" ? "exclusive" : "split"}
+          userMaximized={userMaximizedDock}
+          onUserMaximizedChange={setUserMaximizedDock}
           {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
           {...(paneIconOverrides ? { paneIconOverrides } : {})}
           onSelectPane={handleSelectDockPane}
@@ -1299,7 +1330,10 @@ export function SingleChatSurface(props: {
             }
             closePane(props.threadId, paneId);
           }}
-          onCollapse={() => setDockOpen(props.threadId, false)}
+          onCollapse={() => {
+            setUserMaximizedDock(false);
+            setDockOpen(props.threadId, false);
+          }}
           onOpenChange={(open) => setDockOpen(props.threadId, open)}
           onAddPane={handleAddDockPane}
           renderPane={renderDockPane}

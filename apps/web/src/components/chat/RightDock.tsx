@@ -20,7 +20,7 @@ import {
   EMPTY_PANE_ID_SET,
   reconcileKeepMountedPaneIds,
 } from "~/lib/dockPaneActivation";
-import { PanelRightCloseIcon, PlusIcon } from "~/lib/icons";
+import { Maximize2, Minimize2, PanelRightCloseIcon, PlusIcon } from "~/lib/icons";
 import type {
   RightDockPane,
   RightDockPaneKind,
@@ -83,6 +83,8 @@ interface RightDockProps {
   onSelectPane?: ((paneId: string) => void) | undefined;
   onClosePane: (paneId: string) => void;
   onCollapse: () => void;
+  userMaximized?: boolean;
+  onUserMaximizedChange?: (maximized: boolean) => void;
   onOpenChange: (open: boolean) => void;
   onAddPane: (kind: RightDockPaneKind) => void;
   /** Width the primary surface must retain while this dock is split beside it. */
@@ -220,6 +222,13 @@ export function RightDock(props: RightDockProps) {
   const minimumPrimaryWidth = props.minimumPrimaryWidth ?? 0;
   const shouldAcceptWidth = props.shouldAcceptWidth;
   const activePaneKind = activePane?.kind ?? null;
+  const userMaximized = props.userMaximized === true;
+  const canToggleMaximize = props.onUserMaximizedChange !== undefined && props.state.open;
+  useLayoutEffect(() => {
+    if (!userMaximized) return;
+    if (props.state.panes.length > 0) return;
+    props.onUserMaximizedChange?.(false);
+  }, [props.onUserMaximizedChange, props.state.panes.length, userMaximized]);
   const applyResponsiveWidth = useCallback(() => {
     const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
     const shell = wrapper?.parentElement;
@@ -423,6 +432,19 @@ export function RightDock(props: RightDockProps) {
                 />
               ))}
             </div>
+            {canToggleMaximize && (userMaximized || activePane !== null) ? (
+              <IconButton
+                variant="chrome"
+                size="icon-xs"
+                label={userMaximized ? t("workbench.restorePanel") : t("workbench.maximizePanel")}
+                tooltip={userMaximized ? t("workbench.restorePanel") : t("workbench.maximizePanel")}
+                aria-pressed={userMaximized}
+                className={DOCK_HEADER_ICON_BUTTON_CLASS}
+                onClick={() => props.onUserMaximizedChange?.(!userMaximized)}
+              >
+                {userMaximized ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+              </IconButton>
+            ) : null}
             {props.state.panes.length > 0 && props.addMenuKinds.length > 0 ? (
               <Menu modal={false}>
                 <MenuTrigger

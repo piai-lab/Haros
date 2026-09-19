@@ -111,11 +111,12 @@ export function resolveWorkbenchAutoExclusive(input: {
 export function resolveWorkbenchPresentation(input: {
   readonly dockOpen: boolean;
   readonly autoExclusive: boolean;
+  readonly userMaximized?: boolean;
 }): WorkbenchPresentation {
   if (!input.dockOpen) {
     return "closed";
   }
-  return input.autoExclusive ? "exclusive" : "split";
+  return input.autoExclusive || input.userMaximized === true ? "exclusive" : "split";
 }
 
 export function resolvePlanSidebarPresentation(input: {

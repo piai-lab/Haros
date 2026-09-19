@@ -268,6 +268,20 @@ describe("responsive Workbench presentation", () => {
         }),
       }),
     ).toBe("exclusive");
+    expect(
+      resolveWorkbenchPresentation({
+        dockOpen: true,
+        autoExclusive: false,
+        userMaximized: true,
+      }),
+    ).toBe("exclusive");
+    expect(
+      resolveWorkbenchPresentation({
+        dockOpen: true,
+        autoExclusive: true,
+        userMaximized: false,
+      }),
+    ).toBe("exclusive");
   });
 
   it("counts the existing 340px PlanSidebar as pressure without making it an owner", () => {
