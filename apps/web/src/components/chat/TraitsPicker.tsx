@@ -10,7 +10,6 @@ import {
   type EngineModelDescriptor,
   type ThreadId,
 } from "@harnessos/contracts";
-import { applyClaudePromptEffortPrefix } from "@harnessos/shared/model";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDownIcon, FastModeIcon, FastModeOutlineIcon, SettingsIcon } from "~/lib/icons";
 import { Button } from "../ui/button";
@@ -25,16 +24,13 @@ import {
   MenuTrigger,
 } from "../ui/menu";
 import { useComposerDraftStore } from "../../composerDraftStore";
-import {
-  buildNextEngineOptions,
-  buildEngineOptionPatch,
-  type EngineOptions,
-} from "../../engineModelOptions";
+import { buildNextEngineOptions, type EngineOptions } from "../../engineModelOptions";
 import { COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import {
   getComposerTraitSelection,
   hasVisibleComposerTraitControls,
+  planComposerEffortChange,
   resolveComposerTraitStatusLabel,
   showsComposerFastModeBadge,
   supportsComposerFastModeControl,
@@ -42,8 +38,6 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
 import { useI18n } from "~/i18n";
-
-const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
 function defaultAgentForProvider(engine: EngineKind | null): string | null {
   if (engine === "kilo") return "code";
@@ -242,6 +236,7 @@ export interface TraitsMenuContentProps {
   prompt: string;
   onPromptChange: (prompt: string) => void;
   includeFastMode?: boolean;
+  hideEffortControls?: boolean;
   modelOptions?: EngineOptions | null | undefined;
   onSelectionComplete?: () => void;
 }
@@ -255,11 +250,13 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   prompt,
   onPromptChange,
   includeFastMode: includeFastModeProp,
+  hideEffortControls: hideEffortControlsProp,
   modelOptions,
   onSelectionComplete,
 }: TraitsMenuContentProps) {
   const { t } = useI18n();
   const includeFastMode = includeFastModeProp ?? true;
+  const hideEffortControls = hideEffortControlsProp ?? false;
   const setEngineModelOptions = useComposerDraftStore((store) => store.setEngineModelOptions);
   const {
     caps,
@@ -286,7 +283,10 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // effort section exists; fast-only models (no effort levels) keep the
   // standalone radio section instead.
   const showsFastModeEffortToggle =
-    includeFastMode && supportsFastModeControl && effortLevels.length > 0;
+    includeFastMode &&
+    supportsFastModeControl &&
+    effortLevels.length > 0 &&
+    !hideEffortControls;
   const agentOptions = getAgentOptions(engine, runtimeAgents);
   const defaultAgent = defaultAgentForProvider(engine);
   const selectedAgent = getSelectedAgentValue(engine, modelOptions);
@@ -296,7 +296,6 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // in an object-key position, and it cannot match an optional-chained expression in a dependency
   // list to its own inferred scope — either one makes it skip this component entirely.
   const contextWindowTraitId = contextWindowDescriptor?.id ?? "contextWindow";
-  const primarySelectDescriptorId = primarySelectDescriptor?.id;
   const hasPriorEffortSection = thinkingEnabled !== null || contextWindowOptions.length > 1;
   const hasPriorFastModeSection =
     thinkingEnabled !== null || effortLevels.length > 0 || contextWindowOptions.length > 1;
@@ -323,30 +322,25 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // hand-written dependency list can match it and the validator refuses to compile the component at
   // all. Letting the compiler own this memoization is what gets the whole file optimized.
   const handleEffortChange = (value: string) => {
-    if (ultrathinkPromptControlled) return;
-    if (!value) return;
-    const nextOption = effortLevels.find((option) => option.value === value);
-    if (!nextOption) return;
-    if (promptInjectedValues.includes(nextOption.value)) {
-      const nextPrompt =
-        prompt.trim().length === 0
-          ? ULTRATHINK_PROMPT_PREFIX
-          : applyClaudePromptEffortPrefix(prompt, "ultrathink");
-      onPromptChange(nextPrompt);
+    if (!engine) return;
+    const plan = planComposerEffortChange({
+      engine,
+      selection: {
+        effortLevels,
+        promptInjectedValues,
+        primarySelectDescriptor,
+        ultrathinkPromptControlled,
+      },
+      prompt,
+      value,
+    });
+    if (!plan) return;
+    if (plan.kind === "prompt") {
+      onPromptChange(plan.prompt);
       onSelectionComplete?.();
       return;
     }
-    const optionId =
-      primarySelectDescriptorId ??
-      (engine === "kilo" || engine === "opencode"
-        ? "variant"
-        : engine === "pi"
-          ? "thinkingLevel"
-          : engine === "claude"
-            ? "effort"
-            : "reasoningEffort");
-    if (!engine) return;
-    commitTrait(buildEngineOptionPatch(engine, optionId, nextOption.value));
+    commitTrait(plan.patch);
   };
 
   if (!hasVisibleControls && !hasAgentControls) {
@@ -383,7 +377,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
           />
         </>
       ) : null}
-      {effortLevels.length > 0 ? (
+      {effortLevels.length > 0 && !hideEffortControls ? (
         <>
           {hasPriorEffortSection ? <MenuDivider /> : null}
           <TraitRadioSection

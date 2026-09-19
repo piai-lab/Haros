@@ -119,6 +119,12 @@ export const APPEARANCE_SETTINGS_SEARCH = {
     keywords:
       "Control how wide the chat column grows so tables and wide content get more room. standard wide full",
   }),
+  effortSlider: defineSettingsSearchRow({
+    id: "appearance:effort-slider",
+    titleKey: "settings.effortSlider",
+    keywords:
+      "Show a stepped effort slider in the Composer model menu. radio buttons reasoning ladder.",
+  }),
   baseFontSize: defineSettingsSearchRow({
     id: "appearance:base-font-size",
     titleKey: "settings.baseFontSize",

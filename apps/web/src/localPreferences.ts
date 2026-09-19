@@ -123,6 +123,7 @@ export const LocalPreferencesSchema = Schema.Struct({
   showEnvironmentPinned: Schema.Boolean.pipe(withDefaults(() => true)),
   showEnvironmentNotepad: Schema.Boolean.pipe(withDefaults(() => false)),
   followUpBehavior: FollowUpBehavior.pipe(withDefaults(() => DEFAULT_FOLLOW_UP_BEHAVIOR)),
+  composerEffortSlider: Schema.Boolean.pipe(withDefaults(() => true)),
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),

@@ -418,6 +418,9 @@ function SettingsRouteView() {
     ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.studio")] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? [t("settings.uiDensity")] : []),
     ...(settings.chatWidth !== defaults.chatWidth ? [t("settings.chatWidth")] : []),
+    ...(settings.composerEffortSlider !== defaults.composerEffortSlider
+      ? [t("settings.effortSlider")]
+      : []),
     ...(desktopAppIcon !== "default" ? [t("settings.appIcon")] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? [t("settings.baseFontSize")] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx
@@ -1171,6 +1174,29 @@ function SettingsRouteView() {
               }}
               ariaLabel={t("settings.chatWidth")}
               options={chatWidthOptions}
+            />
+          }
+        />
+
+        <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.effortSlider.target}
+          title={t("settings.effortSlider")}
+          description={t("settings.effortSliderDescription")}
+          resetAction={
+            settings.composerEffortSlider !== defaults.composerEffortSlider ? (
+              <SettingResetButton
+                label={t("settings.effortSlider")}
+                onClick={() => updateSettings({ composerEffortSlider: defaults.composerEffortSlider })}
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.composerEffortSlider}
+              onCheckedChange={(checked) =>
+                updateSettings({ composerEffortSlider: Boolean(checked) })
+              }
+              aria-label={t("settings.effortSliderAria")}
             />
           }
         />

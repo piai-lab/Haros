@@ -9,14 +9,17 @@ import {
   type EngineModelDescriptor,
 } from "@harnessos/contracts";
 import {
+  applyClaudePromptEffortPrefix,
   getEngineOptionCurrentValue,
   getEngineOptionDescriptors,
   isClaudeUltrathinkPrompt,
   trimOrNull,
 } from "@harnessos/shared/model";
 
-import type { EngineOptions } from "../../engineModelOptions";
+import { buildEngineOptionPatch, type EngineOptions } from "../../engineModelOptions";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
+
+const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
 function getCursorBooleanModelParameter(
   model: string | null | undefined,
@@ -243,4 +246,61 @@ export function hasVisibleComposerTraitControls(
     selection.contextWindowOptions.length > 1 ||
     ((options?.includeFastMode ?? true) && supportsComposerFastModeControl(selection))
   );
+}
+
+function fallbackEffortOptionId(engine: EngineKind): string {
+  if (engine === "kilo" || engine === "opencode") return "variant";
+  if (engine === "pi") return "thinkingLevel";
+  if (engine === "claude") return "effort";
+  return "reasoningEffort";
+}
+
+export type ComposerEffortChangePlan =
+  | { readonly kind: "prompt"; readonly prompt: string }
+  | { readonly kind: "options"; readonly patch: Record<string, unknown> };
+
+export function planComposerEffortChange(input: {
+  engine: EngineKind;
+  selection: Pick<
+    ReturnType<typeof getComposerTraitSelection>,
+    | "effortLevels"
+    | "promptInjectedValues"
+    | "primarySelectDescriptor"
+    | "ultrathinkPromptControlled"
+  >;
+  prompt: string;
+  value: string;
+}): ComposerEffortChangePlan | null {
+  const { engine, selection, prompt, value } = input;
+  if (selection.ultrathinkPromptControlled) return null;
+  if (!value) return null;
+  const nextOption = selection.effortLevels.find((option) => option.value === value);
+  if (!nextOption) return null;
+  if (selection.promptInjectedValues.includes(nextOption.value)) {
+    return {
+      kind: "prompt",
+      prompt:
+        prompt.trim().length === 0
+          ? ULTRATHINK_PROMPT_PREFIX
+          : applyClaudePromptEffortPrefix(prompt, "ultrathink"),
+    };
+  }
+  const optionId = selection.primarySelectDescriptor?.id ?? fallbackEffortOptionId(engine);
+  return { kind: "options", patch: buildEngineOptionPatch(engine, optionId, nextOption.value) };
+}
+
+export function resolveComposerEffortLadderIndex(
+  selection: Pick<
+    ReturnType<typeof getComposerTraitSelection>,
+    "effort" | "effortLevels" | "promptInjectedValues" | "ultrathinkPromptControlled"
+  >,
+): number {
+  if (selection.ultrathinkPromptControlled) {
+    const injectedIndex = selection.effortLevels.findIndex((level) =>
+      selection.promptInjectedValues.includes(level.value),
+    );
+    if (injectedIndex >= 0) return injectedIndex;
+  }
+  const index = selection.effortLevels.findIndex((level) => level.value === selection.effort);
+  return index >= 0 ? index : 0;
 }

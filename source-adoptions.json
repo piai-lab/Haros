@@ -890,6 +890,20 @@
       "mode": "adapt",
       "changes": "Haros routes transcript selections to the current composer, an existing Side chat, or a new Chat through the existing sidechat and handleNewThread owners. It does not copy native Engine session state or invent a second selection store.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the listed selection-routing files without restoring transcript product markers."
+    },
+    {
+      "id": "synara-composer-effort-slider",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/components/ui/slider.tsx",
+        "apps/web/src/components/chat/ComposerEffortSliderCard.tsx",
+        "apps/web/src/components/chat/composerTraits.ts"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed composer effort-slider mechanism.",
+      "mode": "adapt",
+      "changes": "Haros adopts the stepped Composer effort slider into the existing composerTraits / TraitsPicker / ComposerModelEffortPicker owners. Effort semantics stay in getComposerTraitSelection and planComposerEffortChange. The slider preference lives in localPreferences.composerEffortSlider and defaults on. Ultrathink remains prompt injection. Fast mode is not a second effort ladder.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the slider primitive and card and restoring radio effort controls."
     }
   ]
 }

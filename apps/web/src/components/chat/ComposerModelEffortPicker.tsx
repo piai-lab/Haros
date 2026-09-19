@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useI18n } from "~/i18n";
 import { ChevronDownIcon, FastModeIcon, RefreshCwIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useLocalPreferences } from "~/localPreferences";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
 import type { EngineModelOption, EngineOptions } from "../../engineModelOptions";
 import { Button } from "../ui/button";
@@ -27,6 +28,8 @@ import {
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
+import { ComposerEffortSliderCard } from "./ComposerEffortSliderCard";
+import { getComposerTraitSelection } from "./composerTraits";
 import { renderEngineTraitsMenuContent } from "./composerEngineRegistry";
 import { EngineModelMenuItems, resolveEngineModelLabel } from "./EngineModelPicker";
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
@@ -59,6 +62,7 @@ type ComposerModelEffortPickerProps = {
 
 export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps) {
   const { t } = useI18n();
+  const { preferences } = useLocalPreferences();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isMenuOpen = props.open ?? uncontrolledOpen;
   const setMenuOpen = (nextOpen: boolean) => {
@@ -102,6 +106,27 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     setMenuOpen(false);
     props.onSelectionCommitted?.();
   };
+  const liveStarredTraits = props.engine
+    ? getComposerTraitSelection(
+        props.engine,
+        props.model,
+        props.prompt,
+        props.modelOptions,
+        props.runtimeModel,
+      )
+    : null;
+  const starredTraitProps = liveStarredTraits
+    ? {
+        starredEffort: liveStarredTraits.effort,
+        starredFastMode: liveStarredTraits.fastModeEnabled,
+        starredThinking: liveStarredTraits.thinkingEnabled,
+      }
+    : {};
+  const usesEffortSlider =
+    preferences.composerEffortSlider &&
+    Boolean(props.engine) &&
+    Boolean(props.model) &&
+    (liveStarredTraits?.effortLevels.length ?? 0) > 0;
   const traitsContent = props.model
     ? renderEngineTraitsMenuContent({
         engine: props.engine,
@@ -112,6 +137,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         ...(props.runtimeAgents !== undefined ? { runtimeAgents: props.runtimeAgents } : {}),
         modelOptions: props.modelOptions,
         prompt: props.prompt,
+        ...(usesEffortSlider ? { hideEffortControls: true } : {}),
         onPromptChange: props.onPromptChange,
         onSelectionComplete: closeAndRefocus,
       })
@@ -261,9 +287,22 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
               </>
             ) : null}
             {props.engine ? (
-              traitsContent ? (
+              traitsContent || usesEffortSlider ? (
                 <>
                   {traitsContent}
+                  {traitsContent && usesEffortSlider ? <MenuSeparator /> : null}
+                  {usesEffortSlider && props.model ? (
+                    <ComposerEffortSliderCard
+                      engine={props.engine}
+                      threadId={props.threadId}
+                      model={props.model}
+                      modelLabel={modelLabel}
+                      {...(props.runtimeModel ? { runtimeModel: props.runtimeModel } : {})}
+                      modelOptions={props.modelOptions}
+                      prompt={props.prompt}
+                      onPromptChange={props.onPromptChange}
+                    />
+                  ) : null}
                   <MenuSeparator />
                   <MenuSub>
                     <MenuSubTrigger>
@@ -281,6 +320,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                         {...(props.loadingEngineModels
                           ? { loadingEngineModels: props.loadingEngineModels }
                           : {})}
+                        {...starredTraitProps}
                         onEngineModelChange={props.onEngineModelChange}
                         onAfterSelection={closeAndRefocus}
                       />
@@ -296,6 +336,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   {...(props.loadingEngineModels
                     ? { loadingEngineModels: props.loadingEngineModels }
                     : {})}
+                  {...starredTraitProps}
                   onEngineModelChange={props.onEngineModelChange}
                   onAfterSelection={closeAndRefocus}
                 />
@@ -311,6 +352,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
             {...(props.loadingEngineModels
               ? { loadingEngineModels: props.loadingEngineModels }
               : {})}
+            {...starredTraitProps}
             onEngineModelChange={props.onEngineModelChange}
             onAfterSelection={closeAndRefocus}
           />

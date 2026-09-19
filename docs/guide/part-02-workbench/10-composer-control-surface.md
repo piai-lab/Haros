@@ -50,7 +50,9 @@ validated in Chapter 7, selects Plan because she wants a reviewable direction be
 keeps the runtime mode at the level appropriate for inspection.
 
 Before submission, the Composer can show slash-command suggestions, model options, attachment
-chips, and mode controls. Those presentation features help Maya form intent; they do not bypass
+chips, and mode controls. Engines with an effort ladder use a stepped slider in the started-thread
+model menu; Settings can restore radio buttons. Ultrathink remains prompt injection. Fast is not a
+second effort ladder. Those presentation features help Maya form intent; they do not bypass
 canonical owners. The Engine list comes from descriptor-backed projections. Model options come from
 the selected Engine's catalog. Slash commands are recognized by the Composer parser and then mapped
 to product or Engine-native behavior.
@@ -75,6 +77,7 @@ history, mutate another Engine's state, or skip capability checks.
 | ------------------- | ------------------------ | ---------------------------------- | ----------------------------------------- |
 | Slash trigger       | Composer parser/picker   | mapped command owner               | treating any slash as a command           |
 | Engine/model picker | Web projection           | descriptor, catalog, admission     | storing display label as identity         |
+| Effort slider       | Composer trait selection | `composerTraits` / local preference | treating Fast as a second effort ladder |
 | Mode picker         | typed mode controls      | capability projection and dispatch | assuming every Engine supports every mode |
 | Send button         | Composer                 | orchestration command path         | equating click with accepted turn         |
 | Queue/Steer header  | Composer follow-up state | decider and lifecycle              | rewriting a running turn locally          |

@@ -57,6 +57,7 @@ type EngineTraitRenderInput = {
   modelOptions: EngineOptions | undefined;
   prompt: string;
   includeFastMode?: boolean;
+  hideEffortControls?: boolean;
   onPromptChange: (prompt: string) => void;
   onSelectionComplete?: () => void;
 };
@@ -82,6 +83,9 @@ function renderTraitsMenuContentForEngine(
       modelOptions={input.modelOptions}
       prompt={input.prompt}
       {...(input.includeFastMode === undefined ? {} : { includeFastMode: input.includeFastMode })}
+      {...(input.hideEffortControls === undefined
+        ? {}
+        : { hideEffortControls: input.hideEffortControls })}
       onPromptChange={input.onPromptChange}
       {...(input.onSelectionComplete ? { onSelectionComplete: input.onSelectionComplete } : {})}
     />
@@ -273,6 +277,7 @@ export function renderEngineTraitsMenuContent(input: {
   modelOptions: EngineOptions | undefined;
   prompt: string;
   includeFastMode?: boolean;
+  hideEffortControls?: boolean;
   onPromptChange: (prompt: string) => void;
   onSelectionComplete?: () => void;
 }): ReactNode {
