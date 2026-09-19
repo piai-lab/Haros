@@ -353,6 +353,7 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import {
   deletePromotedThreadForCleanup,
   promoteThreadCreate,
@@ -7467,6 +7468,15 @@ export default function ChatView({
     if (!queuedTurn) {
       sendPreflightInFlightRef.current = true;
       await waitForPendingComposerImages();
+      const editorWorkspaceRoot = diffEnvironmentState.cwd ?? activeProjectCwd;
+      if (editorWorkspaceRoot) {
+        const editorsFlushed = await flushWorkspaceEditors(queryClient, editorWorkspaceRoot);
+        if (!editorsFlushed) {
+          sendPreflightInFlightRef.current = false;
+          setThreadError(activeThread.id, t("composer.editorSaveBlocked"));
+          return false;
+        }
+      }
       sendPreflightInFlightRef.current = false;
     }
     const queuedChatTurn = queuedTurn ?? null;

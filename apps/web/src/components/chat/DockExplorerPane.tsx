@@ -5,7 +5,10 @@
 // Layer: Chat right-dock UI
 // Exports: DockExplorerPane
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+
+import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";
@@ -28,6 +31,7 @@ export const DockExplorerPane = function DockExplorerPane(props: {
   onCommentInChat?: ((comment: FileCommentSelection) => void) | undefined;
 }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [expandedDirectories, setExpandedDirectories] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
@@ -35,7 +39,13 @@ export const DockExplorerPane = function DockExplorerPane(props: {
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSelectFile = (path: string) => {
-    setSelectedFilePath(path);
+    void (async () => {
+      if (props.workspaceRoot) {
+        const flushed = await flushWorkspaceEditors(queryClient, props.workspaceRoot);
+        if (!flushed) return;
+      }
+      setSelectedFilePath(path);
+    })();
   };
 
   const handleToggleDirectory = (path: string) => {

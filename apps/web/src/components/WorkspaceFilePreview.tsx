@@ -5,11 +5,7 @@
 // Layer: Web chat presentation component
 // Exports: WorkspaceFilePreview, isMarkdownPreviewablePath
 
-import type {
-  ProjectFileEncoding,
-  ProjectFileLineEnding,
-  ProjectReadFileResult,
-} from "@harnessos/contracts";
+import type { ProjectReadFileResult } from "@harnessos/contracts";
 import {
   isSupportedLocalImagePath,
   isSupportedLocalPdfPath,
@@ -22,6 +18,7 @@ import {
 } from "@harnessos/shared/path";
 import { isScratchWorkspacePath } from "@harnessos/shared/threadWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useWorkspaceFileEditorBuffer } from "~/hooks/useWorkspaceFileEditor";
 import {
   Component,
   Suspense,
@@ -315,56 +312,6 @@ export interface WorkspaceFilePreviewProps {
   onCommentInChat?: ((comment: FileCommentSelection) => void) | undefined;
 }
 
-type EditableLineEnding = Exclude<ProjectFileLineEnding, "mixed">;
-
-interface EditableFileDocument {
-  key: string;
-  relativePath: string;
-  contents: string;
-  version: string;
-  encoding: ProjectFileEncoding;
-  lineEnding: EditableLineEnding;
-}
-
-interface FileEditBuffer extends EditableFileDocument {
-  savedContents: string;
-  saving: boolean;
-  error: FileEditError | null;
-}
-
-type FileEditError =
-  | { readonly kind: "unavailable" }
-  | { readonly kind: "failed"; readonly detail: string | null };
-
-function makeFileEditBuffer(document: EditableFileDocument): FileEditBuffer {
-  return {
-    ...document,
-    savedContents: document.contents,
-    saving: false,
-    error: null,
-  };
-}
-
-function resolveFileEditBuffer(
-  current: FileEditBuffer | null,
-  document: EditableFileDocument,
-): FileEditBuffer {
-  if (current?.key !== document.key) {
-    return makeFileEditBuffer(document);
-  }
-  const dirty = current.contents !== current.savedContents;
-  const sourceChanged =
-    current.version !== document.version || current.savedContents !== document.contents;
-  return !dirty && sourceChanged ? makeFileEditBuffer(document) : current;
-}
-
-function readFileSaveError(error: unknown): FileEditError {
-  return {
-    kind: "failed",
-    detail: error instanceof Error && error.message.length > 0 ? error.message : null,
-  };
-}
-
 function FilePreviewErrorState(props: { message: string; detail?: string | null }) {
   const { t } = useI18n();
   return (
@@ -392,7 +339,6 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   const taskWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
   const latestTaskWriteVersionRef = useRef({ next: 0, byFile: new Map<string, number>() });
   const taskFileDiskVersionRef = useRef(new Map<string, string>());
-  const [editBuffer, setEditBuffer] = useState<FileEditBuffer | null>(null);
   const {
     filePath: requestedFilePath,
     onAskWhyInChat,
@@ -522,32 +468,17 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
 
   const fileContents = fileQuery.data?.contents ?? "";
   const showMarkdownPreview = fileIsMarkdown && markdownPreviewEnabled;
-  const editableDocument: EditableFileDocument | null =
-    props.editable &&
-    workspaceRoot !== null &&
-    filePath !== null &&
-    fileIsWorkspaceRelative &&
-    fileQuery.data !== undefined &&
-    !fileQuery.data.truncated &&
-    fileQuery.data.version !== null &&
-    fileQuery.data.encoding !== null &&
-    fileQuery.data.lineEnding !== null &&
-    fileQuery.data.lineEnding !== "mixed"
-      ? {
-          key: `${workspaceRoot}\0${fileQuery.data.relativePath}`,
-          relativePath: fileQuery.data.relativePath,
-          contents: fileQuery.data.contents,
-          version: fileQuery.data.version,
-          encoding: fileQuery.data.encoding,
-          lineEnding: fileQuery.data.lineEnding,
-        }
-      : null;
-  const activeEditBuffer = editableDocument
-    ? resolveFileEditBuffer(editBuffer, editableDocument)
-    : null;
-  const editBufferDirty =
-    activeEditBuffer !== null && activeEditBuffer.contents !== activeEditBuffer.savedContents;
-  const displayedFileContents = activeEditBuffer?.contents ?? fileContents;
+  const editor = useWorkspaceFileEditorBuffer({
+    cwd: workspaceRoot,
+    filePath,
+    enabled:
+      Boolean(props.editable) &&
+      workspaceRoot !== null &&
+      filePath !== null &&
+      fileIsWorkspaceRelative,
+    file: fileQuery.data,
+  });
+  const displayedFileContents = editor.canEdit ? editor.state.value : fileContents;
   const lineCount =
     displayedFileContents.length === 0 ? 0 : displayedFileContents.split("\n").length;
   const readOnlyReason =
@@ -561,94 +492,10 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             ? t("file.mixedLineEndingsReadOnly")
             : fileQuery.data.version === null || fileQuery.data.encoding === null
               ? t("file.formatReadOnly")
-              : null;
+              : editor.readOnlyReason === "symlink"
+                ? t("file.symlinkReadOnly")
+                : null;
 
-  const handleEditBufferChange = (contents: string) => {
-    if (!editableDocument) return;
-    setEditBuffer((current) => ({
-      ...resolveFileEditBuffer(current, editableDocument),
-      contents,
-      error: null,
-    }));
-  };
-
-  const handleEditBufferSave = async () => {
-    if (
-      !workspaceRoot ||
-      !editableDocument ||
-      !activeEditBuffer ||
-      !editBufferDirty ||
-      activeEditBuffer.saving
-    ) {
-      return;
-    }
-    const api = readNativeApi();
-    if (!api) {
-      setEditBuffer((current) => ({
-        ...resolveFileEditBuffer(current, editableDocument),
-        error: { kind: "unavailable" },
-      }));
-      return;
-    }
-
-    const documentKey = activeEditBuffer.key;
-    const contentsToSave = activeEditBuffer.contents;
-    const expectedVersion = activeEditBuffer.version;
-    setEditBuffer((current) => ({
-      ...resolveFileEditBuffer(current, editableDocument),
-      saving: true,
-      error: null,
-    }));
-
-    try {
-      const result = await api.projects.writeFile({
-        cwd: workspaceRoot,
-        relativePath: activeEditBuffer.relativePath,
-        contents: contentsToSave,
-        expectedVersion,
-        encoding: activeEditBuffer.encoding,
-        lineEnding: activeEditBuffer.lineEnding,
-      });
-      const options = projectReadFileQueryOptions({ cwd: workspaceRoot, relativePath: filePath });
-      queryClient.setQueryData<ProjectReadFileResult>(options.queryKey, (current) =>
-        current ? { ...current, contents: contentsToSave, version: result.version } : current,
-      );
-      taskFileDiskVersionRef.current.set(`${workspaceRoot}\0${filePath}`, result.version);
-      setEditBuffer((current) =>
-        current?.key === documentKey
-          ? {
-              ...current,
-              savedContents: contentsToSave,
-              version: result.version,
-              saving: false,
-              error: null,
-            }
-          : current,
-      );
-    } catch (error) {
-      setEditBuffer((current) =>
-        current?.key === documentKey
-          ? { ...current, saving: false, error: readFileSaveError(error) }
-          : current,
-      );
-    }
-  };
-
-  const handleEditBufferReload = () => {
-    if (!editableDocument || !filePath) return;
-    const documentKey = editableDocument.key;
-    const options = projectReadFileQueryOptions({ cwd: workspaceRoot, relativePath: filePath });
-    void queryClient
-      .invalidateQueries({ queryKey: options.queryKey })
-      .then(() => {
-        setEditBuffer((current) => (current?.key === documentKey ? null : current));
-      })
-      .catch((error: unknown) => {
-        setEditBuffer((current) =>
-          current?.key === documentKey ? { ...current, error: readFileSaveError(error) } : current,
-        );
-      });
-  };
   // Highlight -> floating "Add to chat" -> reference that points at exactly what
   // was selected, mirroring the transcript flow. This is offered only in the
   // source view, where the DOM mirrors the file's lines/columns 1:1 so a
@@ -666,7 +513,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     }
   };
   const previewSelectionAction = useCodeSelectionAction({
-    enabled: Boolean(onReferenceInChat && filePath) && !showMarkdownPreview && !editableDocument,
+    enabled: Boolean(onReferenceInChat && filePath) && !showMarkdownPreview && !editor.canEdit,
     readSelection: readPreviewSelection,
     onCommit: commitPreviewSelection,
   });
@@ -675,7 +522,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   // `.line` resolves to an exact line number (the rendered-markdown view
   // restructures the source and cannot map a row back to a file line).
   const lineCommentingEnabled =
-    Boolean(onCommentInChat && filePath) && !showMarkdownPreview && !editableDocument;
+    Boolean(onCommentInChat && filePath) && !showMarkdownPreview && !editor.canEdit;
   const lineCommenting = useFileLineCommenting({
     enabled: lineCommentingEnabled,
     resetKey: filePath,
@@ -794,7 +641,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     fileQuery.data.encoding !== null &&
     fileQuery.data.lineEnding !== null &&
     fileQuery.data.lineEnding !== "mixed" &&
-    !editBufferDirty;
+    !editor.dirty;
 
   if (!props.workspaceRoot && !fileIsLocalAbsolute && !fileIsScratchBinaryPreview) {
     return (
@@ -859,7 +706,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   const fileReadError = fileQuery.error;
   const fileReadCapacityError = isRpcCapacityExceededError(fileReadError);
   const showFileReadErrorIndicator =
-    hasFileContents && fileReadError !== null && !activeEditBuffer?.error;
+    hasFileContents && fileReadError !== null && editor.state.saveError === null;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[var(--color-background-surface)]">
@@ -873,23 +720,21 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         onAskWhyInChat={onAskWhyInChat}
         contentsForCopy={fileIsImage || fileQuery.data === undefined ? null : displayedFileContents}
         truncated={fileQuery.data?.truncated ?? false}
-        dirty={editBufferDirty}
+        dirty={editor.dirty}
         readOnlyReason={readOnlyReason}
       />
-      {activeEditBuffer?.error ? (
+      {editor.state.saveError ? (
         <div
           role="alert"
           className="flex shrink-0 items-center gap-3 border-b border-destructive/25 bg-destructive/5 px-3 py-2 text-[11px] text-destructive"
         >
           <span className="min-w-0 flex-1">
-            {activeEditBuffer.error.kind === "unavailable"
-              ? t("file.saveUnavailable")
-              : t("file.saveFailed")}
-            {activeEditBuffer.error.kind === "failed" && activeEditBuffer.error.detail ? (
+            {t("file.saveFailed")}
+            {editor.state.saveError.length > 0 ? (
               <details className="mt-1 max-w-full text-muted-foreground">
                 <summary className="cursor-pointer">{t("error.showDetails")}</summary>
                 <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words">
-                  {activeEditBuffer.error.detail}
+                  {editor.state.saveError}
                 </pre>
               </details>
             ) : null}
@@ -897,10 +742,19 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
           <button
             type="button"
             className="shrink-0 rounded-md px-2 py-1 font-medium text-foreground/80 hover:bg-foreground/8"
-            onClick={handleEditBufferReload}
+            onClick={editor.reloadFromDisk}
           >
             {t("file.reloadFromDisk")}
           </button>
+          {editor.state.conflict ? (
+            <button
+              type="button"
+              className="shrink-0 rounded-md px-2 py-1 font-medium text-foreground/80 hover:bg-foreground/8"
+              onClick={editor.overwrite}
+            >
+              {t("file.overwrite")}
+            </button>
+          ) : null}
         </div>
       ) : showFileReadErrorIndicator ? (
         <div
@@ -948,21 +802,21 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         />
       ) : !hasFileContents ? (
         <FilePreviewLoadingState />
-      ) : activeEditBuffer && editableDocument && !showMarkdownPreview ? (
+      ) : editor.canEdit && !showMarkdownPreview ? (
         <textarea
           className="editor-file-editor"
           aria-label={t("file.edit", { path: filePath })}
-          aria-busy={activeEditBuffer.saving}
-          aria-invalid={activeEditBuffer.error ? "true" : undefined}
-          value={activeEditBuffer.contents}
+          aria-busy={editor.state.saving}
+          aria-invalid={editor.state.saveError ? "true" : undefined}
+          value={editor.state.value}
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
-          onChange={(event) => handleEditBufferChange(event.currentTarget.value)}
+          onChange={(event) => editor.handleChange(event.currentTarget.value)}
           onKeyDown={(event) => {
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
               event.preventDefault();
-              void handleEditBufferSave();
+              editor.save();
             }
           }}
         />

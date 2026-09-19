@@ -164,10 +164,6 @@
       "types": "./src/pinnedMessages.ts",
       "import": "./src/pinnedMessages.ts"
     },
-    "./threadMarkers": {
-      "types": "./src/threadMarkers.ts",
-      "import": "./src/threadMarkers.ts"
-    },
     "./threadWorkspace": {
       "types": "./src/threadWorkspace.ts",
       "import": "./src/threadWorkspace.ts"
@@ -287,6 +283,10 @@
     "./unifiedPatchStats": {
       "types": "./src/unifiedPatchStats.ts",
       "import": "./src/unifiedPatchStats.ts"
+    },
+    "./workspaceFileWrite": {
+      "types": "./src/workspaceFileWrite.ts",
+      "import": "./src/workspaceFileWrite.ts"
     },
     "./engineDeliveryBlock": {
       "types": "./src/engineDeliveryBlock.ts",

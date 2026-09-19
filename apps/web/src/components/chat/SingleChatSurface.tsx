@@ -2,6 +2,7 @@ import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { isWorkspaceRelativePathSafe } from "@harnessos/shared/path";
 import type { ProjectId, ThreadId, TurnId } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { flushWorkspaceEditors } from "~/lib/workspaceEditorSession";
 import { useNavigate } from "@tanstack/react-router";
 import {
   lazy,
@@ -1287,7 +1288,17 @@ export function SingleChatSurface(props: {
           {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
           {...(paneIconOverrides ? { paneIconOverrides } : {})}
           onSelectPane={handleSelectDockPane}
-          onClosePane={(paneId) => closePane(props.threadId, paneId)}
+          onClosePane={(paneId) => {
+            const pane = dockState.panes.find((candidate) => candidate.id === paneId);
+            if (pane?.kind === "explorer" && workspaceRoot) {
+              void flushWorkspaceEditors(queryClient, workspaceRoot).then((flushed) => {
+                if (!flushed) return;
+                closePane(props.threadId, paneId);
+              });
+              return;
+            }
+            closePane(props.threadId, paneId);
+          }}
           onCollapse={() => setDockOpen(props.threadId, false)}
           onOpenChange={(open) => setDockOpen(props.threadId, open)}
           onAddPane={handleAddDockPane}
