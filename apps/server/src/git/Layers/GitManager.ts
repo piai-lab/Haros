@@ -1410,18 +1410,33 @@ export const makeGitManager = Effect.gen(function* () {
     };
   });
 
+  const blameLine: GitManagerShape["blameLine"] = Effect.fnUntraced(function* (input) {
+    return yield* gitCore.blameLine(input);
+  });
+
+  const readFileAtRev: GitManagerShape["readFileAtRev"] = Effect.fnUntraced(function* (input) {
+    return yield* gitCore.readFileAtRev(input);
+  });
+
   const readWorkingTreeDiff: GitManagerShape["readWorkingTreeDiff"] = Effect.fnUntraced(
     function* (input) {
       switch (input.scope) {
         case "branch":
           return yield* gitCore.readBranchPatch(input.cwd);
+        case "ref": {
+          const compareRef = input.compareRef?.trim() ?? "";
+          if (compareRef.length === 0) {
+            return yield* gitManagerError("readWorkingTreeDiff", "A compare ref is required.");
+          }
+          return yield* gitCore.readRefPatch(input.cwd, compareRef);
+        }
         case "staged":
           return yield* gitCore.readStagedPatch(input.cwd);
         case "unstaged":
           return yield* gitCore.readUnstagedPatch(input.cwd);
         case "workingTree":
         default:
-          return yield* gitCore.readWorkingTreePatch(input.cwd);
+          return yield* gitCore.readWorkingTreePatch(input.cwd, input.filePath);
       }
     },
   );
@@ -1431,7 +1446,9 @@ export const makeGitManager = Effect.gen(function* () {
   // identical to the ones a client-side parse produced, so no surface changes what it displays.
   const readWorkingTreeDiffStats: GitManagerShape["readWorkingTreeDiffStats"] = Effect.fnUntraced(
     function* (input) {
-      return yield* gitCore.readDiffStats(input.cwd, input.scope ?? "workingTree").pipe(
+      return yield* gitCore
+        .readDiffStats(input.cwd, input.scope ?? "workingTree", input.compareRef)
+        .pipe(
         Effect.catch(() =>
           readWorkingTreeDiff(input).pipe(
             Effect.map(
@@ -2794,6 +2811,8 @@ The local stash entry was kept for recovery.`,
     status,
     pullRequestForBranch,
     readWorkingTreeDiff,
+    blameLine,
+    readFileAtRev,
     readWorkingTreeDiffStats,
     summarizeDiff,
     resolvePullRequest,

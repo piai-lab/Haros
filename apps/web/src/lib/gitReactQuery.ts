@@ -1,4 +1,5 @@
 import type {
+  GitBlameLineInput,
   GitHandoffThreadInput,
   GitReadWorkingTreeDiffInput,
   GitStackedAction,
@@ -6,6 +7,7 @@ import type {
   NativeApi,
   EngineStartOptions,
 } from "@harnessos/contracts";
+import { DEFAULT_GIT_RECENT_COMMIT_LIMIT } from "@harnessos/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "../nativeApi";
 import { EXPENSIVE_READ_RETRY_OPTIONS, isRpcCapacityExceededError } from "./expensiveReadRetry";
@@ -39,13 +41,24 @@ export const gitQueryKeys = {
   workingTreeDiff: (
     cwd: string | null,
     scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree",
-  ) => ["git", "working-tree-diff", cwd, scope] as const,
+    compareRef: string | null = null,
+  ) => ["git", "working-tree-diff", cwd, scope, compareRef] as const,
   // Deliberately nested under the patch key so every existing
   // `["git", "working-tree-diff", ...]` invalidation refreshes the counts too.
   workingTreeDiffStats: (
     cwd: string | null,
     scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree",
-  ) => ["git", "working-tree-diff", cwd, scope, "stats"] as const,
+    compareRef: string | null = null,
+  ) => ["git", "working-tree-diff", cwd, scope, compareRef, "stats"] as const,
+  blameLine: (
+    cwd: string | null,
+    filePath: string | null,
+    line: number | null,
+    rev: string | null,
+    base: "branch" | null,
+  ) => ["git", "blame-line", cwd, filePath, line, rev, base] as const,
+  recentCommits: (cwd: string | null, limit: number) =>
+    ["git", "recent-commits", cwd, limit] as const,
   diffSummary: (
     cacheScope: string | null,
     model: string | null,
@@ -421,24 +434,41 @@ export function gitPullRequestSnapshotQueryOptions(input: {
  * reparsing it on the renderer's main thread just to show `+N/-M`. The response here is three
  * integers regardless of diff size. Fetch the patch itself only when showing the diff.
  */
+function resolveGitCompareRef(
+  scope: GitReadWorkingTreeDiffInput["scope"],
+  compareRef: string | null | undefined,
+): string | null {
+  if (scope !== "ref") {
+    return null;
+  }
+  const trimmed = compareRef?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export function gitWorkingTreeDiffStatsQueryOptions(input: {
   cwd: string | null;
   scope?: GitReadWorkingTreeDiffInput["scope"];
+  compareRef?: string | null;
   enabled?: boolean;
   refetchInterval?: number | false;
 }) {
   const scope = input.scope ?? "workingTree";
+  const compareRef = resolveGitCompareRef(scope, input.compareRef);
   const refetchInterval = input.refetchInterval;
   return queryOptions({
-    queryKey: gitQueryKeys.workingTreeDiffStats(input.cwd, scope),
+    queryKey: gitQueryKeys.workingTreeDiffStats(input.cwd, scope, compareRef),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
         throw new Error("Working tree diff stats are unavailable.");
       }
-      return api.git.workingTreeDiffStats({ cwd: input.cwd, scope });
+      return api.git.workingTreeDiffStats({
+        cwd: input.cwd,
+        scope,
+        ...(compareRef ? { compareRef } : {}),
+      });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null,
+    enabled: (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
     staleTime: GIT_WORKING_TREE_DIFF_STALE_TIME_MS,
     ...(refetchInterval !== undefined ? { refetchInterval } : {}),
     refetchOnWindowFocus: true,
@@ -450,26 +480,89 @@ export function gitWorkingTreeDiffStatsQueryOptions(input: {
 export function gitWorkingTreeDiffQueryOptions(input: {
   cwd: string | null;
   scope?: GitReadWorkingTreeDiffInput["scope"];
+  compareRef?: string | null;
   enabled?: boolean;
   refetchInterval?: number | false;
 }) {
   const scope = input.scope ?? "workingTree";
+  const compareRef = resolveGitCompareRef(scope, input.compareRef);
   const refetchInterval = input.refetchInterval;
   return queryOptions({
-    queryKey: gitQueryKeys.workingTreeDiff(input.cwd, scope),
+    queryKey: gitQueryKeys.workingTreeDiff(input.cwd, scope, compareRef),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
         throw new Error("Working tree diff is unavailable.");
       }
-      return api.git.readWorkingTreeDiff({ cwd: input.cwd, scope });
+      return api.git.readWorkingTreeDiff({
+        cwd: input.cwd,
+        scope,
+        ...(compareRef ? { compareRef } : {}),
+      });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null,
+    enabled: (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
     staleTime: GIT_WORKING_TREE_DIFF_STALE_TIME_MS,
     ...(refetchInterval !== undefined ? { refetchInterval } : {}),
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
+  });
+}
+
+export function gitBlameLineQueryOptions(input: {
+  cwd: string | null;
+  filePath: string | null;
+  line: number | null;
+  rev?: string | null;
+  base?: GitBlameLineInput["base"] | null;
+  enabled?: boolean;
+}) {
+  const rev = input.rev?.trim() || null;
+  const base = input.base ?? null;
+  return queryOptions({
+    queryKey: gitQueryKeys.blameLine(input.cwd, input.filePath, input.line, rev, base),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      if (!input.cwd || !input.filePath || input.line === null) {
+        throw new Error("Git blame is unavailable.");
+      }
+      return api.git.blameLine({
+        cwd: input.cwd,
+        filePath: input.filePath,
+        line: input.line,
+        ...(rev ? { rev } : {}),
+        ...(base ? { base } : {}),
+      });
+    },
+    enabled:
+      (input.enabled ?? true) &&
+      input.cwd !== null &&
+      input.filePath !== null &&
+      input.line !== null,
+    staleTime: GIT_BRANCHES_STALE_TIME_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function gitRecentCommitsQueryOptions(input: {
+  cwd: string | null;
+  limit?: number;
+  enabled?: boolean;
+}) {
+  const limit = input.limit ?? DEFAULT_GIT_RECENT_COMMIT_LIMIT;
+  return queryOptions({
+    queryKey: gitQueryKeys.recentCommits(input.cwd, limit),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      if (!input.cwd) throw new Error("Git commits are unavailable.");
+      return api.git.listRecentCommits({ cwd: input.cwd, limit });
+    },
+    enabled: (input.enabled ?? true) && input.cwd !== null,
+    staleTime: GIT_BRANCHES_STALE_TIME_MS,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 

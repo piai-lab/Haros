@@ -625,6 +625,9 @@ export function createWsNativeApi(): NativeApi {
       pull: (input) => transport.request(WS_METHODS.gitPull, input),
       status: (input) => transport.request(WS_METHODS.gitStatus, input),
       readWorkingTreeDiff: (input) => transport.request(WS_METHODS.gitReadWorkingTreeDiff, input),
+      blameLine: (input) => transport.request(WS_METHODS.gitBlameLine, input),
+      readFileAtRev: (input) => transport.request(WS_METHODS.gitReadFileAtRev, input),
+      listRecentCommits: (input) => transport.request(WS_METHODS.gitListRecentCommits, input),
       workingTreeDiffStats: (input) => transport.request(WS_METHODS.gitWorkingTreeDiffStats, input),
       summarizeDiff: (input) =>
         transport.request(WS_METHODS.gitSummarizeDiff, input, {

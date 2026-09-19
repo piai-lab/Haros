@@ -36,10 +36,13 @@ import type { RepoDiffScope } from "~/repoDiffScopeStore";
 import { formatShortTimestamp } from "~/timestampFormat";
 import {
   DIFF_PANEL_PICKER_SCOPE_OPTIONS,
+  isDiffPanelRepoScopeOption,
   resolveDiffPanelScopePickerValue,
+  type DiffPanelRepoScopeOption,
   type DiffPanelTurnScopeIntent,
   type DiffPanelViewSource,
 } from "./DiffPanel.logic";
+import { DiffPanelCompareRefMenuSection } from "./DiffPanelCompareRefMenuSection";
 import { DiffPanelFileJumpMenu } from "./DiffPanelFileJumpMenu";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { EnvironmentRowBody, EnvironmentRowChevron } from "./chat/environment/EnvironmentRow";
@@ -81,6 +84,8 @@ function repoDiffScopeMessageKey(scope: RepoDiffScope) {
       return "diff.staged" as const;
     case "branch":
       return "diff.branch" as const;
+    case "ref":
+      return "diff.compareWith" as const;
   }
 }
 
@@ -110,8 +115,11 @@ interface DiffPanelToolbarProps {
   diffIgnoreWhitespace: boolean;
   diffCopyText: string | null;
   isDiffCopied: boolean;
+  truncated: boolean;
   allFilesCollapsed: boolean;
-  onSelectRepoScope: (scope: RepoDiffScope) => void;
+  compareRef: string | null;
+  onSelectRepoScope: (scope: DiffPanelRepoScopeOption) => void;
+  onSelectCompareRef: (ref: string) => void;
   onSelectAllTurns: () => void;
   onSelectLastTurn: () => void;
   onSelectTurn: (turnId: TurnId | null) => void;
@@ -171,7 +179,9 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
   const [visibleTurnCount, setVisibleTurnCount] = useState(INITIAL_VISIBLE_TURN_COUNT);
   const scopePickerLabel =
     props.viewSource.kind === "repo"
-      ? t(repoDiffScopeMessageKey(props.viewSource.scope))
+      ? props.viewSource.scope === "ref"
+        ? t("diff.vsRef", { ref: props.compareRef?.trim() || t("diff.compareWith") })
+        : t(repoDiffScopeMessageKey(props.viewSource.scope))
       : props.viewSource.turnId !== null
         ? t("diff.turnDiff")
         : props.turnScopeIntent === "last"
@@ -207,6 +217,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
     viewSource: props.viewSource,
     latestTurnId,
     turnScopeIntent: props.turnScopeIntent,
+    compareRef: props.compareRef,
   });
   const selectedTurnIndex = props.selectedTurnId
     ? props.orderedTurnDiffSummaries.findIndex((summary) => summary.turnId === props.selectedTurnId)
@@ -271,12 +282,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
                   props.onSelectLastTurn();
                   return;
                 }
-                if (
-                  value === "workingTree" ||
-                  value === "unstaged" ||
-                  value === "staged" ||
-                  value === "branch"
-                ) {
+                if (isDiffPanelRepoScopeOption(value)) {
                   props.onSelectRepoScope(value);
                 }
               }}
@@ -300,6 +306,14 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
               </MenuRadioItem>
             </MenuRadioGroup>
           </MenuGroup>
+          <DiffPanelCompareRefMenuSection
+            cwd={props.activeCwd}
+            open={props.scopePickerOpen ?? false}
+            compareRef={props.compareRef}
+            scopeIsRef={props.viewSource.kind === "repo" && props.viewSource.scope === "ref"}
+            iconClassName={DIFF_PANEL_MENU_ICON_CLASS_NAME}
+            onSelectCompareRef={props.onSelectCompareRef}
+          />
         </ComposerPickerMenuPopup>
       </Menu>
 
@@ -377,7 +391,15 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
                     }}
                   >
                     <CopyIcon className={DIFF_PANEL_MENU_ICON_CLASS_NAME} />
-                    <span>{props.isDiffCopied ? t("diff.copied") : t("diff.copy")}</span>
+                    <span>
+                      {props.isDiffCopied
+                        ? props.truncated
+                          ? t("diff.copiedPartial")
+                          : t("diff.copied")
+                        : props.truncated
+                          ? t("diff.copyPartial")
+                          : t("diff.copy")}
+                    </span>
                   </MenuItem>
                 ) : null}
                 {props.renderableFiles.length > 0 ? (

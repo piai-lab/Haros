@@ -21,6 +21,9 @@ import {
   resolveDiffSelectAllWithinViewport,
   resolveInitialDiffViewKind,
   resolveSelectedTurnSummary,
+  buildDiffPanelCompareRefValue,
+  isDiffPanelRepoScopeOption,
+  parseDiffPanelCompareRefValue,
   DIFF_PANEL_PICKER_SCOPE_OPTIONS,
   DIFF_PANEL_REPO_LIVE_REFETCH_INTERVAL_MS,
 } from "./DiffPanel.logic";
@@ -301,6 +304,21 @@ describe("diff panel view source helpers", () => {
 
   it("keeps the persisted default working-tree scope available in the picker", () => {
     expect(DIFF_PANEL_PICKER_SCOPE_OPTIONS).toContain("workingTree");
+    expect(DIFF_PANEL_PICKER_SCOPE_OPTIONS).not.toContain("ref");
+    expect(isDiffPanelRepoScopeOption("ref")).toBe(false);
+  });
+
+  it("encodes compare-ref picker values without colliding with the ref scope name", () => {
+    expect(buildDiffPanelCompareRefValue("release/1.2")).toBe("ref:release/1.2");
+    expect(parseDiffPanelCompareRefValue("ref:release/1.2")).toBe("release/1.2");
+    expect(parseDiffPanelCompareRefValue("branch")).toBeNull();
+    expect(
+      resolveDiffPanelScopePickerValue({
+        viewSource: { kind: "repo", scope: "ref" },
+        latestTurnId: TurnId.makeUnsafe("turn-latest"),
+        compareRef: "release/1.2",
+      }),
+    ).toBe("ref:release/1.2");
   });
 
   it("marks picker options selected only when they match the active scope", () => {

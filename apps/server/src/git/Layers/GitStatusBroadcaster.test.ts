@@ -56,6 +56,8 @@ function makeTestLayer(state: {
     pullRequestForBranch: () =>
       Effect.die("pullRequestForBranch should not be called in this test"),
     readWorkingTreeDiff: () => Effect.die("readWorkingTreeDiff should not be called in this test"),
+    blameLine: () => Effect.die("blameLine should not be called in this test"),
+    readFileAtRev: () => Effect.die("readFileAtRev should not be called in this test"),
     readWorkingTreeDiffStats: () =>
       Effect.die("readWorkingTreeDiffStats should not be called in this test"),
     summarizeDiff: () => Effect.die("summarizeDiff should not be called in this test"),

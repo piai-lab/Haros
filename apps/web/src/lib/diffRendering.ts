@@ -208,12 +208,21 @@ export function buildPatchCacheKey(patch: string, scope = "diff-panel"): string 
   return `${scope}:${normalizedPatch.length}:${primary}:${secondary}`;
 }
 
+export const PARTIAL_DIFF_COPY_NOTICE =
+  "[Haros: partial diff. Output was truncated at the size limit; some files or changes may be missing.]";
+
 // Returns copyable source text for diff surfaces without depending on virtualized DOM rows.
-export function resolveDiffCopyText(patch: string | undefined): string | null {
+// A truncation notice travels with partial clipboard content so it cannot be mistaken for a
+// complete patch after it leaves Haros.
+export function resolveDiffCopyText(patch: string | undefined, truncated = false): string | null {
   if (typeof patch !== "string") {
     return null;
   }
-  return patch.trim().length > 0 ? patch : null;
+  if (patch.trim().length === 0) {
+    return null;
+  }
+  const noticeSeparator = patch.endsWith("\n") ? "\n" : "\n\n";
+  return truncated ? `${patch}${noticeSeparator}${PARTIAL_DIFF_COPY_NOTICE}\n` : patch;
 }
 
 export type RenderablePatch =
@@ -499,6 +508,24 @@ export function rawPatchByFileRenderKey(
 // conventional `a/` / `b/` patch prefixes so callers can match git status paths.
 export function resolveFileDiffPath(fileDiff: FileDiffMetadata): string {
   const raw = fileDiff.name ?? fileDiff.prevName ?? "";
+  if (raw.startsWith("a/") || raw.startsWith("b/")) {
+    return raw.slice(2);
+  }
+  return raw;
+}
+
+// Resolve the pre-change path for a parsed file diff (the old side of a
+// rename/move), stripping the conventional `a/` patch prefix. Returns null for
+// files that were not renamed or moved: the parser also fills `prevName` for
+// added files, where it is `/dev/null` or a copy of the new name.
+export function resolveFileDiffPrevPath(fileDiff: FileDiffMetadata): string | null {
+  if (
+    fileDiff.prevName === undefined ||
+    (fileDiff.type !== "rename-pure" && fileDiff.type !== "rename-changed")
+  ) {
+    return null;
+  }
+  const raw = fileDiff.prevName;
   if (raw.startsWith("a/") || raw.startsWith("b/")) {
     return raw.slice(2);
   }

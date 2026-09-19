@@ -10,7 +10,9 @@ import {
   fileDiffStatsByPath,
   getRenderablePatch,
   rawPatchByFileRenderKey,
+  PARTIAL_DIFF_COPY_NOTICE,
   resolveDiffCopyText,
+  resolveFileDiffPrevPath,
   resolveFileDiffStatByChangedPath,
   resolveFileDiffPath,
   sortFileDiffsByPath,
@@ -97,6 +99,11 @@ describe("resolveDiffCopyText", () => {
   it("does not expose empty or missing patches as copyable", () => {
     expect(resolveDiffCopyText(undefined)).toBeNull();
     expect(resolveDiffCopyText(" \n\t ")).toBeNull();
+  });
+
+  it("appends a Haros truncation notice to partial clipboard content", () => {
+    const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')\n";
+    expect(resolveDiffCopyText(patch, true)).toBe(`${patch}\n${PARTIAL_DIFF_COPY_NOTICE}\n`);
   });
 });
 

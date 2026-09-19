@@ -9,6 +9,8 @@
 import { ServiceMap } from "effect";
 import type { Effect, Scope } from "effect";
 import type {
+  GitBlameLineInput,
+  GitBlameLineResult,
   GitCheckoutInput,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
@@ -19,7 +21,11 @@ import type {
   GitInitInput,
   GitListBranchesInput,
   GitListBranchesResult,
+  GitListRecentCommitsInput,
+  GitListRecentCommitsResult,
   GitPullResult,
+  GitReadFileAtRevInput,
+  GitReadFileAtRevResult,
   GitRemoveIndexLockInput,
   GitRemoveWorktreeInput,
   GitStashAndCheckoutInput,
@@ -49,6 +55,8 @@ export interface ExecuteGitResult {
   readonly code: number;
   readonly stdout: string;
   readonly stderr: string;
+  readonly stdoutTruncated?: boolean;
+  readonly stderrTruncated?: boolean;
 }
 
 export interface GitStatusDetails extends Omit<GitStatusResult, "pr"> {
@@ -64,7 +72,7 @@ export interface GitBranchContext {
   readonly upstreamRef: string | null;
 }
 
-export type GitDiffScope = "branch" | "staged" | "unstaged" | "workingTree";
+export type GitDiffScope = "branch" | "staged" | "unstaged" | "workingTree" | "ref";
 
 export interface GitPreparedCommitContext {
   stagedSummary: string;
@@ -115,6 +123,7 @@ export interface GitRangeContext {
 
 export interface GitWorkingTreePatch {
   patch: string;
+  truncated: boolean;
 }
 
 export interface GitRenameBranchInput {
@@ -222,6 +231,7 @@ export interface GitCoreShape {
    */
   readonly readWorkingTreePatch: (
     cwd: string,
+    filePath?: string,
   ) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
 
   /**
@@ -239,9 +249,23 @@ export interface GitCoreShape {
    */
   readonly readBranchPatch: (cwd: string) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
 
+  readonly blameLine: (
+    input: GitBlameLineInput,
+  ) => Effect.Effect<GitBlameLineResult, GitCommandError>;
+
+  readonly readFileAtRev: (
+    input: GitReadFileAtRevInput,
+  ) => Effect.Effect<GitReadFileAtRevResult, GitCommandError>;
+
+  readonly readRefPatch: (
+    cwd: string,
+    ref: string,
+  ) => Effect.Effect<GitWorkingTreePatch, GitCommandError>;
+
   readonly readDiffStats: (
     cwd: string,
     scope: GitDiffScope,
+    ref?: string,
   ) => Effect.Effect<GitWorkingTreeDiffStatsResult, GitCommandError>;
 
   /**
@@ -292,6 +316,10 @@ export interface GitCoreShape {
   readonly listBranches: (
     input: GitListBranchesInput,
   ) => Effect.Effect<GitListBranchesResult, GitCommandError>;
+
+  readonly listRecentCommits: (
+    input: GitListRecentCommitsInput,
+  ) => Effect.Effect<GitListRecentCommitsResult, GitCommandError>;
 
   /**
    * Pull current branch from upstream using fast-forward only.

@@ -8,8 +8,13 @@ import { CopyIcon, EllipsisIcon, MessageCircleIcon } from "~/lib/icons";
 
 import { useCopyPathToClipboard } from "~/hooks/useCopyToClipboard";
 import { useI18n } from "~/i18n";
-import { buildFileDiffRenderKey, resolveFileDiffPath } from "~/lib/diffRendering";
-import { FileDiffCard, FileDiffSurface } from "./chat/FileDiffView";
+import {
+  buildFileDiffRenderKey,
+  resolveFileDiffPath,
+  resolveFileDiffPrevPath,
+} from "~/lib/diffRendering";
+import { FileDiffCard, FileDiffSurface, type DiffLineClickProps } from "./chat/FileDiffView";
+import { resolveDiffLineBlameTarget, type DiffLineBlameTarget } from "./DiffLineBlamePopover";
 import { LocalImagePreview } from "./LocalImagePreview";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
@@ -83,6 +88,7 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
   isCollapsed: boolean;
   onToggleFileCollapsed: (fileKey: string) => void;
   chatActions?: DiffFileChatActions | undefined;
+  onBlameLine?: ((target: DiffLineBlameTarget) => void) | undefined;
 }) {
   const { t } = useI18n();
   const filePath = resolveFileDiffPath(props.fileDiff);
@@ -90,6 +96,17 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
   const { chatActions, isCollapsed } = props;
   const shouldPreviewImage =
     !isCollapsed && props.workspaceRoot !== null && isSupportedLocalImagePath(filePath);
+  const { onBlameLine } = props;
+  const handleLineClick = onBlameLine
+    ? (line: DiffLineClickProps) => {
+        const blamePath =
+          line.lineType === "change-deletion"
+            ? (resolveFileDiffPrevPath(props.fileDiff) ?? filePath)
+            : filePath;
+        const target = resolveDiffLineBlameTarget(blamePath, line);
+        if (target) onBlameLine(target);
+      }
+    : undefined;
 
   return (
     <FileDiffCard
@@ -108,6 +125,7 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
           <DiffFileHeaderActionsMenu filePath={filePath} chatActions={chatActions} />
         ) : null
       }
+      onLineClick={handleLineClick}
     >
       {shouldPreviewImage ? (
         <LocalImagePreview
@@ -131,6 +149,7 @@ export const DiffPanelFileList = function DiffPanelFileList(props: {
   collapsedFiles: ReadonlySet<string>;
   onToggleFileCollapsed: (fileKey: string) => void;
   chatActions?: DiffFileChatActions | undefined;
+  onBlameLine?: ((target: DiffLineBlameTarget) => void) | undefined;
 }) {
   const { t } = useI18n();
   if (props.renderableFiles.length === 0) {
@@ -161,6 +180,7 @@ export const DiffPanelFileList = function DiffPanelFileList(props: {
             isCollapsed={props.collapsedFiles.has(fileKey)}
             onToggleFileCollapsed={props.onToggleFileCollapsed}
             chatActions={props.chatActions}
+            onBlameLine={props.onBlameLine}
           />
         );
       })}

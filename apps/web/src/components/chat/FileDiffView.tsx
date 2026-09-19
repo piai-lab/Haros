@@ -6,7 +6,12 @@
 // Layer: Chat/diff UI primitives
 // Depends on: @pierre/diffs FileDiff/Virtualizer, diffRendering (theme + unsafeCSS), FileDiffHeader
 
-import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
+import {
+  FileDiff,
+  type FileDiffMetadata,
+  type FileDiffProps,
+  Virtualizer,
+} from "@pierre/diffs/react";
 import { type ReactNode } from "react";
 
 import {
@@ -40,6 +45,10 @@ export function FileDiffSurface(props: { className?: string; children: ReactNode
 // A single themed file diff with Haros's custom file header. Bakes in the shared
 // `unsafeCSS` theming so every surface renders with the chat code font and
 // themed addition/deletion backgrounds.
+type FileDiffCardOptions = NonNullable<FileDiffProps<unknown>["options"]>;
+
+export type DiffLineClickProps = Parameters<NonNullable<FileDiffCardOptions["onLineClick"]>>[0];
+
 export function FileDiffCard(props: {
   fileDiff: FileDiffMetadata;
   theme: "light" | "dark";
@@ -52,6 +61,7 @@ export function FileDiffCard(props: {
   headerActions?: ReactNode;
   onToggleCollapsed?: (() => void) | undefined;
   toggleLabel?: string | undefined;
+  onLineClick?: ((line: DiffLineClickProps) => void) | undefined;
 }) {
   return (
     <div
@@ -62,12 +72,13 @@ export function FileDiffCard(props: {
         fileDiff={props.fileDiff}
         options={{
           diffStyle: props.diffStyle ?? "unified",
-          lineDiffType: "none",
+          lineDiffType: "word",
           overflow: props.overflow ?? "scroll",
           theme: resolveDiffThemeName(props.theme),
           themeType: props.theme,
           unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
           ...(props.collapsed !== undefined ? { collapsed: props.collapsed } : {}),
+          ...(props.onLineClick ? { onLineClick: props.onLineClick } : {}),
         }}
         renderCustomHeader={(fileDiff) => (
           <FileDiffHeader

@@ -142,6 +142,12 @@ import type {
   GitInitInput,
   GitListBranchesInput,
   GitListBranchesResult,
+  GitListRecentCommitsInput,
+  GitListRecentCommitsResult,
+  GitBlameLineInput,
+  GitBlameLineResult,
+  GitReadFileAtRevInput,
+  GitReadFileAtRevResult,
   GitPreparePullRequestThreadInput,
   GitPreparePullRequestThreadResult,
   GitPullInput,
@@ -910,6 +916,9 @@ export interface NativeApi {
     readWorkingTreeDiff: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitReadWorkingTreeDiffResult>;
+    blameLine: (input: GitBlameLineInput) => Promise<GitBlameLineResult>;
+    readFileAtRev: (input: GitReadFileAtRevInput) => Promise<GitReadFileAtRevResult>;
+    listRecentCommits: (input: GitListRecentCommitsInput) => Promise<GitListRecentCommitsResult>;
     workingTreeDiffStats: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitWorkingTreeDiffStatsResult>;
