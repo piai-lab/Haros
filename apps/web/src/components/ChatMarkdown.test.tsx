@@ -437,3 +437,30 @@ describe("ChatMarkdown user variant", () => {
     expect(markup).toContain("const value = 1;");
   });
 });
+
+describe("workspace wiki links", () => {
+  it("opens aliases relative to the workspace root and leaves code unchanged", async () => {
+    const { default: ChatMarkdown } = await import("./ChatMarkdown");
+    const markup = renderToStaticMarkup(
+      <ChatMarkdown
+        text={[
+          "Read [[notes/design|Design]] and [[My note]]. Code `[[literal|text]]`.",
+          "",
+          "```md",
+          "[[fenced|code]]",
+          "```",
+        ].join("\n")}
+        cwd="/workspace/src"
+        wikiLinkRoot="/workspace"
+        isStreaming={false}
+      />,
+    );
+    expect(markup).toContain("Design");
+    expect(markup).toContain("My note");
+    expect(markup).toContain("[[literal|text]]");
+    expect(markup).toContain("[[fenced|code]]");
+    expect(markup).toContain('href="/workspace/notes/design.md"');
+    expect(markup).toContain('href="/workspace/My%20note.md"');
+    expect(markup).not.toContain("[[notes/design");
+  });
+});

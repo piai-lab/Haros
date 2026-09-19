@@ -82,6 +82,7 @@ import {
   createComposerChipsRemarkPlugin,
   parseComposerChipSegment,
 } from "../lib/remarkComposerChips";
+import { remarkWikiLinks } from "../lib/remarkWikiLinks";
 import { useI18n } from "../i18n";
 import {
   activeSelectionIntersectsElement,
@@ -151,6 +152,7 @@ interface ChatMarkdownProps {
   onTaskToggle?: ((input: { sourceLine: number; checked: boolean }) => void) | undefined;
   /** Canonical assistant Timeline body opt-in; all other Markdown keeps source rendering. */
   mermaidPresentation?: { readonly messageId: MessageId } | undefined;
+  wikiLinkRoot?: string | undefined;
 }
 
 // Source line of the enclosing task-list item, provided by the `li` override.
@@ -1191,6 +1193,7 @@ function ChatMarkdown({
   mentionReferences,
   terminalContexts,
   mermaidPresentation,
+  wikiLinkRoot,
 }: ChatMarkdownProps) {
   // Defaults applied with ?? in the body, not in the destructuring: default
   // values in parameter destructuring make React Compiler 1.0.0 bail on the
@@ -1286,17 +1289,20 @@ function ChatMarkdown({
         tableIntegrityRemarkPlugin,
       ];
     }
-    const assistantPlugins = [
+    const assistantPlugins: MarkdownRemarkPlugins = [
       ...MARKDOWN_REMARK_PLUGINS,
+      [remarkWikiLinks, { root: wikiLinkRoot ?? cwd }] as MarkdownRemarkPlugins[number],
       ...(transcriptSourceRemarkPlugin ? [transcriptSourceRemarkPlugin] : []),
       tableIntegrityRemarkPlugin,
     ];
     return mermaidOrdinalPlugin ? [...assistantPlugins, mermaidOrdinalPlugin] : assistantPlugins;
   }, [
     composerChipsRemarkPlugin,
+    cwd,
     mermaidOrdinalPlugin,
     tableIntegrityRemarkPlugin,
     transcriptSourceRemarkPlugin,
+    wikiLinkRoot,
   ]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const markdownComponents = useMemo<Components>(

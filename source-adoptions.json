@@ -918,6 +918,20 @@
       "mode": "adapt",
       "changes": "Haros synthesizes user Maximize into the existing RightDock exclusive presentation. Narrow-screen autoExclusive remains. Closing the last pane or collapsing the dock restores chat without remounting preview buffers.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing the maximize button and userMaximized input from resolveWorkbenchPresentation."
+    },
+    {
+      "id": "synara-workspace-wiki-links",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/web/src/lib/remarkWikiLinks.ts",
+        "apps/web/src/markdown-links.ts",
+        "apps/web/src/components/ChatMarkdown.tsx"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed workspace wiki-link mechanism.",
+      "mode": "adapt",
+      "changes": "Haros resolves [[workspace/path]] Markdown links relative to the workspace root through the existing ChatMarkdown remark chain and openWorkspaceFileReference. This is not an Obsidian vault. Code and inlineCode stay literal.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing remarkWikiLinks from ChatMarkdown."
     }
   ]
 }
