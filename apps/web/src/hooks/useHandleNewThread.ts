@@ -19,6 +19,7 @@ import {
   type NewThreadOptions,
 } from "../lib/threadBootstrap";
 import { promoteThreadCreate } from "../lib/threadCreatePromotion";
+import { useProjectEnvironmentStore } from "../projectEnvironmentStore";
 import {
   prefetchEngineModelsForNewThread,
   resolveNewThreadModelPrefetchCwd,
@@ -67,9 +68,11 @@ export function useHandleNewThread() {
     navigation?: NewThreadNavigationOptions,
   ): Promise<ThreadId | null> => {
     const authoritativeSettings = settings ?? (await fetchAuthoritativeServerSettings(queryClient));
+    const rememberedEnvMode = useProjectEnvironmentStore.getState().envModeByProjectId[projectId];
     const options: NewThreadOptions = {
       ...requestedOptions,
-      envMode: requestedOptions?.envMode ?? authoritativeSettings.defaultThreadEnvMode,
+      envMode:
+        requestedOptions?.envMode ?? rememberedEnvMode ?? authoritativeSettings.defaultThreadEnvMode,
     };
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;

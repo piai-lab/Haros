@@ -22,6 +22,7 @@ import { useAccountCapacity } from "../hooks/useAccountCapacity";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { engineExecutionCapabilitiesQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import { RuntimeModeAvailabilityHint } from "./chat/RuntimeModeAvailabilityHint";
+import { useProjectEnvironmentStore } from "../projectEnvironmentStore";
 import { useStore } from "../store";
 import { createProjectSelector, createThreadSelector } from "../storeSelectors";
 import {
@@ -435,6 +436,9 @@ export default function BranchToolbar({
         patch.worktreePath !== undefined ? patch.worktreePath : activeWorktreePath;
       const nextEnvMode =
         patch.envMode !== undefined ? patch.envMode : worktreePath ? "worktree" : effectiveEnvMode;
+      if (activeProjectId && patch.envMode !== undefined) {
+        useProjectEnvironmentStore.getState().setProjectEnvMode(activeProjectId, nextEnvMode);
+      }
       const nextAssociatedWorktree = resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch,
         worktreePath,
