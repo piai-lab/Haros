@@ -7,6 +7,7 @@ import type {
   MessageDispatchOrigin,
   OrchestrationMessageSource,
   OrchestrationMessageTextSegment,
+  AsyncUserInput,
   OrchestrationPendingInteraction,
   TurnDispatchMode,
   OrchestrationLatestTurn,
@@ -111,6 +112,7 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   text: string;
   textSegments?: OrchestrationMessageTextSegment[];
+  asyncUserInput?: AsyncUserInput;
   attachments?: ChatAttachment[];
   skills?: EngineSkillReference[];
   mentions?: EngineMentionReference[];

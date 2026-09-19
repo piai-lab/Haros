@@ -16,6 +16,7 @@ import {
 } from "@harnessos/shared/pinnedMessages";
 import { isPendingInteractionResponseClaimable } from "@harnessos/shared/pendingInteractions";
 import { deriveNextMessageTextSegments } from "@harnessos/shared/threadMessageTextSegments";
+import { clearRemovedAsyncUserInputResponses } from "@harnessos/shared/asyncUserInput";
 
 import { isSessionRunningTurn } from "./session-logic";
 import {
@@ -721,6 +722,14 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
       role: payload.role,
       text: payload.text,
       ...(nextTextSegments !== undefined ? { textSegments: nextTextSegments } : {}),
+      ...(payload.asyncUserInput !== undefined
+        ? {
+            asyncUserInput: {
+              ...payload.asyncUserInput,
+              responseSequence: payload.asyncUserInput.responseSequence ?? event.sequence,
+            },
+          }
+        : {}),
       dispatchMode: payload.dispatchMode,
       dispatchOrigin: payload.dispatchOrigin,
       turnId: payload.turnId,
@@ -1492,11 +1501,16 @@ function applyOrchestrationEvent(
                 (right.checkpointTurnCount ?? Number.MAX_SAFE_INTEGER),
             );
           const retainedTurnIds = new Set(turnDiffSummaries.map((entry) => entry.turnId));
-          const messages = retainThreadMessagesAfterRevert(
+          const revertedMessages = retainThreadMessagesAfterRevert(
             thread.messages,
             retainedTurnIds,
             event.payload.turnCount,
           ).slice(-MAX_THREAD_MESSAGES);
+          const messages = clearRemovedAsyncUserInputResponses(
+            revertedMessages,
+            new Set(revertedMessages.map((message) => message.id)),
+            event.sequence,
+          );
           const proposedPlans = retainThreadProposedPlansAfterRevert(
             thread.proposedPlans,
             retainedTurnIds,
@@ -1570,7 +1584,12 @@ function applyOrchestrationEvent(
             (activity) => activity.turnId === null || !removedTurnIds.has(activity.turnId),
           );
           const latestCheckpoint = turnDiffSummaries.at(-1) ?? null;
-          const messages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
+          const rolledBackMessages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
+          const messages = clearRemovedAsyncUserInputResponses(
+            rolledBackMessages,
+            new Set(rolledBackMessages.map((message) => message.id)),
+            event.sequence,
+          );
           const turnProvenance = retainTurnProvenanceForMessages(thread.turnProvenance, messages);
 
           return {

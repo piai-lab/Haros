@@ -41,6 +41,7 @@ import {
 } from "./baseSchemas";
 import { canonicalUserInputPayloadFits } from "./canonicalUserInputGuard";
 import { ClaudeCacheObservation } from "./claudeCache";
+import { AsyncUserInput, AsyncUserInputQuestions, AsyncUserInputResponse } from "./asyncUserInput";
 
 export const ORCHESTRATION_WS_METHODS = {
   getSnapshot: "orchestration.getSnapshot",
@@ -623,6 +624,7 @@ export const OrchestrationMessage = Schema.Struct({
   role: OrchestrationMessageRole,
   text: Schema.String,
   textSegments: Schema.optional(Schema.Array(OrchestrationMessageTextSegment)),
+  asyncUserInput: Schema.optional(AsyncUserInput),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(EngineSkillReference)),
   mentions: Schema.optional(Schema.Array(EngineMentionReference)),
@@ -1443,6 +1445,7 @@ const ThreadInteractionModeSetCommand = Schema.Struct({
 
 export const ThreadTurnStartCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.start"),
+  asyncUserInputResponse: Schema.optional(AsyncUserInputResponse),
   commandId: CommandId,
   threadId: ThreadId,
   message: Schema.Struct({
@@ -1482,6 +1485,7 @@ export const ThreadTurnStartCommand = Schema.Struct({
 
 const ClientThreadTurnStartCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.start"),
+  asyncUserInputResponse: Schema.optional(AsyncUserInputResponse),
   commandId: CommandId,
   threadId: ThreadId,
   message: Schema.Struct({
@@ -1773,6 +1777,7 @@ const ThreadMessageAssistantDeltaCommand = Schema.Struct({
 });
 
 const ThreadMessageAssistantCompleteCommand = Schema.Struct({
+  asyncQuestions: Schema.optional(AsyncUserInputQuestions),
   type: Schema.Literal("thread.message.assistant.complete"),
   commandId: CommandId,
   threadId: ThreadId,
@@ -2121,6 +2126,7 @@ export const ThreadMessageSentPayload = Schema.Struct({
   messageId: MessageId,
   role: OrchestrationMessageRole,
   text: Schema.String,
+  asyncUserInput: Schema.optional(AsyncUserInput),
   segmentStartedAt: Schema.optional(IsoDateTime),
   segmentSequence: Schema.optional(NonNegativeInt),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),

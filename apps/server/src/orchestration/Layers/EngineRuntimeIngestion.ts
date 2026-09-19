@@ -1,5 +1,6 @@
 import {
   type AssistantDeliveryMode,
+  type AsyncUserInputQuestions,
   CommandId,
   EventId,
   MessageId,
@@ -1564,6 +1565,7 @@ const make = Effect.gen(function* () {
     commandTag: string;
     finalDeltaCommandTag: string;
     fallbackText?: string;
+    asyncQuestions?: AsyncUserInputQuestions;
   }) =>
     Effect.gen(function* () {
       const bufferedText = yield* getBufferedAssistantText(input.messageId);
@@ -1592,6 +1594,7 @@ const make = Effect.gen(function* () {
         threadId: input.threadId,
         messageId: input.messageId,
         ...(input.turnId ? { turnId: input.turnId } : {}),
+        ...(input.asyncQuestions ? { asyncQuestions: input.asyncQuestions } : {}),
         createdAt: input.createdAt,
       });
       yield* clearAssistantMessageState(input.threadId, input.messageId);
@@ -2816,6 +2819,8 @@ const make = Effect.gen(function* () {
         event.type === "item.completed" && event.payload.itemType === "assistant_message"
           ? {
               fallbackText: event.payload.detail,
+              asyncQuestions:
+                thread.parentThreadId == null ? event.payload.asyncQuestions : undefined,
             }
           : undefined;
       const proposedPlanCompletion =
@@ -2829,11 +2834,14 @@ const make = Effect.gen(function* () {
 
       if (assistantCompletion) {
         const turnId = toTurnId(event.turnId);
-        const assistantMessageId = yield* resolveAssistantCompletionMessageId({
-          event,
-          thread,
-          ...(turnId ? { turnId } : {}),
-        });
+        const assistantMessageId =
+          assistantCompletion.asyncQuestions && event.itemId
+            ? MessageId.makeUnsafe(`assistant:${event.itemId}`)
+            : yield* resolveAssistantCompletionMessageId({
+                event,
+                thread,
+                ...(turnId ? { turnId } : {}),
+              });
         const existingAssistantMessage = thread.messages.find(
           (entry) => entry.id === assistantMessageId,
         );
@@ -2851,6 +2859,9 @@ const make = Effect.gen(function* () {
           createdAt: now,
           commandTag: "assistant-complete",
           finalDeltaCommandTag: "assistant-delta-finalize",
+          ...(assistantCompletion.asyncQuestions
+            ? { asyncQuestions: assistantCompletion.asyncQuestions }
+            : {}),
           ...(assistantCompletion.fallbackText !== undefined && shouldApplyFallbackCompletionText
             ? { fallbackText: assistantCompletion.fallbackText }
             : {}),

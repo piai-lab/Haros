@@ -23,6 +23,7 @@ import {
   type ServerVoiceTranscriptionResult,
   type ThreadTokenUsageSnapshot,
   type EngineUserInputAnswers,
+  AsyncUserInputQuestions,
   EventId,
   RuntimeItemId,
   RuntimeRequestId,
@@ -260,6 +261,28 @@ function asTrimmedString(value: unknown): string | undefined {
 
 function asArray(value: unknown): unknown[] | undefined {
   return Array.isArray(value) ? value : undefined;
+}
+
+function parseCodexAsyncUserInputQuestions(value: unknown) {
+  const questions = asArray(value);
+  if (!questions) return Option.none();
+  return Schema.decodeUnknownOption(AsyncUserInputQuestions)(
+    questions.map((entry) => {
+      const question = asObject(entry);
+      const title =
+        asTrimmedString(question?.title) ??
+        asTrimmedString(question?.question) ??
+        asTrimmedString(question?.prompt);
+      const rawOptions = asArray(question?.options);
+      const options = rawOptions
+        ?.map((option) => {
+          const record = asObject(option);
+          return asTrimmedString(record?.label) ?? asTrimmedString(option);
+        })
+        .filter((option): option is string => option != null);
+      return options && options.length > 0 ? { title, options } : { title };
+    }),
+  );
 }
 
 function asNumber(value: unknown): number | undefined {
@@ -873,6 +896,10 @@ function mapItemLifecycle(
   const detail =
     itemType === "reasoning" ? reasoningSummaryDetail(source) : itemDetail(source, payload ?? {});
   const status = itemStatus(lifecycle, source.status);
+  const asyncQuestions =
+    itemType === "assistant_message"
+      ? parseCodexAsyncUserInputQuestions(source.questions)
+      : Option.none();
 
   return {
     ...(generatedImageReference
@@ -885,6 +912,7 @@ function mapItemLifecycle(
     type: lifecycle,
     payload: {
       itemType: canonicalItemType,
+      ...(Option.isSome(asyncQuestions) ? { asyncQuestions: asyncQuestions.value } : {}),
       ...(status ? { status } : {}),
       ...(itemTitle(canonicalItemType) ? { title: itemTitle(canonicalItemType) } : {}),
       ...(generatedImageReference

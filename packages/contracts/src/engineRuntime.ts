@@ -12,6 +12,7 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
+import { AsyncUserInputQuestions } from "./asyncUserInput";
 import { CanonicalUserInputSettlement, EngineKind } from "./orchestration";
 import {
   CANONICAL_USER_INPUT_MAX_NODES,
@@ -436,6 +437,7 @@ const TurnDiffUpdatedPayload = Schema.Struct({
 export type TurnDiffUpdatedPayload = typeof TurnDiffUpdatedPayload.Type;
 
 export const ItemLifecyclePayload = Schema.Struct({
+  asyncQuestions: Schema.optional(AsyncUserInputQuestions),
   itemType: CanonicalItemType,
   status: Schema.optional(RuntimeItemStatus),
   title: Schema.optional(TrimmedNonEmptyStringSchema),

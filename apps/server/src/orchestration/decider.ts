@@ -32,6 +32,10 @@ import {
 } from "@harnessos/shared/conversationEdit";
 import { Effect } from "effect";
 
+import {
+  ASYNC_USER_INPUT_ALREADY_ANSWERED,
+  formatAsyncUserInputResponse,
+} from "@harnessos/shared/asyncUserInput";
 import { OrchestrationCommandInvariantError } from "./Errors.ts";
 import { buildForkThreadTitle } from "./forkThreadTitle.ts";
 import { turnStartBindingMatchesCommitted } from "./turnStartSession.ts";
@@ -1918,6 +1922,48 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const sourceProposedPlan = command.sourceProposedPlan;
+      const questionResponse = command.asyncUserInputResponse;
+      const questionMessage = questionResponse
+        ? targetThread.messages.find((message) => message.id === questionResponse.messageId)
+        : undefined;
+      if (questionResponse) {
+        if (
+          !questionMessage?.asyncUserInput ||
+          questionMessage.role !== "assistant" ||
+          targetThread.engineSelection.engine !== "codex" ||
+          (decodePersistedEngineKind(targetThread.session?.engine) != null &&
+            decodePersistedEngineKind(targetThread.session?.engine) !== "codex") ||
+          (command.engineSelection && command.engineSelection.engine !== "codex") ||
+          targetThread.parentThreadId !== null
+        ) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "This asynchronous question is unavailable in this Codex thread.",
+          });
+        }
+        if (questionMessage.asyncUserInput.response) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: ASYNC_USER_INPUT_ALREADY_ANSWERED,
+          });
+        }
+        if (
+          questionResponse.answers.length !== questionMessage.asyncUserInput.questions.length ||
+          targetThread.messages.some((message) => message.id === command.message.messageId)
+        ) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "Provide one answer per question and a new response message id.",
+          });
+        }
+      }
+      const messageText =
+        questionResponse && questionMessage?.asyncUserInput
+          ? formatAsyncUserInputResponse(
+              questionMessage.asyncUserInput.questions,
+              questionResponse.answers,
+            )
+          : command.message.text;
       const admittedEngineSelection = command.engineSelection ?? targetThread.engineSelection;
       yield* validateStructuralRuntimeMode(command, admittedEngineSelection, command.runtimeMode);
       const sourceThread = sourceProposedPlan
@@ -1956,7 +2002,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           messageId: command.message.messageId,
           role: "user",
-          text: command.message.text,
+          text: messageText,
           attachments: command.message.attachments,
           ...(command.message.skills !== undefined ? { skills: command.message.skills } : {}),
           ...(command.message.mentions !== undefined ? { mentions: command.message.mentions } : {}),
@@ -2044,9 +2090,43 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: shouldQueue ? "thread.turn-queued" : "thread.turn-start-requested",
         payload: turnRequestPayload,
       };
+      const answeredQuestionEvent =
+        questionResponse && questionMessage?.asyncUserInput
+          ? ({
+              ...withEventBase({
+                aggregateKind: "thread",
+                aggregateId: command.threadId,
+                occurredAt: command.createdAt,
+                commandId: command.commandId,
+              }),
+              type: "thread.message-sent",
+              payload: {
+                threadId: command.threadId,
+                messageId: questionResponse.messageId,
+                role: "assistant",
+                text: questionMessage.text,
+                asyncUserInput: {
+                  questions: questionMessage.asyncUserInput.questions,
+                  response: {
+                    messageId: command.message.messageId,
+                    answers: questionResponse.answers,
+                  },
+                  ...(questionMessage.asyncUserInput.responseSequence !== undefined
+                    ? { responseSequence: questionMessage.asyncUserInput.responseSequence }
+                    : {}),
+                },
+                turnId: questionMessage.turnId,
+                streaming: false,
+                source: questionMessage.source,
+                createdAt: questionMessage.createdAt,
+                updatedAt: command.createdAt,
+              },
+            } satisfies Omit<OrchestrationEvent, "sequence">)
+          : null;
       if (shouldQueue && dispatchMode === "steer" && targetThread.claudeCacheReview == null) {
         return [
           userMessageEvent,
+          ...(answeredQuestionEvent ? [answeredQuestionEvent] : []),
           queuedEvent,
           {
             ...withEventBase({
@@ -2065,7 +2145,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           },
         ];
       }
-      return [userMessageEvent, queuedEvent];
+      return [
+        userMessageEvent,
+        ...(answeredQuestionEvent ? [answeredQuestionEvent] : []),
+        queuedEvent,
+      ];
     }
 
     case "thread.turn.dispatch-queued": {
@@ -2699,6 +2783,13 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           messageId: command.messageId,
           role: "assistant",
           text: existingMessage?.text ?? "",
+          ...(command.asyncQuestions
+            ? {
+                asyncUserInput: existingMessage?.asyncUserInput ?? {
+                  questions: command.asyncQuestions,
+                },
+              }
+            : {}),
           turnId: resolveStableMessageTurnId({
             existingTurnId: existingMessage?.turnId,
             incomingTurnId: command.turnId,

@@ -1,5 +1,6 @@
 export * from "./agentMentions";
 export * from "./agentTools";
+export * from "./asyncUserInput";
 export * from "./auth";
 export * from "./automation";
 export * from "./baseSchemas";

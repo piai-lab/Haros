@@ -92,6 +92,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerPendingTerminalContexts.tsx",
   "components/chat/ComposerPendingUserInputPanel.tsx",
   "components/chat/ComposerClaudeCacheReviewPanel.tsx",
+  "components/chat/AsyncUserInputCard.tsx",
   "components/chat/ComposerSlashStatusDialog.tsx",
   "components/chat/QueuedComposerActions.tsx",
   "components/chat/ProposedPlanActions.tsx",

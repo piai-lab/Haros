@@ -12,6 +12,7 @@ import {
   setPinnedMessageLabel,
 } from "@harnessos/shared/pinnedMessages";
 import { deriveNextMessageTextSegments } from "@harnessos/shared/threadMessageTextSegments";
+import { clearRemovedAsyncUserInputResponses } from "@harnessos/shared/asyncUserInput";
 import { Effect, Schema } from "effect";
 
 import { toProjectorDecodeError, type OrchestrationProjectorDecodeError } from "./Errors.ts";
@@ -913,6 +914,14 @@ export function projectEvent(
             id: payload.messageId,
             role: payload.role,
             text: payload.text,
+            ...(payload.asyncUserInput !== undefined
+              ? {
+                  asyncUserInput: {
+                    ...payload.asyncUserInput,
+                    responseSequence: payload.asyncUserInput.responseSequence ?? event.sequence,
+                  },
+                }
+              : {}),
             ...(payload.attachments !== undefined ? { attachments: payload.attachments } : {}),
             ...(payload.skills !== undefined ? { skills: payload.skills } : {}),
             ...(payload.mentions !== undefined ? { mentions: payload.mentions } : {}),
@@ -963,6 +972,9 @@ export function projectEvent(
               existingTurnId: entry.turnId,
               incomingTurnId: message.turnId,
             }),
+            ...(message.asyncUserInput !== undefined
+              ? { asyncUserInput: message.asyncUserInput }
+              : {}),
             ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
             ...(message.skills !== undefined ? { skills: message.skills } : {}),
             ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
@@ -1196,17 +1208,22 @@ export function projectEvent(
             .toSorted((left, right) => left.checkpointTurnCount - right.checkpointTurnCount)
             .slice(-MAX_THREAD_CHECKPOINTS);
           const retainedTurnIds = new Set(checkpoints.map((checkpoint) => checkpoint.turnId));
-          const messages = retainThreadMessagesAfterRevert(
+          const revertedMessages = retainThreadMessagesAfterRevert(
             thread.messages,
             retainedTurnIds,
             payload.turnCount,
           ).slice(-MAX_THREAD_MESSAGES);
+          const retainedMessageIds = new Set(revertedMessages.map((message) => message.id));
+          const messages = clearRemovedAsyncUserInputResponses(
+            revertedMessages,
+            retainedMessageIds,
+            event.sequence,
+          );
           const proposedPlans = retainThreadProposedPlansAfterRevert(
             thread.proposedPlans,
             retainedTurnIds,
           ).slice(-200);
           const activities = retainThreadActivitiesAfterRevert(thread.activities, retainedTurnIds);
-          const retainedMessageIds = new Set(messages.map((message) => message.id));
           const turnProvenance = (thread.turnProvenance ?? []).filter((entry) =>
             retainedMessageIds.has(entry.pendingMessageId),
           );
@@ -1271,8 +1288,13 @@ export function projectEvent(
             (activity) => activity.turnId === null || !rollback.removedTurnIds.has(activity.turnId),
           );
           const latestCheckpoint = checkpoints.at(-1) ?? null;
-          const messages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
-          const retainedMessageIds = new Set(messages.map((message) => message.id));
+          const rolledBackMessages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
+          const retainedMessageIds = new Set(rolledBackMessages.map((message) => message.id));
+          const messages = clearRemovedAsyncUserInputResponses(
+            rolledBackMessages,
+            retainedMessageIds,
+            event.sequence,
+          );
           const turnProvenance = (thread.turnProvenance ?? []).filter((entry) =>
             retainedMessageIds.has(entry.pendingMessageId),
           );

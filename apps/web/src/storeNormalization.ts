@@ -17,6 +17,7 @@ import {
 import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
 import { normalizeModelSlug } from "@harnessos/shared/model";
 import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
+import { mergeAsyncUserInput } from "@harnessos/shared/asyncUserInput";
 
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 import { toAttachmentPreviewUrl } from "./lib/wsHttpUrl";
@@ -508,6 +509,7 @@ export function normalizeChatMessage(
   const previousSkills = previous?.skills ?? [];
   const previousMentions = previous?.mentions ?? [];
   const completedAt = incoming.streaming ? undefined : incoming.updatedAt;
+  const asyncUserInput = mergeAsyncUserInput(previous?.asyncUserInput, incoming.asyncUserInput);
   if (
     previous &&
     previous.role === incoming.role &&
@@ -520,6 +522,7 @@ export function normalizeChatMessage(
     previous.source === incoming.source &&
     previous.completedAt === completedAt &&
     previous.attachments === attachments &&
+    previous.asyncUserInput === asyncUserInput &&
     textSegmentArraysEqual(previous.textSegments, incoming.textSegments) &&
     engineReferenceArraysEqual(previousSkills, skills) &&
     engineReferenceArraysEqual(previousMentions, mentions)
@@ -534,6 +537,7 @@ export function normalizeChatMessage(
     ...(incoming.textSegments && incoming.textSegments.length > 0
       ? { textSegments: [...incoming.textSegments] }
       : {}),
+    ...(asyncUserInput ? { asyncUserInput } : {}),
     ...(incoming.dispatchMode ? { dispatchMode: incoming.dispatchMode } : {}),
     ...(incoming.dispatchOrigin ? { dispatchOrigin: incoming.dispatchOrigin } : {}),
     turnId: incoming.turnId,

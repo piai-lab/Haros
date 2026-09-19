@@ -19,6 +19,7 @@ layer("Haros initial schema", (it) => {
         [4, "ProfileCacheWriteTelemetry"],
         [5, "RemoveTranscriptMarkers"],
         [6, "ProjectionThreadsClaudeCacheReview"],
+        [7, "ProjectionThreadMessagesAsyncUserInput"],
       ]);
       assert.deepStrictEqual(yield* runMigrations(), []);
 
@@ -71,7 +72,10 @@ layer("Haros initial schema", (it) => {
         SELECT name FROM pragma_table_info('projection_threads')
       `;
       assert.isFalse(threadColumns.some(({ name }) => name === "thread_markers_json"));
-      assert.include(threadColumns.map(({ name }) => name), "claude_cache_review_json");
+      assert.include(
+        threadColumns.map(({ name }) => name),
+        "claude_cache_review_json",
+      );
 
       const schemaSql = yield* sql<{ readonly sql: string | null }>`
         SELECT sql FROM sqlite_master WHERE sql IS NOT NULL
@@ -125,6 +129,7 @@ describe("Haros migration registry", () => {
         [4, "ProfileCacheWriteTelemetry"],
         [5, "RemoveTranscriptMarkers"],
         [6, "ProjectionThreadsClaudeCacheReview"],
+        [7, "ProjectionThreadMessagesAsyncUserInput"],
       ],
     );
   });
@@ -183,6 +188,7 @@ admissionBackfillLayer("Engine Session admission migration", (it) => {
         [4, "ProfileCacheWriteTelemetry"],
         [5, "RemoveTranscriptMarkers"],
         [6, "ProjectionThreadsClaudeCacheReview"],
+        [7, "ProjectionThreadMessagesAsyncUserInput"],
       ]);
 
       const rows = yield* sql<{
@@ -253,7 +259,7 @@ foreignTrackerLayer("foreign migration tracker", (it) => {
       `;
       yield* sql`
         INSERT INTO effect_sql_migrations (migration_id, name)
-        VALUES (7, 'ForeignSchema')
+        VALUES (8, 'ForeignSchema')
       `;
 
       const exit = yield* Effect.exit(runMigrations());

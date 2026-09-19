@@ -68,6 +68,24 @@ describe("conversationEdit", () => {
     ).toEqual({ editable: false, reason: "not-latest-native-user-message" });
   });
 
+  it("rejects structured answers to Codex async questions", () => {
+    expect(
+      resolveTailUserMessageEditTarget({
+        messages: [
+          {
+            id: "assistant-question",
+            role: "assistant",
+            source: "native",
+            turnId: "turn-1",
+            asyncUserInput: { response: { messageId: "user-answer" } },
+          },
+          { id: "user-answer", role: "user", source: "native", turnId: null },
+        ],
+        messageId: "user-answer",
+      }),
+    ).toEqual({ editable: false, reason: "structured-answer" });
+  });
+
   it("rejects old tail messages that do not have turn metadata", () => {
     expect(
       resolveTailUserMessageEditTarget({

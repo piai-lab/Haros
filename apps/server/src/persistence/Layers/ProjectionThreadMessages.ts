@@ -45,6 +45,7 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
           turn_id,
           role,
           text,
+          async_user_input_json,
           attachments_json,
           skills_json,
           mentions_json,
@@ -62,6 +63,7 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
           ${row.turnId},
           ${row.role},
           ${row.text},
+          ${row.asyncUserInput !== undefined ? JSON.stringify(row.asyncUserInput) : null},
           ${nextAttachmentsJson},
           ${nextSkillsJson},
           ${nextMentionsJson},
@@ -78,6 +80,10 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
           turn_id = excluded.turn_id,
           role = excluded.role,
           text = excluded.text,
+          async_user_input_json = COALESCE(
+            excluded.async_user_input_json,
+            projection_thread_messages.async_user_input_json
+          ),
           attachments_json = COALESCE(
             excluded.attachments_json,
             projection_thread_messages.attachments_json
@@ -118,6 +124,7 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
           turn_id AS "turnId",
           role,
           text,
+          async_user_input_json AS "asyncUserInput",
           attachments_json AS "attachments",
           skills_json AS "skills",
           mentions_json AS "mentions",
@@ -168,6 +175,7 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
           turn_id AS "turnId",
           role,
           text,
+          async_user_input_json AS "asyncUserInput",
           attachments_json AS "attachments",
           skills_json AS "skills",
           mentions_json AS "mentions",

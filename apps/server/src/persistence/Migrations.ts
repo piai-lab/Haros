@@ -17,6 +17,7 @@ import PendingUserInputDraft from "./Migrations/003_PendingUserInputDraft.ts";
 import ProfileCacheWriteTelemetry from "./Migrations/004_ProfileCacheWriteTelemetry.ts";
 import RemoveTranscriptMarkers from "./Migrations/005_RemoveTranscriptMarkers.ts";
 import ProjectionThreadsClaudeCacheReview from "./Migrations/006_ProjectionThreadsClaudeCacheReview.ts";
+import ProjectionThreadMessagesAsyncUserInput from "./Migrations/007_ProjectionThreadMessagesAsyncUserInput.ts";
 
 // The recorded migration name is a persisted machine contract from the repository split. Keep it
 // stable even though the current product name is Haros.
@@ -27,6 +28,7 @@ export const migrationEntries = [
   [4, "ProfileCacheWriteTelemetry", ProfileCacheWriteTelemetry],
   [5, "RemoveTranscriptMarkers", RemoveTranscriptMarkers],
   [6, "ProjectionThreadsClaudeCacheReview", ProjectionThreadsClaudeCacheReview],
+  [7, "ProjectionThreadMessagesAsyncUserInput", ProjectionThreadMessagesAsyncUserInput],
 ] as const;
 
 const LATEST_MIGRATION_ID = migrationEntries.at(-1)![0];

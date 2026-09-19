@@ -7,6 +7,7 @@
  * @module ProjectionThreadMessageRepository
  */
 import {
+  AsyncUserInput,
   ChatAttachment,
   MessageDispatchOrigin,
   OrchestrationMessageRole,
@@ -40,6 +41,7 @@ export const ProjectionThreadMessage = Schema.Struct({
   role: OrchestrationMessageRole,
   text: Schema.String,
   textSegments: Schema.optional(Schema.Array(ProjectionThreadMessageTextSegment)),
+  asyncUserInput: Schema.optional(AsyncUserInput),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(EngineSkillReference)),
   mentions: Schema.optional(Schema.Array(EngineMentionReference)),

@@ -44,6 +44,7 @@ import {
   type WorktreeSetupStep,
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
+import { AsyncUserInputCard } from "./AsyncUserInputCard";
 import { InlineLinkChip } from "../InlineLinkChip";
 import {
   BotIcon,
@@ -545,6 +546,7 @@ interface MessagesTimelineProps {
   onRevertUserMessage: (messageId: MessageId) => void;
   onUndoTurnFiles?: (turnCounts: readonly number[]) => void;
   onEditUserMessage?: (messageId: MessageId, text: string) => boolean | Promise<boolean>;
+  onRespondToAsyncUserInput?: (messageId: MessageId, answers: readonly string[]) => Promise<void>;
   /**
    * The user message the edit affordance may target, resolved by the owner from
    * the raw thread messages (the same list the server-side edit policy
@@ -632,6 +634,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onRevertUserMessage,
   onUndoTurnFiles,
   onEditUserMessage,
+  onRespondToAsyncUserInput,
   editableUserMessageId,
   activeTurnId,
   isRevertingCheckpoint,
@@ -1759,7 +1762,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         />
                       </div>
                     )}
-                     {renderedFileComments.length > 0 && (
+                    {renderedFileComments.length > 0 && (
                       <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
                         <FileCommentsSummaryChip comments={renderedFileComments} />
                       </div>
@@ -1968,6 +1971,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             return (
               <>
                 <div className="group min-w-0 py-0.5">
+                  {row.message.asyncUserInput ? (
+                    <AsyncUserInputCard
+                      key={row.message.id}
+                      messageId={row.message.id}
+                      input={row.message.asyncUserInput}
+                      onRespond={onRespondToAsyncUserInput}
+                    />
+                  ) : null}
                   {messageText !== null ? (
                     <div data-assistant-message-id={row.message.id} data-chat-find-text-root="true">
                       <ChatMarkdown

@@ -148,6 +148,10 @@
       "types": "./src/claudeCache.ts",
       "import": "./src/claudeCache.ts"
     },
+    "./asyncUserInput": {
+      "types": "./src/asyncUserInput.ts",
+      "import": "./src/asyncUserInput.ts"
+    },
     "./projectContainers": {
       "types": "./src/projectContainers.ts",
       "import": "./src/projectContainers.ts"

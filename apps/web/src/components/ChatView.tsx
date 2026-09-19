@@ -42,6 +42,7 @@ import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
 } from "@harnessos/shared/conversationEdit";
+import { formatAsyncUserInputResponse } from "@harnessos/shared/asyncUserInput";
 import { threadExportBlockedReason } from "@harnessos/shared/threadExport";
 import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import {
@@ -2679,6 +2680,48 @@ export default function ChatView({
     [selectableModelOptionsByEngine, selectedEngine, settings.hiddenEngines, settings.engineOrder],
   );
   const phase = derivePhase(activeThread?.session ?? null);
+  const onRespondToAsyncUserInput = useCallback(
+    async (messageId: MessageId, answers: readonly string[]) => {
+      const api = readNativeApi();
+      if (!api) throw new Error(t("asyncInput.submitFailed"));
+      if (!selectedEngineSelection) throw new Error(t("asyncInput.submitFailed"));
+      const questionMessage = activeThread?.messages.find((entry) => entry.id === messageId);
+      const questions = questionMessage?.asyncUserInput?.questions;
+      if (!questions) throw new Error(t("asyncInput.submitFailed"));
+      await api.orchestration.dispatchCommand({
+        type: "thread.turn.start",
+        commandId: newCommandId(),
+        threadId,
+        asyncUserInputResponse: { messageId, answers: [...answers] },
+        message: {
+          messageId: newMessageId(),
+          role: "user",
+          text: formatAsyncUserInputResponse(questions, answers),
+          attachments: [],
+        },
+        engineSelection: selectedEngineSelection,
+        assistantDeliveryMode,
+        dispatchMode: resolveFollowUpDispatchMode({
+          behavior: settings.followUpBehavior,
+          hasLiveTurn: phase === "running",
+        }),
+        runtimeMode,
+        interactionMode,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    [
+      activeThread?.messages,
+      assistantDeliveryMode,
+      interactionMode,
+      phase,
+      runtimeMode,
+      selectedEngineSelection,
+      settings.followUpBehavior,
+      t,
+      threadId,
+    ],
+  );
   const isConnecting = isLocalConnecting || phase === "connecting";
   // User messages intentionally have no turn id; assistant messages are the stable
   // bridge for deciding which historical work can fold into visible replies.
@@ -9581,10 +9624,10 @@ export default function ChatView({
     isConnecting,
     isAwaitingTurnStart,
     isSendBusy,
-      pendingUserInputs.length,
-      activeThread?.claudeCacheReview,
-      hasQueueableLiveTurn,
-      queuedAutoDispatchTick,
+    pendingUserInputs.length,
+    activeThread?.claudeCacheReview,
+    hasQueueableLiveTurn,
+    queuedAutoDispatchTick,
     queuedComposerTurns,
     queuedSteerGate,
     removeQueuedComposerTurnFromDraft,
@@ -12653,6 +12696,7 @@ export default function ChatView({
                     onRevertUserMessage={onRevertUserMessage}
                     onUndoTurnFiles={onUndoTurnFiles}
                     onEditUserMessage={onEditUserMessage}
+                    onRespondToAsyncUserInput={onRespondToAsyncUserInput}
                     editableUserMessageId={editableUserMessageId}
                     isRevertingCheckpoint={isRevertingCheckpoint}
                     onExpandTimelineImage={onExpandTimelineImage}

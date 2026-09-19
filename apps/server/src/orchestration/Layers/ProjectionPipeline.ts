@@ -6,6 +6,7 @@ import {
   setPinnedMessageLabel,
 } from "@harnessos/shared/pinnedMessages";
 import { isStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
+import { clearRemovedAsyncUserInputResponses } from "@harnessos/shared/asyncUserInput";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, FileSystem, Layer, Option, Path, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -1183,6 +1184,15 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             }),
             role: event.payload.role,
             text: resolvedText,
+            ...(event.payload.asyncUserInput !== undefined
+              ? {
+                  asyncUserInput: {
+                    ...event.payload.asyncUserInput,
+                    responseSequence:
+                      event.payload.asyncUserInput.responseSequence ?? event.sequence,
+                  },
+                }
+              : {}),
             ...(nextAttachments !== undefined ? { attachments: [...nextAttachments] } : {}),
             ...(event.payload.skills !== undefined ? { skills: event.payload.skills } : {}),
             ...(event.payload.mentions !== undefined ? { mentions: event.payload.mentions } : {}),
@@ -1225,9 +1235,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               }),
               event.payload.turnCount,
             );
-            if (keptRows.length === existingRows.length) {
-              return;
-            }
           } else {
             const rollback = rollbackProjectionMessagesFromMessage(
               existingRows,
@@ -1238,6 +1245,26 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             }
             keptRows = rollback.keptRows;
           }
+          const retainedMessageIds = new Set(keptRows.map((row) => row.messageId));
+          const nextRows = clearRemovedAsyncUserInputResponses(
+            keptRows.map((row) => ({
+              ...row,
+              asyncUserInput: row.asyncUserInput,
+            })),
+            retainedMessageIds,
+            event.sequence,
+          );
+          const asyncUserInputChanged = nextRows.some(
+            (row, index) => row.asyncUserInput !== keptRows[index]?.asyncUserInput,
+          );
+          if (
+            event.type === "thread.reverted" &&
+            nextRows.length === existingRows.length &&
+            !asyncUserInputChanged
+          ) {
+            return;
+          }
+          keptRows = nextRows;
 
           yield* projectionThreadMessageRepository.replaceByThreadId({
             threadId: event.payload.threadId,
