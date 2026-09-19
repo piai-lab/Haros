@@ -216,7 +216,7 @@ their real authorization owner. Labels help humans focus; they do not elevate pr
 ## Choosing between nearby tools
 
 Use a Group when the main requirement is a reusable list of existing Agent Threads. Use a Thread note
-when the requirement is explanatory context inside one Thread. Use a pinned Message or marker when
+when the requirement is explanatory context inside one Thread. Use a pinned Message when
 the requirement is a precise landmark in history. Use a fork when the requirement is a new Thread
 with a defined inherited history prefix. Use a handoff when execution must move across an Engine or
 workspace boundary. These choices are not cosmetic; each creates a different durable relationship.
@@ -305,6 +305,6 @@ the same Engine. Those facts belong elsewhere.
 
 <!-- guide-navigation:start -->
 
-[Guidebook contents](../README.md) · [Previous: Timeline, Activity, and Model Provenance](../part-02-workbench/15-timeline-activity-model-provenance.md) · [Next: Notes, Pinned Messages, and Markers](17-notes-pinned-messages-markers.md)
+[Guidebook contents](../README.md) · [Previous: Timeline, Activity, and Model Provenance](../part-02-workbench/15-timeline-activity-model-provenance.md) · [Next: Notes and Pinned Messages](17-notes-pinned-messages-markers.md)
 
 <!-- guide-navigation:end -->

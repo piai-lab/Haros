@@ -11,8 +11,9 @@ same orchestration owner with different workspace lifecycles.
 ## Engines
 
 An Engine is a complete agent runtime. `ENGINE_DESCRIPTORS` is the single owner of Engine identity,
-display name, registration, capability projection, and Settings discovery. A fresh setup has no
-default Engine; the user chooses one in Settings before sending.
+display name, registration, capability projection, and Settings discovery. A welcome tour can
+introduce Engines, appearance, and the first project, but it does not silently choose an Engine
+or freeze a model. The user still chooses one in Settings or Composer before sending.
 
 Engine selection freezes the exact Engine, model, and options admitted to a queued turn. Changing
 Engine is stop-first. A launch failure preserves the prompt and Queue and never silently selects a

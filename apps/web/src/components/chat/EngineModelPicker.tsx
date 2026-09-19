@@ -5,7 +5,6 @@
 
 import { type ModelSlug, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import { resolveSelectableModel } from "@harnessos/shared/model";
-import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { type EnginePickerKind, ENGINE_OPTIONS } from "../../session-logic";
 import { buildEngineSelection, formatEngineModelOptionName } from "../../engineModelOptions";
@@ -36,12 +35,8 @@ import {
   shouldUseCollapsibleModelGroups,
   type EngineModelOption,
 } from "../../engineModelOptions";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
-import {
-  FAVORITE_MODEL_STORAGE_KEYS,
-  supportsModelFavorites,
-  type FavoriteModelEngine,
-} from "../../lib/modelFavorites";
+import { useStarredModels } from "../../hooks/useStarredModels";
+import { starredModelSlugsForEngine } from "../../lib/starredModels";
 import { Skeleton } from "../ui/skeleton";
 import { useI18n } from "~/i18n";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
@@ -59,16 +54,6 @@ function providerIconClassName(
 }
 
 const SEARCHABLE_MODEL_PICKER_THRESHOLD = 15;
-const FavoriteModelSlugs = Schema.Array(Schema.String);
-const EMPTY_FAVORITE_MODEL_SLUGS: ReadonlyArray<string> = [];
-
-// Keeps persisted favorite slugs compact and stable while preserving the user's order.
-function toggleFavoriteModelSlug(current: ReadonlyArray<string>, slug: string): string[] {
-  const normalizedCurrent = Array.from(new Set(current.filter((entry) => entry.trim().length > 0)));
-  return normalizedCurrent.includes(slug)
-    ? normalizedCurrent.filter((entry) => entry !== slug)
-    : [...normalizedCurrent, slug];
-}
 
 function stripParameterizedModelSuffix(model: string): string {
   return model.trim().replace(/\[[^\]]*\]$/u, "");
@@ -138,26 +123,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   const { t } = useI18n();
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
-  const [kiloFavoriteModelSlugs, setKiloFavoriteModelSlugs] = useLocalStorage(
-    FAVORITE_MODEL_STORAGE_KEYS.kilo,
-    EMPTY_FAVORITE_MODEL_SLUGS,
-    FavoriteModelSlugs,
-  );
-  const [cursorFavoriteModelSlugs, setCursorFavoriteModelSlugs] = useLocalStorage(
-    FAVORITE_MODEL_STORAGE_KEYS.cursor,
-    EMPTY_FAVORITE_MODEL_SLUGS,
-    FavoriteModelSlugs,
-  );
-  const [openCodeFavoriteModelSlugs, setOpenCodeFavoriteModelSlugs] = useLocalStorage(
-    FAVORITE_MODEL_STORAGE_KEYS.opencode,
-    EMPTY_FAVORITE_MODEL_SLUGS,
-    FavoriteModelSlugs,
-  );
-  const [piFavoriteModelSlugs, setPiFavoriteModelSlugs] = useLocalStorage(
-    FAVORITE_MODEL_STORAGE_KEYS.pi,
-    EMPTY_FAVORITE_MODEL_SLUGS,
-    FavoriteModelSlugs,
-  );
+  const { starredModels, toggleStarredModel } = useStarredModels();
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
   const activeEngine = props.lockedEngine ?? props.engine;
   const hiddenEngines = props.hiddenEngines;
@@ -174,16 +140,6 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     hiddenEngineSet,
     protectedEngineSet,
   );
-  const kiloFavoriteModelSlugSet = new Set(kiloFavoriteModelSlugs);
-  const openCodeFavoriteModelSlugSet = new Set(openCodeFavoriteModelSlugs);
-  const cursorFavoriteModelSlugSet = new Set(cursorFavoriteModelSlugs);
-  const piFavoriteModelSlugSet = new Set(piFavoriteModelSlugs);
-  const favoriteModelSlugSets = {
-    cursor: cursorFavoriteModelSlugSet,
-    kilo: kiloFavoriteModelSlugSet,
-    opencode: openCodeFavoriteModelSlugSet,
-    pi: piFavoriteModelSlugSet,
-  };
   const handleModelChange = (engine: EngineKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
@@ -196,16 +152,14 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     props.onEngineModelChange(engine, resolvedModel);
     onAfterSelection?.();
   };
-  const toggleFavoriteModel = (engine: FavoriteModelEngine, slug: string) => {
-    const setFavoriteModelSlugs =
-      engine === "cursor"
-        ? setCursorFavoriteModelSlugs
-        : engine === "kilo"
-          ? setKiloFavoriteModelSlugs
-          : engine === "pi"
-            ? setPiFavoriteModelSlugs
-            : setOpenCodeFavoriteModelSlugs;
-    setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
+  const toggleFavoriteModel = (engine: EngineKind, slug: string) => {
+    toggleStarredModel({
+      engine,
+      model: slug,
+      effort: null,
+      fastMode: null,
+      thinking: null,
+    });
   };
 
   const renderModelRadioGroup = (engine: EngineKind) => {
@@ -233,11 +187,9 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             buildModelSearchText(option).includes(normalizedModelSearchQuery),
           )
         : engineOptions;
-    const favoriteEngine = supportsModelFavorites(engine) ? engine : null;
-    const favoriteModelSlugSet =
-      favoriteEngine !== null ? favoriteModelSlugSets[favoriteEngine] : undefined;
+    const favoriteModelSlugSet = new Set(starredModelSlugsForEngine(starredModels, engine));
     const groupedOptions =
-      favoriteModelSlugSet !== undefined
+      favoriteModelSlugSet.size > 0
         ? groupEngineModelOptionsWithFavorites({
             options: filteredOptions,
             favoriteSlugs: favoriteModelSlugSet,
@@ -256,7 +208,6 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             engine={engine}
             activeModel={props.model ?? ""}
             isSearching={normalizedModelSearchQuery.length > 0}
-            favoriteEngine={favoriteEngine}
             favoriteModelSlugSet={favoriteModelSlugSet}
             onToggleFavorite={toggleFavoriteModel}
             {...(onAfterSelection ? { onAfterSelection } : {})}

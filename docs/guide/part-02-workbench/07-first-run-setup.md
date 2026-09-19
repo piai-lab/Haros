@@ -8,17 +8,19 @@ verified_at: 2026-08-30
 source_anchors:
   - docs/architecture.md#engines
   - packages/shared/src/engineMetadata.ts#ENGINE_DESCRIPTORS
+  - apps/web/src/onboarding/OnboardingDialog.tsx
   - apps/server/src/engine/executionCapabilityProjection.ts#resolveEngineExecutionCapabilities
 ---
 
 # Chapter 7 — First-Run Setup {#chapter-07}
 
-Current source correction after this edition pin: the first-run readiness dialog and
-`apps/web/src/components/onboarding/**` have been removed. Fresh installs open the workbench
-directly and default to Codex. Engine and exact-model readiness now live in Settings, the
+Current source correction: a welcome tour lives in `apps/web/src/onboarding/**`. It can show on a
+fresh install with no ordinary projects, and Settings can replay it. The tour never silently
+selects an Engine or freezes a model. Engine and exact-model readiness still live in Settings, the
 Composer, and `resolveEngineExecutionCapabilities`. AppSnap welcome remains a separate optional
-overlay, not Engine setup. Treat the first-run dialog states below as historical edition
-evidence, not current product UI.
+overlay, not Engine setup. The older first-run *readiness* dialog that guessed a default Engine is
+retired; treat those dialog states below as historical edition evidence for readiness layers, not
+as current product UI.
 
 ## The question
 
@@ -28,9 +30,10 @@ For Haros's built-in Engine, a configured model service may also be part of that
 separate layers. “The app opened” is not the same as “this exact request can run.”
 
 The pinned edition described a setup dialog as a truthful readiness check rather than a ceremonial
-welcome screen. That dialog is gone. The same layers still apply at send time: Haros derives
-readiness from settled discovery facts and remembered exact bindings, and it never treats an
-Engine name, a model-service connection, or a model family label as a complete executable choice.
+welcome screen. That readiness dialog is gone. The current welcome tour is optional setup, not
+admission. The same layers still apply at send time: Haros derives readiness from settled discovery
+facts and remembered exact bindings, and it never treats an Engine name, a model-service
+connection, or a model family label as a complete executable choice.
 
 ![A Part II control anatomy connects Composer controls and desired selection to admission, permission, Queue, Timeline, refusal, and recovery.](../assets/generated/part-02-opener.jpg)
 
@@ -293,12 +296,12 @@ must not modify private Engine state or probe paid APIs.
 ## Source trail
 
 - `packages/shared/src/engineMetadata.ts` owns `ENGINE_DESCRIPTORS`.
-- `docs/architecture.md` records that the first-run setup wizard is removed; the workbench opens
-  directly, and AppSnap welcome is not Engine setup.
+- `docs/architecture.md` records that a welcome tour may exist, but it does not silently choose an
+  Engine. AppSnap welcome is not Engine setup.
 - `apps/server/src/engine/executionCapabilityProjection.ts` resolves mode capability and health for
   an exact Engine selection.
-- The pinned edition's `apps/web/src/components/onboarding/**` first-run owners are gone; do not
-  restore them as a second Engine registry.
+- Current welcome-tour owners live in `apps/web/src/onboarding/**` and project
+  `ENGINE_DESCRIPTORS`; do not restore a second Engine registry.
 
 <!-- guide-navigation:start -->
 

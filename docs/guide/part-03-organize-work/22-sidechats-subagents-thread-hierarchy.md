@@ -210,7 +210,7 @@ workspace, or have explicit worktree metadata depending on the command; the rela
 nothing about paths.
 
 It is also not an ownership transfer. The source Project remains the Project. A Group can organize
-any eligible Threads without changing lineage. Notes, pins, and markers remain scoped to their own
+any eligible Threads without changing lineage. Notes and pins remain scoped to their own
 Threads.
 
 This allows several views over the same durable work: Project ownership, Group membership, and Thread
@@ -225,7 +225,7 @@ source prefix.
 
 If you need to change Engines or move to a separate worktree with stop-first semantics, use Handoff,
 not a generic descendant. If you only need a reusable view of existing Threads, use a Group. If you
-need a landmark in one history, use notes, pins, or markers.
+need a landmark in one history, use notes or pins.
 
 Naming the relationship before creating it is a useful guardrail. Finish: “This child exists to **_;
 it receives _**; it returns or owns **_; it must not _**.” If you cannot fill the blanks, the split is

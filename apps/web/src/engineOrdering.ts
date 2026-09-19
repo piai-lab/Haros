@@ -1,7 +1,7 @@
 // FILE: engineOrdering.ts
 // Purpose: Keeps engine picker ordering stable across settings, search, and menus.
 // Layer: Web settings utility
-// Exports: default order, normalization, and order comparison helpers.
+// Exports: default order, hidden-engine writes, normalization, and order comparison helpers.
 
 import type { EngineKind } from "@harnessos/contracts";
 import { RUNNABLE_ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
@@ -26,6 +26,15 @@ export function normalizeHiddenEngines(hiddenEngines: ReadonlyArray<string>): En
     }
   }
   return result;
+}
+
+export function setEngineHidden(
+  current: ReadonlyArray<EngineKind>,
+  engine: EngineKind,
+  hidden: boolean,
+): EngineKind[] {
+  const withoutTarget = current.filter((entry) => entry !== engine);
+  return hidden ? [...withoutTarget, engine] : withoutTarget;
 }
 
 export function normalizeEngineOrder(engineOrder: ReadonlyArray<string>): EngineKind[] {

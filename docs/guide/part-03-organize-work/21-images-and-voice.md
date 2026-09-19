@@ -199,7 +199,7 @@ behavior without checking the final request.
 ## Images and voice across history
 
 An admitted image remains associated with its Message according to managed attachment lifecycle. A
-voice transcript becomes ordinary Message text after send. Later notes, pins, and markers can help
+voice transcript becomes ordinary Message text after send. Later notes and pins can help
 navigate that history without changing the media or source Message.
 
 A fork or handoff may import product history according to its exact scope. That does not mean a native

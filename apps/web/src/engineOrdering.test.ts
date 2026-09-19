@@ -15,6 +15,7 @@ import {
   isEngineKind,
   normalizeHiddenEngines,
   normalizeEngineOrder,
+  setEngineHidden,
 } from "./engineOrdering";
 
 const ALL_ENGINE_KINDS: readonly EngineKind[] = ENGINE_KINDS;
@@ -43,5 +44,12 @@ describe("engineOrdering", () => {
     expect(isEngineKind("pi")).toBe(true);
     expect(normalizeEngineOrder(["pi", "codex"])[0]).toBe("pi");
     expect(normalizeHiddenEngines(["bogus", "pi", "pi"])).toEqual(["pi"]);
+  });
+
+  it("hides and restores an engine without mutating the previous list", () => {
+    const current: EngineKind[] = ["claude"];
+    expect(setEngineHidden(current, "pi", true)).toEqual(["claude", "pi"]);
+    expect(current).toEqual(["claude"]);
+    expect(setEngineHidden(["claude", "pi"], "pi", false)).toEqual(["claude"]);
   });
 });

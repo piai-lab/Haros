@@ -77,7 +77,7 @@ this order; they do not keep another chapter registry.
 ### Part III — Organize and Extend a Line of Work
 
 16. [Groups Without Moving Projects](part-03-organize-work/16-groups-without-moving-projects.md#chapter-16)
-17. [Notes, Pinned Messages, and Markers](part-03-organize-work/17-notes-pinned-messages-markers.md#chapter-17)
+17. [Notes and Pinned Messages](part-03-organize-work/17-notes-pinned-messages-markers.md#chapter-17)
 18. [Goals and Goal Achievement](part-03-organize-work/18-goals-and-goal-achievement.md#chapter-18)
 19. [Plans and Implementation Threads](part-03-organize-work/19-plans-and-implementation-threads.md#chapter-19)
 20. [Attachments, Mentions, Skills, and References](part-03-organize-work/20-attachments-mentions-skills-references.md#chapter-20)

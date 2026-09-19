@@ -62,6 +62,20 @@ describe("agent tool settings contract", () => {
   });
 });
 
+describe("onboarding completion marker", () => {
+  it("accepts a completion timestamp on settings and patches", () => {
+    const completedAt = "2026-09-18T00:00:00.000Z";
+    expect(
+      Schema.decodeUnknownSync(ServerSettings)({ onboardingCompletedAt: completedAt })
+        .onboardingCompletedAt,
+    ).toBe(completedAt);
+    expect(decodePatch({ onboardingCompletedAt: completedAt })).toEqual({
+      onboardingCompletedAt: completedAt,
+    });
+    expect(decodePatch({ onboardingCompletedAt: null })).toEqual({ onboardingCompletedAt: null });
+  });
+});
+
 describe("retired Haros prompt settings", () => {
   it("refuses retired OA as defaultEngine instead of rewriting it as Pi", () => {
     expect(() => Schema.decodeUnknownSync(ServerSettings)({ defaultEngine: "oa" })).toThrow();

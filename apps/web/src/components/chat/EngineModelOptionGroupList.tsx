@@ -29,16 +29,13 @@ import {
   COMPOSER_PICKER_RADIUS_CLASS_NAME,
 } from "./composerPickerStyles";
 
-type FavoriteModelEngine = "cursor" | "kilo" | "opencode" | "pi";
-
 type EngineModelOptionGroupListProps = {
   groupedOptions: ReadonlyArray<EngineModelOptionGroup>;
   engine: EngineKind;
   activeModel: string;
   isSearching: boolean;
-  favoriteEngine: FavoriteModelEngine | null;
-  favoriteModelSlugSet: ReadonlySet<string> | undefined;
-  onToggleFavorite: (engine: FavoriteModelEngine, slug: string) => void;
+  favoriteModelSlugSet: ReadonlySet<string>;
+  onToggleFavorite: (engine: EngineKind, slug: string) => void;
   onAfterSelection?: () => void;
 };
 
@@ -46,10 +43,9 @@ function EngineModelRadioItem(
   props: Readonly<{
     engine: EngineKind;
     modelOption: EngineModelOption;
-    favoriteEngine: FavoriteModelEngine | null;
     isFavorite: boolean;
     showProvenance: boolean;
-    onToggleFavorite: (engine: FavoriteModelEngine, slug: string) => void;
+    onToggleFavorite: (engine: EngineKind, slug: string) => void;
     onAfterSelection?: () => void;
   }>,
 ) {
@@ -57,13 +53,11 @@ function EngineModelRadioItem(
   const {
     engine,
     modelOption,
-    favoriteEngine,
     isFavorite,
     showProvenance,
     onToggleFavorite,
     onAfterSelection,
   } = props;
-  const supportsFavorites = favoriteEngine !== null;
   const costMultiplierLabel =
     engine === "droid" ? engineModelCostMultiplierLabel(modelOption.description) : null;
   const provenanceLabel = showProvenance
@@ -82,45 +76,34 @@ function EngineModelRadioItem(
       aria-label={accessibleModelName}
       title={modelOption.name}
       preserveChildLayout
-      className={supportsFavorites ? undefined : "grid-cols-[minmax(0,1fr)_auto]"}
       trailing={
-        supportsFavorites ? (
-          <button
-            type="button"
-            aria-label={
-              isFavorite
-                ? t("composer.removeFavorite", { model: accessibleModelName })
-                : t("composer.addFavorite", { model: accessibleModelName })
-            }
-            className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
-              COMPOSER_PICKER_RADIUS_CLASS_NAME,
-              isFavorite && "text-amber-400 hover:text-amber-300",
-            )}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onToggleFavorite(favoriteEngine, modelOption.slug);
-            }}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            {isFavorite ? (
-              <StarFilledIcon aria-hidden="true" className="size-3" />
-            ) : (
-              <StarIcon aria-hidden="true" className="size-3" />
-            )}
-          </button>
-        ) : costMultiplierLabel && modelOption.description ? (
-          <span
-            title={modelOption.description}
-            className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground/65"
-          >
-            <span aria-hidden="true">{costMultiplierLabel}</span>
-            <span className="sr-only">{modelOption.description}</span>
-          </span>
-        ) : null
+        <button
+          type="button"
+          aria-label={
+            isFavorite
+              ? t("composer.removeFavorite", { model: accessibleModelName })
+              : t("composer.addFavorite", { model: accessibleModelName })
+          }
+          className={cn(
+            "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
+            COMPOSER_PICKER_RADIUS_CLASS_NAME,
+            isFavorite && "text-amber-400 hover:text-amber-300",
+          )}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleFavorite(engine, modelOption.slug);
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {isFavorite ? (
+            <StarFilledIcon aria-hidden="true" className="size-3" />
+          ) : (
+            <StarIcon aria-hidden="true" className="size-3" />
+          )}
+        </button>
       }
       onClick={() => {
         onAfterSelection?.();
@@ -129,7 +112,7 @@ function EngineModelRadioItem(
       <span
         className={cn(
           "flex min-w-0 items-center gap-1.5",
-          supportsFavorites && COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
+          COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
         )}
       >
         <ModelIdentityIcon
@@ -148,6 +131,15 @@ function EngineModelRadioItem(
             </span>
           ) : null}
         </span>
+        {costMultiplierLabel && modelOption.description ? (
+          <span
+            title={modelOption.description}
+            className="ms-auto shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground/65"
+          >
+            <span aria-hidden="true">{costMultiplierLabel}</span>
+            <span className="sr-only">{modelOption.description}</span>
+          </span>
+        ) : null}
       </span>
     </MenuRadioItem>
   );
@@ -208,8 +200,7 @@ export function EngineModelOptionGroupList(props: EngineModelOptionGroupListProp
             key={`${props.engine}:${modelOption.slug}`}
             engine={props.engine}
             modelOption={modelOption}
-            favoriteEngine={props.favoriteEngine}
-            isFavorite={props.favoriteModelSlugSet?.has(modelOption.slug) ?? false}
+            isFavorite={props.favoriteModelSlugSet.has(modelOption.slug)}
             showProvenance={group.key === "__favorites__"}
             onToggleFavorite={props.onToggleFavorite}
             {...(props.onAfterSelection ? { onAfterSelection: props.onAfterSelection } : {})}

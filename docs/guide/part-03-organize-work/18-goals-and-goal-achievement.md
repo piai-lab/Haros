@@ -311,6 +311,6 @@ work continues.
 
 <!-- guide-navigation:start -->
 
-[Guidebook contents](../README.md) · [Previous: Notes, Pinned Messages, and Markers](17-notes-pinned-messages-markers.md) · [Next: Plans and Implementation Threads](19-plans-and-implementation-threads.md)
+[Guidebook contents](../README.md) · [Previous: Notes and Pinned Messages](17-notes-pinned-messages-markers.md) · [Next: Plans and Implementation Threads](19-plans-and-implementation-threads.md)
 
 <!-- guide-navigation:end -->

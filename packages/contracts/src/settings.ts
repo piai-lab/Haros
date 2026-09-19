@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { BuiltInToolGroupOverrides } from "./agentTools";
-import { TrimmedString } from "./baseSchemas";
+import { IsoDateTime, TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { EngineKind, EngineSelection, ThreadEnvironmentMode } from "./orchestration";
 
@@ -145,6 +145,7 @@ export const ServerSettings = Schema.Struct({
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  onboardingCompletedAt: Schema.optionalKey(Schema.NullOr(IsoDateTime)),
 });
 export type ServerSettings = typeof ServerSettings.Type;
 
@@ -177,6 +178,7 @@ export const ServerSettingsView = Schema.Struct({
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  onboardingCompletedAt: Schema.optionalKey(Schema.NullOr(IsoDateTime)),
 });
 export type ServerSettingsView = typeof ServerSettingsView.Type;
 
@@ -272,6 +274,7 @@ export const ServerSettingsPatch = Schema.Struct({
       builtInGroupOverrides: Schema.optionalKey(BuiltInToolGroupOverrides),
     }),
   ),
+  onboardingCompletedAt: Schema.optionalKey(Schema.NullOr(IsoDateTime)),
 });
 export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
 

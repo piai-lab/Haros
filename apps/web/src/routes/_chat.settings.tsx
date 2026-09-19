@@ -114,6 +114,7 @@ import {
 } from "../localPreferences";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
 import { useServerSettings } from "../serverSettings";
+import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import {
   APPEARANCE_SETTINGS_SEARCH,
   BEHAVIOR_SETTINGS_SEARCH,
@@ -170,6 +171,7 @@ function SettingsRouteView() {
   const activeServerSettings = serverSettings ?? serverDefaults;
   const { icon: desktopAppIcon, updateIcon: updateDesktopAppIcon } = useDesktopAppIcon();
   const { t } = useI18n();
+  const openWelcomeTour = useOnboardingDialogStore((store) => store.openDialog);
   const serverSettingsStatus = serverSettings ? undefined : serverSettingsQuery.isError ? (
     <span className="inline-flex items-center gap-2">
       <span>{t("settings.unavailable")}</span>
@@ -663,6 +665,17 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={GENERAL_SETTINGS_SEARCH.welcomeTour.target}
+          title={t("firstRun.openTour")}
+          description={t("firstRun.openTourDescription")}
+          control={
+            <Button type="button" size="sm" variant="outline" onClick={openWelcomeTour}>
+              {t("firstRun.openTour")}
+            </Button>
+          }
+        />
+
+        <SettingsRow
           anchorId={GENERAL_SETTINGS_SEARCH.defaultEngine.target}
           title={t("settings.defaultEngine")}
           description={t("settings.defaultEngineDescription")}
@@ -957,15 +970,6 @@ function SettingsRouteView() {
             description: t("settings.pinnedMessagesDescription"),
             resetLabel: t("settings.pinnedMessages"),
             ariaLabel: t("settings.pinnedMessagesDescription"),
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentMarkers",
-            anchorId: GENERAL_SETTINGS_SEARCH.environmentMarkers.target,
-            title: t("settings.textMarkers"),
-            description: t("settings.textMarkersDescription"),
-            resetLabel: t("settings.textMarkers"),
-            ariaLabel: t("settings.textMarkersDescription"),
           })}
 
           {renderBooleanSettingRow({

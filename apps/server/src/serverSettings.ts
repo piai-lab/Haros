@@ -150,6 +150,9 @@ export class ServerSettingsService extends ServiceMap.Service<
             const current = yield* Ref.get(currentSettingsRef);
             const next = {
               ...DEFAULT_SERVER_SETTINGS,
+              ...(current.onboardingCompletedAt !== undefined
+                ? { onboardingCompletedAt: current.onboardingCompletedAt }
+                : {}),
               engines: {
                 ...DEFAULT_SERVER_SETTINGS.engines,
                 kilo: {
@@ -664,9 +667,15 @@ const makeServerSettings = Effect.gen(function* () {
 
   const resetSettingsView = writeSemaphore.withPermits(1)(
     Effect.gen(function* () {
+      const current = yield* Ref.get(settingsRef);
       const credentialState = yield* withCredentialState(DEFAULT_SERVER_SETTINGS);
       const disk = yield* loadSettingsFromDisk;
-      const next = credentialState;
+      const next = {
+        ...credentialState,
+        ...(current.onboardingCompletedAt !== undefined
+          ? { onboardingCompletedAt: current.onboardingCompletedAt }
+          : {}),
+      };
       const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
       yield* writeSettingsAtomically({
         revision: nextRevision,

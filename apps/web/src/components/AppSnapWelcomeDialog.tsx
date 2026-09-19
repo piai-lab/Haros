@@ -16,6 +16,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useOnboardingDialogStore } from "../onboarding/onboardingDialogStore";
 import { useI18n } from "../i18n";
 import { CentralIcon } from "../lib/central-icons";
 import { Button } from "./ui/button";
@@ -47,9 +48,11 @@ export function AppSnapWelcomeDialog() {
   );
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const onboardingOpen = useOnboardingDialogStore((store) => store.isOpen);
+  const startupGateSettled = useOnboardingDialogStore((store) => store.startupGateSettled);
 
   useEffect(() => {
-    if (storage.acknowledged) {
+    if (storage.acknowledged || onboardingOpen || !startupGateSettled) {
       return;
     }
 
@@ -71,7 +74,7 @@ export function AppSnapWelcomeDialog() {
     return () => {
       disposed = true;
     };
-  }, [storage.acknowledged]);
+  }, [onboardingOpen, startupGateSettled, storage.acknowledged]);
 
   const acknowledge = () => {
     setOpen(false);

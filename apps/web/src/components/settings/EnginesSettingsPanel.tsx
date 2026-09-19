@@ -34,7 +34,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
-import { sameEngineOrder } from "~/engineOrdering";
+import { sameEngineOrder, setEngineHidden } from "~/engineOrdering";
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   getCustomBinaryPathForEngine,
@@ -674,15 +674,6 @@ export function createEngineInstallResetPatch(defaults: ServerSettingsView): Ser
       },
     },
   };
-}
-
-function setEngineHidden(
-  current: ReadonlyArray<EngineKind>,
-  engine: EngineKind,
-  hidden: boolean,
-): EngineKind[] {
-  const withoutTarget = current.filter((entry) => entry !== engine);
-  return hidden ? [...withoutTarget, engine] : withoutTarget;
 }
 
 function engineVisibilityStatusLabel(

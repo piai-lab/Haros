@@ -8,7 +8,7 @@ import { render } from "vitest-browser-react";
 import { EngineModelPicker } from "./EngineModelPicker";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
 import type { EngineModelOption } from "../../engineModelOptions";
-import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
+import { STARRED_MODELS_STORAGE_KEY } from "../../lib/starredModels";
 import { I18nProvider } from "../../i18n";
 
 const i18nHarness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } } => ({
@@ -581,8 +581,16 @@ describe("EngineModelPicker", () => {
 
   it("distinguishes same-name favourite models by their upstream engine", async () => {
     localStorage.setItem(
-      FAVORITE_MODEL_STORAGE_KEYS.opencode,
-      JSON.stringify(OPENCODE_DUPLICATE_NAME_MODELS.map((model) => model.slug)),
+      STARRED_MODELS_STORAGE_KEY,
+      JSON.stringify(
+        OPENCODE_DUPLICATE_NAME_MODELS.map((model) => ({
+          engine: "opencode",
+          model: model.slug,
+          effort: null,
+          fastMode: null,
+          thinking: null,
+        })),
+      ),
     );
     const mounted = await mountPicker({
       engine: "opencode",
@@ -767,8 +775,16 @@ describe("EngineModelPicker", () => {
 
   it("localizes favorite grouping and favorite actions in zh-CN", async () => {
     localStorage.setItem(
-      FAVORITE_MODEL_STORAGE_KEYS.opencode,
-      JSON.stringify([OPENCODE_FAVORITE_SORT_MODELS[0]!.slug]),
+      STARRED_MODELS_STORAGE_KEY,
+      JSON.stringify([
+        {
+          engine: "opencode",
+          model: OPENCODE_FAVORITE_SORT_MODELS[0]!.slug,
+          effort: null,
+          fastMode: null,
+          thinking: null,
+        },
+      ]),
     );
     const mounted = await mountPicker({
       engine: "opencode",

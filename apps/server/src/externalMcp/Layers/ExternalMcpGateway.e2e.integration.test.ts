@@ -64,7 +64,6 @@ function emptyThreadDetail(shell: OrchestrationThreadShell): OrchestrationThread
     ...shell,
     deletedAt: null,
     pinnedMessages: [],
-    threadMarkers: [],
     messages: [],
     proposedPlans: [],
     activities: [],

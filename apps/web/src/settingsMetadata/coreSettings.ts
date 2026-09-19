@@ -5,6 +5,11 @@ import {
 } from "../settingsSearchMetadata";
 
 export const GENERAL_SETTINGS_SEARCH = {
+  welcomeTour: defineSettingsSearchRow({
+    id: "general:welcome-tour",
+    titleKey: "firstRun.openTour",
+    keywords: "welcome tour first run onboarding setup engines",
+  }),
   defaultEngine: defineSettingsSearchRow({
     id: "general:default-engine",
     titleKey: "settings.defaultEngine",
@@ -71,11 +76,6 @@ export const GENERAL_SETTINGS_SEARCH = {
     id: "general:environment-pinned",
     titleKey: "settings.pinnedMessages",
     keywords: "Show the pinned-messages checklist in the Environment panel.",
-  }),
-  environmentMarkers: defineSettingsSearchRow({
-    id: "general:environment-markers",
-    titleKey: "settings.textMarkers",
-    keywords: "Show highlighted and underlined transcript text in the Environment panel.",
   }),
   environmentNotepad: defineSettingsSearchRow({
     id: "general:environment-notepad",

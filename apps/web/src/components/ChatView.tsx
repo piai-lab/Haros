@@ -360,7 +360,7 @@ import {
   resolveLocalDraftPromotion,
   type LocalDraftPromotionOwnership,
 } from "~/lib/threadCreatePromotion";
-import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
+import { readStarredModelSlugs } from "~/lib/starredModels";
 import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
 import {
   getCustomBinaryPathForEngine,
@@ -6460,7 +6460,7 @@ export default function ChatView({
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
           options: engineOptions,
-          favoriteSlugs: readFavoriteModelSlugs(selectedEngine),
+          favoriteSlugs: selectedEngine ? readStarredModelSlugs(selectedEngine) : [],
           direction,
         });
         if (!nextSlug) return;
