@@ -53,6 +53,7 @@ describe("browser automation tool schemas", () => {
       "browser_scroll",
       "browser_wait",
       "browser_evaluate",
+      "browser_run",
       "browser_close",
     ]);
     expect(new Set(BROWSER_TOOL_NAMES).size).toBe(BROWSER_TOOL_NAMES.length);

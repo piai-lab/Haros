@@ -996,6 +996,24 @@
       "mode": "adapt",
       "changes": "Haros keeps Codex non-blocking questions on the assistant message as asyncUserInput, not pendingUserInput. Answers are ordinary user messages. Conversation edit and rollback clear hanging responses. Subagent threads do not project these questions.",
       "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing asyncUserInput from OrchestrationMessage and the Codex item mapper."
+    },
+    {
+      "id": "synara-betterwright-browser-host",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "33333439c4b9c74d0097bc01196cccc921f67cf3",
+      "paths": [
+        "apps/desktop/src/browserAutomation/betterwrightRuntime.ts",
+        "apps/desktop/src/browserAutomation/betterwrightHostTarget.ts",
+        "apps/desktop/src/browserAutomation/betterwrightConnection.ts",
+        "apps/desktop/src/browserAutomation/betterwrightCdp.ts",
+        "apps/desktop/src/browserAutomation/betterwrightNetworkGuard.ts",
+        "apps/desktop/src/browserManager.ts",
+        "patches/betterwright@2.7.3.patch"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed BetterWright host-target browser automation and in-page popup mechanism.",
+      "mode": "adapt",
+      "changes": "Haros leases the existing visible Electron WebContents to BetterWright through hostTarget. It does not launch a second browser. window.open popups become in-app tabs that keep window.opener. AAD and product copy stay Haros-owned.",
+      "updatePolicy": "Pinned exact Synara revision. Do not advance ui-mother. Replace or delete by removing betterwrightRuntime from DesktopBrowserAutomationHost and restoring OS popup windows."
     }
   ]
 }

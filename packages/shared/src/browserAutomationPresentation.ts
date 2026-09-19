@@ -24,5 +24,6 @@ export const BROWSER_TOOL_TITLES = {
   browser_scroll: "Scroll browser page",
   browser_wait: "Wait for browser condition",
   browser_evaluate: "Evaluate browser expression",
+  browser_run: "Run browser actions",
   browser_close: "Close browser tab",
 } as const satisfies Record<BrowserToolName, string>;

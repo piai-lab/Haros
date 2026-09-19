@@ -49,6 +49,7 @@ describe("browser automation catalogue projection", () => {
       MUTATING_OPEN_WORLD,
       READ_ONLY_OPEN_WORLD,
       DESTRUCTIVE_OPEN_WORLD,
+      DESTRUCTIVE_OPEN_WORLD,
       DESTRUCTIVE_LOCAL,
     ]);
     for (const tool of BROWSER_TOOL_DEFINITIONS) {

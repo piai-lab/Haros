@@ -12,6 +12,7 @@ import {
   type BrowserOpenOutput,
   type BrowserPressInput,
   type BrowserReloadInput,
+  type BrowserRunInput,
   type BrowserResizeInput,
   type BrowserResizeOutput,
   type BrowserScrollInput,
@@ -40,6 +41,8 @@ import {
   stableJsonStringify,
 } from "@harnessos/shared/browserAutomationCatalogue";
 import { Schema } from "effect";
+import { app } from "electron";
+import { join } from "node:path";
 
 import type {
   BrowserAutomationWindowOpenEvent,
@@ -64,7 +67,9 @@ import { navigateBrowserHistory, type BrowserHistoryDirection } from "./navigati
 import { captureBrowserScreenshot } from "./screenshotCapture";
 import { withDialogHandling } from "./dialogHandling";
 import { uploadBrowserFiles } from "./workspaceUpload";
+import { runBetterwright } from "./betterwrightRuntime";
 import {
+  browserEvaluationOutput,
   evaluateBrowserExpression,
   waitForBrowserConditions,
   waitForLoadMilestone,
@@ -1219,7 +1224,8 @@ export class DesktopBrowserAutomationHost {
     const windowOpen =
       request.name === "browser_click" ||
       request.name === "browser_press" ||
-      request.name === "browser_webmcp_call"
+      request.name === "browser_webmcp_call" ||
+      request.name === "browser_run"
         ? this.observeWindowOpen(runtime)
         : null;
     try {
@@ -1452,6 +1458,37 @@ export class DesktopBrowserAutomationHost {
           );
         case "browser_evaluate":
           return evaluateBrowserExpression(runtime, input as BrowserEvaluateInput, signal);
+        case "browser_run": {
+          let value: unknown;
+          try {
+            value = await runBetterwright({
+              home: join(app.getPath("userData"), "browser-engine"),
+              contents: runtime.webContents,
+              expectAgentInput: runtime.expectAgentInput,
+              code: (input as BrowserRunInput).code,
+              timeoutMs: (input.timeoutMs as number | undefined) ?? 15_000,
+              signal,
+            });
+          } catch (error) {
+            throwIfAborted(signal);
+            if (error instanceof BrowserAutomationHostError) throw error;
+            browserHostError({
+              code: "BrowserEvaluationFailed",
+              retryable: false,
+              phase: "evaluate",
+              effectMayHaveCommitted: true,
+            });
+          }
+          const correlation = await this.reconcileWindowOpen(
+            windowOpen!,
+            input.timeoutMs as number | undefined,
+            targetTabId,
+            signal,
+          );
+          openedTabId = correlation.openedTabId;
+          oauthPopup = correlation.oauthPopup;
+          return browserEvaluationOutput(runtime.tabId, value);
+        }
         default:
           browserHostError({ code: "BrowserInputUnsupported" });
       }
@@ -1469,7 +1506,8 @@ export class DesktopBrowserAutomationHost {
     if (
       request.name !== "browser_click" &&
       request.name !== "browser_press" &&
-      request.name !== "browser_webmcp_call"
+      request.name !== "browser_webmcp_call" &&
+      request.name !== "browser_run"
     ) {
       return result;
     }

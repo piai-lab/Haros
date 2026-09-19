@@ -152,6 +152,7 @@ interface LiveTabRuntime {
   view: WebContentsView | null;
   ownsWebContents: boolean;
   listenerDisposers: Array<() => void>;
+  popupOpenerTabId?: string;
 }
 
 interface OAuthPopupContext {
@@ -289,6 +290,10 @@ function createBrowserTab(
     ...(presentation === undefined ? {} : { presentation }),
   };
 }
+
+type EmbeddedPopupOptions = Electron.BrowserWindowConstructorOptions & {
+  webContents?: WebContents;
+};
 
 function defaultThreadBrowserState(threadId: ThreadId): ThreadBrowserState {
   return {
@@ -805,13 +810,12 @@ export class DesktopBrowserManager {
             openedTabId: null,
           });
         }
-        // Allow (don't deny) so Electron creates a real child window that keeps
-        // `window.opener`, which the OAuth callback needs to message the page back.
         return {
           action: "allow",
           overrideBrowserWindowOptions: this.sessionPolicy.buildOAuthPopupWindowOptions(
             this.window,
           ),
+          createWindow: (options) => this.createEmbeddedPopup({ threadId, tabId }, options, url),
         };
       }
 
@@ -836,6 +840,55 @@ export class DesktopBrowserManager {
     listenerDisposers.push(() => {
       webContents.removeListener("did-create-window", didCreateWindow);
     });
+  }
+
+  private createEmbeddedPopup(
+    opener: OAuthPopupContext,
+    options: EmbeddedPopupOptions,
+    url: string,
+  ): WebContents {
+    const state = this.ensureWorkspace(opener.threadId);
+    const tab = createBrowserTab(url);
+    tab.status = "live";
+    tab.isLoading = true;
+    const runtime = this.createLiveRuntime(opener.threadId, tab.id, options);
+    state.tabs.push(tab);
+    runtime.popupOpenerTabId = opener.tabId;
+    this.runtimes.set(runtime.key, runtime);
+    this.inheritAutomationDownloadProvenance(opener, runtime.key);
+    this.clearTabSuspendTimer(opener.threadId, opener.tabId);
+    const close = (event: Electron.Event) => {
+      event.preventDefault();
+      this.closeEmbeddedPopup(runtime);
+    };
+    const popupEvents: NodeJS.EventEmitter = runtime.webContents;
+    popupEvents.on("close", close);
+    runtime.listenerDisposers.push(() => popupEvents.removeListener("close", close));
+    setImmediate(() => {
+      if (this.disposed || this.runtimes.get(runtime.key) !== runtime) return;
+      state.activeTabId = tab.id;
+      this.markThreadStateChanged(opener.threadId);
+      const bounds = this.getVisibleBoundsForThread(opener.threadId);
+      if (this.activeThreadId === opener.threadId && bounds) this.attachRuntime(runtime, bounds);
+      this.emitState(opener.threadId);
+      if (!options.webContents) {
+        void runtime.webContents.loadURL(url).catch(() => {});
+      }
+    });
+    return runtime.webContents;
+  }
+
+  private closeEmbeddedPopup(runtime: LiveTabRuntime): void {
+    if (this.runtimes.get(runtime.key) !== runtime) return;
+    const state = this.states.get(runtime.threadId);
+    if (!state?.tabs.some((tab) => tab.id === runtime.tabId)) return;
+    if (
+      state.activeTabId === runtime.tabId &&
+      state.tabs.some((tab) => tab.id === runtime.popupOpenerTabId)
+    ) {
+      state.activeTabId = runtime.popupOpenerTabId!;
+    }
+    this.closeAutomationTab({ threadId: runtime.threadId, tabId: runtime.tabId });
   }
 
   private findRuntimeContext(webContents: WebContents): OAuthPopupContext | null {
@@ -875,6 +928,15 @@ export class DesktopBrowserManager {
       threadId: context.threadId,
       sourceTabId: context.tabId,
     });
+  }
+
+  private inheritAutomationDownloadProvenance(opener: OAuthPopupContext, childKey: string): void {
+    const provenance = this.automationSideEffectProvenanceByRuntimeKey.get(
+      buildRuntimeKey(opener.threadId, opener.tabId),
+    );
+    if (provenance?.humanControlEpoch === this.getAutomationHumanControlEpoch(opener.threadId)) {
+      this.automationSideEffectProvenanceByRuntimeKey.set(childKey, { ...provenance });
+    }
   }
 
   private scheduleWindowOpenTab(input: {
@@ -2877,9 +2939,15 @@ export class DesktopBrowserManager {
     return didChange;
   }
 
-  private createLiveRuntime(threadId: ThreadId, tabId: string): LiveTabRuntime {
+  private createLiveRuntime(
+    threadId: ThreadId,
+    tabId: string,
+    popupOptions?: EmbeddedPopupOptions,
+  ): LiveTabRuntime {
     const view = new WebContentsView({
+      ...(popupOptions?.webContents ? { webContents: popupOptions.webContents } : {}),
       webPreferences: {
+        ...popupOptions?.webPreferences,
         partition: BROWSER_SESSION_PARTITION,
         contextIsolation: true,
         nodeIntegration: false,

@@ -21,6 +21,8 @@ import {
   BrowserPressOutput,
   BrowserReloadInput,
   BrowserReloadOutput,
+  BrowserRunInput,
+  BrowserRunOutput,
   BrowserResizeInput,
   BrowserResizeOutput,
   BrowserScreenshotHostOutput,
@@ -142,6 +144,7 @@ export const BROWSER_TOOL_INSTRUCTION_COPY = {
   browser_scroll: `${BROWSER_COMMON_AGENT_GUIDANCE}${BROWSER_TAB_SCOPED_AGENT_GUIDANCE} Scroll the viewport or one target using one pixels/pages/direction mode and inspect returned before/after/boundary state. The mode is inferred when exactly one of direction, pixel deltas, or page deltas is provided. Snapshot again when newly revealed content matters.`,
   browser_wait: `Preferred condition shape: {"conditions":[{"kind":"text","text":"Done","state":"present"}],"timeoutMs":15000}. "text" and "state" belong inside each condition, never at the top level; every condition uses "kind", never "type". A bounded fallback delay may use {"conditions":[{"kind":"delay","timeMs":500}]} or the compatibility form {"timeMs":500}; a timeoutMs-only call is treated as a bounded delay. ${BROWSER_COMMON_AGENT_GUIDANCE}${BROWSER_TAB_SCOPED_AGENT_GUIDANCE} Wait for 1–8 closed conditions combined as all (default) or any: delay, target state, text presence/absence, exact/bounded-glob URL, or load state. Then snapshot to verify content.`,
   browser_evaluate: `${BROWSER_COMMON_AGENT_GUIDANCE}${BROWSER_TAB_SCOPED_AGENT_GUIDANCE} Evaluate one bounded main-world expression in the same page and return JSON only. This is destructive/open-world capability; prefer snapshot/actions and never use it to bypass navigation, network or native-surface policy.`,
+  browser_run: `${BROWSER_COMMON_AGENT_GUIDANCE}${BROWSER_TAB_SCOPED_AGENT_GUIDANCE} Run a bounded BetterWright snippet against this thread's visible shared tab. Never launch or attach another browser. Saved accounts: credentials.list() and credentials.listPending() return origin-scoped metadata only. Password filling, generation and vault changes are unavailable. Ask the user to sign in manually or import a browser session through Saved logins; never attempt credentials.fill/generateAndFill. Never read or return passwords, cookies, tokens or auth headers. Master reveal and cookie import are human-only UI.`,
   browser_close: `${BROWSER_COMMON_AGENT_GUIDANCE}${BROWSER_TAB_SCOPED_AGENT_GUIDANCE} Permanently close the assigned/current live tab or an explicit scoped restoration-blocked/crashed tab returned by browser_tabs, and return the next active live tab if any. Closing invalidates every ref and cannot be undone by the tool.`,
 } as const satisfies Record<BrowserToolName, string>;
 
@@ -361,6 +364,14 @@ export const BROWSER_TOOL_DEFINITIONS = [
     DESTRUCTIVE_OPEN_WORLD,
     5_000,
     { maximumTimeoutMs: 10_000 },
+  ),
+  defineTool(
+    "browser_run",
+    BROWSER_TOOL_TITLES.browser_run,
+    BrowserRunInput,
+    BrowserRunOutput,
+    DESTRUCTIVE_OPEN_WORLD,
+    15_000,
   ),
   defineTool(
     "browser_close",

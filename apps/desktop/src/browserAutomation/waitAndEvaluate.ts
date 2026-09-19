@@ -1,6 +1,7 @@
 import type {
   BrowserEvaluateInput,
   BrowserEvaluateOutput,
+  BrowserRunOutput,
   BrowserTabId,
   BrowserWaitCondition,
   BrowserWaitInput,
@@ -305,6 +306,39 @@ export const evaluateBrowserExpression = async (
   return {
     tabId: runtime.tabId as BrowserTabId,
     value: value as BrowserEvaluateOutput["value"],
+    serializedByteCount,
+  };
+};
+
+export const browserEvaluationOutput = (tabId: string, value: unknown): BrowserRunOutput => {
+  if (value === undefined) {
+    browserHostError({
+      code: "BrowserEvaluationFailed",
+      retryable: false,
+      phase: "evaluate",
+      effectMayHaveCommitted: true,
+      tabId: tabId as BrowserTabId,
+    });
+  }
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    serialized = "";
+  }
+  const serializedByteCount = Buffer.byteLength(serialized, "utf8");
+  if (!serialized || serializedByteCount > 262_144 || jsonDepth(value) > 20) {
+    browserHostError({
+      code: "BrowserEvaluationResultTooLarge",
+      retryable: false,
+      phase: "evaluate",
+      effectMayHaveCommitted: true,
+      tabId: tabId as BrowserTabId,
+    });
+  }
+  return {
+    tabId: tabId as BrowserTabId,
+    value: value as BrowserRunOutput["value"],
     serializedByteCount,
   };
 };

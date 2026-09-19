@@ -30,6 +30,7 @@ import {
   systemPreferences,
   Tray,
 } from "electron";
+import { configureElectronNetwork } from "betterwright/electron";
 import type {
   BrowserWindowConstructorOptions,
   FileFilter,
@@ -5090,6 +5091,7 @@ function configureMediaPermissions(): void {
 // Chromium session data uses a filesystem-friendly directory name.
 // Must be called synchronously at the top level — before `app.whenReady()`.
 configureAppIdentity();
+configureElectronNetwork();
 
 if (!hasSingleInstanceLock) {
   app.quit();

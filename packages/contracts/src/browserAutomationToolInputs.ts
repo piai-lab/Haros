@@ -433,6 +433,14 @@ export const BrowserEvaluateInput = closedStruct({
   ...optionalTabField,
   expression: BrowserEvaluateExpression,
 });
+export const BrowserRunInput = closedStruct({
+  ...effectingInvocationFields,
+  ...optionalTabField,
+  code: described(
+    BoundedUtf8String(16_384, 1),
+    "A bounded BetterWright snippet using page and snapshot(); return JSON. Snippet state does not persist between calls.",
+  ),
+});
 export const BrowserCloseInput = closedStruct({
   ...effectingInvocationFields,
   ...optionalTabField,
@@ -462,4 +470,5 @@ export type BrowserScrollInput = typeof BrowserScrollInput.Type;
 export type BrowserWaitCondition = typeof BrowserWaitCondition.Type;
 export type BrowserWaitInput = typeof BrowserWaitInput.Type;
 export type BrowserEvaluateInput = typeof BrowserEvaluateInput.Type;
+export type BrowserRunInput = typeof BrowserRunInput.Type;
 export type BrowserCloseInput = typeof BrowserCloseInput.Type;

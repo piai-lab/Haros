@@ -22,6 +22,7 @@ export const BROWSER_TOOL_NAMES = [
   "browser_scroll",
   "browser_wait",
   "browser_evaluate",
+  "browser_run",
   "browser_close",
 ] as const;
 

@@ -366,6 +366,13 @@ export const BrowserEvaluateOutput = closedStruct({
   serializedByteCount: boundedInt(0, 262_144),
   ...optionalDialogFields,
 });
+export const BrowserRunOutput = closedStruct({
+  tabId: BrowserTabId,
+  value: BrowserBoundedJson,
+  serializedByteCount: boundedInt(0, 262_144),
+  ...optionalDialogFields,
+  ...BrowserPopupCorrelationOutputFields,
+});
 export const BrowserCloseOutput = closedStruct({
   closedTabId: BrowserTabId,
   activeTabId: Schema.NullOr(BrowserTabId),
@@ -400,4 +407,5 @@ export type BrowserPressOutput = typeof BrowserPressOutput.Type;
 export type BrowserScrollOutput = typeof BrowserScrollOutput.Type;
 export type BrowserWaitOutput = typeof BrowserWaitOutput.Type;
 export type BrowserEvaluateOutput = typeof BrowserEvaluateOutput.Type;
+export type BrowserRunOutput = typeof BrowserRunOutput.Type;
 export type BrowserCloseOutput = typeof BrowserCloseOutput.Type;

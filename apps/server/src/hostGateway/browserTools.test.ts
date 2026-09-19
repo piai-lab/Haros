@@ -277,6 +277,7 @@ describe("HostGateway browser tools", () => {
       "browser_scroll",
       "browser_wait",
       "browser_evaluate",
+      "browser_run",
       "browser_close",
     ]);
     expect(tools.every((tool) => tool.requiredCapability === "browser:control")).toBe(true);

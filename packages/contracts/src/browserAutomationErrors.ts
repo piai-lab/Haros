@@ -37,6 +37,8 @@ export const BrowserErrorCode = Schema.Literals([
   "BrowserTargetNotEditable",
   "BrowserInvalidLocator",
   "BrowserInputUnsupported",
+  "BrowserCredentialTargetRequired",
+  "BrowserCredentialUseUnavailable",
   "BrowserNavigationBlocked",
   "BrowserNetworkBlocked",
   "BrowserNavigationFailed",
@@ -44,6 +46,7 @@ export const BrowserErrorCode = Schema.Literals([
   "BrowserPopupOpenerUnsupported",
   "BrowserDownloadApprovalRequired",
   "BrowserEvaluationFailed",
+  "BrowserScriptApiUnavailable",
   "BrowserEvaluationResultTooLarge",
   "BrowserSnapshotTooLarge",
   "BrowserScreenshotTooLarge",
@@ -140,6 +143,10 @@ export const BrowserAutomationErrorMessages = Object.freeze({
   BrowserInvalidLocator: "The browser locator is invalid.",
   BrowserInputUnsupported:
     "The requested browser input is unsupported. Use a supported browser action.",
+  BrowserCredentialTargetRequired:
+    "Saved login form detection could not select a target. Agent password filling and generation are unavailable. Ask the user to sign in manually or import a browser session through Saved logins. Never ask for passwords in chat.",
+  BrowserCredentialUseUnavailable:
+    "Saved logins are metadata-only for agents. Password filling, generation and changes are unavailable. Ask the user to sign in manually or import a browser session through Saved logins. Never ask for passwords in chat.",
   BrowserNavigationBlocked:
     "Browser navigation was rejected: browser tools accept only http/https URLs (localhost is allowed) or a resolvable annotationId. The user can open local HTML files from the integrated browser's address bar.",
   BrowserNetworkBlocked: "The browser network request was blocked by policy.",
@@ -148,6 +155,8 @@ export const BrowserAutomationErrorMessages = Object.freeze({
   BrowserPopupOpenerUnsupported: "The popup opener relationship is unsupported.",
   BrowserDownloadApprovalRequired: "The browser download requires explicit approval.",
   BrowserEvaluationFailed: "Browser evaluation failed before a confirmed result was available.",
+  BrowserScriptApiUnavailable:
+    "The script used an unavailable browser API/global. Use page.getByRole(...), page.getByLabel(...), page.url(), and page.evaluate(() => ...) for document/window access. Use global snapshot(), not page.snapshot(). Wait with locator.waitFor or page.waitForURL, not bare waitForTimeout. Earlier actions may have completed; inspect their result before correcting the script. This is not a password-access error.",
   BrowserEvaluationResultTooLarge: "The browser evaluation result exceeds the safe response limit.",
   BrowserSnapshotTooLarge: "The browser snapshot exceeds the safe response limit.",
   BrowserScreenshotTooLarge: "The browser screenshot exceeds the safe response limit.",
