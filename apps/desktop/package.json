@@ -27,6 +27,7 @@
     "@harnessos/shared": "workspace:*",
     "@types/node": "catalog:",
     "@types/ws": "^8.5.13",
+    "playwright": "^1.58.2",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
