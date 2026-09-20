@@ -99,15 +99,15 @@ function capture(command, arguments_) {
   return result.stdout.trim();
 }
 
-export function resolveAppSnapToolchainIdentity() {
-  const swiftcPath = capture("xcrun", ["--find", "swiftc"]);
+export function resolveAppSnapToolchainIdentity(inspect = capture) {
+  const swiftcPath = inspect("xcrun", ["--find", "swiftc"]);
   return {
     swiftcPath,
-    swiftcVersion: capture(swiftcPath, ["--version"]),
-    xcodePath: capture("xcode-select", ["-p"]),
-    xcodeVersion: capture("xcodebuild", ["-version"]),
-    sdkPath: capture("xcrun", ["--sdk", "macosx", "--show-sdk-path"]),
-    sdkVersion: capture("xcrun", ["--sdk", "macosx", "--show-sdk-version"]),
+    swiftcVersion: inspect(swiftcPath, ["--version"]),
+    // Compiler and SDK identity work with both Command Line Tools and full Xcode.
+    developerPath: inspect("xcode-select", ["-p"]),
+    sdkPath: inspect("xcrun", ["--sdk", "macosx", "--show-sdk-path"]),
+    sdkVersion: inspect("xcrun", ["--sdk", "macosx", "--show-sdk-version"]),
   };
 }
 
