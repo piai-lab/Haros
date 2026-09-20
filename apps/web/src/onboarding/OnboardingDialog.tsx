@@ -35,7 +35,6 @@ import { EnginesStep } from "./steps/EnginesStep";
 import { FeatureTourStep } from "./steps/FeatureTourStep";
 import { ProjectStep, type OnboardingProjectResult } from "./steps/ProjectStep";
 import { ThemeStep } from "./steps/ThemeStep";
-import { WelcomeStep } from "./steps/WelcomeStep";
 
 const STEP_TITLE_KEYS: Record<OnboardingStep, MessageKey> = {
   welcome: "firstRun.welcomeTitle",
@@ -161,7 +160,6 @@ function OnboardingFlow(props: {
           hero && "justify-center pb-6",
         )}
       >
-        {step === "welcome" ? <WelcomeStep /> : null}
         {step === "tour" ? <FeatureTourStep /> : null}
         {step === "engines" ? <EnginesStep /> : null}
         {step === "theme" ? <ThemeStep /> : null}
