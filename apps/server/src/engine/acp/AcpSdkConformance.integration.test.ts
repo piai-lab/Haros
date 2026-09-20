@@ -13,7 +13,7 @@ import { it } from "@effect/vitest";
 import { Deferred, Effect, Exit, Fiber, Schema, Stream } from "effect";
 import { afterEach, describe, expect, it as test } from "vitest";
 
-import { AcpSessionRuntime } from "./AcpSessionRuntime.ts";
+import { AcpSessionRuntime, type AcpSessionRuntimeOptions } from "./AcpSessionRuntime.ts";
 
 const fixturePath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -83,8 +83,13 @@ function captureByteStream(
   );
 }
 
-function runtimeLayer(logPath: string, env: Record<string, string> = {}) {
+function runtimeLayer(
+  logPath: string,
+  env: Record<string, string> = {},
+  protocolLogging?: AcpSessionRuntimeOptions["protocolLogging"],
+) {
   return AcpSessionRuntime.layer({
+    ...(protocolLogging ? { protocolLogging } : {}),
     spawn: {
       command: process.execPath,
       args: [fixturePath],
@@ -197,7 +202,23 @@ describe("official ACP SDK conformance at the current Haros boundary", () => {
         events.flatMap((event) => (event._tag === "ContentDelta" ? [event.text] : [])),
       ).toEqual(["early-new", "prompt-one", "prompt-two"]);
     }).pipe(
-      Effect.provide(runtimeLayer(logPath)),
+      Effect.provide(
+        runtimeLayer(
+          logPath,
+          {},
+          {
+            logIncoming: true,
+            logger: (event) => {
+              const update = (event.payload as { update?: { content?: { text?: string } } })
+                ?.update;
+              // Make the SDK response overtake delivery of the preceding notification.
+              return event.stage === "decoded" && update?.content?.text === "early-new"
+                ? Effect.sleep("40 millis")
+                : Effect.void;
+            },
+          },
+        ),
+      ),
       Effect.scoped,
       Effect.provide(NodeServices.layer),
     );

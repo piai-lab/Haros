@@ -645,7 +645,12 @@ const makeOfficialSdkClient = Effect.fnUntraced(function* (
         request(acpSdk.methods.agent.authenticate, payload),
       logout: (payload: Acp.LogoutRequest) => request(acpSdk.methods.agent.logout, payload),
       createSession: (payload: Acp.NewSessionRequest) =>
-        request(acpSdk.methods.agent.session.new, payload),
+        request(acpSdk.methods.agent.session.new, payload).pipe(
+          // Early updates precede the setup response on the wire, but their async
+          // handlers can finish later. Drain them before the first prompt closes
+          // the startup segment, just as prompt completion drains its updates.
+          Effect.tap(() => fromPromise(awaitSessionUpdateDrain)),
+        ),
       loadSession: (payload: Acp.LoadSessionRequest) =>
         request(acpSdk.methods.agent.session.load, payload).pipe(
           Effect.map((response) => response ?? {}),
