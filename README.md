@@ -57,17 +57,51 @@ work is presented—not who owns its history.
 
 ## Run Haros from source
 
-Requires Bun 1.3.12, Node.js 24.13.1, and macOS, Linux, or Windows.
+Use Node.js 24.13.1 or newer within Node 24 and Bun 1.3.9 or newer within Bun 1.x.
+The repository pins Bun 1.3.12 for reproducible installs. macOS, Linux, and Windows are supported.
+
+### macOS desktop app
+
+1. Install Node.js and Bun, then check `node --version` and `bun --version` in your terminal.
+2. Install Apple's Command Line Tools with `xcode-select --install` if they are missing, and wait
+   for installation to finish. Full Xcode is not required. Verify `xcrun swiftc --version` and
+   `xcrun --sdk macosx --show-sdk-path`; the native AppSnap helper needs Swift and the macOS SDK.
+3. Clone the repository and install dependencies **before** building:
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
 cd Haros
 bun install --frozen-lockfile
-bun run dev
+bun run dist:desktop:local-app
+```
+
+4. Open the built app (Apple Silicon):
+
+```bash
+open apps/desktop/.electron-runtime/local-app/arm64/mac-arm64/Haros.app
+```
+
+On an Intel Mac, use `apps/desktop/.electron-runtime/local-app/x64/mac/Haros.app`.
+The build command creates the app; it does not launch it. Quit Haros before rebuilding. The default
+local output is replaceable; an explicit `--output-dir` must be empty.
+
+If an older checkout fails with `xcodebuild requires Xcode` while Command Line Tools are selected,
+update to the latest source and rebuild. That failure came from an unnecessary Xcode version probe;
+installing full Xcode is not needed to fix it. If Swift or SDK checks fail, install or update
+Command Line Tools before retrying.
+
+### Development mode
+
+After cloning and running `bun install --frozen-lockfile`, choose one:
+
+```bash
+bun run dev          # Server and web workbench in the browser
+bun run dev:desktop  # Desktop development with live rebuilds
 ```
 
 Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching CLI, account, and
-local setup. A successful local build is unsigned source software, not an official release.
+local setup. The local app is not Developer ID signed or notarized and is not an official release.
+The local build does not publish artifacts or create updater metadata.
 
 ## Go deeper
 
@@ -75,11 +109,6 @@ local setup. A successful local build is unsigned source software, not an offici
 - Read [Architecture](docs/architecture.md) for ownership boundaries and runtime design.
 - See [Contributing](CONTRIBUTING.md) before proposing a change.
 - Use [Support](SUPPORT.md) for help and [Security](SECURITY.md) for private reports.
-
-On macOS, `bun run dist:desktop:local-app` builds a replaceable unsigned `.app` under
-`apps/desktop/.electron-runtime/local-app/`. This local-only path never signs, notarizes, publishes,
-or creates updater metadata. Passing an explicit output directory keeps the normal no-overwrite
-artifact rule.
 
 <details>
 <summary>Development checks and repository map</summary>

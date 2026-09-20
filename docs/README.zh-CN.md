@@ -56,17 +56,50 @@ Agent、Chat 和 Studio 共用同一套产品状态。它们改变的是工作�
 
 ## 从源码运行 Haros
 
-需要 Bun 1.3.12、Node.js 24.13.1，以及 macOS、Linux 或 Windows。
+需要 Node.js 24.13.1 或更新的 24.x 版本，以及 Bun 1.3.9 或更新的 1.x 版本。
+仓库固定使用 Bun 1.3.12，以便复现依赖安装。支持 macOS、Linux 和 Windows。
+
+### macOS 桌面 App
+
+1. 安装 Node.js 和 Bun，然后在终端检查 `node --version` 与 `bun --version`。
+2. 如果尚未安装 Apple Command Line Tools，运行 `xcode-select --install`，等待安装完成。
+   不需要完整 Xcode。运行 `xcrun swiftc --version` 和 `xcrun --sdk macosx --show-sdk-path`
+   确认工具可用；原生 AppSnap helper 需要 Swift 编译器和 macOS SDK。
+3. 克隆仓库，**先安装依赖，再构建**：
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
 cd Haros
 bun install --frozen-lockfile
-bun run dev
+bun run dist:desktop:local-app
+```
+
+4. 打开构建好的 App（Apple Silicon）：
+
+```bash
+open apps/desktop/.electron-runtime/local-app/arm64/mac-arm64/Haros.app
+```
+
+Intel Mac 请使用 `apps/desktop/.electron-runtime/local-app/x64/mac/Haros.app`。
+构建命令只生成 App，不会自动启动。重新构建前请退出 Haros。默认本地输出可以覆盖；
+显式指定的 `--output-dir` 必须为空。
+
+如果旧版源码在已选择 Command Line Tools 的情况下报错 `xcodebuild requires Xcode`，
+请更新源码后重新构建。原因是构建脚本多余的 Xcode 版本检查，无需为此安装完整 Xcode。
+如果 Swift 或 SDK 检查失败，请先安装或更新 Command Line Tools，再重试。
+
+### 开发模式
+
+克隆仓库并运行 `bun install --frozen-lockfile` 后，按需选择：
+
+```bash
+bun run dev          # 在浏览器中运行服务端与 Web 工作台
+bun run dev:desktop  # 带实时重新构建的桌面开发模式
 ```
 
 Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
-本机配置。本机构建成功仍然只是未签名的源码软件，不代表正式发行。
+本机配置。本地 App 未经 Developer ID 签名或公证，不代表正式发行；构建过程不会发布
+产物或生成更新元数据。
 
 ## 继续了解
 
@@ -74,10 +107,6 @@ Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于�
 - 阅读[架构说明](architecture.md)，了解 owner 边界与 runtime 设计。
 - 提交改动前请先阅读[参与贡献](../CONTRIBUTING.md)。
 - 使用[支持文档](../SUPPORT.md)获取帮助；安全问题请按[安全策略](../SECURITY.md)私下报告。
-
-在 macOS 上，`bun run dist:desktop:local-app` 会把可替换的 unsigned `.app` 构建到
-`apps/desktop/.electron-runtime/local-app/`。该本地路径不会签名、公证、发布或生成更新元数据；
-一旦显式指定输出目录，仍遵守正式产物不可覆盖规则。
 
 <details>
 <summary>开发检查与仓库结构</summary>

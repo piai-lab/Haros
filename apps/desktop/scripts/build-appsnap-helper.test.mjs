@@ -6,7 +6,12 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { buildFingerprint, swiftTargetsForArch, withBuildLock } from "./build-appsnap-helper.mjs";
+import {
+  buildFingerprint,
+  resolveAppSnapToolchainIdentity,
+  swiftTargetsForArch,
+  withBuildLock,
+} from "./build-appsnap-helper.mjs";
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
 const sourceDirectory = resolve(scriptsDirectory, "../native/appsnap");
@@ -17,8 +22,7 @@ const sources = readdirSync(sourceDirectory)
 const toolchain = {
   swiftcPath: "/Applications/Xcode.app/usr/bin/swiftc",
   swiftcVersion: "Swift version fixture",
-  xcodePath: "/Applications/Xcode.app/Contents/Developer",
-  xcodeVersion: "Xcode 26.0\nBuild version fixture",
+  developerPath: "/Applications/Xcode.app/Contents/Developer",
   sdkPath: "/Applications/Xcode.app/SDKs/MacOSX.sdk",
   sdkVersion: "26.0",
 };
@@ -39,7 +43,10 @@ describe("AppSnap helper build fingerprint", () => {
       buildFingerprint({ ...input, arch: "x64", targets: swiftTargetsForArch("x64") }),
     ).not.toBe(base);
     expect(
-      buildFingerprint({ ...input, toolchain: { ...toolchain, xcodeVersion: "Xcode 26.1" } }),
+      buildFingerprint({
+        ...input,
+        toolchain: { ...toolchain, swiftcVersion: "Swift version updated" },
+      }),
     ).not.toBe(base);
     expect(
       buildFingerprint({ ...input, toolchain: { ...toolchain, sdkVersion: "26.1" } }),
@@ -90,5 +97,42 @@ describe("AppSnap helper build fingerprint", () => {
       child.kill("SIGKILL");
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("AppSnap toolchain inspection", () => {
+  it.each(["/Library/Developer/CommandLineTools", "/Applications/Xcode.app/Contents/Developer"])(
+    "supports the toolchain at %s without requiring xcodebuild",
+    (developerPath) => {
+      const swiftcPath = `${developerPath}/usr/bin/swiftc`;
+      const responses = new Map([
+        ["xcrun --find swiftc", swiftcPath],
+        [`${swiftcPath} --version`, "Apple Swift version 6.3.3"],
+        ["xcode-select -p", developerPath],
+        ["xcrun --sdk macosx --show-sdk-path", `${developerPath}/SDKs/MacOSX.sdk`],
+        ["xcrun --sdk macosx --show-sdk-version", "26.0"],
+      ]);
+      const inspect = (command, args) => {
+        const key = [command, ...args].join(" ");
+        if (!responses.has(key)) throw new Error(`Unexpected toolchain command: ${key}`);
+        return responses.get(key);
+      };
+      expect(resolveAppSnapToolchainIdentity(inspect)).toEqual({
+        swiftcPath,
+        swiftcVersion: "Apple Swift version 6.3.3",
+        developerPath,
+        sdkPath: `${developerPath}/SDKs/MacOSX.sdk`,
+        sdkVersion: "26.0",
+      });
+    },
+  );
+
+  it("preserves errors from a missing compiler or SDK", () => {
+    const failure = new Error("No macOS SDK installed");
+    expect(() =>
+      resolveAppSnapToolchainIdentity(() => {
+        throw failure;
+      }),
+    ).toThrow(failure);
   });
 });
