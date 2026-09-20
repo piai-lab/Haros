@@ -15,6 +15,7 @@ export * from "./browserAutomationToolCatalogue";
 export { BrowserLoadState } from "./browserAutomationToolCommon";
 export * from "./browserAutomationToolInputs";
 export * from "./browserAutomationToolOutputs";
+export * from "./browserVault";
 export * from "./claudeCache";
 export * from "./device";
 export * from "./editableText";

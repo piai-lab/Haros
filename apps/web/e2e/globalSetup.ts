@@ -4,7 +4,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const WEB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const OUTPUT_DIR = resolve(WEB_DIR, ".playwright/electron-e2e");
+// Resolve external Desktop runtime dependencies from their actual workspace owner.
+const OUTPUT_DIR = resolve(WEB_DIR, "../desktop/.playwright/electron-e2e");
 const OUTPUT_PATH = resolve(OUTPUT_DIR, "visibleBrowserMain.cjs");
 const ANNOTATION_PRELOAD_OUTPUT_PATH = resolve(OUTPUT_DIR, "browserAnnotationGuestPreload.cjs");
 
@@ -19,6 +20,7 @@ export default function globalSetup(): () => void {
       "--format=cjs",
       `--outfile=${OUTPUT_PATH}`,
       "--external=electron",
+      "--external=betterwright",
     ],
     { cwd: WEB_DIR, stdio: "inherit" },
   );

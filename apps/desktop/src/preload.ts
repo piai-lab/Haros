@@ -117,6 +117,11 @@ contextBridge.exposeInMainWorld("desktopBridge", {
   setAppIcon: (icon) => ipcRenderer.invoke(IPC.setAppIcon, icon),
   showContextMenu: (items, position) => ipcRenderer.invoke(IPC.contextMenu, items, position),
   openExternal: (url: string) => ipcRenderer.invoke(IPC.openExternal, url),
+  safariAccess: {
+    getInfo: () => ipcRenderer.invoke(IPC.safariAccess.getInfo),
+    openSettings: () => ipcRenderer.invoke(IPC.safariAccess.openSettings),
+    revealApp: () => ipcRenderer.invoke(IPC.safariAccess.revealApp),
+  },
   showInFolder: (path: string) => ipcRenderer.invoke(IPC.showInFolder, path),
   shell: {
     showInFolder: (path: string) => ipcRenderer.invoke(IPC.showInFolder, path),
@@ -243,6 +248,31 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     transcribeVoice: (input) => ipcRenderer.invoke(IPC.transcribeVoice, input),
   },
   browser: {
+    vault: {
+      snapshot: () => ipcRenderer.invoke(IPC.browser.vault.snapshot),
+      listLogins: () => ipcRenderer.invoke(IPC.browser.vault.listLogins),
+      retryCapture: () => ipcRenderer.invoke(IPC.browser.vault.retryCapture),
+      cookieImportStatus: () => ipcRenderer.invoke(IPC.browser.vault.cookieImportStatus),
+      cancelCookieImport: (id) => ipcRenderer.invoke(IPC.browser.vault.cancelCookieImport, id),
+      configure: (input) => ipcRenderer.invoke(IPC.browser.vault.configure, input),
+      remove: (id) => ipcRenderer.invoke(IPC.browser.vault.remove, id),
+      respond: (input) => ipcRenderer.invoke(IPC.browser.vault.respond, input),
+      setupMaster: (password) => ipcRenderer.invoke(IPC.browser.vault.setupMaster, password),
+      unlock: (password) => ipcRenderer.invoke(IPC.browser.vault.unlock, password),
+      lock: () => ipcRenderer.invoke(IPC.browser.vault.lock),
+      reveal: (input) => ipcRenderer.invoke(IPC.browser.vault.reveal, input),
+      cookieSources: () => ipcRenderer.invoke(IPC.browser.vault.cookieSources),
+      cookieProfiles: (browser) => ipcRenderer.invoke(IPC.browser.vault.cookieProfiles, browser),
+      importCookies: (input) => ipcRenderer.invoke(IPC.browser.vault.importCookies, input),
+      onChanged: (listener) => {
+        const wrapped = (_event: Electron.IpcRendererEvent, change: { logins: boolean }) =>
+          listener({ logins: change?.logins === true });
+        ipcRenderer.on(IPC.browser.vault.changed, wrapped);
+        return () => {
+          ipcRenderer.removeListener(IPC.browser.vault.changed, wrapped);
+        };
+      },
+    },
     open: (input) => ipcRenderer.invoke(IPC.browser.open, input),
     close: (input) => ipcRenderer.invoke(IPC.browser.close, input),
     hide: (input) => ipcRenderer.invoke(IPC.browser.hide, input),

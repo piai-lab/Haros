@@ -30,6 +30,8 @@ import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
 import { QueuedComposerDrainCoordinator } from "../components/QueuedComposerDrainCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
 import { OnboardingDialog } from "../onboarding/OnboardingDialog";
+import { BrowserVaultDialog } from "../components/BrowserVault";
+import { SafariAccessOnboarding } from "../components/SafariAccessOnboarding";
 import { FeedbackDialog } from "../components/FeedbackDialog";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
@@ -323,6 +325,8 @@ function RootRouteView() {
             <RunningTasksQuitCoordinator />
             <QueuedComposerDrainCoordinator />
             <OnboardingDialog />
+            <SafariAccessOnboarding />
+            <BrowserVaultDialog />
             <AppSnapWelcomeDialog />
             <AppSnapCoordinator />
             <DesktopProjectBootstrap />

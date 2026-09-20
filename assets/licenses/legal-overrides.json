@@ -464,6 +464,20 @@
       },
       "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
       "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["patchright-core@1.61.1"],
+      "license": "Apache-2.0",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/patchright-Apache-2.0.txt",
+      "sha256": "951c6fadfd26b1d1e549144c6da0ebe4c457a1c34a869911c5472a61a1f5c651",
+      "manifestSha256ByPackageId": {
+        "patchright-core@1.61.1": "2faf19d7fb35c116252f34d25826658a4ced8d2ee48677e1786b3e176981e27e"
+      },
+      "revision": "dc5e35699b03bf27b8c51c8da6f15e563b76a7b7",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/Kaliiiiiiiiii-Vinyzu/patchright/blob/dc5e35699b03bf27b8c51c8da6f15e563b76a7b7/LICENSE",
+      "upstreamLegalTextAbsent": false
     }
   ]
 }

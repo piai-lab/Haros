@@ -69,6 +69,42 @@ when policy requires it.
 | Screenshot | Correct tab and viewport        | Image with time/context           | Pixels do not prove backend state      |
 | Submit     | Exact form/action and authority | Confirmation plus resulting state | Client success before server rejection |
 
+## Saved logins and imported browser sessions
+
+The key button in the Desktop browser opens Saved logins. Saving passwords is opt-in. You can
+delete a login, configure a master password, and lock the vault. Save/update prompts appear in the
+originating browser tab without opening the manager or taking keyboard focus; navigation, closure,
+or expiration invalidates them. The closed manager does not enumerate saved accounts.
+Revealing a password requires the master password each time; the revealed value disappears after
+20 seconds, when the window loses focus, or when you close the panel. Agents can discover
+account metadata for the exact current origin when allowed. They cannot retrieve, fill, generate,
+or update passwords through the vault adapter.
+
+Cookie import is a separate, explicit action. Choose a source browser and profile, then import
+for the visible site or confirm access to all sites in the profile. Imported sessions are shared
+across Haros browser tabs and agent workflows. Navigation or loss of the destination stops the
+operation. During import, browser automation pauses; interrupted instructions are never replayed.
+Cancel or close the import panel to stop it. The operation has a 60-second total deadline. Cancellation
+and persistence failure can leave some cookies applied; inspect the destination before retrying.
+Where secure OS storage is available, imported session cookies survive a clean quit and restart.
+An interrupted run is never replayed, so an interrupted logout cannot silently restore a login.
+
+Safari import on macOS may require Full Disk Access. The setup dialog opens System Settings but
+never claims permission was granted. Help opens only when you choose it during import or in
+Settings > General; it never interrupts first launch. Password
+saving, permission guidance, and cookie import do not read or change private Engine state.
+
+**简体中文。** 桌面浏览器的钥匙按钮打开已保存的登录。密码保存默认关闭；启用后可确认保存或更新、
+删除登录、设置主密码并锁定。每次显示密码都需验证主密码，20 秒后、窗口失焦或关闭面板时隐藏。
+保存提示只出现在来源标签页，不自动打开管理界面、不抢输入焦点；导航、关页或到期后失效。
+关闭管理界面时不会枚举账号库。捕获失败的重试会释放并重新安装捕获功能。
+智能体仅可发现当前精确来源的账户元数据，不能通过保险库获取、填入、生成或修改密码。
+Cookie 导入需主动选择浏览器、配置文件及范围；导入全部网站还需明确勾选同意。
+导入会话在 Haros 标签页与智能体工作流程中共享，导入期间浏览器自动操作暂停，不重放被中断指令。
+取消、关闭导入面板或目标变化会中止导入，总期限为 60 秒；已写入的 Cookie 不伪装回滚，持久化失败会单独提示。
+安全系统存储可用时，导入的会话 Cookie 可在正常退出后恢复；异常退出不会重放，以免恢复已退出的登录。
+Safari 权限说明只在导入时主动选择或设置 > 通用中打开，不在首次启动抢焦点；打开系统设置不代表已经获得权限。
+
 ## Search, open, and cite
 
 Web search is a source-discovery workflow. Search results suggest pages; they are not the pages

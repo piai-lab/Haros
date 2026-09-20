@@ -25,6 +25,7 @@ import {
   nativeTheme,
   protocol,
   screen,
+  safeStorage,
   session,
   shell,
   systemPreferences,
@@ -221,6 +222,13 @@ import {
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
 import { BROWSER_SESSION_PARTITION, DesktopBrowserManager } from "./browserManager";
+import { BrowserVault } from "./browserAutomation/browserVault";
+import { BrowserVaultCapture } from "./browserAutomation/browserVaultCapture";
+import { registerBrowserVaultIpc } from "./browserVaultIpc";
+import { registerSafariAccessIpc } from "./safariAccessIpc";
+import { BrowserCookieImport } from "./browserAutomation/browserCookieImport";
+import { BrowserSessionRestore } from "./browserAutomation/browserSessionRestore";
+import { createCookieSessionBackend } from "./browserAutomation/electronCookieSession";
 import {
   registerBrowserIpcHandlers,
   sendBrowserAnnotationEvent,
@@ -399,7 +407,25 @@ let restoreStdIoCapture: (() => void) | null = null;
 let unreadBackgroundNotificationCount = 0;
 let browserPerfInterval: ReturnType<typeof setInterval> | null = null;
 const annotationGuestPreload = Path.join(__dirname, "guestPreload.js");
+const browserOsKeyStore = {
+  available: async () => {
+    await app.whenReady();
+    return (
+      safeStorage.isEncryptionAvailable() &&
+      (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text")
+    );
+  },
+  encrypt: (value: string) => safeStorage.encryptString(value),
+  decrypt: (value: Buffer) => safeStorage.decryptString(value),
+};
+const browserVault = new BrowserVault(Path.join(BASE_DIR, "browser-vault"), browserOsKeyStore);
+const browserVaultCapture = new BrowserVaultCapture(browserVault);
+let browserCookieImport: BrowserCookieImport | undefined;
+let disposeBrowserVaultIpc: (() => Promise<void>) | undefined;
+let browserSessionRestore: BrowserSessionRestore | undefined;
 const browserManager = new DesktopBrowserManager({
+  onRuntimeReady: (runtime) => browserVaultCapture.register(runtime),
+  onHumanControl: (threadId) => browserVaultCapture.noteHumanActivity(threadId),
   annotationPreloadPath: annotationGuestPreload,
   beforeInputEvent: (event, input) => {
     if (
@@ -692,6 +718,8 @@ async function ensureBrowserHostPipeServer(): Promise<void> {
     return;
   }
   const server = new BrowserHostPipeServer(browserManager, {
+    vault: browserVault,
+    vaultCapture: browserVaultCapture,
     capability: DESKTOP_BROWSER_HOST_CAPABILITY,
     requestOpenPanel: requestBrowserPanelReveal,
   });
@@ -4146,17 +4174,19 @@ async function stopBackendAndWaitForExit(
   }
 }
 
-async function disposeBrowserHostPipeServerForShutdown(reason: string): Promise<void> {
+async function disposeBrowserHostPipeServerForShutdown(reason: string): Promise<boolean> {
   const pipeServer = browserHostPipeServer;
   browserHostPipeServer = null;
-  if (!pipeServer) return;
+  if (!pipeServer) return true;
 
   try {
     await pipeServer.dispose();
+    return true;
   } catch (error: unknown) {
     const message = formatErrorMessage(error);
     writeDesktopLogHeader(`${reason} browser host pipe dispose failed message=${message}`);
     console.warn(`[desktop] Failed to dispose browser host pipe during ${reason}: ${message}`);
+    return false;
   }
 }
 
@@ -4178,6 +4208,10 @@ async function shutdownDesktopRuntime(reason: string, shutdownBody?: unknown): P
   }
 
   isQuitting = true;
+  const browserDrain = Promise.allSettled([
+    disposeBrowserVaultIpc?.(),
+    browserCookieImport?.dispose(),
+  ]);
   hideDesktopWindowForImmediateQuit();
   writeDesktopLogHeader(`${reason} shutdown start`);
   const shutdown = runAfterDesktopShutdown(
@@ -4189,8 +4223,23 @@ async function shutdownDesktopRuntime(reason: string, shutdownBody?: unknown): P
       cancelBackendReadinessWait();
       appSnapManager?.dispose();
       appSnapManager = null;
-      await disposeBrowserHostPipeServerForShutdown(reason);
+      let browserClean = (await browserDrain).every((result) => result.status === "fulfilled");
+      if (!browserClean) writeDesktopLogHeader("Browser operations cleanup incomplete");
+      browserClean = (await disposeBrowserHostPipeServerForShutdown(reason)) && browserClean;
+      try {
+        await browserVaultCapture.dispose();
+      } catch {
+        browserClean = false;
+        writeDesktopLogHeader("Browser login capture unavailable during shutdown");
+      }
+      browserVault.dispose();
       browserManager.dispose();
+      try {
+        await browserSessionRestore?.shutdown(browserClean);
+      } catch {
+        // Never log cookie data or revive a snapshot from an incomplete shutdown.
+        writeDesktopLogHeader("Browser session persistence unavailable during shutdown");
+      }
       restoreStdIoCapture?.();
       desktopShutdownComplete = true;
       writeDesktopLogHeader(`${reason} shutdown complete`);
@@ -4635,6 +4684,35 @@ function registerIpcHandlers(): void {
   registerDesktopVoiceTranscriptionHandler();
   startBrowserPerformanceLogging();
   registerBrowserIpcHandlers(ipcMain, browserManager);
+  registerSafariAccessIpc(ipcMain, {
+    platform: process.platform,
+    systemVersion: process.getSystemVersion(),
+    execPath: process.execPath,
+    appName: APP_DISPLAY_NAME,
+    isTrustedRenderer: (id) => browserManager.isTrustedRenderer(id),
+    openExternal: (url) => shell.openExternal(url),
+    showItemInFolder: (path) => shell.showItemInFolder(path),
+  });
+  disposeBrowserVaultIpc = registerBrowserVaultIpc(
+    ipcMain,
+    browserManager,
+    browserVault,
+    (change) => {
+      mainWindow?.webContents.send(IPC.browser.vault.changed, change);
+    },
+    (browserCookieImport = new BrowserCookieImport(
+      Path.join(BASE_DIR, "browser-engine"),
+      browserManager,
+      async () => {
+        await browserHostPipeServer?.waitForIdle();
+      },
+      async (domains, signal) => {
+        if (!browserSessionRestore) throw new Error("Browser session storage is unavailable.");
+        await browserSessionRestore.rememberImport(domains, signal);
+      },
+    )),
+    () => browserVaultCapture.retry(),
+  );
   registerEngineWebSurfacePresentationIpc();
 }
 
@@ -5225,9 +5303,19 @@ app.on("before-quit", (event) => {
 if (hasSingleInstanceLock) {
   app
     .whenReady()
-    .then(() => {
+    .then(async () => {
       writeDesktopLogHeader("app ready");
       configureAppIdentity();
+      try {
+        browserSessionRestore = new BrowserSessionRestore(
+          Path.join(BASE_DIR, "browser-session-restore"),
+          createCookieSessionBackend(BROWSER_SESSION_PARTITION),
+          browserOsKeyStore,
+        );
+        await browserSessionRestore.initialize();
+      } catch {
+        writeDesktopLogHeader("Browser session restoration unavailable at startup");
+      }
       if (process.platform === "win32") {
         try {
           ensureWindowsShellAppUserModelHelper(Path.join(STATE_DIR, "taskbar-icons"));

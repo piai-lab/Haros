@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
+import { SafariAccessSetupButton } from "~/components/SafariAccessOnboarding";
 import { AppIconPicker } from "~/components/settings/AppIconPicker";
 import {
   ArchivedSettingsPanel,
@@ -622,6 +623,7 @@ function SettingsRouteView() {
   };
   const renderGeneralPanel = () => (
     <div className="space-y-6">
+      <SafariAccessSetupButton />
       <SettingsSection title={t("settings.coreDefaults")}>
         <SettingsRow
           title={t("settings.language")}
@@ -1186,7 +1188,9 @@ function SettingsRouteView() {
             settings.composerEffortSlider !== defaults.composerEffortSlider ? (
               <SettingResetButton
                 label={t("settings.effortSlider")}
-                onClick={() => updateSettings({ composerEffortSlider: defaults.composerEffortSlider })}
+                onClick={() =>
+                  updateSettings({ composerEffortSlider: defaults.composerEffortSlider })
+                }
               />
             ) : null
           }

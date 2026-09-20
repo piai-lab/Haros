@@ -1022,6 +1022,9 @@ export function createWsNativeApi(): NativeApi {
       onEvent: deviceEventListeners.subscribe,
     },
     browser: {
+      ...(window.desktopBridge?.browser?.vault
+        ? { vault: window.desktopBridge.browser.vault }
+        : {}),
       open: async (input) => {
         if (window.desktopBridge) {
           return window.desktopBridge.browser.open(input);

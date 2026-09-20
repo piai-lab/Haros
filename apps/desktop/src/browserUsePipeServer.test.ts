@@ -212,7 +212,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "forged-session",
-            provider: "codex",
+            engine: "codex",
             thread_id: "forged-thread",
             name: "browser_status",
             arguments: {},
@@ -247,7 +247,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "session-1",
-            provider: "claude",
+            engine: "claude",
             thread_id: "thread-1",
             name: "browser_status",
             arguments: {},
@@ -406,7 +406,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "session-1",
-            provider: "codex",
+            engine: "codex",
             thread_id: "thread-1",
             name: "browser_upload",
             arguments: {},
@@ -446,7 +446,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "session-1",
-            provider: "cursor",
+            engine: "cursor",
             thread_id: "thread-1",
             name: "browser_tabs",
             arguments: {},
@@ -537,7 +537,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "session-abort",
-            provider: "codex",
+            engine: "codex",
             thread_id: "thread-1",
             name: "browser_wait",
             arguments: {},
@@ -572,7 +572,7 @@ describe("canonical browser host RPC", () => {
             method: "executeTool",
             params: {
               session_id: "session-1",
-              provider: "gemini",
+              engine: "gemini",
               thread_id: "thread-1",
               name: "browser_status",
               arguments: {},
@@ -604,7 +604,7 @@ describe("canonical browser host RPC", () => {
           method: "executeTool",
           params: {
             session_id: "session-large",
-            provider: "codex",
+            engine: "codex",
             thread_id: "thread-1",
             name: "browser_snapshot",
             arguments: {},

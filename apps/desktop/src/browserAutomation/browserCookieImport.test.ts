@@ -1,0 +1,421 @@
+import { EventEmitter } from "node:events";
+import { BrowserCookieImportInput, ThreadId } from "@harnessos/contracts";
+import { Schema } from "effect";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DesktopBrowserManager } from "../browserManager";
+
+const mocks = vi.hoisted(() => ({
+  sources: vi.fn(),
+  profiles: vi.fn(),
+  sync: vi.fn(),
+  closeBrowser: vi.fn(),
+  closeConnection: vi.fn(),
+  connect: vi.fn(),
+  constructedOptions: { current: undefined as unknown },
+}));
+vi.mock("betterwright", () => ({
+  listCookieSourceBrowsers: mocks.sources,
+  listCookieSourceProfiles: mocks.profiles,
+  NetworkPolicy: vi.fn(function () {}),
+  BetterWright: class {
+    conn: { close(): Promise<void> } | undefined;
+    closing: Promise<void> | undefined;
+    constructor(
+      public options: {
+        hostTarget: { connect(arg: unknown): Promise<{ close(): Promise<void> }> };
+      },
+    ) {
+      mocks.constructedOptions.current = options;
+    }
+    syncCookies = async (syncOptions?: unknown) => {
+      this.conn ??= await this.options.hostTarget.connect({
+        proxyUrl: "socks5://127.0.0.1:1",
+      });
+      return mocks.sync(syncOptions);
+    };
+    close = () =>
+      (this.closing ??= (async () => {
+        await this.conn?.close();
+        await mocks.closeBrowser();
+      })());
+  },
+}));
+vi.mock("./betterwrightConnection", () => ({ openBetterwrightConnection: mocks.connect }));
+import { BrowserCookieImport } from "./browserCookieImport";
+
+const input = {
+  operationId: "import-1",
+  threadId: ThreadId.makeUnsafe("thread-1"),
+  tabId: "tab-1",
+  scope: "site",
+  origin: "https://example.test",
+  browser: "chrome",
+  profile: "Default",
+} as const;
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.sources.mockResolvedValue([
+    { id: "chrome", name: "Chrome" },
+    { id: "firefox", name: "Firefox" },
+  ]);
+  mocks.profiles.mockResolvedValue([{ id: "Default", name: "Default" }]);
+  mocks.sync.mockResolvedValue({
+    ok: true,
+    synced: 2,
+    skipped: 1,
+    cookieImportDomains: ["example.test"],
+    warnings: [{ code: "unsupported", count: 1 }],
+    cookie: "must-not-be-returned",
+  });
+  mocks.closeBrowser.mockResolvedValue(undefined);
+  mocks.closeConnection.mockResolvedValue(undefined);
+  mocks.constructedOptions.current = undefined;
+  mocks.connect.mockImplementation(async () => {
+    let closing: Promise<void> | undefined;
+    return {
+      provider: { cdpUrl: "ws://127.0.0.1:1234/browser" },
+      get closed() {
+        return closing !== undefined;
+      },
+      close: (cancel = true) => (closing ??= Promise.resolve(mocks.closeConnection(cancel))),
+    };
+  });
+});
+
+function fixture(rememberSessionImport = vi.fn(async (_domains: readonly string[]) => {})) {
+  const contents = Object.assign(new EventEmitter(), {
+    getURL: (): string => input.origin,
+    isDestroyed: (): boolean => false,
+    session: {
+      cookies: { flushStore: vi.fn(async () => {}) },
+      setProxy: vi.fn(async () => {}),
+      closeAllConnections: vi.fn(async () => {}),
+    },
+  });
+  const releaseHumanOperation = vi.fn();
+  const waitForAgents = vi.fn(async () => {});
+  const manager = {
+    beginHumanBrowserOperation: vi.fn(() => releaseHumanOperation),
+    getCookieImportRuntime: vi.fn(async () => ({ webContents: contents })),
+  };
+  return {
+    importer: new BrowserCookieImport(
+      "/synthetic-home",
+      manager as unknown as DesktopBrowserManager,
+      waitForAgents,
+      rememberSessionImport,
+    ),
+    contents,
+    manager,
+    releaseHumanOperation,
+    waitForAgents,
+    rememberSessionImport,
+  };
+}
+
+describe("human-only cookie import", () => {
+  it("imports only the selected visible site with app-bound injection disabled and returns counts", async () => {
+    const { importer, contents } = fixture();
+    expect(await importer.sources()).toEqual([{ id: "chrome", name: "Chrome" }]);
+    expect(await importer.import(input)).toEqual({
+      ok: true,
+      imported: 2,
+      skipped: 1,
+      warnings: [{ code: "unsupported", count: 1 }],
+    });
+    expect(mocks.sync).toHaveBeenCalledWith({
+      source: { browser: "chrome", profile: "Default" },
+      domains: ["example.test"],
+      windowsAppBound: "disabled",
+      timeoutMs: 30_000,
+    });
+    const options = mocks.constructedOptions.current as Record<string, unknown>;
+    expect(options.hostTarget).toEqual(expect.objectContaining({ connect: expect.any(Function) }));
+    expect(options).toMatchObject({ downloadPolicy: "deny", credentialCapture: false });
+    expect(options).not.toHaveProperty("provider");
+    expect(options).not.toHaveProperty("hostOwnedTarget");
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+    expect(mocks.closeBrowser).toHaveBeenCalled();
+    expect(contents.listenerCount("did-start-navigation")).toBe(0);
+  });
+
+  it("rejects other origins, profile paths and unsupported sources before extraction", async () => {
+    const { importer } = fixture();
+    await expect(
+      importer.import({ ...input, origin: "https://unrelated.test" }),
+    ).resolves.toMatchObject({ ok: false, code: "target_changed" });
+    await expect(
+      importer.import({ ...input, profile: "/private/arbitrary-path" }),
+    ).resolves.toMatchObject({ ok: false, code: "source_missing" });
+    expect(() =>
+      Schema.decodeUnknownSync(BrowserCookieImportInput)({ ...input, browser: "unsupported" }),
+    ).toThrow();
+    expect(mocks.sync).not.toHaveBeenCalled();
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("records an empty grant when the sync stores nothing", async () => {
+    mocks.sync.mockResolvedValueOnce({
+      ok: true,
+      synced: 0,
+      skipped: 0,
+      cookieImportDomains: [],
+      warnings: [],
+    });
+    const { importer, rememberSessionImport } = fixture();
+    await expect(importer.import(input)).resolves.toMatchObject({ ok: true, imported: 0 });
+    expect(rememberSessionImport).toHaveBeenCalledWith([], expect.any(AbortSignal));
+  });
+
+  it("does not report success or release human control before durable cookie writes finish", async () => {
+    const { importer, contents, releaseHumanOperation } = fixture();
+    let flushed!: () => void;
+    contents.session.cookies.flushStore.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          flushed = resolve;
+        }),
+    );
+    let completed = false;
+    const pending = importer.import(input).then((result) => {
+      completed = true;
+      return result;
+    });
+    await vi.waitFor(() => expect(contents.session.cookies.flushStore).toHaveBeenCalledOnce());
+    expect(completed).toBe(false);
+    expect(releaseHumanOperation).not.toHaveBeenCalled();
+    expect(mocks.closeBrowser).not.toHaveBeenCalled();
+    flushed();
+    expect((await pending).ok).toBe(true);
+    expect(releaseHumanOperation).toHaveBeenCalledOnce();
+  });
+
+  it("does not report durable success when the cookie store cannot be flushed", async () => {
+    const { importer, contents, releaseHumanOperation } = fixture();
+    contents.session.cookies.flushStore.mockRejectedValue(new Error("synthetic-disk-failure"));
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "persistence_failed",
+      mayHaveImported: true,
+    });
+    expect(mocks.closeBrowser).toHaveBeenCalledOnce();
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+    expect(releaseHumanOperation).toHaveBeenCalledOnce();
+  });
+
+  it("requires session restoration checkpointing before reporting import success", async () => {
+    const remember = vi.fn(async (_domains: readonly string[]) => {
+      throw new Error("synthetic-checkpoint-failure");
+    });
+    const { importer, releaseHumanOperation } = fixture(remember);
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "persistence_failed",
+    });
+    expect(remember).toHaveBeenCalledWith(["example.test"], expect.any(AbortSignal));
+    expect(releaseHumanOperation).toHaveBeenCalledOnce();
+  });
+
+  it("revokes the import connection on navigation and always cleans up after failure", async () => {
+    const { importer, contents, releaseHumanOperation } = fixture();
+    mocks.sync.mockImplementation(async () => {
+      contents.emit("did-start-navigation", {}, "https://other.test", false, true);
+      throw new Error("synthetic-read-failure");
+    });
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "target_changed",
+    });
+    expect(mocks.closeConnection).toHaveBeenCalledTimes(1);
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+    expect(mocks.closeBrowser).toHaveBeenCalledTimes(1);
+    expect(contents.listenerCount("destroyed")).toBe(0);
+    expect(releaseHumanOperation).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not report a successful sync that raced same-origin navigation", async () => {
+    const { importer, contents } = fixture();
+    const result = { ok: true, synced: 1, cookieImportDomains: ["example.test"] };
+    mocks.sync.mockImplementation(async () => {
+      contents.emit("did-start-navigation", {}, "https://example.test/next", false, true);
+      return result;
+    });
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "target_changed",
+    });
+    expect(contents.session.cookies.flushStore).not.toHaveBeenCalled();
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+  });
+
+  it("does not report success when navigation interrupts durable cookie persistence", async () => {
+    const { importer, contents } = fixture();
+    contents.session.cookies.flushStore.mockImplementation(async () => {
+      contents.emit("did-start-navigation", {}, "https://example.test/next", false, true);
+    });
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "target_changed",
+    });
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+  });
+
+  it("holds human control until agents drain and import cleanup finishes", async () => {
+    const { importer, manager, waitForAgents, releaseHumanOperation } = fixture();
+    let drain!: () => void;
+    waitForAgents.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          drain = resolve;
+        }),
+    );
+    const pending = importer.import(input);
+    await vi.waitFor(() => expect(waitForAgents).toHaveBeenCalledTimes(1));
+    expect(manager.beginHumanBrowserOperation).toHaveBeenCalledTimes(1);
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(releaseHumanOperation).not.toHaveBeenCalled();
+    await expect(importer.import(input)).resolves.toMatchObject({ ok: false, code: "busy" });
+    drain();
+    await pending;
+    expect(mocks.closeBrowser).toHaveBeenCalledTimes(1);
+    expect(releaseHumanOperation).toHaveBeenCalledTimes(1);
+    expect(releaseHumanOperation.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mocks.closeBrowser.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("rechecks the destination after draining and releases the lease on failure", async () => {
+    const { importer, contents, waitForAgents, releaseHumanOperation } = fixture();
+    waitForAgents.mockImplementation(async () => {
+      contents.getURL = () => "https://other.test";
+    });
+    await expect(importer.import(input)).resolves.toMatchObject({
+      ok: false,
+      code: "target_changed",
+    });
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(releaseHumanOperation).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires explicit profile consent and permits all-sites import from a blank tab", async () => {
+    const { importer, contents, rememberSessionImport } = fixture();
+    const profile = {
+      operationId: "profile-import",
+      threadId: input.threadId,
+      tabId: input.tabId,
+      browser: input.browser,
+      profile: input.profile,
+      scope: "profile",
+    };
+    for (const confirmed of [undefined, false, "true"])
+      expect(() =>
+        Schema.decodeUnknownSync(BrowserCookieImportInput)({ ...profile, confirmed }),
+      ).toThrow();
+    contents.getURL = () => "about:blank";
+    const request = Schema.decodeUnknownSync(BrowserCookieImportInput)({
+      ...profile,
+      confirmed: true,
+    });
+    expect((await importer.import(request)).ok).toBe(true);
+    expect(mocks.sync).toHaveBeenCalledWith({
+      source: { browser: "chrome", profile: "Default" },
+      windowsAppBound: "disabled",
+      timeoutMs: 30_000,
+    });
+    expect(mocks.sync.mock.calls[0]![0]).not.toHaveProperty("domains");
+    expect(rememberSessionImport).toHaveBeenCalledWith(["example.test"], expect.any(AbortSignal));
+  });
+
+  it.each([
+    [
+      { cookieReaderCode: "source_extraction_failed", cookiePermissionDenied: true },
+      "permission_denied",
+    ],
+    [{ cookieReaderCode: "source_extraction_failed" }, "reader_failed"],
+    [{ cookieReaderCode: "timed_out" }, "timed_out"],
+    [{ cookieReaderCode: "reader_unavailable" }, "reader_unavailable"],
+    [{ cookieReaderCode: "no_selected_source" }, "source_missing"],
+    [{}, "transfer_failed"],
+  ])(
+    "returns only a fixed error category, never native diagnostic content",
+    async (diagnostic, code) => {
+      const { importer, releaseHumanOperation } = fixture();
+      mocks.sync.mockResolvedValue({
+        ok: false,
+        error: "synthetic-private-diagnostic",
+        ...diagnostic,
+      });
+      const result = await importer.import(input);
+      expect(result).toMatchObject({ ok: false, code });
+      expect(JSON.stringify(result)).not.toContain("synthetic-private-diagnostic");
+      expect(releaseHumanOperation).toHaveBeenCalledOnce();
+    },
+  );
+});
+
+describe("import cancellation ownership", () => {
+  it("never interrupts automation for invalid preflight", async () => {
+    const f = fixture();
+    await f.importer.import({ ...input, profile: "missing" });
+    expect(f.manager.beginHumanBrowserOperation).not.toHaveBeenCalled();
+    expect(f.waitForAgents).not.toHaveBeenCalled();
+  });
+  it("cancels stalled preflight and ignores its late result", async () => {
+    const f = fixture();
+    let complete!: (profiles: unknown[]) => void;
+    mocks.profiles.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const pending = f.importer.import(input);
+    await vi.waitFor(() => expect(mocks.profiles).toHaveBeenCalledOnce());
+    await f.importer.cancel("another-operation");
+    expect(f.manager.beginHumanBrowserOperation).not.toHaveBeenCalled();
+    await f.importer.cancel(input.operationId);
+    expect(await pending).toMatchObject({ code: "cancelled", mayHaveImported: false });
+    complete([{ id: "Default", name: "Default" }]);
+    await Promise.resolve();
+    expect(mocks.sync).not.toHaveBeenCalled();
+    expect(f.manager.beginHumanBrowserOperation).not.toHaveBeenCalled();
+  });
+  it("cancels stalled sync, drains transport, and never checkpoints a late success", async () => {
+    const f = fixture();
+    let complete!: (result: unknown) => void;
+    mocks.sync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const pending = f.importer.import(input);
+    await vi.waitFor(() => expect(mocks.sync).toHaveBeenCalledOnce());
+    await f.importer.cancel(input.operationId);
+    expect(await pending).toMatchObject({ code: "cancelled", mayHaveImported: true });
+    expect(mocks.closeConnection).toHaveBeenCalledWith(true);
+    complete({ ok: true, synced: 1, cookieImportDomains: ["example.test"] });
+    await Promise.resolve();
+    expect(f.rememberSessionImport).not.toHaveBeenCalled();
+    expect(f.releaseHumanOperation).toHaveBeenCalledOnce();
+  });
+  it("shutdown prevents a new import", async () => {
+    const f = fixture();
+    await f.importer.dispose();
+    expect(await f.importer.import(input)).toMatchObject({ ok: false });
+    expect(f.manager.beginHumanBrowserOperation).not.toHaveBeenCalled();
+  });
+  it("starts the deadline before waiting for agents", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      f.waitForAgents.mockImplementation(() => new Promise(() => {}));
+      const pending = f.importer.import(input);
+      await vi.advanceTimersByTimeAsync(60_001);
+      expect(await pending).toMatchObject({ code: "timed_out", mayHaveImported: false });
+      expect(mocks.sync).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

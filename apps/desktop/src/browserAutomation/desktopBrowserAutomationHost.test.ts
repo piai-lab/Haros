@@ -319,6 +319,7 @@ const createManager = () => {
   };
   const manager = {
     isAnnotationInteractive: vi.fn(() => false),
+    isHumanBrowserOperationActive: vi.fn(() => false),
     getState: vi.fn(() => state),
     getAutomationHumanControlEpoch: vi.fn(() => 0),
     subscribeAutomationHumanControl: vi.fn(
@@ -389,9 +390,10 @@ describe("DesktopBrowserAutomationHost", () => {
     });
   });
 
-  it("blocks new DOM tools while a human annotation picker is interactive", async () => {
+  it.each(["annotation", "cookie-import"])("blocks new DOM tools during %s", async (operation) => {
     const { manager, raw } = createManager();
-    raw.isAnnotationInteractive.mockReturnValue(true);
+    raw.isAnnotationInteractive.mockReturnValue(operation === "annotation");
+    raw.isHumanBrowserOperationActive.mockReturnValue(operation === "cookie-import");
     const host = new DesktopBrowserAutomationHost(manager);
 
     await expect(
@@ -1689,6 +1691,7 @@ describe("DesktopBrowserAutomationHost", () => {
 
   it("hands an OAuth popup to the user and stops automated follow-up", async () => {
     const { manager, raw, webContents } = createManager();
+    const state = raw.getState();
     let reportWindowOpen:
       | ((event: {
           threadId: ThreadId;
@@ -1714,6 +1717,8 @@ describe("DesktopBrowserAutomationHost", () => {
           kind: "popup",
           openedTabId: null,
         });
+        state.tabs.push({ ...state.tabs[0]!, id: OPENED_TAB_ID });
+        state.activeTabId = OPENED_TAB_ID;
       }
       return result;
     });
@@ -1737,7 +1742,16 @@ describe("DesktopBrowserAutomationHost", () => {
         instruction: "Complete sign-in in the visible popup before continuing.",
       },
     });
-    expect(raw.getState().activeTabId).toBe(TAB_ID);
+    expect(raw.getState().activeTabId).toBe(OPENED_TAB_ID);
+    await expect(
+      host.executeTool({
+        sessionId: "session-oauth-popup",
+        provider: "codex",
+        threadId: THREAD_ID,
+        name: "browser_status",
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({ assignedTabId: TAB_ID });
   });
 
   it("hands a keyboard-opened OAuth popup to the user", async () => {

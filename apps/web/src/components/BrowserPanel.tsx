@@ -42,6 +42,7 @@ import { isElectron } from "~/env";
 import { useI18n } from "~/i18n";
 import { CentralIcon } from "~/lib/central-icons";
 import { readNativeApi } from "~/nativeApi";
+import { BrowserVaultButton, BrowserVaultSavePrompt } from "./BrowserVault";
 import type { DockPaneRuntimeMode } from "~/lib/dockPaneActivation";
 import { readDesktopZoomFactor, subscribeDesktopZoomFactor } from "~/lib/desktopZoom";
 import { NATIVE_SURFACE_OCCLUSION_SYNC_EVENT } from "~/lib/nativeSurfaceOcclusion";
@@ -1758,6 +1759,17 @@ export function BrowserPanel({
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1 [-webkit-app-region:no-drag]">
+        <BrowserVaultButton
+          destination={
+            activeTab
+              ? {
+                  threadId,
+                  tabId: activeTab.id,
+                  origin: /^https?:\/\//.test(activeTab.url) ? new URL(activeTab.url).origin : null,
+                }
+              : undefined
+          }
+        />
         <BrowserAnnotationButton
           controller={annotationController}
           disabled={
@@ -1887,6 +1899,9 @@ export function BrowserPanel({
           onCloseTab={onCloseTab}
           onCreateTab={onCreateTab}
         />
+        {isLiveRuntime && activeTab && !activeTabInternalOnly ? (
+          <BrowserVaultSavePrompt key={activeTab.id} threadId={threadId} tabId={activeTab.id} />
+        ) : null}
         <div className="relative min-h-0 flex-1 bg-transparent">
           {!isLiveRuntime ? (
             <BrowserRuntimePreview

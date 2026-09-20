@@ -74,10 +74,13 @@ test("Engine Web Surface lease survives Renderer reload and deletion seals nativ
         if (typeof operation !== "function") {
           throw new Error("Missing Browser manager operation: " + request.method);
         }
-        return (await operation.call(
+        const result = await operation.call(
           fixture.browserManager,
           ...(request.input === undefined ? [] : [request.input]),
-        )) as T;
+        );
+        // Native WebContents cannot be serialized across Playwright's inspector bridge.
+        // This call only verifies that the surface can acquire a live runtime.
+        return (request.method === "getEngineWebSurfaceRuntime" ? undefined : result) as T;
       },
       { method, input },
     );

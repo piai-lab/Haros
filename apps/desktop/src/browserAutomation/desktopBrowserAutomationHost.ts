@@ -115,6 +115,8 @@ export interface DesktopBrowserAutomationHostOptions {
     presentationId?: string,
     surfaceId?: string,
   ) => BrowserPanelRevealResult | void | Promise<BrowserPanelRevealResult | void>;
+  readonly vault?: import("./browserVault").BrowserVault;
+  readonly vaultCapture?: import("./browserVaultCapture").BrowserVaultCapture;
 }
 
 interface SessionAffinity {
@@ -349,7 +351,7 @@ export class DesktopBrowserAutomationHost {
 
   constructor(
     private readonly browserManager: DesktopBrowserManager,
-    options: DesktopBrowserAutomationHostOptions = {},
+    private readonly options: DesktopBrowserAutomationHostOptions = {},
   ) {
     this.requestOpenPanel = options.requestOpenPanel;
   }
@@ -389,6 +391,10 @@ export class DesktopBrowserAutomationHost {
       if (!oldestSessionId) break;
       this.discardWebMcpDiscovery(oldestSessionId);
     }
+  }
+
+  async waitForIdle(): Promise<void> {
+    while (this.activeOperations.size > 0) await Promise.allSettled([...this.activeOperations]);
   }
 
   dispose(): Promise<void> {
@@ -487,7 +493,8 @@ export class DesktopBrowserAutomationHost {
     if (
       request.name !== "browser_status" &&
       request.name !== "browser_tabs" &&
-      this.browserManager.isAnnotationInteractive(request.threadId)
+      (this.browserManager.isAnnotationInteractive(request.threadId) ||
+        this.browserManager.isHumanBrowserOperationActive())
     ) {
       throw new BrowserAutomationHostError({
         code: "BrowserInterruptedByHuman",
@@ -1259,6 +1266,9 @@ export class DesktopBrowserAutomationHost {
   ): Promise<TabToolExecution> {
     let openedTabId: string | null = null;
     let oauthPopup = false;
+    if (!BROWSER_TOOL_DEFINITIONS_BY_NAME[request.name].annotations.readOnlyHint) {
+      this.options.vaultCapture?.noteAgentActivity(runtime);
+    }
     const output = await this.withDialogs(runtime, signal, async () => {
       switch (request.name) {
         case "browser_resize":
@@ -1468,6 +1478,9 @@ export class DesktopBrowserAutomationHost {
               code: (input as BrowserRunInput).code,
               timeoutMs: (input.timeoutMs as number | undefined) ?? 15_000,
               signal,
+              ...(this.options.vault
+                ? { vault: this.options.vault.agentAdapter(runtime.webContents, signal) }
+                : {}),
             });
           } catch (error) {
             throwIfAborted(signal);
@@ -1522,6 +1535,9 @@ export class DesktopBrowserAutomationHost {
             },
           }
         : result;
+    // Sign-in surfaces temporarily become the visible tab. Keep the Engine's
+    // affinity on its opener so closing the human login flow cannot strand it.
+    if (execution.oauthPopup) return reconciledResult;
     const state = this.browserManager.getState({ threadId: affinity.threadId });
     const openedTabId = execution.openedTabId ?? state.activeTabId;
     if (

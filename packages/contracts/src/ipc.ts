@@ -570,6 +570,7 @@ export type BrowserUseOpenPanelResponse = BrowserPanelRevealResult & {
   readonly requestId: string;
 };
 interface BrowserControlMethods {
+  vault?: import("./browserVault").BrowserVaultMethods;
   open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;
   close: (input: BrowserThreadInput) => Promise<ThreadBrowserState>;
   hide: (input: BrowserThreadInput) => Promise<void>;
@@ -652,7 +653,15 @@ export interface DesktopCustomTitleBarState {
 }
 export const DesktopAppIcon = Schema.Literals(["default", "icon", "dark"]);
 export type DesktopAppIcon = typeof DesktopAppIcon.Type;
+export type DesktopSafariAccessInfo =
+  | { supported: false }
+  | { supported: true; appName: string; appPath: string | null };
 export interface DesktopBridge {
+  safariAccess?: {
+    getInfo: () => Promise<DesktopSafariAccessInfo>;
+    openSettings: () => Promise<boolean>;
+    revealApp: () => Promise<boolean>;
+  };
   /** Full only for the first renderer window in this Desktop process; later windows skip it. */
   readonly startupPresentation?: "full" | "none";
   getWsUrl: () => string | null;

@@ -93,6 +93,28 @@ test("production MCP controls one persistent Electron page across visibility cha
   try {
     const page = await electronApp.firstWindow();
     await expect(page.locator("html")).toHaveAttribute("data-shell-ready", "true");
+    expect(
+      await electronApp.evaluate(() =>
+        (
+          globalThis as typeof globalThis & {
+            __harnessosVisibleBrowserE2E: { verifyBrowserSessionRestore(): Promise<boolean> };
+          }
+        ).__harnessosVisibleBrowserE2E.verifyBrowserSessionRestore(),
+      ),
+    ).toBe(true);
+    expect(
+      await electronApp.evaluate(
+        (_electron, url) =>
+          (
+            globalThis as typeof globalThis & {
+              __harnessosVisibleBrowserE2E: {
+                verifyNativeLoginCapture(url: string): Promise<boolean>;
+              };
+            }
+          ).__harnessosVisibleBrowserE2E.verifyNativeLoginCapture(url),
+        site.appUrl,
+      ),
+    ).toBe(true);
     const runtimeDetails = (scopedTabId: string) =>
       electronApp.evaluate(
         (_electron, input) => {
@@ -426,7 +448,17 @@ test("production MCP controls one persistent Electron page across visibility cha
     expect(existsSync(join(home, "Downloads", "fixture-download.txt"))).toBe(false);
 
     snapshotResult = await mcp.call("browser_snapshot");
-    const oauthWindowPromise = electronApp.waitForEvent("window");
+    const oauthWindowPromise = electronApp.waitForEvent("window", {
+      predicate: async (candidate) => {
+        try {
+          await candidate.waitForURL(new URL("/oauth", site.appUrl).href, { timeout: 5_000 });
+          return true;
+        } catch {
+          // Electron may announce a transient popup host before its managed native view.
+          return false;
+        }
+      },
+    });
     const oauthPopupClick = await mcp.call("browser_click", {
       target: targetByName(snapshotResult.structuredContent, "Open OAuth popup"),
       idempotencyKey: key(),
@@ -444,10 +476,10 @@ test("production MCP controls one persistent Electron page across visibility cha
     ).toBeVisible();
     const afterOAuthTabs = await mcp.call("browser_tabs");
     expect(afterOAuthTabs.structuredContent).toMatchObject({
-      activeTabId: tabId,
       assignedTabId: tabId,
     });
-    expect(afterOAuthTabs.structuredContent.tabs).toHaveLength(1);
+    expect(afterOAuthTabs.structuredContent.activeTabId).not.toBe(tabId);
+    expect(afterOAuthTabs.structuredContent.tabs).toHaveLength(2);
     await oauthWindow.close();
 
     snapshotResult = await mcp.call("browser_snapshot");

@@ -269,6 +269,8 @@ export interface BrowserAutomationDownloadEvent {
 export interface DesktopBrowserManagerOptions {
   beforeInputEvent?: (event: Electron.Event, input: Electron.Input) => boolean;
   annotationPreloadPath?: string;
+  onRuntimeReady?: (runtime: BrowserAutomationVisibleRuntime) => () => void;
+  onHumanControl?: (threadId: ThreadId) => void;
 }
 
 function createBrowserTab(
@@ -1334,6 +1336,40 @@ export class DesktopBrowserManager {
 
   getAutomationHumanControlEpoch(threadId: ThreadId): number {
     return this.humanControlEpochByThreadId.get(threadId) ?? 0;
+  }
+
+  private humanBrowserOperations = 0;
+
+  isHumanBrowserOperationActive(): boolean {
+    return this.humanBrowserOperations > 0;
+  }
+
+  beginHumanBrowserOperation(): () => void {
+    this.humanBrowserOperations += 1;
+    for (const threadId of this.states.keys()) this.markHumanControl(threadId);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.humanBrowserOperations -= 1;
+    };
+  }
+
+  async getCookieImportRuntime(input: BrowserTabInput): Promise<BrowserAutomationVisibleRuntime> {
+    const state = this.states.get(input.threadId);
+    const tab = state ? this.getTab(state, input.tabId) : null;
+    if (!state?.open || !tab || state.activeTabId !== tab.id) {
+      throw new Error("The cookie import tab is no longer selected.");
+    }
+    this.clearSuspendTimer(input.threadId);
+    const runtime = this.ensureLiveRuntime(input.threadId, tab.id);
+    if (!runtime.webContents.getURL()) await this.loadTab(input.threadId, tab.id, { runtime });
+    return {
+      threadId: input.threadId,
+      tabId: tab.id,
+      webContents: runtime.webContents,
+      expectAgentInput: (signal) => this.expectAutomationInput(input.threadId, tab.id, signal),
+    };
   }
 
   subscribeAutomationHumanControl(
@@ -2978,6 +3014,8 @@ export class DesktopBrowserManager {
 
   private configureRuntimeWebContents(runtime: LiveTabRuntime): void {
     const { threadId, tabId, webContents } = runtime;
+    const releaseObserver = this.options.onRuntimeReady?.({ threadId, tabId, webContents });
+    if (releaseObserver) runtime.listenerDisposers.push(releaseObserver);
 
     // Belt-and-suspenders alongside the session-level UA: also covers an adopted renderer
     // <webview> for any navigation after it attaches.
@@ -3436,6 +3474,7 @@ export class DesktopBrowserManager {
   }
 
   private markHumanControl(threadId: ThreadId): void {
+    this.options.onHumanControl?.(threadId);
     const state = this.states.get(threadId);
     const activeTab = state ? this.getActiveTab(state) : null;
     if (activeTab) {

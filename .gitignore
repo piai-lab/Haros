@@ -29,6 +29,7 @@ artifacts/
 /.harnessos-*/
 .idea/
 apps/web/.playwright
+apps/desktop/.playwright
 apps/web/playwright-report
 apps/web/test-results
 /apps/web/public/licenses/THIRD-PARTY-NOTICES.txt

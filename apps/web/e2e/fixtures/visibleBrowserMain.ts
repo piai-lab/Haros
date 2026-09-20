@@ -11,6 +11,7 @@ import { BrowserHostPipeServer } from "../../../desktop/src/browserUsePipeServer
 import { BROWSER_IPC_CHANNELS } from "../../../desktop/src/ipcChannels";
 import { hardenBrowserAnnotationWebviewPreferences } from "../../../desktop/src/browserAnnotations/webviewSecurity";
 import { createBrowserPanelHideScheduler } from "../../src/components/BrowserPanel.logic";
+import { verifyBrowserSessionRestore, verifyNativeLoginCapture } from "./browserSessionProbe";
 
 const pipePath = process.env.HARNESSOS_BROWSER_HOST_PIPE_PATH;
 const capability = process.env.HARNESSOS_BROWSER_HOST_CAPABILITY;
@@ -77,6 +78,9 @@ ipcMain.on(BROWSER_IPC_CHANNELS.annotations.guestMessage, (event, payload: unkno
   if (!event.senderFrame || event.senderFrame !== event.sender.mainFrame) return;
   browserManager.handleAnnotationGuestMessage(event.sender, payload);
 });
+ipcMain.on(BROWSER_IPC_CHANNELS.webMcpCompatibilityPolicy, (event) => {
+  event.returnValue = browserManager.isWebMcpCompatibilityAllowed(event.sender.id);
+});
 browserManager.subscribeAnnotationEvents((event) => {
   annotationEvents.push(event);
 });
@@ -98,6 +102,8 @@ const pipeServer = new BrowserHostPipeServer(browserManager, {
 Object.assign(globalThis, {
   __harnessosVisibleBrowserE2E: {
     browserManager,
+    verifyBrowserSessionRestore: () => verifyBrowserSessionRestore(harnessosHome),
+    verifyNativeLoginCapture: (url: string) => verifyNativeLoginCapture(harnessosHome, url),
     annotationEvents,
     threadId,
     pipePath,
@@ -112,7 +118,9 @@ app.whenReady().then(async () => {
   mainWindow = new BrowserWindow({
     width: 1_000,
     height: 760,
-    show: true,
+    show: false,
+    // Keep synthetic native input separate from typing in the user's foreground app.
+    focusable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -121,6 +129,7 @@ app.whenReady().then(async () => {
     },
   });
   browserManager.setWindow(mainWindow);
+  mainWindow.showInactive();
   mainWindow.webContents.on("will-attach-webview", (event, webPreferences, params) => {
     if (
       !hardenBrowserAnnotationWebviewPreferences({

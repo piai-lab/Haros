@@ -1098,6 +1098,21 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("keeps saved-login operations on desktop IPC instead of WebSocket RPC", async () => {
+    const snapshot = vi.fn(async () => ({ logins: [] }));
+    const vault = { snapshot };
+    Object.defineProperty(getWindowForTest(), "desktopBridge", {
+      configurable: true,
+      value: { browser: { vault } },
+    });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    expect(api.browser.vault).toBe(vault);
+    await api.browser.vault!.snapshot();
+    expect(snapshot).toHaveBeenCalledOnce();
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
   it("forwards browser webview detach requests to the desktop bridge", async () => {
     const detachWebview = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(getWindowForTest(), "desktopBridge", {
