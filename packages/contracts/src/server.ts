@@ -88,6 +88,7 @@ export const ServerEngineStatus = Schema.Struct({
   ),
   updateState: Schema.optionalKey(
     Schema.Struct({
+      operation: Schema.optional(Schema.Literals(["install", "update", "repair"])),
       status: Schema.Literals(["idle", "queued", "running", "succeeded", "failed", "unchanged"]),
       startedAt: Schema.NullOr(IsoDateTime),
       finishedAt: Schema.NullOr(IsoDateTime),

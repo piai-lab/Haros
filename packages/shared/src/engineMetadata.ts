@@ -1,13 +1,22 @@
 // FILE: engineMetadata.ts
 // Purpose: The exhaustive, credential-blind identity owner for top-level Agent Engines.
 
-import type { EngineKind } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
+
+export function engineMaintenanceOperation(
+  status: Pick<ServerEngineStatus, "available" | "unavailableReason"> | undefined,
+): "install" | "update" | "repair" {
+  if (status?.unavailableReason === "not_installed") return "install";
+  return status?.available ? "update" : "repair";
+}
 
 export interface EngineDescriptor {
   readonly installation: {
     readonly binary: string;
     readonly windowsBinary?: string;
     readonly npm?: string;
+    /** Node CLI packages need their dependency tree and npm-generated launcher. */
+    readonly npmDistribution?: "node-package";
   } | null;
   readonly kind: EngineKind;
   readonly displayName: string;
@@ -118,7 +127,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   },
   {
     kind: "deepseek",
-    installation: { binary: "dsh", npm: "@deepseek-ai/dsh" },
+    installation: { binary: "dsh", npm: "@deepseek-ai/dsh", npmDistribution: "node-package" },
     displayName: "DeepSeek",
     // SDK has no model-list RPC; the static catalog is global and sendable.
     globalOnlyModelCatalog: true,

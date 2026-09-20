@@ -1,6 +1,10 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { ServerEngineStatus } from "@harnessos/contracts";
-import { DEFAULT_SERVER_SETTINGS, ServerEngineUpdateError } from "@harnessos/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS,
+  ServerEngineUpdateError,
+  ServerSettingsError,
+} from "@harnessos/contracts";
 import { describe, it, assert } from "@effect/vitest";
 import { Effect, FileSystem, Layer, Path, Sink, Stream } from "effect";
 import { TestClock } from "effect/testing";
@@ -372,6 +376,103 @@ it.layer(NodeServices.layer)("EngineHealth", (it) => {
         pathPrepend: "/Users/test/.nvm/versions/node/v24.13.0/bin",
       });
     });
+
+    it.effect("finishes activation failures, restores the prior path, and allows retry", () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fs.makeTempDirectoryScoped({ prefix: "engine-activation-failure-" });
+        const previousPath = path.join(root, "previous-dsh");
+        const candidatePath = path.join(root, "candidate-dsh");
+        const settings = {
+          ...allProvidersDisabledServerSettings,
+          enableEngineUpdateChecks: false,
+          engines: {
+            ...allProvidersDisabledServerSettings.engines,
+            deepseek: {
+              ...DEFAULT_SERVER_SETTINGS.engines.deepseek,
+              enabled: true,
+              binaryPath: previousPath,
+            },
+          },
+        };
+        let rejectWrite = true;
+        let rejectSnapshot = false;
+        const settingsLayer = Layer.effect(
+          ServerSettingsService,
+          Effect.gen(function* () {
+            const base = yield* ServerSettingsService;
+            return {
+              ...base,
+              getSnapshot: Effect.suspend(() =>
+                rejectSnapshot
+                  ? Effect.fail(
+                      new ServerSettingsError({
+                        settingsPath: "<test>",
+                        detail: "injected refresh failure",
+                      }),
+                    )
+                  : base.getSnapshot,
+              ),
+              updateSettings: (patch: Parameters<typeof base.updateSettings>[0]) => {
+                if (patch.engines?.deepseek?.binaryPath === candidatePath && rejectWrite) {
+                  return Effect.fail(
+                    new ServerSettingsError({
+                      settingsPath: "<test>",
+                      detail: "injected write failure",
+                    }),
+                  );
+                }
+                return base.updateSettings(patch);
+              },
+            };
+          }),
+        ).pipe(Layer.provide(ServerSettingsService.layerTest(settings)));
+        const layer = makeEngineHealthLive({
+          managedInstall: () =>
+            Effect.succeed({ binaryPath: candidatePath, version: "1.2.3", output: "dsh 1.2.3" }),
+        }).pipe(
+          Layer.provideMerge(settingsLayer),
+          Layer.provideMerge(ServerConfig.layerTest(root, root)),
+          Layer.provideMerge(mockSpawnerLayer(() => ({ stdout: "1.2.3", stderr: "", code: 0 }))),
+        );
+        yield* Effect.gen(function* () {
+          const health = yield* EngineHealth;
+          const settingsService = yield* ServerSettingsService;
+          yield* health.refresh;
+          const first = yield* health.updateEngine({ engine: "deepseek" });
+          assert.strictEqual(
+            first.engines.find((status) => status.engine === "deepseek")?.updateState?.status,
+            "failed",
+          );
+          assert.strictEqual(
+            (yield* settingsService.getSettings).engines.deepseek.binaryPath,
+            previousPath,
+          );
+          rejectWrite = false;
+          rejectSnapshot = true;
+          const second = yield* health.updateEngine({ engine: "deepseek" });
+          assert.strictEqual(
+            second.engines.find((status) => status.engine === "deepseek")?.updateState?.status,
+            "failed",
+          );
+          assert.strictEqual(
+            (yield* settingsService.getSettings).engines.deepseek.binaryPath,
+            previousPath,
+          );
+          rejectSnapshot = false;
+          const third = yield* health.updateEngine({ engine: "deepseek" });
+          assert.strictEqual(
+            third.engines.find((status) => status.engine === "deepseek")?.updateState?.status,
+            "succeeded",
+          );
+          assert.strictEqual(
+            (yield* settingsService.getSettings).engines.deepseek.binaryPath,
+            candidatePath,
+          );
+        }).pipe(Effect.provide(layer));
+      }),
+    );
 
     it.effect("stops a hung engine installation and persists a failed update state", () =>
       Effect.gen(function* () {

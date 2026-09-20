@@ -24,6 +24,14 @@ type Artifact = typeof EngineArtifact.Type;
 type RunResult = { readonly stdout: string; readonly stderr: string; readonly exitCode: number };
 type Runner = (command: string, args: ReadonlyArray<string>) => Effect.Effect<RunResult, unknown>;
 
+export class ManagedEngineInstallError extends Error {
+  readonly output: string;
+  constructor(message: string, output: string) {
+    super(message);
+    this.output = output.slice(-10_000);
+  }
+}
+
 function checkedUrl(value: string): string {
   const url = new URL(value);
   if (
@@ -121,6 +129,7 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
     );
   yield* input.progress("Resolving installation source");
   let artifact: Artifact;
+  const nodePackage = !input.mirrorUrl && installation.npmDistribution === "node-package";
   if (input.mirrorUrl) {
     const manifestUrl = `${input.mirrorUrl.replace(/\/$/, "")}/${input.engine}/${process.platform}-${process.arch}.json`;
     artifact = yield* readJson(manifestUrl).pipe(
@@ -132,38 +141,49 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
   } else if (installation.npm) {
     const Metadata = Schema.Struct({
       version: Schema.String,
-      optionalDependencies: Schema.Record(Schema.String, Schema.String),
+      optionalDependencies: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+      dist: Schema.Struct({ tarball: Schema.String, integrity: Schema.String }),
     });
     const metadata = yield* readJson(npmRegistryPackageUrl(installation.npm)).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Metadata)),
     );
-    const platformNames = process.platform === "win32" ? ["win32", "windows"] : [process.platform];
-    const dependency = Object.entries(metadata.optionalDependencies).find(([name]) =>
-      platformNames.some((platform) => name.endsWith(`-${platform}-${process.arch}`)),
-    );
-    if (!dependency)
-      return yield* Effect.fail(
-        new Error(
-          `No native distribution for ${input.engine} on ${process.platform}-${process.arch}.`,
-        ),
+    if (nodePackage) {
+      artifact = {
+        version: metadata.version,
+        url: metadata.dist.tarball,
+        integrity: metadata.dist.integrity,
+        format: "tar.gz",
+      };
+    } else {
+      const platformNames =
+        process.platform === "win32" ? ["win32", "windows"] : [process.platform];
+      const dependency = Object.entries(metadata.optionalDependencies ?? {}).find(([name]) =>
+        platformNames.some((platform) => name.endsWith(`-${platform}-${process.arch}`)),
       );
-    const [dependencyName, dependencyVersion] = dependency;
-    const alias = dependencyVersion.startsWith("npm:") ? dependencyVersion.slice(4) : null;
-    const at = alias?.lastIndexOf("@") ?? -1;
-    const name = alias ? alias.slice(0, at) : dependencyName;
-    const version = alias ? alias.slice(at + 1) : dependencyVersion;
-    const Distribution = Schema.Struct({
-      dist: Schema.Struct({ tarball: Schema.String, integrity: Schema.String }),
-    });
-    const native = yield* readJson(npmRegistryPackageUrl(name, version)).pipe(
-      Effect.flatMap(Schema.decodeUnknownEffect(Distribution)),
-    );
-    artifact = {
-      version: metadata.version,
-      url: native.dist.tarball,
-      integrity: native.dist.integrity,
-      format: "tar.gz",
-    };
+      if (!dependency)
+        return yield* Effect.fail(
+          new Error(
+            `No native distribution for ${input.engine} on ${process.platform}-${process.arch}.`,
+          ),
+        );
+      const [dependencyName, dependencyVersion] = dependency;
+      const alias = dependencyVersion.startsWith("npm:") ? dependencyVersion.slice(4) : null;
+      const at = alias?.lastIndexOf("@") ?? -1;
+      const name = alias ? alias.slice(0, at) : dependencyName;
+      const version = alias ? alias.slice(at + 1) : dependencyVersion;
+      const Distribution = Schema.Struct({
+        dist: Schema.Struct({ tarball: Schema.String, integrity: Schema.String }),
+      });
+      const native = yield* readJson(npmRegistryPackageUrl(name, version)).pipe(
+        Effect.flatMap(Schema.decodeUnknownEffect(Distribution)),
+      );
+      artifact = {
+        version: metadata.version,
+        url: native.dist.tarball,
+        integrity: native.dist.integrity,
+        format: "tar.gz",
+      };
+    }
   } else if (input.engine === "antigravity") {
     const platform = process.platform === "win32" ? "windows" : process.platform;
     const arch = process.arch === "x64" ? "amd64" : process.arch;
@@ -224,18 +244,31 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
     );
     if (exists) {
       yield* input.progress("Verifying installed engine");
-      const probe = yield* input.run(installed.binaryPath, ["--version"]);
-      if (probe.exitCode !== 0)
-        return yield* Effect.fail(
-          new Error(`Installed executable failed verification: ${probe.stderr}`),
-        );
-      return { ...installed, output: probe.stdout + probe.stderr };
+      const probe = yield* input.run(installed.binaryPath, ["--version"]).pipe(Effect.result);
+      if (
+        probe._tag === "Success" &&
+        probe.success.exitCode === 0 &&
+        /\d+\.\d+/.test(probe.success.stdout + probe.success.stderr)
+      ) {
+        return { ...installed, output: probe.success.stdout + probe.success.stderr };
+      }
+      // A failed cached probe is repairable: stage a fresh copy instead of
+      // returning the same broken receipt on every retry.
     }
   }
   // Every attempt uses a new directory. A failed update leaves the previous binary usable;
   // activation is a settings write by EngineHealth only after a real --version probe succeeds.
   const directory = path.join(input.root, input.engine, randomUUID());
-  yield* request(() => fs.mkdir(directory, { recursive: true }));
+  let retained = false;
+  // The caller's scope drains subprocesses before removing this attempt's bytes.
+  // Never remove earlier versions: a running Engine session may still own them.
+  yield* Effect.acquireRelease(
+    request(() => fs.mkdir(directory, { recursive: true })),
+    () =>
+      retained
+        ? Effect.void
+        : Effect.promise(() => fs.rm(directory, { recursive: true, force: true })),
+  );
   const binaryName =
     process.platform === "win32"
       ? (installation.windowsBinary ?? `${installation.binary}.exe`)
@@ -300,39 +333,94 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
       throw new Error("Engine download checksum mismatch. Installation was not activated.");
     }
   });
-  if (artifact.format !== "binary") {
-    yield* input.progress("Extracting downloaded engine");
-    const extract = resolveEngineArchiveExtractCommand({
-      format: artifact.format,
-      archivePath: payload,
-      directory,
-    });
-    const result = yield* input.run(extract.command, extract.args);
-    if (result.exitCode !== 0)
-      return yield* Effect.fail(new Error(`Extraction failed: ${result.stderr}`));
-    yield* request(() => fs.unlink(payload));
-  }
-  const binaryPath = yield* request(async () => {
-    const entries = await fs.readdir(directory, { recursive: true, withFileTypes: true });
-    const matches = entries.filter(
-      (entry) => entry.isFile() && (entry.name === binaryName || entry.name === `${binaryName}.br`),
+  let binaryPath: string;
+  if (nodePackage) {
+    yield* input.progress("Installing Node CLI dependencies");
+    const userConfig = path.join(directory, "npm-user.conf");
+    const globalConfig = path.join(directory, "npm-global.conf");
+    yield* request(() =>
+      Promise.all([fs.writeFile(userConfig, ""), fs.writeFile(globalConfig, "")]),
     );
-    if (matches.length !== 1)
-      throw new Error(
-        `Expected one ${binaryName} in downloaded distribution, found ${matches.length}.`,
+    const result = yield* input
+      .run(process.platform === "win32" ? "npm.cmd" : "npm", [
+        "install",
+        "--global=false",
+        "--bin-links=true",
+        "--prefix",
+        directory,
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        "--omit=dev",
+        "--registry=https://registry.npmjs.org",
+        "--userconfig",
+        userConfig,
+        "--globalconfig",
+        globalConfig,
+        "--cache",
+        path.join(directory, ".npm-cache"),
+        "--",
+        payload,
+      ])
+      .pipe(
+        Effect.mapError(
+          () => new Error("Could not start npm. Install Node.js and npm, then retry."),
+        ),
       );
-    const entry = matches[0]!;
-    const executable = path.join(entry.parentPath, binaryName);
-    if (entry.name.endsWith(".br")) {
-      await pipeline(
-        createReadStream(path.join(entry.parentPath, entry.name)),
-        createBrotliDecompress(),
-        createWriteStream(executable, { flags: "wx" }),
+    if (result.exitCode !== 0) {
+      return yield* Effect.fail(
+        new ManagedEngineInstallError(
+          "Node CLI installation failed. Check Node.js and npm, then retry.",
+          result.stdout + result.stderr,
+        ),
       );
     }
-    if (process.platform !== "win32") await fs.chmod(executable, 0o755);
-    return executable;
-  });
+    binaryPath = path.join(
+      directory,
+      "node_modules",
+      ".bin",
+      `${installation.binary}${process.platform === "win32" ? ".cmd" : ""}`,
+    );
+    yield* request(() => fs.unlink(payload));
+    yield* request(() =>
+      fs.rm(path.join(directory, ".npm-cache"), { recursive: true, force: true }),
+    );
+  } else {
+    if (artifact.format !== "binary") {
+      yield* input.progress("Extracting downloaded engine");
+      const extract = resolveEngineArchiveExtractCommand({
+        format: artifact.format,
+        archivePath: payload,
+        directory,
+      });
+      const result = yield* input.run(extract.command, extract.args);
+      if (result.exitCode !== 0)
+        return yield* Effect.fail(new Error(`Extraction failed: ${result.stderr}`));
+      yield* request(() => fs.unlink(payload));
+    }
+    binaryPath = yield* request(async () => {
+      const entries = await fs.readdir(directory, { recursive: true, withFileTypes: true });
+      const matches = entries.filter(
+        (entry) =>
+          entry.isFile() && (entry.name === binaryName || entry.name === `${binaryName}.br`),
+      );
+      if (matches.length !== 1)
+        throw new Error(
+          `Expected one ${binaryName} in downloaded distribution, found ${matches.length}.`,
+        );
+      const entry = matches[0]!;
+      const executable = path.join(entry.parentPath, binaryName);
+      if (entry.name.endsWith(".br")) {
+        await pipeline(
+          createReadStream(path.join(entry.parentPath, entry.name)),
+          createBrotliDecompress(),
+          createWriteStream(executable, { flags: "wx" }),
+        );
+      }
+      if (process.platform !== "win32") await fs.chmod(executable, 0o755);
+      return executable;
+    });
+  }
   yield* input.progress("Verifying installed engine");
   const probe = yield* input.run(binaryPath, ["--version"]);
   if (probe.exitCode !== 0 || !/\d+\.\d+/.test(probe.stdout + probe.stderr)) {
@@ -345,6 +433,7 @@ export const installManagedEngine = Effect.fn("installManagedEngine")(function* 
     const pending = path.join(directory, "installed.json");
     await fs.writeFile(pending, JSON.stringify(receipt));
     await fs.rename(pending, receiptPath);
-  });
+    retained = true;
+  }).pipe(Effect.uninterruptible);
   return { binaryPath, version: artifact.version, output: probe.stdout + probe.stderr };
 });

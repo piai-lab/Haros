@@ -28,6 +28,19 @@ therefore closes the startup message segment only after its early content has be
 completion uses the same drain boundary. **简体中文。** ACP 新会话建立后先处理完已收到的通知，
 再交还控制权，防止早期消息与首轮输出因异步处理顺序而合并或丢失结束事件。
 
+Managed Engine installation follows the descriptor's distribution kind. Native packages use
+verified platform archives; DeepSeek uses a verified npm package and an isolated local dependency
+prefix, with lifecycle scripts disabled. It requires Node.js and npm on the host PATH. Neither path
+uses a global package install. Failed attempts remove only their own staging directory; previous
+versions remain intact because existing sessions may still use them. A broken cached executable is
+reinstalled on retry. EngineHealth owns activation, health verification, restoration and the terminal
+operation state; an executable selection edited during the download is preserved.
+
+**简体中文。** 托管安装按 Engine 描述选择分发方式：原生包校验平台归档，DeepSeek 校验 npm 包后
+在独立目录安装依赖，禁用生命周期脚本，需要本机 PATH 中的 Node.js 和 npm。安装不写入全局包目录。
+失败或取消只清理本次暂存文件；旧版本可能仍由会话使用，因此保留。缓存中的可执行文件损坏时，重试会重新
+安装。EngineHealth 统一负责启用、健康验证、恢复和最终操作状态，并保留下载期间用户修改的可执行文件选择。
+
 ## HostGateway
 
 HostGateway owns the catalog and authorization boundary for local system capabilities. File, Git,

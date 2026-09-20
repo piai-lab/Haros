@@ -1,4 +1,5 @@
 import {
+  engineMaintenanceOperation,
   ENGINE_DESCRIPTOR_BY_KIND,
   RUNNABLE_ENGINE_DESCRIPTORS,
 } from "@harnessos/shared/engineMetadata";
@@ -107,7 +108,7 @@ import {
   type PackageManagedEngineMaintenanceDefinition,
 } from "../engineMaintenance";
 import { makeEngineMaintenanceCommandCoordinator } from "../engineMaintenanceCommandCoordinator";
-import { installManagedEngine } from "../managedEngineInstall";
+import { installManagedEngine, ManagedEngineInstallError } from "../managedEngineInstall";
 import {
   orderEngineStatuses,
   readEngineStatusCache,
@@ -2721,12 +2722,14 @@ export function makeEngineHealthLive(options?: {
 
       const makeUpdateState = (input: {
         readonly status: ServerEngineUpdateState["status"];
+        readonly operation?: ServerEngineUpdateState["operation"];
         readonly startedAt: string | null;
         readonly finishedAt: string | null;
         readonly message: string | null;
         readonly output?: string | null;
       }): ServerEngineUpdateState => ({
         status: input.status,
+        ...(input.operation ? { operation: input.operation } : {}),
         startedAt: input.startedAt,
         finishedAt: input.finishedAt,
         message: input.message,
@@ -2810,12 +2813,17 @@ export function makeEngineHealthLive(options?: {
           });
         }
         if (ENGINE_DESCRIPTOR_BY_KIND[engine].installation) {
+          const operation = engineMaintenanceOperation(
+            (yield* Ref.get(statusesRef)).find((status) => status.engine === engine),
+          );
+          const managedState = (state: Parameters<typeof makeUpdateState>[0]) =>
+            makeUpdateState({ ...state, operation });
           return yield* commandCoordinator.withCommandLock({
             targetKey: engine,
             lockKey: `managed-install:${engine}`,
             onQueued: setEngineUpdateState(
               engine,
-              makeUpdateState({
+              managedState({
                 status: "queued",
                 startedAt: null,
                 finishedAt: null,
@@ -2835,7 +2843,7 @@ export function makeEngineHealthLive(options?: {
                 progress: (message) =>
                   setEngineUpdateState(
                     engine,
-                    makeUpdateState({ status: "running", startedAt, finishedAt: null, message }),
+                    managedState({ status: "running", startedAt, finishedAt: null, message }),
                   ).pipe(Effect.asVoid),
               }).pipe(
                 Effect.scoped,
@@ -2853,47 +2861,90 @@ export function makeEngineHealthLive(options?: {
               if (Result.isFailure(result)) {
                 const engines = yield* setEngineUpdateState(
                   engine,
-                  makeUpdateState({
+                  managedState({
                     status: "failed",
                     startedAt,
                     finishedAt: yield* nowIso,
                     message: describeUpdateCommandError(result.failure),
+                    output:
+                      result.failure instanceof ManagedEngineInstallError
+                        ? result.failure.output
+                        : null,
                   }),
                 );
                 return { engines };
               }
-              yield* serverSettings
-                .updateSettings({
-                  engines: { [engine]: { binaryPath: result.success.binaryPath } },
-                })
-                .pipe(Effect.mapError(toUpdateError));
-              const statuses = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
-              const installedStatus = statuses.find((status) => status.engine === engine);
-              const available = installedStatus?.available;
-              if (!available) {
-                yield* serverSettings
-                  .updateSettings({
-                    engines: {
-                      [engine]: { binaryPath: getEngineBinaryPath(engine, settings) ?? "" },
-                    },
-                  })
-                  .pipe(Effect.mapError(toUpdateError));
-                yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+              const previousPath = getEngineBinaryPath(engine, settings) ?? "";
+              const candidatePath = result.success.binaryPath;
+              const activation = yield* Effect.gen(function* () {
+                // Do not replace an executable choice edited while the download was running.
+                const current = yield* serverSettings.getSettings;
+                if ((getEngineBinaryPath(engine, current) ?? "") !== previousPath) {
+                  return yield* Effect.fail(
+                    new Error(
+                      "Executable selection changed during installation. Retry using the current settings.",
+                    ),
+                  );
+                }
+                yield* serverSettings.updateSettings({
+                  engines: { [engine]: { binaryPath: candidatePath } },
+                });
+                const statuses = yield* refreshNow;
+                const installedStatus = statuses.find((status) => status.engine === engine);
+                if (
+                  !installedStatus?.available ||
+                  installedStatus.checkedBinaryPath !== candidatePath
+                ) {
+                  return yield* Effect.fail(
+                    new Error("The installed executable did not pass the Engine health check."),
+                  );
+                }
+              }).pipe(Effect.result);
+              let failureMessage: string | null = null;
+              if (Result.isFailure(activation)) {
+                failureMessage = describeUpdateCommandError(activation.failure);
+                const restore = yield* Effect.gen(function* () {
+                  const current = yield* serverSettings.getSettings;
+                  if (getEngineBinaryPath(engine, current) === candidatePath) {
+                    yield* serverSettings.updateSettings({
+                      engines: { [engine]: { binaryPath: previousPath } },
+                    });
+                    yield* refreshNow;
+                    return " Previous executable selection was restored.";
+                  }
+                  return " The current executable selection was kept.";
+                }).pipe(Effect.result);
+                failureMessage += Result.isFailure(restore)
+                  ? " Could not restore or verify the previous selection. Check the executable path before retrying."
+                  : restore.success;
               }
               const engines = yield* setEngineUpdateState(
                 engine,
-                makeUpdateState({
-                  status: available ? "succeeded" : "failed",
+                managedState({
+                  status: failureMessage ? "failed" : "succeeded",
                   startedAt,
                   finishedAt: yield* nowIso,
-                  message: available
-                    ? "Engine installed and verified."
-                    : `Executable installed, but the engine health check failed. Previous executable selection was restored. ${installedStatus?.message ?? ""}`,
+                  message: failureMessage ?? "Engine installed and verified.",
                   output: result.success.output,
                 }),
               );
               return { engines };
-            }),
+            }).pipe(
+              Effect.onExit((exit) =>
+                Exit.isFailure(exit)
+                  ? setEngineUpdateState(
+                      engine,
+                      managedState({
+                        status: "failed",
+                        startedAt: null,
+                        finishedAt: new Date().toISOString(),
+                        message:
+                          "Engine operation stopped unexpectedly. Check its status before retrying.",
+                      }),
+                    ).pipe(Effect.asVoid)
+                  : Effect.void,
+              ),
+            ),
           });
         }
         const capabilities = yield* getEngineMaintenanceCapabilities(engine).pipe(
