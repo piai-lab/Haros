@@ -283,7 +283,10 @@ describe("workspace search", () => {
       await render(<SearchHarness onSelectFile={vi.fn()} />);
       const input = page.getByRole("textbox", { name: "Search workspace" });
       await userEvent.type(input, "first");
-      await vi.waitFor(() => expect(searchContent).toHaveBeenCalledTimes(1));
+      // Debouncing may issue an intermediate query under load. Wait for the
+      // exact request whose cancellation this test is supposed to exercise.
+      await vi.waitFor(() => expect(firstSignal).toBeInstanceOf(AbortSignal));
+      expect(firstSignal?.aborted).toBe(false);
       expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
 
       await userEvent.clear(input);

@@ -19,7 +19,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useMutation: () => ({ isPending: false, mutate: vi.fn() }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: (options: { queryKey?: readonly unknown[] }) => {
-    const scope = options.queryKey?.at(-1);
+    const scope = options.queryKey?.[3];
     const error = scope === "staged" ? harness.stagedError : harness.unstagedError;
     return {
       data: undefined,

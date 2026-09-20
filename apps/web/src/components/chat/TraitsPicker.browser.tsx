@@ -954,9 +954,9 @@ describe("TraitsPicker (OpenCode)", () => {
 describe("TraitsPicker (Pi-backed thinking)", () => {
   it.each([
     { engine: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
-    { engine: "codex", locale: "en", trigger: "Options", label: "Thinking level" },
+    { engine: "codex", locale: "en", trigger: "Options", label: "Effort" },
     { engine: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
-    { engine: "codex", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+    { engine: "codex", locale: "zh-CN", trigger: "选项", label: "推理强度" },
   ] as const)("labels $engine native options truthfully in $locale", async (testCase) => {
     i18nHarness.settings.localePreference = testCase.locale;
     const host = document.createElement("div");
@@ -990,7 +990,18 @@ describe("TraitsPicker (Pi-backed thinking)", () => {
       await page.getByRole("button", { name: testCase.trigger }).click();
       await expect.element(page.getByText(testCase.label, { exact: true })).toBeVisible();
       await expect
-        .element(page.getByText(testCase.locale === "en" ? "Effort" : "推理强度", { exact: true }))
+        .element(
+          page.getByText(
+            testCase.engine === "pi"
+              ? testCase.locale === "en"
+                ? "Effort"
+                : "推理强度"
+              : testCase.locale === "en"
+                ? "Thinking level"
+                : "思考强度",
+            { exact: true },
+          ),
+        )
         .not.toBeInTheDocument();
     } finally {
       await screen.unmount();

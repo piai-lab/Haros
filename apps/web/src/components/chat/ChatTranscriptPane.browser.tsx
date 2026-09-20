@@ -3,7 +3,7 @@ import "../../index.css";
 import { MessageId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import { page } from "vitest/browser";
-import { Profiler, useRef, useState, type ProfilerOnRenderCallback } from "react";
+import { Profiler, useEffect, useRef, useState, type ProfilerOnRenderCallback } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -228,6 +228,12 @@ function ExactMarkdownSelectionHarness(props: {
     onMessagesWheelBase: NOOP,
   });
 
+  const { onMarkerRange } = props;
+  useEffect(() => {
+    const range = pendingTranscriptSelectionAction?.selection.markerRange;
+    if (range) onMarkerRange(range);
+  }, [pendingTranscriptSelectionAction, onMarkerRange]);
+
   return (
     <>
       <div
@@ -328,8 +334,8 @@ describe("ChatTranscriptPane", () => {
       await vi.waitFor(() => {
         expect(document.querySelector('[data-transcript-selection-action="true"]')).not.toBeNull();
       });
-      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
-      await expect.element(page.getByRole("button", { name: "Underline" })).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
+      expect(document.querySelector('button[aria-label="Highlight"]')).toBeNull();
       await page.getByRole("button", { name: "Add to Chat" }).click();
 
       expect(addedSelections).toEqual(["Selectable assistant answer"]);
@@ -389,13 +395,13 @@ describe("ChatTranscriptPane", () => {
         }),
       );
 
-      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
       const toolbarRect = document
         .querySelector<HTMLElement>('[role="toolbar"]')!
         .getBoundingClientRect();
       expect(toolbarRect.left).toBeGreaterThanOrEqual(8);
       expect(toolbarRect.right).toBeLessThanOrEqual(window.innerWidth - 8);
-      await page.getByRole("button", { name: "Highlight" }).click();
+      await page.getByRole("button", { name: "Add to Chat" }).click();
       expect(markerRanges).toEqual([
         {
           startOffset: 0,
@@ -423,9 +429,9 @@ describe("ChatTranscriptPane", () => {
         }),
       );
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual([
-        "参考： docs/architecture.md · Project note · Prompt 设计稿",
-      ]);
+      expect(addedSelections).toEqual(
+        Array(2).fill("参考： docs/architecture.md · Project note · Prompt 设计稿"),
+      );
     } finally {
       if (originalNativeApi) {
         window.nativeApi = originalNativeApi;
@@ -520,7 +526,7 @@ describe("ChatTranscriptPane", () => {
     }
   });
 
-  it("removes marker actions when a selected message resumes streaming but keeps the snapshot", async () => {
+  it("keeps the captured selection addable when its message resumes streaming", async () => {
     const addedSelections: string[] = [];
     const renderHarness = (streaming: boolean) => (
       <ExactMarkdownSelectionHarness
@@ -542,7 +548,7 @@ describe("ChatTranscriptPane", () => {
       transcript.dispatchEvent(
         new MouseEvent("mouseup", { bubbles: true, clientX: 160, clientY: 90 }),
       );
-      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
 
       await screen.rerender(renderHarness(true));
       await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();

@@ -4243,11 +4243,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       assertDraft(editorNode, draft);
-      expect(
-        mounted.host
-          .querySelector<HTMLElement>("[data-right-dock-content]")
-          ?.contains(document.activeElement),
-      ).toBe(true);
+      await vi.waitFor(() => expect(document.activeElement).toBe(editorNode));
       expect(compositionEndCount).toBe(0);
       useRightDockStore.getState().setDockOpen(THREAD_ID, false);
       await waitForWorkbench("closed");
@@ -5435,9 +5431,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
           engines: [
-            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "codex"),
+            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "pi"),
             {
-              engine: "codex",
+              engine: "pi",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5452,7 +5448,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await waitForServerConfigToApply();
       useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
-        engine: "codex",
+        engine: "pi",
         model: "deepseek/deepseek-v4-flash",
       });
       useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
@@ -8950,6 +8946,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       snapshot: {
         ...snapshot,
         projects: snapshot.projects.filter((project) => project.kind !== "project"),
+      },
+      configureFixture: (nextFixture) => {
+        nextFixture.serverSettings = {
+          ...nextFixture.serverSettings,
+          onboardingCompletedAt: NOW_ISO,
+        };
       },
     });
 

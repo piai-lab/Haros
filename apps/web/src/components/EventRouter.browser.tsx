@@ -292,7 +292,7 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
     return fixture.serverConfig;
   }
   if (tag === WS_METHODS.serverGetSettings) {
-    return DEFAULT_SERVER_SETTINGS_VIEW;
+    return { ...DEFAULT_SERVER_SETTINGS_VIEW, onboardingCompletedAt: NOW_ISO };
   }
   if (tag === WS_METHODS.serverGetEnvironment) {
     return {

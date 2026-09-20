@@ -28,7 +28,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: (options: { queryKey?: readonly unknown[] }) => ({
     data: {
-      patch: options.queryKey?.at(-1) === "staged" ? harness.stagedPatch : harness.unstagedPatch,
+      patch: options.queryKey?.[3] === "staged" ? harness.stagedPatch : harness.unstagedPatch,
     },
     error: null,
     isError: false,

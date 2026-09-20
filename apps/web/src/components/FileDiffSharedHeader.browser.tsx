@@ -127,24 +127,21 @@ describe("shared diff file header", () => {
       scrollRoot.dispatchEvent(new Event("scroll"));
       const scrollTopBeforeAction = scrollRoot.scrollTop;
 
-      await expect
-        .poll(() =>
-          deepTextNodes(panel).some((node) => node.nodeValue?.includes("old selectable line")),
-        )
-        .toBe(true);
-      const textNode = deepTextNodes(panel).find((node) =>
-        node.nodeValue?.includes("old selectable line"),
-      );
-      expect(textNode).toBeDefined();
+      // Syntax highlighting splits a code line across text nodes; select the rendered
+      // line rather than assuming that one token owns its entire text.
+      const selectableLine = () =>
+        deepTextNodes(panel)
+          .map((node) => node.parentElement?.closest("[data-line]"))
+          .find((line) => line?.textContent?.includes("old selectable line"));
+      await expect.poll(() => Boolean(selectableLine())).toBe(true);
+      const line = selectableLine()!;
       const range = document.createRange();
-      range.selectNodeContents(textNode!);
+      range.selectNodeContents(line);
       const selection = document.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
       expect(selection?.toString()).toContain("old selectable line");
-      textNode!.parentElement?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true, composed: true }),
-      );
+      line.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
       expect(currentDisclosure().getAttribute("aria-expanded")).toBe("true");
 
       await userEvent.click(currentActions());
