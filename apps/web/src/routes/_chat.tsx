@@ -20,6 +20,7 @@ import ShortcutsDialog from "../components/ShortcutsDialog";
 import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
+import { STATUS_TOAST_TIMEOUT_MS } from "../components/ui/toast.logic";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
@@ -202,7 +203,7 @@ function ThreadRetentionMaintenanceToast() {
             type: "warning",
             title: t("maintenance.paused"),
             description: t("maintenance.retryLater"),
-            timeout: 6000,
+            timeout: STATUS_TOAST_TIMEOUT_MS,
             data: { allowCrossThreadVisibility: true },
           });
           return;
@@ -211,7 +212,7 @@ function ThreadRetentionMaintenanceToast() {
           type: "warning",
           title: t("maintenance.paused"),
           description: t("maintenance.retryLater"),
-          timeout: 6000,
+          timeout: STATUS_TOAST_TIMEOUT_MS,
           data: { allowCrossThreadVisibility: true },
         });
         return;
@@ -227,7 +228,7 @@ function ThreadRetentionMaintenanceToast() {
           archivedCount && archivedCount > 0
             ? t("maintenance.archivedDescription", { archived: archivedCount })
             : t("maintenance.noneArchived"),
-        timeout: 3500,
+        timeout: STATUS_TOAST_TIMEOUT_MS,
         data: { allowCrossThreadVisibility: true },
       });
     });

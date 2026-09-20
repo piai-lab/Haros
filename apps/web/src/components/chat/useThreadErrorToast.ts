@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react";
 
 import { useI18n } from "../../i18n";
 import { toastManager } from "../ui/toast";
+import { STATUS_TOAST_TIMEOUT_MS } from "../ui/toast.logic";
 
 type ThreadErrorToastOptions = Parameters<typeof toastManager.add>[0];
 
@@ -16,6 +17,21 @@ type ThreadErrorToastOptions = Parameters<typeof toastManager.add>[0];
  *  instead of stacking a new toast for every error update. */
 export function threadErrorToastId(threadId: ThreadId): string {
   return `thread-error:${threadId}`;
+}
+
+export function shouldNotifyThreadErrorToast(input: {
+  readonly previous: {
+    readonly threadId: ThreadId;
+    readonly error: string | null;
+    readonly unblocking: boolean;
+  } | null;
+  readonly threadId: ThreadId;
+  readonly error: string | null;
+  readonly unblocking: boolean;
+}): boolean {
+  if (input.error === null || input.previous === null) return false;
+  if (input.previous.threadId !== input.threadId) return false;
+  return input.previous.error !== input.error || input.previous.unblocking !== input.unblocking;
 }
 
 export function buildThreadErrorToastOptions(input: {
@@ -35,7 +51,7 @@ export function buildThreadErrorToastOptions(input: {
     id: threadErrorToastId(input.threadId),
     type: "error",
     title,
-    timeout: input.unblocking ? 0 : 8_000,
+    timeout: input.unblocking ? 0 : STATUS_TOAST_TIMEOUT_MS,
     priority: "high",
     description: canUnblock ? input.error : undefined,
     data: { copyText: input.error, compactContextual: true, threadId: input.threadId },
@@ -65,6 +81,11 @@ export function useThreadErrorToast(input: {
   const { error, onUnblock, threadId, unblocking } = input;
   const { t } = useI18n();
   const callbacksRef = useRef({ onUnblock });
+  const observedRef = useRef<{
+    readonly threadId: ThreadId;
+    readonly error: string | null;
+    readonly unblocking: boolean;
+  } | null>(null);
 
   useEffect(() => {
     callbacksRef.current = { onUnblock };
@@ -72,10 +93,21 @@ export function useThreadErrorToast(input: {
 
   useEffect(() => {
     if (!threadId) return;
-    if (!error) {
+    const previous = observedRef.current;
+    if (previous?.threadId !== threadId) {
+      // A persisted error is historical state. Mark it observed on first mount so
+      // reopening or switching back to a failed thread does not replay an old toast.
+      observedRef.current = { threadId, error, unblocking };
       toastManager.close(threadErrorToastId(threadId));
       return;
     }
+    if (!error) {
+      observedRef.current = { threadId, error: null, unblocking };
+      toastManager.close(threadErrorToastId(threadId));
+      return;
+    }
+    observedRef.current = { threadId, error, unblocking };
+    if (!shouldNotifyThreadErrorToast({ previous, threadId, error, unblocking })) return;
     toastManager.add(
       buildThreadErrorToastOptions({
         error,

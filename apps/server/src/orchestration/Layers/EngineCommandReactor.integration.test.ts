@@ -3307,7 +3307,7 @@ describe("EngineCommandReactor", () => {
 
     await harness.drain();
     expect(harness.sendTurn).not.toHaveBeenCalled();
-    expect((await readHarnessThread(harness))?.goalPausedAt).toBeTruthy();
+    await waitFor(async () => Boolean((await readHarnessThread(harness))?.goalPausedAt));
   });
 
   it("allows a Chat goal continuation after the user opts in", async () => {

@@ -7,7 +7,12 @@ import { ThreadId } from "@harnessos/contracts";
 import { formatEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { describe, expect, it } from "vitest";
 
-import { buildThreadErrorToastOptions, threadErrorToastId } from "./useThreadErrorToast";
+import {
+  buildThreadErrorToastOptions,
+  shouldNotifyThreadErrorToast,
+  threadErrorToastId,
+} from "./useThreadErrorToast";
+import { STATUS_TOAST_TIMEOUT_MS } from "../ui/toast.logic";
 
 const threadId = ThreadId.makeUnsafe("11111111-1111-4111-8111-111111111111");
 
@@ -36,7 +41,7 @@ describe("buildThreadErrorToastOptions", () => {
     expect(options.id).toBe(threadErrorToastId(threadId));
     expect(options.type).toBe("error");
     expect(options.title).toBe("The engine rejected the prompt.");
-    expect(options.timeout).toBe(8_000);
+    expect(options.timeout).toBe(STATUS_TOAST_TIMEOUT_MS);
     expect(options.data).toMatchObject({
       copyText: "The engine rejected the prompt.",
       threadId,
@@ -60,5 +65,47 @@ describe("buildThreadErrorToastOptions", () => {
 
   it("hides the action for unrelated thread errors", () => {
     expect(build("The engine rejected the prompt.").actionProps).toBeUndefined();
+  });
+});
+
+describe("shouldNotifyThreadErrorToast", () => {
+  it("does not replay a persisted error when a thread is first observed", () => {
+    expect(
+      shouldNotifyThreadErrorToast({
+        previous: null,
+        threadId,
+        error: "The engine rejected the prompt.",
+        unblocking: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("notifies only when the observed error or recovery state changes", () => {
+    const previous = { threadId, error: null, unblocking: false };
+
+    expect(
+      shouldNotifyThreadErrorToast({
+        previous,
+        threadId,
+        error: "The engine rejected the prompt.",
+        unblocking: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldNotifyThreadErrorToast({
+        previous: { ...previous, error: "The engine rejected the prompt." },
+        threadId,
+        error: "The engine rejected the prompt.",
+        unblocking: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldNotifyThreadErrorToast({
+        previous: { ...previous, error: "The engine rejected the prompt." },
+        threadId,
+        error: "The engine rejected the prompt.",
+        unblocking: true,
+      }),
+    ).toBe(true);
   });
 });
