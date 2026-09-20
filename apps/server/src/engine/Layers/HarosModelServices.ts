@@ -67,6 +67,7 @@ import {
   loadHarosOAuthLogoDataUrl,
 } from "../harnessosOAuthCallbackPage.ts";
 import { installOfficialModelCatalog, modelDiscoveredAt } from "../officialModelCatalog.ts";
+import { trialReplyText } from "../modelServiceTrial.ts";
 import { publishHarosModelRuntimeMutation } from "../modelRuntimeMutation.ts";
 import { CODEX_MODEL_IDS_NOT_OFFERED_BY_PROVIDER } from "../codexDiscoveryCatalog.ts";
 import {
@@ -87,6 +88,8 @@ const CUSTOM_API_PROTOCOLS = [
   "google-generative-ai",
 ] as const;
 const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
+const MODEL_SERVICE_TRIAL_MAX_TOKENS = 256;
+const MODEL_SERVICE_TRIAL_THINKING_MAX_TOKENS = 4_096;
 const CUSTOM_CONNECTION_TEST_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
 const MODEL_SERVICE_REFRESH_TIMEOUT_MS = 20_000;
@@ -1917,22 +1920,31 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
                     {
                       messages: [{ role: "user", content: input.message, timestamp: Date.now() }],
                     },
-                    { signal, maxTokens: 256 },
+                    {
+                      signal,
+                      maxTokens: model.reasoning
+                        ? MODEL_SERVICE_TRIAL_THINKING_MAX_TOKENS
+                        : MODEL_SERVICE_TRIAL_MAX_TOKENS,
+                      ...(model.reasoning && typeof model.thinkingLevelMap?.low === "string"
+                        ? { reasoningEffort: "low" as const }
+                        : {}),
+                    },
                   );
                   signal.throwIfAborted();
                   if (response.stopReason === "error" || response.stopReason === "aborted")
-                    return { state: "failed", text: "", api } as const;
-                  const text = response.content
-                    .flatMap((part) => (part.type === "text" ? [part.text] : []))
-                    .join("\n")
-                    .slice(0, 8_000);
-                  return { state: text.trim() ? "success" : "failed", text, api } as const;
+                    return {
+                      state: "failed",
+                      text: response.errorMessage?.trim().slice(0, 8_000) ?? "",
+                      api,
+                    } as const;
+                  const text = trialReplyText(response.content);
+                  return { state: text ? "success" : "failed", text, api } as const;
                 },
               );
-            } catch {
+            } catch (error) {
               return {
                 state: requestSignal.aborted ? "cancelled" : "failed",
-                text: "",
+                text: error instanceof Error ? error.message.trim().slice(0, 8_000) : "",
                 api,
               } as const;
             }

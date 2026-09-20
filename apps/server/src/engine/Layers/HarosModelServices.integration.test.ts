@@ -2373,6 +2373,59 @@ describe("HarosModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("test-only-custom-key");
   });
 
+  it("treats DeepSeek thinking-only trial replies as a successful text check", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "pi-agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ deepseek: { type: "api_key", key: "trial-key" } }),
+      { mode: 0o600 },
+    );
+    let requestBody: unknown;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      const raw =
+        typeof init?.body === "string"
+          ? init.body
+          : request instanceof Request
+            ? await request.clone().text()
+            : "";
+      requestBody = raw ? JSON.parse(raw) : null;
+      return new Response(
+        [
+          'data: {"id":"trial","object":"chat.completion.chunk","created":1,"model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"role":"assistant","reasoning_content":"I am ready."},"finish_reason":null}]}',
+          'data: {"id":"trial","object":"chat.completion.chunk","created":1,"model":"deepseek-v4-flash","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* HarosModelServices;
+        return yield* service.testModel({
+          serviceId: "deepseek",
+          modelId: "deepseek-v4-flash",
+          message: "Reply briefly to say you are ready.",
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root }))),
+    );
+
+    expect(result).toEqual({
+      state: "success",
+      text: "I am ready.",
+      api: "openai-completions",
+    });
+    expect(requestBody).toMatchObject({
+      model: "deepseek-v4-flash",
+      max_tokens: 4096,
+      thinking: { type: "enabled" },
+    });
+  });
+
   it("discovers generic provider models through Pi without persisting the preview credential", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
