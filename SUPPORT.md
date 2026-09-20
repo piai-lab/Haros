@@ -1,7 +1,8 @@
 # Haros Support
 
-Haros is currently a source alpha. There are no official installers, releases, or paid support
-channels yet.
+Haros is currently `0.1.0`. There are no signed or notarized installers, update feeds, or paid
+support channels yet. An unsigned GitHub download, if a maintainer explicitly publishes one, is
+not an official signed release.
 
 - Use [GitHub Discussions](https://github.com/piai-lab/Haros/discussions) for setup help, usage
   questions, and broader ideas.

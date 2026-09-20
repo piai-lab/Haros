@@ -91,6 +91,10 @@ jobs:
         if: matrix.suite == 'build'
         run: node scripts/packaged-proof-smoke.ts
 
+      - name: Unsigned GitHub distribution smoke
+        if: matrix.suite == 'build'
+        run: node scripts/unsigned-github-distribution-smoke.ts
+
       - name: Build desktop pipeline
         if: matrix.suite == 'build'
         run: bun run build:desktop

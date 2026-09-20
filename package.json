@@ -1,6 +1,6 @@
 {
   "name": "@harnessos/monorepo",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0",
   "private": true,
   "workspaces": {
     "packages": [
@@ -62,6 +62,7 @@
     "dist:desktop:linux": "node scripts/build-desktop-artifact.ts --platform linux --target AppImage --arch x64",
     "dist:desktop:win": "node scripts/build-desktop-artifact.ts --platform win --target nsis --arch x64",
     "proof:packaged:smoke": "node scripts/packaged-proof-smoke.ts",
+    "proof:distribution:smoke": "node scripts/unsigned-github-distribution-smoke.ts",
     "licenses:generate": "node scripts/generate-legal-metadata.ts",
     "licenses:check": "node scripts/generate-legal-metadata.ts --check",
     "canary:setup": "node scripts/canary.ts setup",
