@@ -1308,6 +1308,112 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
+  it("keeps the settled tail assistant outside Worked for when only trailing process work follows", () => {
+    const reasoning: TimelineEntry = {
+      id: "entry-reasoning-tail",
+      kind: "work",
+      createdAt: "2026-01-01T00:00:02Z",
+      entry: {
+        id: "reasoning-tail",
+        createdAt: "2026-01-01T00:00:02Z",
+        label: "Reasoning",
+        tone: "thinking",
+        activityKind: "reasoning.completed",
+        reasoningEntries: [{ id: "reasoning-source-tail", text: "Studio is the workspace." }],
+      },
+    };
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-tail", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-tail", "2026-01-01T00:00:01Z", {
+          turnId: "t-tail",
+          text: "Studio is the workspace for a folder.",
+          completedAt: "2026-01-01T00:00:01Z",
+        }),
+        reasoning,
+        workEntry("w-tail", "2026-01-01T00:00:03Z", "tool 1"),
+      ],
+    });
+
+    const visibleMessageIds = rows
+      .filter((row): row is MessageTimelineRow => row.kind === "message")
+      .map((row) => String(row.message.id));
+    expect(visibleMessageIds).toEqual(["u-tail", "a-tail"]);
+    expect(messageRow(rows, "a-tail")?.message.text).toBe("Studio is the workspace for a folder.");
+    expect(processSignature(rows)).toEqual(["work:reasoning-tail", "work:w-tail"]);
+    expect(processRow(rows)?.phase).toBe("settled");
+  });
+
+  it("demotes the live tail assistant into Working for when process work follows with no later assistant", () => {
+    const reasoning: TimelineEntry = {
+      id: "entry-reasoning-live-tail",
+      kind: "work",
+      createdAt: "2026-01-01T00:00:02Z",
+      entry: {
+        id: "reasoning-live-tail",
+        createdAt: "2026-01-01T00:00:02Z",
+        label: "Reasoning",
+        tone: "thinking",
+        activityKind: "reasoning.completed",
+        reasoningEntries: [{ id: "reasoning-source-live-tail", text: "Still inspecting." }],
+      },
+    };
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnId: TurnId.makeUnsafe("t-live-tail"),
+      activeTurnStartedAt: "2026-01-01T00:00:00Z",
+      timelineEntries: [
+        userEntry("u-live-tail", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-live-tail", "2026-01-01T00:00:01Z", {
+          turnId: "t-live-tail",
+          text: "Looking into Studio.",
+          completedAt: "2026-01-01T00:00:01Z",
+        }),
+        reasoning,
+        workEntry("w-live-tail", "2026-01-01T00:00:03Z", "tool 1"),
+      ],
+    });
+
+    expect(messageRow(rows, "a-live-tail")).toBeUndefined();
+    expect(processSignature(rows)).toEqual([
+      "narration:a-live-tail",
+      "work:reasoning-live-tail",
+      "work:w-live-tail",
+    ]);
+    expect(processRow(rows)?.phase).toBe("running");
+  });
+
+  it("keeps a historical settled tail assistant outside Worked for while a newer turn is live", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnId: TurnId.makeUnsafe("t-newer"),
+      activeTurnStartedAt: "2026-01-01T00:01:00Z",
+      timelineEntries: [
+        userEntry("u-historical", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-historical", "2026-01-01T00:00:01Z", {
+          turnId: "t-historical",
+          text: "Studio is the workspace for a folder.",
+          completedAt: "2026-01-01T00:00:01Z",
+        }),
+        workEntry("w-historical", "2026-01-01T00:00:02Z", "tool 1"),
+        userEntry("u-newer", "2026-01-01T00:01:00Z"),
+        workEntry("w-newer", "2026-01-01T00:01:01Z", "tool 2"),
+      ],
+    });
+
+    expect(messageRow(rows, "a-historical")?.message.text).toBe(
+      "Studio is the workspace for a folder.",
+    );
+    expect(processSignature(rows, "u-historical")).toEqual(["work:w-historical"]);
+    expect(processRow(rows, "u-historical")?.phase).toBe("settled");
+    expect(processRow(rows, "u-newer")?.phase).toBe("running");
+  });
+
   it("keeps assistant, reasoning, failed/retried tools, and continuation in one stable sequence", () => {
     const timelineEntries: TimelineEntry[] = [
       userEntry("u-causal", "2026-01-01T00:00:00Z"),
