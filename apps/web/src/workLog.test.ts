@@ -4472,7 +4472,7 @@ describe("deriveTimelineEntries", () => {
     expect(second).toEqual(first);
   });
 
-  it("preserves causal order when legacy timestamps form the old comparator cycle", () => {
+  it("keeps historical segments before later turns even when their event sequences overlap", () => {
     const messageId = MessageId.makeUnsafe("assistant-cycle-order");
     const entries = deriveTimelineEntries(
       [
@@ -4520,10 +4520,80 @@ describe("deriveTimelineEntries", () => {
     );
 
     expect(entries.map((entry) => entry.id)).toEqual([
+      "work-cycle-order",
       "user-cycle-order",
       `${messageId}#segment:0`,
-      "work-cycle-order",
       messageId,
+    ]);
+  });
+
+  it("does not let a restored segmented answer cross a newer user-response boundary", () => {
+    const historicalAssistantId = MessageId.makeUnsafe("assistant-restored");
+    const currentAssistantId = MessageId.makeUnsafe("assistant-current");
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: historicalAssistantId,
+          role: "assistant",
+          text: "Old first.Old final.",
+          textSegments: [
+            {
+              sequence: 82_630,
+              startedAt: "2026-09-18T00:21:29.472Z",
+              endedAt: "2026-09-18T00:21:30.586Z",
+              text: "Old first.",
+            },
+            {
+              sequence: 82_702,
+              startedAt: "2026-09-18T00:28:54.090Z",
+              endedAt: "2026-09-18T00:29:01.660Z",
+              text: "Old final.",
+            },
+          ],
+          turnId: TurnId.makeUnsafe("turn-restored"),
+          createdAt: "2026-09-18T00:21:29.472Z",
+          streaming: false,
+        },
+        {
+          id: MessageId.makeUnsafe("user-current"),
+          role: "user",
+          text: "Hello",
+          createdAt: "2026-09-20T11:50:43.638Z",
+          streaming: false,
+        },
+        {
+          id: currentAssistantId,
+          role: "assistant",
+          text: "Current first.Current final.",
+          textSegments: [
+            {
+              sequence: 54_350,
+              startedAt: "2026-09-20T11:50:55.219Z",
+              endedAt: "2026-09-20T11:50:55.800Z",
+              text: "Current first.",
+            },
+            {
+              sequence: 54_351,
+              startedAt: "2026-09-20T11:50:56.000Z",
+              endedAt: "2026-09-20T11:50:56.609Z",
+              text: "Current final.",
+            },
+          ],
+          turnId: TurnId.makeUnsafe("turn-current"),
+          createdAt: "2026-09-20T11:50:55.219Z",
+          streaming: false,
+        },
+      ],
+      [],
+      [],
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual([
+      `${historicalAssistantId}#segment:0`,
+      historicalAssistantId,
+      "user-current",
+      `${currentAssistantId}#segment:0`,
+      currentAssistantId,
     ]);
   });
 

@@ -2583,49 +2583,50 @@ function compareTimelineEntryTie(left: TimelineEntry, right: TimelineEntry): num
 }
 
 function orderTimelineEntries(entries: ReadonlyArray<TimelineEntry>): TimelineEntry[] {
-  const causal = entries
-    .filter(
-      (entry): entry is TimelineEntry & { readonly sequence: number } =>
-        "sequence" in entry && entry.sequence !== undefined,
-    )
-    .toSorted(
-      (left, right) =>
-        left.sequence! - right.sequence! ||
-        left.createdAt.localeCompare(right.createdAt) ||
-        compareTimelineEntryTie(left, right),
-    );
-  const legacy = entries
-    .filter((entry) => !("sequence" in entry) || entry.sequence === undefined)
-    .toSorted(
-      (left, right) =>
-        left.createdAt.localeCompare(right.createdAt) || compareTimelineEntryTie(left, right),
-    );
-  const merged: TimelineEntry[] = [];
-  let causalIndex = 0;
-  let legacyIndex = 0;
-  while (causalIndex < causal.length && legacyIndex < legacy.length) {
-    const causalEntry = causal[causalIndex]!;
-    const legacyEntry = legacy[legacyIndex]!;
-    const headOrder =
-      causalEntry.createdAt.localeCompare(legacyEntry.createdAt) ||
-      compareTimelineEntryTie(causalEntry, legacyEntry);
-    if (headOrder <= 0) {
-      merged.push(causalEntry);
-      causalIndex += 1;
-    } else {
-      merged.push(legacyEntry);
-      legacyIndex += 1;
+  const entriesByTimestamp = new Map<string, TimelineEntry[]>();
+  for (const entry of entries) {
+    const bucket = entriesByTimestamp.get(entry.createdAt);
+    if (bucket) bucket.push(entry);
+    else entriesByTimestamp.set(entry.createdAt, [entry]);
+  }
+
+  const orderedEntries: TimelineEntry[] = [];
+  for (const [, timestampEntries] of [...entriesByTimestamp.entries()].toSorted(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    // A text-segment sequence is emitted by the Engine event stream. It
+    // keeps simultaneous segments and tool events in their original order,
+    // but it is not a durable, cross-history timeline cursor: restored
+    // sessions can contain older segments with a later sequence than a newly
+    // dispatched turn. It must therefore never order different timestamps.
+    const causal = timestampEntries
+      .filter(
+        (entry): entry is TimelineEntry & { readonly sequence: number } =>
+          "sequence" in entry && entry.sequence !== undefined,
+      )
+      .toSorted(
+        (left, right) => left.sequence - right.sequence || compareTimelineEntryTie(left, right),
+      );
+    const legacy = timestampEntries
+      .filter((entry) => !("sequence" in entry) || entry.sequence === undefined)
+      .toSorted(compareTimelineEntryTie);
+    const ordered: TimelineEntry[] = [];
+    let causalIndex = 0;
+    let legacyIndex = 0;
+    while (causalIndex < causal.length && legacyIndex < legacy.length) {
+      const causalEntry = causal[causalIndex]!;
+      const legacyEntry = legacy[legacyIndex]!;
+      if (compareTimelineEntryTie(causalEntry, legacyEntry) <= 0) {
+        ordered.push(causalEntry);
+        causalIndex += 1;
+      } else {
+        ordered.push(legacyEntry);
+        legacyIndex += 1;
+      }
     }
+    orderedEntries.push(...ordered, ...causal.slice(causalIndex), ...legacy.slice(legacyIndex));
   }
-  while (causalIndex < causal.length) {
-    merged.push(causal[causalIndex]!);
-    causalIndex += 1;
-  }
-  while (legacyIndex < legacy.length) {
-    merged.push(legacy[legacyIndex]!);
-    legacyIndex += 1;
-  }
-  return merged;
+  return orderedEntries;
 }
 
 export function deriveTimelineEntries(
