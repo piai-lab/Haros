@@ -107,6 +107,7 @@ import {
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
+import { resolveAcpTurnIdleTimeoutMs } from "../acp/AcpTurnIdleWatchdog.ts";
 import { makePiHostSystemPrompt } from "../piFamilyPrompt.ts";
 import {
   classifyPiRuntimeError,
@@ -123,6 +124,11 @@ import {
 
 type PiFamilyEngine = Extract<EngineKind, "pi">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
+const PI_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
+  envVar: "HARNESSOS_PI_TURN_IDLE_TIMEOUT_MS",
+  defaultMs: 600_000,
+});
+const PI_TURN_WATCHDOG_INTERVAL_MS = 15_000;
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -404,6 +410,8 @@ interface PiSessionContext {
   pendingProductUserInputs: Map<ApprovalRequestId, PiPendingProductUserInput>;
   settledProductUserInputIds: Set<ApprovalRequestId>;
   stopped: boolean;
+  lastTurnActivityAt: number | undefined;
+  turnWatchdog: ReturnType<typeof setInterval> | undefined;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   unsubscribe: (() => void) | undefined;
 }
@@ -914,6 +922,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       if (context.activeTurnId !== turnId) {
         return;
       }
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+        context.turnWatchdog = undefined;
+      }
+      context.lastTurnActivityAt = undefined;
       if (context.pendingPromptSubmission?.turnId === turnId) {
         context.pendingPromptSubmission = undefined;
       }
@@ -971,6 +984,10 @@ const makePiAdapter = <P extends PiFamilyEngine>(
 
     const disposeSessionContext = async (context: PiSessionContext) => {
       try {
+        if (context.turnWatchdog !== undefined) {
+          clearInterval(context.turnWatchdog);
+          context.turnWatchdog = undefined;
+        }
         context.activeInteractionMode = undefined;
         context.proposedPlanCandidate = undefined;
         await Effect.runPromise(
@@ -1011,6 +1028,50 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         context.gatewaySessionLease?.release();
         delete context.gatewaySessionLease;
       }
+    };
+
+    const startPiTurnWatchdog = (context: PiSessionContext, turnId: TurnId): void => {
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+      }
+      context.lastTurnActivityAt = Date.now();
+      context.turnWatchdog = setInterval(() => {
+        if (context.stopped || context.activeTurnId !== turnId) {
+          if (context.turnWatchdog !== undefined) {
+            clearInterval(context.turnWatchdog);
+            context.turnWatchdog = undefined;
+          }
+          return;
+        }
+        if (context.pendingUserInputs.size > 0 || context.pendingProductUserInputs.size > 0) {
+          context.lastTurnActivityAt = Date.now();
+          return;
+        }
+        const idleMs = Date.now() - (context.lastTurnActivityAt ?? Date.now());
+        if (idleMs < PI_TURN_IDLE_TIMEOUT_MS) return;
+
+        const detail = `Pi stopped responding (no activity for ${Math.round(idleMs / 1000)}s); the turn was timed out.`;
+        context.stopped = true;
+        completePromptRejection(context, turnId, new Error(detail));
+        void disposeSessionContext(context)
+          .catch((cause) => {
+            offerRuntimeError(context, {
+              message: toMessage(cause, `Failed to stop ${displayName} after timeout.`),
+              method: "session/stop",
+              cause,
+            });
+          })
+          .finally(() => {
+            if (sessions.get(context.session.threadId) === context) {
+              sessions.delete(context.session.threadId);
+            }
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "session.exited",
+              payload: { reason: detail, exitKind: "error" },
+            } satisfies EngineRuntimeEvent);
+          });
+      }, PI_TURN_WATCHDOG_INTERVAL_MS);
     };
 
     const handleMessageUpdate = (
@@ -1152,6 +1213,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     ) => {
       const turnId = context.activeTurnId;
       if (!turnId) return;
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+        context.turnWatchdog = undefined;
+      }
+      context.lastTurnActivityAt = undefined;
       if (context.pendingPromptSubmission?.turnId === turnId) {
         context.pendingPromptSubmission = undefined;
       }
@@ -1324,6 +1390,9 @@ const makePiAdapter = <P extends PiFamilyEngine>(
     };
 
     const handleSessionEvent = (context: PiSessionContext, event: AgentSessionEvent) => {
+      if (context.activeTurnId !== undefined) {
+        context.lastTurnActivityAt = Date.now();
+      }
       switch (event.type) {
         case "agent_start":
           offerRuntimeEvent({
@@ -1998,6 +2067,8 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           pendingProductUserInputs: new Map(),
           settledProductUserInputIds: new Set(),
           stopped: false,
+          lastTurnActivityAt: undefined,
+          turnWatchdog: undefined,
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
         };
@@ -2313,6 +2384,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               resumeCursor: getSessionFile(context.runtime.session),
             };
           }
+          startPiTurnWatchdog(context, turnId);
           void submitPiPrompt(context, turnId, promptText, payload.images)
             .then((outcome) => {
               resolvePromptSubmission(context, turnId, outcome);
@@ -2346,6 +2418,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             context.startedTurnId = undefined;
             context.turns.push({ id: turnId, items: [] });
           }
+          startPiTurnWatchdog(context, turnId);
           if (context.runtime.session.isStreaming) {
             yield* Effect.tryPromise({
               try: () => context.runtime.session.steer(promptText, payload.images),

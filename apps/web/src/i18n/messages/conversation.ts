@@ -153,6 +153,9 @@ const EN_MESSAGES = {
   "conversation.unblockTaskAlreadyClear": "Task is already unblocked",
   "conversation.unblockTaskAlreadyClearDescription":
     "No Engine delivery is blocking this task. Send the failed message again to continue.",
+  "conversation.unblockTaskStillBlocked": "Task is still blocked",
+  "conversation.unblockTaskStillBlockedDescription":
+    "Some Engine delivery failures remain. Try again later or inspect the task details.",
   "conversation.optimizingImageStatus": "Optimizing image",
   "conversation.preparingWorktree": "Preparing worktree",
   "conversation.sendingStatus": "Sending",
@@ -350,6 +353,9 @@ const ZH_CN_MESSAGES = {
   "conversation.unblockTaskAlreadyClear": "任务当前没有阻塞",
   "conversation.unblockTaskAlreadyClearDescription":
     "当前没有引擎投递阻塞此任务。请重新发送失败消息以继续。",
+  "conversation.unblockTaskStillBlocked": "任务仍被阻塞",
+  "conversation.unblockTaskStillBlockedDescription":
+    "部分引擎投递故障仍未清除，请稍后重试或查看任务详情。",
   "conversation.optimizingImageStatus": "正在优化图片",
   "conversation.preparingWorktree": "正在准备工作树",
   "conversation.sendingStatus": "正在发送",

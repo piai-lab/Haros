@@ -49,6 +49,7 @@ import {
   type EngineThreadSnapshot,
 } from "../Services/EngineAdapter.ts";
 import { teardownChildProcessTree } from "../supervisedProcessTeardown.ts";
+import { resolveAcpTurnIdleTimeoutMs } from "../acp/AcpTurnIdleWatchdog.ts";
 import {
   DeepSeekJsonlFramer,
   DeepSeekJsonlWriter,
@@ -62,6 +63,11 @@ const DEFAULT_MODEL = "deepseek-v4-flash";
 const DEEPSEEK_RESUME_VERSION = 1 as const;
 const REQUEST_TIMEOUT_MS = 20_000;
 const SHUTDOWN_TIMEOUT_MS = 2_000;
+const DEEPSEEK_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
+  envVar: "HARNESSOS_DEEPSEEK_TURN_IDLE_TIMEOUT_MS",
+  defaultMs: 600_000,
+});
+const DEEPSEEK_TURN_WATCHDOG_INTERVAL_MS = 15_000;
 const RAW_SOURCE = "deepseek.sdk.event" as const;
 
 type StoredTurn = {
@@ -99,6 +105,8 @@ interface DeepSeekSessionContext {
   stopPromise?: Promise<void>;
   detachStdout?: () => void;
   activeTurnId?: TurnId;
+  lastTurnActivityAt: number | undefined;
+  turnWatchdog: ReturnType<typeof setInterval> | undefined;
   turnTerminalEmitted: boolean;
   activeAssistantItemId?: RuntimeItemId;
   turns: StoredTurn[];
@@ -331,6 +339,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
       },
     ) => {
       if (context.turnTerminalEmitted || context.activeTurnId === undefined) return;
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+        context.turnWatchdog = undefined;
+      }
+      context.lastTurnActivityAt = undefined;
       context.turnTerminalEmitted = true;
       if (context.activeAssistantItemId) {
         offer({
@@ -456,6 +469,9 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
     const handleStdoutLine = (context: DeepSeekSessionContext, line: string) => {
       const trimmed = line.trim();
       if (!trimmed) return;
+      if (context.activeTurnId !== undefined) {
+        context.lastTurnActivityAt = Date.now();
+      }
       let parsed: unknown;
       try {
         parsed = JSON.parse(trimmed);
@@ -484,6 +500,11 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
 
     const stopContext = (context: DeepSeekSessionContext, reason: string): Promise<void> => {
       if (context.stopPromise) return context.stopPromise;
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+        context.turnWatchdog = undefined;
+      }
+      context.lastTurnActivityAt = undefined;
       context.stopping = true;
       settleActiveTurn(context, {
         state: "interrupted",
@@ -527,6 +548,39 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
         });
       context.stopPromise = stopPromise;
       return stopPromise;
+    };
+
+    const startDeepSeekTurnWatchdog = (context: DeepSeekSessionContext, turnId: TurnId): void => {
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+      }
+      context.lastTurnActivityAt = Date.now();
+      context.turnWatchdog = setInterval(() => {
+        if (context.stopping || context.activeTurnId !== turnId) {
+          if (context.turnWatchdog !== undefined) {
+            clearInterval(context.turnWatchdog);
+            context.turnWatchdog = undefined;
+          }
+          return;
+        }
+        const idleMs = Date.now() - (context.lastTurnActivityAt ?? Date.now());
+        if (idleMs < DEEPSEEK_TURN_IDLE_TIMEOUT_MS) return;
+        const detail = `DeepSeek stopped responding (no activity for ${Math.round(idleMs / 1000)}s); the turn was timed out.`;
+        offer({
+          ...makeEventBase(context),
+          type: "runtime.error",
+          payload: { message: detail, class: "transport_error" },
+          raw: raw("session/idle-timeout", { idleMs }),
+        } satisfies EngineRuntimeEvent);
+        settleActiveTurn(context, {
+          state: "failed",
+          stopReason: "error",
+          errorMessage: detail,
+          method: "session/idle-timeout",
+          payload: { idleMs },
+        });
+        void stopContext(context, detail);
+      }, DEEPSEEK_TURN_WATCHDOG_INTERVAL_MS);
     };
 
     const attachProcessListeners = (context: DeepSeekSessionContext) => {
@@ -685,6 +739,8 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
           nextRequestId: 1,
           initialized: false,
           stopping: false,
+          lastTurnActivityAt: undefined,
+          turnWatchdog: undefined,
           turns: [],
           nativeSessionId,
           turnTerminalEmitted: true,
@@ -775,6 +831,7 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
           activeTurnId: turnId,
           updatedAt: new Date().toISOString(),
         };
+        startDeepSeekTurnWatchdog(context, turnId);
         offer({
           ...makeEventBase(context),
           type: "turn.started",
@@ -796,15 +853,19 @@ const makeDeepSeekAdapter = (options: DeepSeekAdapterLiveOptions = {}) =>
             }),
         }).pipe(
           Effect.tapError(() =>
-            Effect.sync(() =>
+            Effect.gen(function* () {
               settleActiveTurn(context, {
                 state: "failed",
                 stopReason: "error",
                 errorMessage: "DeepSeek prompt failed.",
                 method: "session/prompt",
                 payload: {},
-              }),
-            ),
+              });
+              // A prompt timeout or transport failure makes the JSON-RPC
+              // session untrusted. Retire the child so the next turn cannot
+              // reuse a process with an unknown pending request state.
+              yield* Effect.promise(() => stopContext(context, "session/prompt failed"));
+            }),
           ),
         );
         return {

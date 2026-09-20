@@ -24,6 +24,7 @@ const sourceThread = {
   id: ThreadId.makeUnsafe("source-thread"),
   projectId: ProjectId.makeUnsafe("project-1"),
   title: "Source thread",
+  runtimeMode: "approval-required",
   envMode: "local",
   branch: "main",
   worktreePath: null,
@@ -128,7 +129,7 @@ describe("createSidechatThread", () => {
     );
   });
 
-  it("uses the shared full-access runtime mode for the fork and its first turn", async () => {
+  it("inherits the source thread runtime mode for the fork and its first turn", async () => {
     const dispatchCommand = vi.fn().mockResolvedValue(undefined);
 
     await createSidechatThread({
@@ -143,11 +144,11 @@ describe("createSidechatThread", () => {
 
     expect(dispatchCommand).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ runtimeMode: "full-access" }),
+      expect.objectContaining({ runtimeMode: sourceThread.runtimeMode }),
     );
     expect(dispatchCommand).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ runtimeMode: "full-access" }),
+      expect.objectContaining({ runtimeMode: sourceThread.runtimeMode }),
     );
   });
 

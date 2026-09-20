@@ -18,7 +18,6 @@ import { resolveModelPresentationIdentity } from "../engineModelOptions";
 const SIDECHAT_MISSING_GRACE_MS = 15_000;
 // Side chats are a Haros-owned product surface. Use the one execution mode every
 // registered Engine exposes instead of requiring an Engine-specific approval bridge.
-const SIDECHAT_RUNTIME_MODE = "full-access" as const;
 type SidechatPaneRetention = { kind: "syncing" } | { kind: "grace"; untilMs: number };
 const sidechatPaneRetentionByThreadId = new Map<ThreadId, SidechatPaneRetention>();
 const sidechatPaneRetentionListeners = new Set<() => void>();
@@ -189,6 +188,7 @@ export async function sendSidechatPrompt(input: {
   api: NativeApi;
   threadId: ThreadId;
   selectedEngineSelection: EngineSelection;
+  runtimeMode: Thread["runtimeMode"];
   prompt: string;
 }): Promise<void> {
   const prompt = input.prompt.trim();
@@ -209,7 +209,7 @@ export async function sendSidechatPrompt(input: {
     modelPresentationIdentity: resolveModelPresentationIdentity({
       selection: input.selectedEngineSelection,
     }),
-    runtimeMode: SIDECHAT_RUNTIME_MODE,
+    runtimeMode: input.runtimeMode,
     interactionMode: "default",
     createdAt: new Date().toISOString(),
   });
@@ -241,7 +241,7 @@ export async function createSidechatThread(input: {
     projectId: input.project.id,
     title: titleSeed,
     engineSelection: input.selectedEngineSelection,
-    runtimeMode: SIDECHAT_RUNTIME_MODE,
+    runtimeMode: input.sourceThread.runtimeMode,
     interactionMode: "default",
     envMode: input.sourceThread.envMode ?? (input.sourceThread.worktreePath ? "worktree" : "local"),
     branch: input.sourceThread.branch,
@@ -277,6 +277,7 @@ export async function createSidechatThread(input: {
         api: input.api,
         threadId: nextThreadId,
         selectedEngineSelection: input.selectedEngineSelection,
+        runtimeMode: input.sourceThread.runtimeMode,
         prompt: initialPrompt,
       });
       return null;

@@ -4690,7 +4690,7 @@ const make = Effect.gen(function* () {
       yield* setThreadSessionError({
         threadId: event.payload.threadId,
         runtimeMode: event.payload.runtimeMode,
-        detail: formatEngineDeliveryBlockDetail("The message was not sent to the Engine."),
+        detail: formatEngineDeliveryBlockDetail(input.detail),
         expectedSession: {
           status: session.status,
           updatedAt: session.updatedAt,

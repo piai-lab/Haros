@@ -5,6 +5,7 @@ import {
   isClaimedEngineIntent,
   isEngineIntentEvent,
   isEngineSideEffectIntent,
+  isQuarantineExemptEngineIntent,
   isReplaySafeClaimedEngineIntent,
 } from "./engineIntentClassification.ts";
 
@@ -30,5 +31,14 @@ describe("engineIntentClassification", () => {
     expect(isEngineSideEffectIntent(event)).toBe(true);
     expect(isClaimedEngineIntent(event)).toBe(true);
     expect(isReplaySafeClaimedEngineIntent(event)).toBe(true);
+  });
+
+  it("keeps both interrupt and task stop commands available while quarantined", () => {
+    expect(
+      isQuarantineExemptEngineIntent({ type: "thread.turn-interrupt-requested" } as never),
+    ).toBe(true);
+    expect(isQuarantineExemptEngineIntent({ type: "thread.task-stop-requested" } as never)).toBe(
+      true,
+    );
   });
 });

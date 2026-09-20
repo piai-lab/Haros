@@ -789,7 +789,7 @@ const ZH_CN_MESSAGES = {
   "workbench.openPanel": "打开{panel}",
   "workbench.addPanel": "添加面板",
   "workbench.collapsePanel": "收起面板",
-  "workbench.sideChats": "侧边聊天",
+  "workbench.sideChats": "侧边对话",
   "workbench.openPanelNavigation": "打开面板",
   "workbench.chatHistory": "Chat 历史",
   "workbench.noProjectChats": "此项目还没有 Chat",

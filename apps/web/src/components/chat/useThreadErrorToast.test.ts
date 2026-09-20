@@ -25,23 +25,23 @@ function build(error: string, unblocking = false) {
       unblock: "Unblock task",
       unblocking: "Unblocking…",
     },
-    onClose: () => {},
     onUnblock: () => {},
   });
 }
 
 describe("buildThreadErrorToastOptions", () => {
-  it("renders a persistent error toast scoped to its thread", () => {
+  it("renders an expiring error toast scoped to its thread", () => {
     const options = build("The engine rejected the prompt.");
 
     expect(options.id).toBe(threadErrorToastId(threadId));
     expect(options.type).toBe("error");
     expect(options.title).toBe("The engine rejected the prompt.");
-    expect(options.timeout).toBe(0);
+    expect(options.timeout).toBe(8_000);
     expect(options.data).toMatchObject({
       copyText: "The engine rejected the prompt.",
       threadId,
     });
+    expect(options.description).toBeUndefined();
   });
 
   it("offers the unblock action for a engine-delivery quarantine", () => {
@@ -52,9 +52,9 @@ describe("buildThreadErrorToastOptions", () => {
   });
 
   it("disables the action while unblocking", () => {
-    expect(build(blockedError, true).actionProps).toMatchObject({
-      children: "Unblocking…",
-      disabled: true,
+    expect(build(blockedError, true)).toMatchObject({
+      timeout: 0,
+      actionProps: { children: "Unblocking…", disabled: true },
     });
   });
 

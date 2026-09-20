@@ -171,8 +171,14 @@ import {
   teardownEngineProcessTree,
   type ProcessExitHandle,
 } from "../supervisedProcessTeardown.ts";
+import { resolveAcpTurnIdleTimeoutMs } from "../acp/AcpTurnIdleWatchdog.ts";
 
 const ENGINE = "claude" as const;
+const CLAUDE_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
+  envVar: "HARNESSOS_CLAUDE_TURN_IDLE_TIMEOUT_MS",
+  defaultMs: 600_000,
+});
+const CLAUDE_TURN_WATCHDOG_INTERVAL_MS = 15_000;
 const CLAUDE_DISCOVERY_THREAD_ID = ThreadId.makeUnsafe("claude:discovery");
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
 type ClaudeToolResultStreamKind = Extract<
@@ -353,6 +359,8 @@ interface ClaudeSessionContext {
   readonly inFlightTools: Map<number, ToolInFlight>;
   readonly trackedTasks: Map<string, ClaudeTrackedTask>;
   turnState: ClaudeTurnState | undefined;
+  lastTurnActivityAt: number | undefined;
+  turnWatchdog: ReturnType<typeof setInterval> | undefined;
   // Survives `turnState` being cleared so a terminal result that arrives with no
   // live turn still names the turn it settles. An id-less `turn.completed` is
   // dropped by runtime ingestion and leaves the projection running forever.
@@ -2752,6 +2760,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       result?: SDKResultMessage,
     ): Effect.Effect<void> =>
       Effect.gen(function* () {
+        if (context.turnWatchdog !== undefined) {
+          clearInterval(context.turnWatchdog);
+          context.turnWatchdog = undefined;
+        }
+        context.lastTurnActivityAt = undefined;
         // A terminal foreground turn cannot retain its root callbacks once the
         // UI can no longer answer them. Agent callbacks remain actionable until
         // their own task has engine-terminal evidence or the session stops;
@@ -3016,6 +3029,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         });
 
         const updatedAt = yield* nowIso;
+        if (context.turnWatchdog !== undefined) {
+          clearInterval(context.turnWatchdog);
+          context.turnWatchdog = undefined;
+        }
+        context.lastTurnActivityAt = undefined;
         if (context.interruptRequestedTurnId === turnState.turnId) {
           context.interruptRequestedTurnId = undefined;
         }
@@ -3073,6 +3091,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           inFlightTools: new Map(),
           trackedTasks: new Map(),
           turnState: undefined,
+          lastTurnActivityAt: undefined,
+          turnWatchdog: undefined,
           lastTurnId: undefined,
           interruptRequestedTurnId: undefined,
           lastKnownContextWindow: context.lastKnownContextWindow,
@@ -4539,6 +4559,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       message: SDKMessage,
     ): Effect.Effect<void, EngineAdapterProcessError> =>
       Effect.gen(function* () {
+        if (context.turnState !== undefined) {
+          context.lastTurnActivityAt = Date.now();
+        }
         yield* logNativeSdkMessage(context, message);
 
         // Claude also sets parent_tool_use_id on async Bash progress, so route only
@@ -4687,6 +4710,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       options?: ClaudeStopSessionOptions,
     ): Effect.Effect<void, EngineAdapterProcessError> =>
       Effect.gen(function* () {
+        if (context.turnWatchdog !== undefined) {
+          clearInterval(context.turnWatchdog);
+          context.turnWatchdog = undefined;
+        }
+        context.lastTurnActivityAt = undefined;
         context.stopped = true;
         yield* cancelHostGatewayTurn(context.gatewaySessionLease, context.turnState?.turnId);
         context.gatewaySessionLease?.release();
@@ -4791,6 +4819,53 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ),
         );
       });
+
+    const startClaudeTurnWatchdog = (context: ClaudeSessionContext, turnId: TurnId): void => {
+      if (context.turnWatchdog !== undefined) {
+        clearInterval(context.turnWatchdog);
+      }
+      context.lastTurnActivityAt = Date.now();
+      context.turnWatchdog = setInterval(() => {
+        if (context.stopped || context.turnState?.turnId !== turnId) {
+          if (context.turnWatchdog !== undefined) {
+            clearInterval(context.turnWatchdog);
+            context.turnWatchdog = undefined;
+          }
+          return;
+        }
+        if (context.pendingApprovals.size > 0 || context.pendingUserInputs.size > 0) {
+          context.lastTurnActivityAt = Date.now();
+          return;
+        }
+        const idleMs = Date.now() - (context.lastTurnActivityAt ?? Date.now());
+        if (idleMs < CLAUDE_TURN_IDLE_TIMEOUT_MS) return;
+        if (context.turnWatchdog !== undefined) {
+          clearInterval(context.turnWatchdog);
+          context.turnWatchdog = undefined;
+        }
+        const detail = `Claude stopped responding (no activity for ${Math.round(idleMs / 1000)}s); the turn was timed out.`;
+        context.stopped = true;
+        Effect.runFork(
+          Effect.gen(function* () {
+            yield* emitRuntimeError(context, detail, { source: "claude.turn.idle-timeout" });
+            yield* completeTurn(context, "failed", detail);
+          }).pipe(
+            Effect.ensuring(
+              stopSessionInternal(context, { emitExitEvent: true }).pipe(
+                Effect.catchCause((cause) =>
+                  emitRuntimeError(
+                    context,
+                    "Failed to stop Claude after timeout.",
+                    Cause.pretty(cause),
+                  ),
+                ),
+              ),
+            ),
+            Effect.catchCause((cause) => emitRuntimeError(context, detail, Cause.pretty(cause))),
+          ),
+        );
+      }, CLAUDE_TURN_WATCHDOG_INTERVAL_MS);
+    };
 
     const requireSession = (
       threadId: ThreadId,
@@ -5478,6 +5553,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             inFlightTools,
             trackedTasks,
             turnState: undefined,
+            lastTurnActivityAt: undefined,
+            turnWatchdog: undefined,
             lastTurnId: undefined,
             interruptRequestedTurnId: undefined,
             lastKnownContextWindow: resolveClaudeApiModelIdContextWindowMaxTokens(
@@ -5819,6 +5896,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           activeTurnId: turnId,
           updatedAt,
         };
+        startClaudeTurnWatchdog(context, turnId);
 
         const turnStartedStamp = yield* makeEventStamp();
         yield* offerRuntimeEvent(context, {

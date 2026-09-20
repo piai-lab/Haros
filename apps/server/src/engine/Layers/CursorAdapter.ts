@@ -559,11 +559,10 @@ export function makeCursorAdapter(
       });
 
     // Idle-progress watchdog escape hatch: force-fail a turn whose cursor-agent
-    // child is alive but has gone completely silent. Stays idempotent via
-    // clearCursorActiveTurn, so it is a no-op if the turn settled normally first.
+    // child is alive but has gone completely silent. A silent ACP session is
+    // retired after the failed turn so it cannot be reused by the next prompt.
     const failCursorTurnAsTimedOut = (ctx: CursorSessionContext, turnId: TurnId, idleMs: number) =>
       Effect.gen(function* () {
-        const promptFiber = ctx.activePromptFiber;
         if (ctx.activeTurnId !== turnId) {
           return;
         }
@@ -599,12 +598,9 @@ export function makeCursorAdapter(
             ...completedCost,
           },
         });
-        // Best-effort: tell the child to abandon the turn, then unwind the
-        // pending prompt fiber (its onInterrupt no-ops, the turn is cleared).
-        yield* Effect.ignore(ctx.acp.cancel);
-        if (promptFiber) {
-          yield* Fiber.interrupt(promptFiber);
-        }
+        // stopSessionInternal closes the ACP scope and removes the context from
+        // the routing map. The next turn must create a replacement session.
+        yield* stopSessionInternal(ctx);
       });
 
     const emitPlanUpdate = (

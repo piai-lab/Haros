@@ -2252,7 +2252,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain(">Loading<");
   });
 
-  it("attaches trailing tool rows to the last assistant reply after completion", async () => {
+  it("keeps trailing tool rows in the settled process disclosure after completion", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -2315,10 +2315,11 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Worked for");
+    expect(markup).toContain('data-turn-process-phase="settled"');
+    expect(markup).toContain(">Details</span>");
     expect(markup).toContain(">done</span></p>");
-    // Trailing work folds into the terminal reply's collapsed disclosure rather
-    // than leaving a detached work row at the end of the transcript.
+    // Trailing work stays in the settled process disclosure rather than leaving
+    // a detached work row at the end of the transcript.
     expect(markup).not.toContain("Tool 1");
     expect(markup).not.toContain("Tool 2");
     expect(markup).not.toContain('data-timeline-row-kind="work"');

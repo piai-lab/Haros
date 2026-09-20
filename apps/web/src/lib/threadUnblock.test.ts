@@ -47,10 +47,11 @@ function conflictError() {
 
 describe("unblockThreadFromClient", () => {
   it("abandons every blocker oldest-first", async () => {
-    const listEngineDeliveryBlockers = vi.fn(async () => [
+    let remaining = [
       blocker({ eventSequence: 42, state: "dead" }),
       blocker({ eventSequence: 17, state: "uncertain" }),
-    ]);
+    ];
+    const listEngineDeliveryBlockers = vi.fn(async () => remaining);
     const reconcileEngineDelivery = vi.fn(async (input: { eventSequence: number }) => ({
       eventSequence: input.eventSequence,
       threadId,
@@ -58,6 +59,16 @@ describe("unblockThreadFromClient", () => {
       state: "succeeded" as const,
       reconciledAt: "2026-07-26T10:01:00.000Z",
     }));
+    reconcileEngineDelivery.mockImplementation(async (input: { eventSequence: number }) => {
+      remaining = remaining.filter((item) => item.eventSequence !== input.eventSequence);
+      return {
+        eventSequence: input.eventSequence,
+        threadId,
+        outcome: "abandon" as const,
+        state: "succeeded" as const,
+        reconciledAt: "2026-07-26T10:01:00.000Z",
+      };
+    });
 
     const result = await unblockThreadFromClient(
       {
@@ -68,7 +79,8 @@ describe("unblockThreadFromClient", () => {
     );
 
     expect(result).toEqual({ kind: "unblocked", reconciledCount: 2 });
-    expect(listEngineDeliveryBlockers).toHaveBeenCalledWith({ threadId });
+    expect(listEngineDeliveryBlockers).toHaveBeenNthCalledWith(1, { threadId, limit: 500 });
+    expect(listEngineDeliveryBlockers).toHaveBeenNthCalledWith(2, { threadId, limit: 500 });
     expect(
       reconcileEngineDelivery.mock.calls.map(
         ([input]) => (input as never as { eventSequence: number }).eventSequence,
@@ -98,11 +110,16 @@ describe("unblockThreadFromClient", () => {
   });
 
   it("treats a reconciliation conflict as settled elsewhere", async () => {
+    let first = true;
     const result = await unblockThreadFromClient(
       {
-        listEngineDeliveryBlockers: vi.fn(async () => [
-          blocker({ eventSequence: 17, state: "uncertain" }),
-        ]),
+        listEngineDeliveryBlockers: vi.fn(async () => {
+          if (first) {
+            first = false;
+            return [blocker({ eventSequence: 17, state: "uncertain" })];
+          }
+          return [];
+        }),
         reconcileEngineDelivery: vi.fn(async () => {
           throw conflictError();
         }),
@@ -115,12 +132,19 @@ describe("unblockThreadFromClient", () => {
 
   it("still unblocks when only a later blocker conflicts", async () => {
     let call = 0;
+    let first = true;
     const result = await unblockThreadFromClient(
       {
-        listEngineDeliveryBlockers: vi.fn(async () => [
-          blocker({ eventSequence: 17, state: "uncertain" }),
-          blocker({ eventSequence: 42, state: "uncertain" }),
-        ]),
+        listEngineDeliveryBlockers: vi.fn(async () => {
+          if (first) {
+            first = false;
+            return [
+              blocker({ eventSequence: 17, state: "uncertain" }),
+              blocker({ eventSequence: 42, state: "uncertain" }),
+            ];
+          }
+          return [];
+        }),
         reconcileEngineDelivery: vi.fn(async () => {
           call += 1;
           if (call === 2) throw conflictError();
@@ -179,5 +203,11 @@ describe("describeThreadUnblockResult", () => {
         describeThreadUnblockResult(result, (key) => translate("zh-CN", key)).description,
       ).toContain("失败消息");
     }
+
+    const stillBlocked = describeThreadUnblockResult(
+      { kind: "still-blocked", blockerCount: 1 },
+      (key) => translate("zh-CN", key),
+    );
+    expect(stillBlocked.description).toContain("仍未清除");
   });
 });

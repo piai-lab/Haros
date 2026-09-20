@@ -1738,12 +1738,11 @@ export function makeGrokAdapter(
       );
 
     // Idle-progress watchdog escape hatch: force-fail a turn whose grok child
-    // is alive but has gone completely silent. Mirrors the prompt-fiber
-    // onFailure branch and stays idempotent via clearAcpActiveTurn, so it is a
-    // no-op if the turn settled normally first (whichever fires first wins).
+    // is alive but has gone completely silent. A silent ACP session is not
+    // reusable: the timeout retires the whole session after publishing the
+    // failed turn, so the next prompt cannot be routed to the wedged child.
     const failGrokTurnAsTimedOut = (ctx: GrokSessionContext, turnId: TurnId, idleMs: number) =>
       Effect.gen(function* () {
-        const promptFiber = ctx.activePromptFiber;
         if (ctx.activeTurnId !== turnId) {
           return;
         }
@@ -1779,15 +1778,11 @@ export function makeGrokAdapter(
             ...completedCost,
           },
         });
-        // Best-effort: tell the child to abandon the turn, then unwind the
-        // pending prompt fiber (its onInterrupt no-ops, the turn is cleared).
-        // The cancel is forked, not awaited — this path only runs because the
-        // child went silent, and a hung session/cancel must not block the
-        // prompt-fiber interrupt or leak the watchdog fiber.
-        yield* Effect.ignore(ctx.acp.cancel).pipe(Effect.forkIn(ctx.scope));
-        if (promptFiber) {
-          yield* Fiber.interrupt(promptFiber);
-        }
+        // The child went silent, so cancel is only a best-effort courtesy. The
+        // session scope is closed immediately afterwards and owns the actual
+        // process/transport teardown. This also removes the context from the
+        // routing map before another turn can reuse it.
+        yield* stopSessionInternal(ctx);
       });
 
     const sendTurn: GrokAdapterShape["sendTurn"] = (input) =>

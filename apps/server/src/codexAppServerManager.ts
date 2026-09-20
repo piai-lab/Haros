@@ -1803,10 +1803,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 
   /**
-   * Force-settles a turn whose app-server went silent. Best-effort interrupt
-   * first — a child that is merely slow settles itself and emits its own
-   * terminal notification — then a synthetic `turn/aborted` so a wedged child
-   * cannot leave the session "running" forever.
+   * Force-settles a turn whose app-server went silent. A timeout makes the
+   * native session untrusted even when interrupt appears to succeed, so the
+   * app-server is retired after the turn is settled instead of being reused.
    */
   async abandonTurn(threadId: ThreadId, turnId: TurnId, detail: string): Promise<void> {
     const context = this.sessions.get(threadId);
@@ -1825,39 +1824,42 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       });
     }
 
-    if (!this.isTurnActive(threadId, turnId)) {
-      return;
-    }
-
     this.clearTaskCompleteFallback(context);
     context.collabReceiverTurns.clear();
     context.collabReceiverParents.clear();
     context.reviewTurnIds.delete(turnId);
-    this.updateSession(context, {
-      status: "ready",
-      activeTurnId: undefined,
-      lastError: detail,
-    });
-    this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
-      kind: "notification",
-      engine: "codex",
-      threadId: context.session.threadId,
-      createdAt: new Date().toISOString(),
-      ...(context.lifecycleGeneration !== undefined
-        ? { lifecycleGeneration: context.lifecycleGeneration }
-        : {}),
-      method: "turn/aborted",
-      turnId,
-      message: detail,
-      payload: {
-        turn: {
-          id: turnId,
-          status: "aborted",
+    if (this.isTurnActive(threadId, turnId)) {
+      this.updateSession(context, {
+        status: "closed",
+        activeTurnId: undefined,
+        lastError: detail,
+      });
+      this.emitEvent({
+        id: EventId.makeUnsafe(randomUUID()),
+        kind: "notification",
+        engine: "codex",
+        threadId: context.session.threadId,
+        createdAt: new Date().toISOString(),
+        ...(context.lifecycleGeneration !== undefined
+          ? { lifecycleGeneration: context.lifecycleGeneration }
+          : {}),
+        method: "turn/aborted",
+        turnId,
+        message: detail,
+        payload: {
+          turn: {
+            id: turnId,
+            status: "aborted",
+          },
+          abandonedBy: "turnIdleWatchdog",
         },
-        abandonedBy: "turnIdleWatchdog",
-      },
-    });
+      });
+    }
+
+    // A silent app-server is not reusable even if a late interrupt response
+    // settled the turn while the watchdog was running. Stop it after the
+    // terminal turn event and wait for process-tree teardown to complete.
+    await this.stopSession(threadId);
   }
 
   async readThread(threadId: ThreadId): Promise<CodexThreadSnapshot> {

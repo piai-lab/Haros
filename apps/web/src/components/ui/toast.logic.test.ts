@@ -6,8 +6,8 @@ import {
 } from "./toast.logic";
 
 describe("DEFAULT_TOAST_TIMEOUT_MS", () => {
-  it("auto-dismisses standard toasts after ten seconds", () => {
-    assert.equal(DEFAULT_TOAST_TIMEOUT_MS, 10_000);
+  it("auto-dismisses standard toasts after eight seconds", () => {
+    assert.equal(DEFAULT_TOAST_TIMEOUT_MS, 8_000);
   });
 });
 
