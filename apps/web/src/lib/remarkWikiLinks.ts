@@ -1,4 +1,5 @@
 import { isLocalAbsolutePath, joinWorkspaceRelativePath } from "@harnessos/shared/path";
+import { decodeString } from "micromark-util-decode-string";
 
 import { markdownFilePathHref } from "../markdown-links";
 
@@ -16,22 +17,6 @@ type RootContent = {
   position?: { start: Point; end: Point };
 };
 type Root = { children: RootContent[] };
-
-function decodeString(value: string): string {
-  return value.replace(/\\([!-/:-@[-`{-~])/g, "$1").replace(/&(?:#x[\da-f]+|#\d+|[\da-z]+);/gi, (entity) => {
-    try {
-      if (entity.startsWith("&#x") || entity.startsWith("&#X")) {
-        return String.fromCodePoint(Number.parseInt(entity.slice(3, -1), 16));
-      }
-      if (entity.startsWith("&#")) {
-        return String.fromCodePoint(Number.parseInt(entity.slice(2, -1), 10));
-      }
-      return entity;
-    } catch {
-      return entity;
-    }
-  });
-}
 
 function advancePoint(start: Point, raw: string): Point {
   const lines = raw.split("\n");

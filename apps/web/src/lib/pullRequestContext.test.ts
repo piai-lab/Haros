@@ -8,6 +8,7 @@ import {
   pullRequestContextDedupKey,
   type PullRequestContextDraft,
 } from "./pullRequestContext";
+import { deriveDisplayedUserMessageState } from "./terminalContext";
 
 function card(overrides: Partial<PullRequestContextDraft> = {}): PullRequestContextDraft {
   return {
@@ -66,5 +67,24 @@ describe("pullRequestContext", () => {
         },
       ],
     });
+  });
+
+  it.each([
+    "Please explain this format",
+    "[]",
+    "{}",
+    JSON.stringify([card(), { scope: "future-kind", text: "Keep this visible" }]),
+    JSON.stringify([card({ title: " " })]),
+    JSON.stringify([card({ text: " " })]),
+    JSON.stringify([card({ prNumber: -1 })]),
+  ])("preserves unrecognized PR context text instead of hiding it: %s", (body) => {
+    const prompt = `Review this literal input\n\n<pull_request_context>\n${body}\n</pull_request_context>`;
+    expect(extractTrailingPullRequestContexts(prompt)).toEqual({
+      promptText: prompt,
+      pullRequestContexts: [],
+    });
+    const displayed = deriveDisplayedUserMessageState(prompt, { messageId: undefined });
+    expect(displayed.visibleText).toBe(prompt);
+    expect(displayed.copyText).toBe(prompt);
   });
 });

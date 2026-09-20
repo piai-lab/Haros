@@ -40,8 +40,10 @@ function makeQueryClient() {
 }
 
 let restoreNativeApi: (() => void) | undefined;
+const wikiFileOpener = { openFile: vi.fn() };
 
 beforeEach(() => {
+  wikiFileOpener.openFile.mockReset();
   harness.showFileReferenceContextMenu.mockReset();
   harness.showFileReferenceContextMenu.mockResolvedValue(undefined);
 });
@@ -52,6 +54,21 @@ afterEach(() => {
 });
 
 describe("ChatMarkdown file context menu", () => {
+  it("opens a wiki alias containing an entity through the workspace file owner", async () => {
+    const screen = await render(
+      <WorkspaceFileOpenerContext.Provider value={wikiFileOpener}>
+        <ChatMarkdown
+          text="Research &amp; notes: [[R&amp;D|Research &amp; development]]"
+          cwd="/repo/src"
+          wikiLinkRoot="/repo"
+          isStreaming={false}
+        />
+      </WorkspaceFileOpenerContext.Provider>,
+    );
+    await screen.getByRole("link", { name: "Research & development" }).click();
+    expect(wikiFileOpener.openFile).toHaveBeenCalledExactlyOnceWith("/repo/R&D.md");
+  });
+
   it("opens the shared menu with a position-free absolute path", async () => {
     const screen = await render(
       <ChatMarkdown

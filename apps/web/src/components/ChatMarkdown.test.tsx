@@ -439,6 +439,28 @@ describe("ChatMarkdown user variant", () => {
 });
 
 describe("workspace wiki links", () => {
+  it.each([
+    [
+      "Research &amp; notes: [[R&amp;D|Research &amp; development]]",
+      "/workspace/R%26D.md",
+      "Research &amp; development",
+    ],
+    ["Quoted &quot;note&quot;: [[design]]", "/workspace/design.md", "design"],
+    ["A replacement &#0; before [[design]]", "/workspace/design.md", "design"],
+    ["> Research &amp; notes\n> [[design]]", "/workspace/design.md", "design"],
+  ])(
+    "keeps wiki links working beside Markdown character references: %s",
+    async (text, href, label) => {
+      const { default: ChatMarkdown } = await import("./ChatMarkdown");
+      const markup = renderToStaticMarkup(
+        <ChatMarkdown text={text} cwd="/workspace" wikiLinkRoot="/workspace" isStreaming={false} />,
+      );
+      expect(markup).toContain(`href="${href}"`);
+      expect(markup).toContain(label);
+      expect(markup).not.toContain("[[");
+    },
+  );
+
   it("opens aliases relative to the workspace root and leaves code unchanged", async () => {
     const { default: ChatMarkdown } = await import("./ChatMarkdown");
     const markup = renderToStaticMarkup(

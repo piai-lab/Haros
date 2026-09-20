@@ -181,7 +181,8 @@ function parseEntries(block: string): ParsedPullRequestContextEntry[] {
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.flatMap((entry, index) => {
+    const entries: ParsedPullRequestContextEntry[] = [];
+    for (const [index, entry] of parsed.entries()) {
       if (!entry || typeof entry !== "object") {
         return [];
       }
@@ -189,23 +190,28 @@ function parseEntries(block: string): ParsedPullRequestContextEntry[] {
       if (
         !isPullRequestContextScope(candidate.scope) ||
         typeof candidate.text !== "string" ||
-        typeof candidate.title !== "string"
+        candidate.text.trim().length === 0 ||
+        typeof candidate.title !== "string" ||
+        candidate.title.trim().length === 0 ||
+        typeof candidate.prNumber !== "number" ||
+        !Number.isInteger(candidate.prNumber) ||
+        candidate.prNumber <= 0 ||
+        typeof candidate.prUrl !== "string" ||
+        typeof candidate.subtitle !== "string"
       ) {
         return [];
       }
-      const prNumber = typeof candidate.prNumber === "number" ? candidate.prNumber : 0;
-      return [
-        {
-          index: index + 1,
-          scope: candidate.scope,
-          prNumber,
-          prUrl: typeof candidate.prUrl === "string" ? candidate.prUrl : "",
-          title: candidate.title,
-          subtitle: typeof candidate.subtitle === "string" ? candidate.subtitle : "",
-          text: candidate.text,
-        },
-      ];
-    });
+      entries.push({
+        index: index + 1,
+        scope: candidate.scope,
+        prNumber: candidate.prNumber,
+        prUrl: candidate.prUrl,
+        title: candidate.title,
+        subtitle: candidate.subtitle,
+        text: candidate.text,
+      });
+    }
+    return entries;
   } catch {
     return [];
   }
@@ -216,8 +222,12 @@ export function extractTrailingPullRequestContexts(prompt: string): ExtractedPul
   if (!match) {
     return { promptText: prompt, pullRequestContexts: [] };
   }
+  const pullRequestContexts = parseEntries(match[1] ?? "");
+  // Only hide a block when every entry can be represented by a card. Malformed
+  // or future formats must remain visible and copyable as the original message.
+  if (pullRequestContexts.length === 0) return { promptText: prompt, pullRequestContexts: [] };
   const promptText = prompt.slice(0, match.index).replace(/\n+$/, "");
-  return { promptText, pullRequestContexts: parseEntries(match[1] ?? "") };
+  return { promptText, pullRequestContexts };
 }
 
 export function createPullRequestContextDraft(
@@ -237,4 +247,3 @@ export function createPullRequestContextDraft(
     text: input.text,
   });
 }
-
