@@ -45,6 +45,7 @@ type ModelServiceOrigin = "models_json" | "extension" | "unknown" | "builtin";
 
 import { BrainIcon, LinkIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { DeepSeekIcon } from "./Icons";
 
 type ModelServiceIconResolution =
   | { readonly kind: "brand"; readonly src: string; readonly monochrome: boolean }
@@ -226,15 +227,15 @@ export function resolveModelServiceIcon(input: {
 }): ModelServiceIconResolution {
   if (input.origin === "models_json") return { kind: "custom", src: null };
   if (input.origin === "extension") return { kind: "extension", src: null };
-  if (input.origin === "unknown") return { kind: "generic", src: null };
   const brandIcon = resolveKnownBrandIcon(input.serviceId.trim());
-  return brandIcon
-    ? {
-        kind: "brand",
-        src: brandIcon,
-        monochrome: MONOCHROME_BRAND_ICONS.has(brandIcon),
-      }
-    : { kind: "generic", src: null };
+  if (brandIcon) {
+    return {
+      kind: "brand",
+      src: brandIcon,
+      monochrome: MONOCHROME_BRAND_ICONS.has(brandIcon),
+    };
+  }
+  return { kind: "generic", src: null };
 }
 
 export function ModelServiceIcon({
@@ -267,6 +268,19 @@ export function ModelServiceIcon({
   const sharedClassName = cn("size-5 shrink-0", className);
 
   if (resolution.kind === "brand") {
+    if (resolution.src === deepSeekIconUrl) {
+      return (
+        <span
+          aria-hidden="true"
+          data-model-service-icon="brand"
+          data-model-service-icon-level={modelIcon ? "model" : "service"}
+          data-model-service-icon-render="svg"
+          className={cn(sharedClassName, "inline-flex items-center justify-center")}
+        >
+          <DeepSeekIcon className="size-full" />
+        </span>
+      );
+    }
     if (resolution.monochrome) {
       return (
         <span

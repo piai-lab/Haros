@@ -61,6 +61,7 @@ function presentationSourceFromDiscovery(
   if (origin === "models_json") return "user-configured";
   if (origin === "extension") return "extension";
   if (origin === "unknown") return "unknown";
+  if (origin === "builtin") return "builtin-catalog";
   return "runtime-catalog";
 }
 

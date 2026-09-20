@@ -57,6 +57,7 @@ import {
   makePiAdapterLive,
   piModelHasConfiguredCredentials,
   PLAIN_PI_EXTENSION_THEME,
+  resolvePiProviderOrigin,
   toPiProviderModelDescriptor,
 } from "./PiAdapter";
 
@@ -769,6 +770,30 @@ describe("getPiDiscoverableModels", () => {
       upstreamProviderName: "OpenRouter",
       upstreamProviderOrigin: "extension",
     });
+  });
+
+  it("keeps stock Pi providers as builtin instead of unknown", () => {
+    expect(
+      resolvePiProviderOrigin({
+        providerId: "deepseek",
+        extensionProviderIds: new Set(),
+        configuredProviderIds: new Set(),
+      }),
+    ).toBe("builtin");
+    expect(
+      resolvePiProviderOrigin({
+        providerId: "deepseek",
+        extensionProviderIds: new Set(["deepseek"]),
+        configuredProviderIds: new Set(),
+      }),
+    ).toBe("extension");
+    expect(
+      resolvePiProviderOrigin({
+        providerId: "local",
+        extensionProviderIds: new Set(),
+        configuredProviderIds: new Set(["local"]),
+      }),
+    ).toBe("models_json");
   });
 
   it("omits models whose normalized identity would no longer resolve in the registry", () => {

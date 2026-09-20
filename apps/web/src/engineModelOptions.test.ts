@@ -75,6 +75,29 @@ describe("formatEngineModelOptionName", () => {
 });
 
 describe("resolveModelPresentationIdentity", () => {
+  it("keeps stock Pi DeepSeek on the builtin catalog identity", () => {
+    expect(
+      resolveModelPresentationIdentity({
+        selection: { engine: "pi", model: "deepseek/deepseek-v4-flash" },
+        options: [
+          {
+            slug: "deepseek/deepseek-v4-flash",
+            name: "DeepSeek V4 Flash",
+            upstreamProviderId: "deepseek",
+            upstreamProviderName: "DeepSeek",
+            upstreamProviderOrigin: "builtin",
+          },
+        ],
+      }),
+    ).toEqual({
+      model: "deepseek/deepseek-v4-flash",
+      displayName: "DeepSeek V4 Flash",
+      serviceId: "deepseek",
+      serviceName: "DeepSeek",
+      source: "builtin-catalog",
+    });
+  });
+
   it("freezes built-in catalog identity even when the caller has no live descriptor", () => {
     expect(
       resolveModelPresentationIdentity({

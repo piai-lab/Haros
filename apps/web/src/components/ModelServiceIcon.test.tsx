@@ -55,11 +55,34 @@ describe("ModelServiceIcon", () => {
     expect(resolveModelServiceIcon({ serviceId: "xiaomi-token-plan-cn" })).toMatchObject({
       kind: "brand",
     });
+    const deepSeekMarkup = renderToStaticMarkup(
+      <ModelServiceIcon serviceId="deepseek" origin="builtin" />,
+    );
+    expect(deepSeekMarkup).toContain('data-model-service-icon="brand"');
+    expect(deepSeekMarkup).toContain('viewBox="0 0 24 24"');
+    expect(deepSeekMarkup).toContain("M23.748 4.482");
+    expect(deepSeekMarkup).not.toContain("deepseek-color.svg");
     const markup = renderToStaticMarkup(<ModelServiceIcon serviceId="openai-codex" />);
     expect(markup).toContain('data-model-service-icon="brand"');
     expect(markup).toContain('data-model-service-icon-render="mask"');
     expect(markup).toContain("bg-current");
     expectBundledBrandAsset(resolveModelServiceIcon({ serviceId: "openai-codex" }).src, "OpenAI");
+    for (const serviceId of ["google", "anthropic", "openai"] as const) {
+      const groupHeaderMarkup = renderToStaticMarkup(
+        <ModelServiceIcon serviceId={serviceId} origin="unknown" className="size-3.5" />,
+      );
+      expect(groupHeaderMarkup).toContain('data-model-service-icon="brand"');
+      expect(groupHeaderMarkup).not.toContain('data-model-service-icon="generic"');
+      expect(resolveModelServiceIcon({ serviceId, origin: "unknown" }).kind).toBe("brand");
+    }
+    expectBundledBrandAsset(
+      resolveModelServiceIcon({ serviceId: "google", origin: "unknown" }).src,
+      "Google",
+    );
+    expectBundledBrandAsset(
+      resolveModelServiceIcon({ serviceId: "openai", origin: "unknown" }).src,
+      "OpenAI",
+    );
   });
 
   it("uses verified service assets without turning the icon table into identity authority", () => {
@@ -276,7 +299,15 @@ describe("ModelServiceIcon", () => {
       kind: "extension",
       src: null,
     });
-    expect(resolveModelServiceIcon({ serviceId: "deepseek", origin: "unknown" })).toEqual({
+    expect(resolveModelServiceIcon({ serviceId: "deepseek", origin: "unknown" }).kind).toBe(
+      "brand",
+    );
+    expect(resolveModelServiceIcon({ serviceId: "google", origin: "unknown" }).kind).toBe("brand");
+    expect(resolveModelServiceIcon({ serviceId: "anthropic", origin: "unknown" }).kind).toBe(
+      "brand",
+    );
+    expect(resolveModelServiceIcon({ serviceId: "openai", origin: "unknown" }).kind).toBe("brand");
+    expect(resolveModelServiceIcon({ serviceId: "mystery-gateway", origin: "unknown" })).toEqual({
       kind: "generic",
       src: null,
     });

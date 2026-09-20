@@ -5,24 +5,65 @@ import { resolveModelPresentationIdentity } from "~/engineModelOptions";
 import { ModelIdentityIcon, resolveModelIdentityPresentation } from "./ModelIdentityIcon";
 
 describe("ModelIdentityIcon", () => {
-  it("renders DeepSeek for an OpenCode-selected DeepSeek model", () => {
-    const selection = { engine: "opencode" as const, model: "deepseek/deepseek-v4-flash" };
-    const markup = decodeURIComponent(
-      renderToStaticMarkup(
+  it("keeps stock Pi Google, Anthropic, and OpenAI on their service marks", () => {
+    for (const [serviceId, model] of [
+      ["google", "google/gemini-3-flash"],
+      ["anthropic", "anthropic/claude-sonnet-4-6"],
+      ["openai", "openai/gpt-5"],
+    ] as const) {
+      const markup = renderToStaticMarkup(
         <ModelIdentityIcon
-          selection={selection}
+          selection={{ engine: "pi", model }}
           identity={{
-            model: selection.model,
-            displayName: "DeepSeek V4 Flash",
-            serviceId: "deepseek",
-            serviceName: "DeepSeek",
-            source: "runtime-catalog",
+            model,
+            displayName: model,
+            serviceId,
+            source: "unknown",
           }}
         />,
-      ),
+      );
+      expect(markup).toContain('data-model-service-icon="brand"');
+      expect(markup).not.toContain('data-model-service-icon="generic"');
+    }
+  });
+
+  it("renders the official DeepSeek whale mark for stock Pi DeepSeek", () => {
+    const selection = { engine: "pi" as const, model: "deepseek/deepseek-v4-flash" };
+    const markup = renderToStaticMarkup(
+      <ModelIdentityIcon
+        selection={selection}
+        identity={{
+          model: selection.model,
+          displayName: "DeepSeek V4 Flash",
+          serviceId: "deepseek",
+          serviceName: "DeepSeek",
+          source: "builtin-catalog",
+        }}
+        historical
+      />,
     );
-    expect(markup).toContain("<title>DeepSeek</title>");
-    expect(markup).not.toContain("<title>opencode</title>");
+    expect(markup).toContain('viewBox="0 0 24 24"');
+    expect(markup).toContain("M23.748 4.482");
+    expect(markup).toContain('data-model-service-icon="brand"');
+    expect(markup).not.toContain("deepseek-color.svg");
+  });
+
+  it("renders DeepSeek for an OpenCode-selected DeepSeek model", () => {
+    const selection = { engine: "opencode" as const, model: "deepseek/deepseek-v4-flash" };
+    const markup = renderToStaticMarkup(
+      <ModelIdentityIcon
+        selection={selection}
+        identity={{
+          model: selection.model,
+          displayName: "DeepSeek V4 Flash",
+          serviceId: "deepseek",
+          serviceName: "DeepSeek",
+          source: "runtime-catalog",
+        }}
+      />,
+    );
+    expect(markup).toContain("M23.748 4.482");
+    expect(markup).not.toContain("opencode");
   });
 
   it("uses Kimi service identity for OpenCode without consumer-specific parsing", () => {

@@ -502,6 +502,16 @@ function hasModelConfigProviderIdentity(
   );
 }
 
+export function resolvePiProviderOrigin(input: {
+  readonly providerId: string;
+  readonly extensionProviderIds: ReadonlySet<string>;
+  readonly configuredProviderIds: ReadonlySet<string>;
+}): "builtin" | "models_json" | "extension" | "unknown" {
+  if (input.extensionProviderIds.has(input.providerId)) return "extension";
+  if (input.configuredProviderIds.has(input.providerId)) return "models_json";
+  return "builtin";
+}
+
 /**
  * Pi extensions own their model-provider catalogs, so normalize their display metadata
  * before it crosses Haros's trimmed-string RPC contract. A single malformed
@@ -2636,11 +2646,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
               model,
               registry.getProviderDisplayName.bind(registry),
               (providerId) =>
-                extensionProviderIds.has(providerId)
-                  ? "extension"
-                  : configuredProviderIds.has(providerId)
-                    ? "models_json"
-                    : "unknown",
+                resolvePiProviderOrigin({
+                  providerId,
+                  extensionProviderIds,
+                  configuredProviderIds,
+                }),
             );
             return descriptor ? [descriptor] : [];
           });
