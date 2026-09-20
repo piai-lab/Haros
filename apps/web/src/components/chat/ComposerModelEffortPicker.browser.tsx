@@ -226,7 +226,7 @@ describe("ComposerModelEffortPicker", () => {
         .toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "Refresh models" })).toBeVisible();
       await expect
-        .element(page.getByRole("menuitem", { name: "Open Model services" }))
+        .element(page.getByRole("menuitem", { name: "Open engine settings" }))
         .toBeVisible();
     } finally {
       await errorScreen.unmount();
@@ -377,7 +377,7 @@ describe("ComposerModelEffortPicker", () => {
         )
         .toBeVisible();
       await expect
-        .element(page.getByRole("menuitem", { name: "Open Model services" }))
+        .element(page.getByRole("menuitem", { name: "Open engine settings" }))
         .toBeVisible();
       await expect
         .element(page.getByRole("menuitem", { name: "Refresh models" }))
@@ -551,7 +551,7 @@ describe("ComposerModelEffortPicker", () => {
       await trigger.click();
       await expect.element(page.getByText("当前没有可用模型", { exact: true })).toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "刷新模型" })).toBeVisible();
-      await expect.element(page.getByRole("menuitem", { name: "打开模型服务" })).toBeVisible();
+      await expect.element(page.getByRole("menuitem", { name: "打开引擎设置" })).toBeVisible();
     } finally {
       await screen.unmount();
       harness.settings.localePreference = "en";

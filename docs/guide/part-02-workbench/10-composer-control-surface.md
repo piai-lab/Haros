@@ -15,6 +15,21 @@ source_anchors:
 
 # Chapter 10 — The Composer as a Control Surface {#chapter-10}
 
+## Saved model combinations
+
+A star stores the Engine, model, effort, fast mode, and thinking setting together. The current
+model's star reflects those exact settings. Selecting a saved model restores supported settings;
+model-cycle shortcuts visit distinct saved combinations, including two efforts for the same model.
+Each combination is shown and removed separately. Unsupported explicit parameters disable that
+combination with a reason. Unset parameters mean “keep current”; explicit off remains off. Ordinary
+model selection does not infer a favorite. Mouse and keyboard use the same application path.
+Explicit prompt-controlled effort still takes precedence.
+
+**简体中文。** 收藏保存引擎、模型、推理强度、快速模式与思考设置的组合。当前模型的星标对应当前参数。
+选择收藏模型时恢复仍受支持的设置；模型切换快捷键可在同一模型的不同收藏参数间循环，并跳过不可用模型。
+同模型不同组合分别展示和删除；显式参数失效时显示原因并禁用。空值表示保持当前，显式关闭不会丢失。
+普通模型选择不推断收藏，鼠标和键盘使用同一应用路径；提示词明确控制的推理强度仍优先保留。
+
 ## The question
 
 Is the Composer just a text box? No. It is the place where user intent, references, an exact
@@ -73,14 +88,14 @@ Some Engines expose native commands. Haros may project those capabilities, but t
 responsible for clear product admission. A native command is not permission to invent product
 history, mutate another Engine's state, or skip capability checks.
 
-| Composer signal     | Presentation owner       | Execution owner                    | Common mistake                            |
-| ------------------- | ------------------------ | ---------------------------------- | ----------------------------------------- |
-| Slash trigger       | Composer parser/picker   | mapped command owner               | treating any slash as a command           |
-| Engine/model picker | Web projection           | descriptor, catalog, admission     | storing display label as identity         |
-| Effort slider       | Composer trait selection | `composerTraits` / local preference | treating Fast as a second effort ladder |
-| Mode picker         | typed mode controls      | capability projection and dispatch | assuming every Engine supports every mode |
-| Send button         | Composer                 | orchestration command path         | equating click with accepted turn         |
-| Queue/Steer header  | Composer follow-up state | decider and lifecycle              | rewriting a running turn locally          |
+| Composer signal     | Presentation owner       | Execution owner                     | Common mistake                            |
+| ------------------- | ------------------------ | ----------------------------------- | ----------------------------------------- |
+| Slash trigger       | Composer parser/picker   | mapped command owner                | treating any slash as a command           |
+| Engine/model picker | Web projection           | descriptor, catalog, admission      | storing display label as identity         |
+| Effort slider       | Composer trait selection | `composerTraits` / local preference | treating Fast as a second effort ladder   |
+| Mode picker         | typed mode controls      | capability projection and dispatch  | assuming every Engine supports every mode |
+| Send button         | Composer                 | orchestration command path          | equating click with accepted turn         |
+| Queue/Steer header  | Composer follow-up state | decider and lifecycle               | rewriting a running turn locally          |
 
 ## Admission and refusal
 

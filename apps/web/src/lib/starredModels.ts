@@ -2,7 +2,6 @@ import type { EngineKind } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 import { isEngineKind } from "../engineOrdering";
-import { FAVORITE_MODEL_STORAGE_KEYS, readFavoriteModelSlugs } from "./modelFavorites";
 
 export const STARRED_MODELS_STORAGE_KEY = "harnessos:starred-models:v1";
 
@@ -63,23 +62,6 @@ export function toggleStarredModel(
     : [...normalized, entry];
 }
 
-export function starredTraitsForModel(
-  models: ReadonlyArray<StarredModel>,
-  engine: EngineKind,
-  model: string,
-): Pick<StarredModel, "effort" | "fastMode" | "thinking"> {
-  const matching = starredModelsForEngine(models, engine).filter((entry) => entry.model === model);
-  const fallback =
-    matching.find(
-      (entry) => entry.effort !== null || entry.fastMode !== null || entry.thinking !== null,
-    ) ?? matching[0];
-  return {
-    effort: fallback?.effort ?? null,
-    fastMode: fallback?.fastMode ?? null,
-    thinking: fallback?.thinking ?? null,
-  };
-}
-
 export function buildStarredModelEntry(input: {
   readonly engine: EngineKind;
   readonly model: string;
@@ -96,51 +78,10 @@ export function buildStarredModelEntry(input: {
   };
 }
 
-export function resolveStarredToggleEntry(input: {
-  readonly models: ReadonlyArray<StarredModel>;
-  readonly engine: EngineKind;
-  readonly model: string;
-  readonly live?: boolean;
-  readonly effort?: string | null;
-  readonly fastMode?: boolean | null;
-  readonly thinking?: boolean | null;
-}): StarredModel {
-  if (input.live) {
-    return buildStarredModelEntry({
-      engine: input.engine,
-      model: input.model,
-      effort: input.effort ?? null,
-      fastMode: input.fastMode ?? null,
-      thinking: input.thinking ?? null,
-    });
-  }
-  const stored = starredTraitsForModel(input.models, input.engine, input.model);
-  return buildStarredModelEntry({
-    engine: input.engine,
-    model: input.model,
-    ...stored,
-  });
-}
-
-export function seedStarredModelsFromLegacyFavorites(): StoredStarredModel[] {
-  const engines = Object.keys(FAVORITE_MODEL_STORAGE_KEYS) as Array<
-    keyof typeof FAVORITE_MODEL_STORAGE_KEYS
-  >;
-  return engines.flatMap((engine) =>
-    readFavoriteModelSlugs(engine).map((model) => ({
-      engine,
-      model,
-      effort: null,
-      fastMode: null,
-      thinking: null,
-    })),
-  );
-}
-
-function readStoredStarredModels(): ReadonlyArray<StarredModel> {
+export function readStoredStarredModels(): ReadonlyArray<StarredModel> {
   try {
     const raw = globalThis.localStorage?.getItem(STARRED_MODELS_STORAGE_KEY);
-    if (!raw) return normalizeStarredModels(seedStarredModelsFromLegacyFavorites());
+    if (!raw) return [];
     return normalizeStarredModels(
       Schema.decodeUnknownSync(StarredModelsSchema)(JSON.parse(raw) as unknown),
     );
@@ -149,28 +90,11 @@ function readStoredStarredModels(): ReadonlyArray<StarredModel> {
   }
 }
 
-export function readStarredModelSlugs(engine: EngineKind): string[] {
-  return Array.from(
-    new Set(
-      readStoredStarredModels()
-        .filter((entry) => entry.engine === engine)
-        .map((entry) => entry.model),
-    ),
-  );
-}
-
 export function starredModelsForEngine(
   models: ReadonlyArray<StarredModel>,
   engine: EngineKind,
 ): ReadonlyArray<StarredModel> {
   return models.filter((entry) => entry.engine === engine);
-}
-
-export function starredModelSlugsForEngine(
-  models: ReadonlyArray<StarredModel>,
-  engine: EngineKind,
-): string[] {
-  return Array.from(new Set(starredModelsForEngine(models, engine).map((entry) => entry.model)));
 }
 
 export function isModelStarred(
@@ -184,4 +108,23 @@ export function isModelStarred(
   }
   const key = starredModelKey({ engine, model, ...traits });
   return models.some((entry) => starredModelKey(entry) === key);
+}
+
+/** Cycle saved combinations, including different efforts for the same model. */
+export function resolveCycledStarredModel(input: {
+  models: ReadonlyArray<StarredModel>;
+  current: StarredModel;
+  availableModels: ReadonlyArray<string>;
+  direction: "next" | "previous";
+}): StarredModel | null {
+  const candidates = input.models.filter(
+    (entry) => entry.engine === input.current.engine && input.availableModels.includes(entry.model),
+  );
+  if (!candidates.length) return null;
+  const index = candidates.findIndex(
+    (entry) => starredModelKey(entry) === starredModelKey(input.current),
+  );
+  if (index < 0) return input.direction === "next" ? candidates[0]! : candidates.at(-1)!;
+  const offset = input.direction === "next" ? 1 : -1;
+  return candidates[(index + offset + candidates.length) % candidates.length]!;
 }

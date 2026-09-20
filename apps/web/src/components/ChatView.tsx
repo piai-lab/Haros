@@ -362,7 +362,11 @@ import {
   resolveLocalDraftPromotion,
   type LocalDraftPromotionOwnership,
 } from "~/lib/threadCreatePromotion";
-import { readStarredModelSlugs } from "~/lib/starredModels";
+import {
+  readStoredStarredModels,
+  resolveCycledStarredModel,
+  type StarredModel,
+} from "~/lib/starredModels";
 import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
 import {
   getCustomBinaryPathForEngine,
@@ -561,7 +565,11 @@ import {
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
 } from "./chat/composerPickerStyles";
-import { getComposerTraitSelection } from "./chat/composerTraits";
+import {
+  getComposerTraitSelection,
+  restoreStarredComposerTraits,
+  canRestoreStarredComposerTraits,
+} from "./chat/composerTraits";
 import {
   getRuntimeAwareModelCapabilities,
   resolveRuntimeModelDescriptor,
@@ -6426,7 +6434,7 @@ export default function ChatView({
   }, [activeThreadId, markWorkflowRunDismissed, workflowRunState]);
 
   const onEngineModelSelect = useCallback(
-    async (engine: EngineKind, model: ModelSlug) => {
+    async (engine: EngineKind, model: ModelSlug, starred?: StarredModel) => {
       if (!activeThread) return;
       const resolvedModel = resolveCommittedEngineModel({
         selectedModel: model,
@@ -6441,6 +6449,10 @@ export default function ChatView({
         model: resolvedModel,
         runtimeModels: runtimeModelsByEngine[engine],
       });
+      if (starred && !canRestoreStarredComposerTraits(starred, runtimeModel)) {
+        scheduleComposerFocus();
+        return;
+      }
       const nextEngineSelection = buildEngineSelection(
         engine,
         resolvedModel,
@@ -6454,6 +6466,23 @@ export default function ChatView({
           model: resolvedModel,
         });
       }
+      const entry = starred;
+      if (entry) {
+        const restored = restoreStarredComposerTraits({
+          entry,
+          prompt: promptRef.current,
+          options: engine === "cursor" ? undefined : composerModelOptions?.[engine],
+          runtimeModel,
+        });
+        setComposerDraftEngineModelOptions(activeThread.id, engine, restored.options, {
+          persistSticky: true,
+          model: resolvedModel,
+        });
+        if (restored.prompt !== promptRef.current) {
+          promptRef.current = restored.prompt;
+          setPrompt(restored.prompt);
+        }
+      }
       scheduleComposerFocus();
     },
     [
@@ -6463,6 +6492,8 @@ export default function ChatView({
       scheduleComposerFocus,
       setComposerDraftEngineSelectionAndSticky,
       setComposerDraftEngineModelOptions,
+      composerModelOptions,
+      setPrompt,
     ],
   );
   const onComposerEngineSelect = useCallback(
@@ -6565,10 +6596,42 @@ export default function ChatView({
         const direction = command === "model.next" ? "next" : "previous";
         if (!selectedEngine) return;
         const engineOptions = selectableModelOptionsByEngine[selectedEngine] ?? [];
+        const traits = getComposerTraitSelection(
+          selectedEngine,
+          selectedModel,
+          promptRef.current,
+          composerModelOptions?.[selectedEngine],
+          selectedRuntimeModel,
+        );
+        const starred = resolveCycledStarredModel({
+          models: readStoredStarredModels().filter((entry) =>
+            canRestoreStarredComposerTraits(
+              entry,
+              resolveRuntimeModelDescriptor({
+                engine: entry.engine,
+                model: entry.model as ModelSlug,
+                runtimeModels: runtimeModelsByEngine[entry.engine],
+              }),
+            ),
+          ),
+          current: {
+            engine: selectedEngine,
+            model: selectedModel ?? "",
+            effort: traits.ultrathinkPromptControlled ? "ultrathink" : traits.effort,
+            fastMode: traits.fastModeEnabled,
+            thinking: traits.thinkingEnabled,
+          },
+          availableModels: engineOptions.map((option) => option.slug),
+          direction,
+        });
+        if (starred) {
+          void onEngineModelSelect(selectedEngine, starred.model as ModelSlug, starred);
+          return;
+        }
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
           options: engineOptions,
-          favoriteSlugs: selectedEngine ? readStarredModelSlugs(selectedEngine) : [],
+          favoriteSlugs: [],
           direction,
         });
         if (!nextSlug) return;
@@ -6797,6 +6860,9 @@ export default function ChatView({
     selectedEngine,
     selectedModel,
     modelOptionsByEngine,
+    selectableModelOptionsByEngine,
+    composerModelOptions,
+    selectedRuntimeModel,
     onEngineModelSelect,
     copyThreadIdToClipboard,
   ]);
@@ -9937,6 +10003,16 @@ export default function ChatView({
         prompt={prompt}
         onPromptChange={setPromptFromTraits}
         onEngineModelChange={onEngineModelSelect}
+        isStarredAvailable={(entry) =>
+          canRestoreStarredComposerTraits(
+            entry,
+            resolveRuntimeModelDescriptor({
+              engine: entry.engine,
+              model: entry.model as ModelSlug,
+              runtimeModels: runtimeModelsByEngine[entry.engine],
+            }),
+          )
+        }
         onRefreshModels={refreshSelectedEngineModels}
         onOpenSettings={openSelectedEngineSettings}
         onSelectionCommitted={scheduleComposerFocus}

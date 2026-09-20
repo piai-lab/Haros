@@ -11,7 +11,6 @@ import {
   buildEngineOptionPatch,
   formatEngineModelOptionName,
   groupEngineModelOptions,
-  groupEngineModelOptionsWithFavorites,
   mergeDynamicModelOptions,
   engineModelCostMultiplierLabel,
   engineModelOptionProvenanceLabel,
@@ -430,37 +429,6 @@ describe("groupEngineModelOptions", () => {
     expect(groupedOptions.map((group) => group.label)).toEqual([
       "Team Gateway · Gateway",
       "Team Gateway · gateway",
-    ]);
-  });
-});
-
-describe("groupEngineModelOptionsWithFavorites", () => {
-  it("adds a favourites group ahead of the normal engine groups", () => {
-    const options = [
-      {
-        slug: "anthropic/claude-sonnet",
-        name: "Claude Sonnet",
-        upstreamProviderId: "anthropic",
-        upstreamProviderName: "Anthropic",
-      },
-      {
-        slug: "openai/gpt-5",
-        name: "GPT-5",
-        upstreamProviderId: "openai",
-        upstreamProviderName: "OpenAI",
-      },
-    ] satisfies EngineModelOption[];
-
-    const groupedOptions = groupEngineModelOptionsWithFavorites({
-      options,
-      favoriteSlugs: new Set(["openai/gpt-5"]),
-    });
-
-    expect(groupedOptions.map((group) => group.label)).toEqual(["Favourites", "Anthropic"]);
-    expect(groupedOptions[0]?.options.map((option) => option.slug)).toEqual(["openai/gpt-5"]);
-    expect(groupedOptions.flatMap((group) => group.options.map((option) => option.slug))).toEqual([
-      "openai/gpt-5",
-      "anthropic/claude-sonnet",
     ]);
   });
 });

@@ -1,8 +1,5 @@
-import { useState } from "react";
-
 import {
   normalizeStarredModels,
-  seedStarredModelsFromLegacyFavorites,
   STARRED_MODELS_STORAGE_KEY,
   type StarredModel,
   StarredModelsSchema,
@@ -14,12 +11,7 @@ export function useStarredModels(): {
   starredModels: ReadonlyArray<StarredModel>;
   toggleStarredModel: (entry: StarredModel) => void;
 } {
-  const [legacySeed] = useState(seedStarredModelsFromLegacyFavorites);
-  const [stored, setStored] = useLocalStorage(
-    STARRED_MODELS_STORAGE_KEY,
-    legacySeed,
-    StarredModelsSchema,
-  );
+  const [stored, setStored] = useLocalStorage(STARRED_MODELS_STORAGE_KEY, [], StarredModelsSchema);
   return {
     starredModels: normalizeStarredModels(stored),
     toggleStarredModel: (entry) => setStored((current) => toggleStarredModel(current, entry)),

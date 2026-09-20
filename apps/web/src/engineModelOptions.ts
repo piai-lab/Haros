@@ -334,33 +334,6 @@ export function groupEngineModelOptions(
   );
 }
 
-export function groupEngineModelOptionsWithFavorites(input: {
-  options: ReadonlyArray<EngineModelOption>;
-  favoriteSlugs: ReadonlySet<string>;
-  favoriteLabel?: string;
-}): EngineModelOptionGroup[] {
-  if (input.favoriteSlugs.size === 0) {
-    return groupEngineModelOptions(input.options);
-  }
-
-  const favoriteOptions = input.options.filter((option) => input.favoriteSlugs.has(option.slug));
-  if (favoriteOptions.length === 0) {
-    return groupEngineModelOptions(input.options);
-  }
-  const groupedOptions = groupEngineModelOptions(
-    input.options.filter((option) => !input.favoriteSlugs.has(option.slug)),
-  );
-
-  return [
-    {
-      key: "__favorites__",
-      label: input.favoriteLabel ?? "Favourites",
-      options: favoriteOptions,
-    },
-    ...groupedOptions,
-  ];
-}
-
 /** Long grouped model lists collapse engine sections to keep submenus scannable. */
 export const COLLAPSIBLE_MODEL_GROUP_THRESHOLD = 3;
 

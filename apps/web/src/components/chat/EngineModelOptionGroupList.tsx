@@ -39,8 +39,11 @@ type EngineModelOptionGroupListProps = {
   onAfterSelection?: () => void;
 };
 
-function EngineModelRadioItem(
+export function EngineModelRadioItem(
   props: Readonly<{
+    value?: string;
+    detail?: string;
+    disabled?: boolean;
     engine: EngineKind;
     modelOption: EngineModelOption;
     isFavorite: boolean;
@@ -50,14 +53,8 @@ function EngineModelRadioItem(
   }>,
 ) {
   const { t } = useI18n();
-  const {
-    engine,
-    modelOption,
-    isFavorite,
-    showProvenance,
-    onToggleFavorite,
-    onAfterSelection,
-  } = props;
+  const { engine, modelOption, isFavorite, showProvenance, onToggleFavorite, onAfterSelection } =
+    props;
   const costMultiplierLabel =
     engine === "droid" ? engineModelCostMultiplierLabel(modelOption.description) : null;
   const provenanceLabel = showProvenance
@@ -69,23 +66,29 @@ function EngineModelRadioItem(
       ? `${modelOption.name} ${modelOption.description}`
       : modelOption.name;
 
+  const favoriteLabel = props.detail
+    ? `${accessibleModelName} · ${props.detail}`
+    : accessibleModelName;
+
   return (
     <MenuRadioItem
       key={`${engine}:${modelOption.slug}`}
-      value={modelOption.slug}
-      aria-label={accessibleModelName}
-      title={modelOption.name}
+      value={props.value ?? modelOption.slug}
+      disabled={props.disabled ?? false}
+      aria-label={props.detail ? `${accessibleModelName} · ${props.detail}` : accessibleModelName}
+      title={props.detail ? `${modelOption.name} · ${props.detail}` : modelOption.name}
       preserveChildLayout
       trailing={
         <button
           type="button"
+          aria-disabled={false}
           aria-label={
             isFavorite
-              ? t("composer.removeFavorite", { model: accessibleModelName })
+              ? t("composer.removeFavorite", { model: favoriteLabel })
               : t("composer.addFavorite", { model: accessibleModelName })
           }
           className={cn(
-            "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
+            "pointer-events-auto inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
             COMPOSER_PICKER_RADIUS_CLASS_NAME,
             isFavorite && "text-amber-400 hover:text-amber-300",
           )}
@@ -122,6 +125,9 @@ function EngineModelRadioItem(
         />
         <span className="flex min-w-0 flex-col">
           <span className="block min-w-0 truncate">{modelOption.name}</span>
+          {props.detail ? (
+            <span className="block truncate text-[10px] text-muted-foreground">{props.detail}</span>
+          ) : null}
           {provenanceLabel ? (
             <span
               aria-hidden="true"

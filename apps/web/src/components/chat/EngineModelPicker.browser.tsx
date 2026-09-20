@@ -229,7 +229,7 @@ describe("EngineModelPicker", () => {
       engine: "codex",
       model: "" as ModelSlug,
       lockedEngine: "pi",
-      catalogStateByEngine: { codex: "checking" },
+      catalogStateByEngine: { codex: "empty", pi: "checking" },
     });
 
     try {
@@ -625,14 +625,14 @@ describe("EngineModelPicker", () => {
       await expect
         .element(
           page.getByRole("button", {
-            name: "Remove DeepSeek V4 Flash — DeepSeek from favourites",
+            name: /^Remove DeepSeek V4 Flash — DeepSeek .* from favourites$/,
           }),
         )
         .toBeInTheDocument();
       await expect
         .element(
           page.getByRole("button", {
-            name: "Remove DeepSeek V4 Flash — OpenCode Go from favourites",
+            name: /^Remove DeepSeek V4 Flash — OpenCode Go .* from favourites$/,
           }),
         )
         .toBeInTheDocument();
@@ -640,7 +640,10 @@ describe("EngineModelPicker", () => {
         Array.from(document.querySelectorAll('[role="menuitemradio"]')).map(
           (element) => element.textContent,
         ),
-      ).toEqual(["DeepSeek V4 FlashDeepSeek", "DeepSeek V4 FlashOpenCode Go"]);
+      ).toEqual([
+        expect.stringMatching(/^DeepSeek V4 Flash.*DeepSeek$/),
+        expect.stringMatching(/^DeepSeek V4 Flash.*OpenCode Go$/),
+      ]);
       const modelIcons = Array.from(
         document.querySelectorAll<HTMLElement>(
           '[role="menuitemradio"] [data-model-service-icon-level="model"]',
@@ -937,4 +940,98 @@ describe("EngineModelPicker", () => {
       await mounted.cleanup();
     }
   });
+});
+
+describe("exact favourite combinations", () => {
+  it("keeps two efforts on one model and dispatches the selected combination", async () => {
+    const low = {
+      engine: "codex",
+      model: "gpt-5.3-codex",
+      effort: "low",
+      fastMode: null,
+      thinking: null,
+    };
+    const high = { ...low, effort: "high" };
+    localStorage.setItem(STARRED_MODELS_STORAGE_KEY, JSON.stringify([low, high]));
+    const mounted = await mountPicker({
+      engine: "codex",
+      model: "gpt-5-codex" as ModelSlug,
+      lockedEngine: "codex",
+    });
+    try {
+      await page.getByRole("button").click();
+      await expect
+        .element(page.getByRole("menuitemradio", { name: /GPT-5.3 Codex.*Effort: low/ }))
+        .toBeVisible();
+      await page.getByRole("menuitemradio", { name: /GPT-5.3 Codex.*Effort: high/ }).click();
+      expect(mounted.onEngineModelChange).toHaveBeenCalledExactlyOnceWith(
+        "codex",
+        "gpt-5.3-codex",
+        high,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+  it("disables removed settings while preserving ordinary model selection", async () => {
+    localStorage.setItem(
+      STARRED_MODELS_STORAGE_KEY,
+      JSON.stringify([
+        {
+          engine: "codex",
+          model: "gpt-5.3-codex",
+          effort: "removed",
+          fastMode: null,
+          thinking: null,
+        },
+      ]),
+    );
+    const mounted = await mountPicker({
+      engine: "codex",
+      model: "gpt-5-codex" as ModelSlug,
+      lockedEngine: "codex",
+    });
+    try {
+      await page.getByRole("button").click();
+      await expect
+        .element(
+          page.getByRole("menuitemradio", { name: /Saved model or settings are unavailable/ }),
+        )
+        .toHaveAttribute("aria-disabled", "true");
+      await page.getByRole("menuitemradio", { name: "GPT-5.3 Codex", exact: true }).click();
+      expect(mounted.onEngineModelChange).toHaveBeenCalledExactlyOnceWith("codex", "gpt-5.3-codex");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+it("removes only the chosen tuple, including an unavailable combination", async () => {
+  const low = {
+    engine: "codex",
+    model: "gpt-5.3-codex",
+    effort: "low",
+    fastMode: null,
+    thinking: null,
+  };
+  const stale = { ...low, effort: "removed" };
+  localStorage.setItem(STARRED_MODELS_STORAGE_KEY, JSON.stringify([low, stale]));
+  const mounted = await mountPicker({
+    engine: "codex",
+    model: "gpt-5-codex" as ModelSlug,
+    lockedEngine: "codex",
+  });
+  try {
+    await page.getByRole("button").click();
+    await page.getByRole("button", { name: /Remove.*Effort: removed.*favourites/ }).click();
+    await vi.waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(STARRED_MODELS_STORAGE_KEY)!)).toEqual([low]),
+    );
+    expect(mounted.onEngineModelChange).not.toHaveBeenCalled();
+    await expect
+      .element(page.getByRole("menuitemradio", { name: /GPT-5.3 Codex.*Effort: low/ }))
+      .toBeVisible();
+  } finally {
+    await mounted.cleanup();
+  }
 });

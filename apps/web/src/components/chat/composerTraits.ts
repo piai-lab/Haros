@@ -18,6 +18,7 @@ import {
 
 import { buildEngineOptionPatch, type EngineOptions } from "../../engineModelOptions";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
+import type { StarredModel } from "../../lib/starredModels";
 
 const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
@@ -287,6 +288,64 @@ export function planComposerEffortChange(input: {
   }
   const optionId = selection.primarySelectDescriptor?.id ?? fallbackEffortOptionId(engine);
   return { kind: "options", patch: buildEngineOptionPatch(engine, optionId, nextOption.value) };
+}
+
+export function canRestoreStarredComposerTraits(
+  entry: StarredModel,
+  runtimeModel?: EngineModelDescriptor,
+): boolean {
+  const selection = getComposerTraitSelection(
+    entry.engine,
+    entry.model,
+    "",
+    undefined,
+    runtimeModel,
+  );
+  return (
+    (entry.effort === null ||
+      selection.effortLevels.some((option) => option.value === entry.effort)) &&
+    (entry.fastMode === null || Boolean(selection.fastModeDescriptor)) &&
+    (entry.thinking === null || Boolean(selection.thinkingDescriptor))
+  );
+}
+
+export function restoreStarredComposerTraits(input: {
+  entry: StarredModel;
+  prompt: string;
+  options: EngineOptions | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
+}): { prompt: string; options: EngineOptions } {
+  const { entry } = input;
+  const selection = getComposerTraitSelection(
+    entry.engine,
+    entry.model,
+    input.prompt,
+    input.options,
+    input.runtimeModel,
+  );
+  let prompt = input.prompt;
+  const options: Record<string, unknown> = { ...input.options };
+  if (entry.effort !== null) {
+    const plan = planComposerEffortChange({
+      engine: entry.engine,
+      selection,
+      prompt,
+      value: entry.effort,
+    });
+    if (plan?.kind === "prompt") prompt = plan.prompt;
+    if (plan?.kind === "options") Object.assign(options, plan.patch);
+  }
+  if (entry.fastMode !== null && selection.fastModeDescriptor)
+    Object.assign(
+      options,
+      buildEngineOptionPatch(entry.engine, selection.fastModeDescriptor.id, entry.fastMode),
+    );
+  if (entry.thinking !== null && selection.thinkingDescriptor)
+    Object.assign(
+      options,
+      buildEngineOptionPatch(entry.engine, selection.thinkingDescriptor.id, entry.thinking),
+    );
+  return { prompt, options: options as EngineOptions };
 }
 
 export function resolveComposerEffortLadderIndex(

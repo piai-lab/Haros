@@ -4,9 +4,36 @@ import {
   getComposerTraitSelection,
   planComposerEffortChange,
   resolveComposerEffortLadderIndex,
+  restoreStarredComposerTraits,
 } from "./composerTraits";
 
 describe("planComposerEffortChange", () => {
+  it("restores saved effort without discarding other model options", () => {
+    const result = restoreStarredComposerTraits({
+      entry: { engine: "codex", model: "gpt-5.5", effort: "high", fastMode: null, thinking: null },
+      prompt: "Keep this draft",
+      options: { reasoningEffort: "low", fastMode: true },
+    });
+    expect(result).toEqual({
+      prompt: "Keep this draft",
+      options: { reasoningEffort: "high", fastMode: true },
+    });
+  });
+
+  it("ignores saved options no longer offered by the model", () => {
+    const result = restoreStarredComposerTraits({
+      entry: {
+        engine: "codex",
+        model: "gpt-5.5",
+        effort: "removed-effort",
+        fastMode: null,
+        thinking: null,
+      },
+      prompt: "Keep this draft",
+      options: { reasoningEffort: "low" },
+    });
+    expect(result.options).toEqual({ reasoningEffort: "low" });
+  });
   it("patches the engine's effort option for plain ladder levels", () => {
     const selection = getComposerTraitSelection("codex", "gpt-5.5", "", {
       reasoningEffort: "medium",

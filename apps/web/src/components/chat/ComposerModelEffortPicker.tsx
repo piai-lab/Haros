@@ -1,3 +1,4 @@
+import type { StarredModel } from "../../lib/starredModels";
 // FILE: ComposerModelEffortPicker.tsx
 // Purpose: Current-Engine model and native-options picker for the chat Composer.
 // Layer: Chat composer presentation
@@ -44,7 +45,8 @@ type ComposerModelEffortPickerProps = {
   hideModelLabel?: boolean;
   hideStatusLabel?: boolean;
   disabled?: boolean;
-  onEngineModelChange: (engine: EngineKind, model: ModelSlug) => void;
+  onEngineModelChange: (engine: EngineKind, model: ModelSlug, starred?: StarredModel) => void;
+  isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   onRefreshModels: () => void;
   onOpenSettings: () => void;
   onSelectionCommitted?: () => void;
@@ -117,7 +119,9 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     : null;
   const starredTraitProps = liveStarredTraits
     ? {
-        starredEffort: liveStarredTraits.effort,
+        starredEffort: liveStarredTraits.ultrathinkPromptControlled
+          ? "ultrathink"
+          : liveStarredTraits.effort,
         starredFastMode: liveStarredTraits.fastModeEnabled,
         starredThinking: liveStarredTraits.thinkingEnabled,
       }
@@ -322,6 +326,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                           : {})}
                         {...starredTraitProps}
                         onEngineModelChange={props.onEngineModelChange}
+                        isStarredAvailable={props.isStarredAvailable}
                         onAfterSelection={closeAndRefocus}
                       />
                     </ComposerPickerMenuSubPopup>
@@ -338,6 +343,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     : {})}
                   {...starredTraitProps}
                   onEngineModelChange={props.onEngineModelChange}
+                  isStarredAvailable={props.isStarredAvailable}
                   onAfterSelection={closeAndRefocus}
                 />
               )
@@ -354,6 +360,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
               : {})}
             {...starredTraitProps}
             onEngineModelChange={props.onEngineModelChange}
+            isStarredAvailable={props.isStarredAvailable}
             onAfterSelection={closeAndRefocus}
           />
         ) : (

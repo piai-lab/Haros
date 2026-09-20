@@ -13,14 +13,23 @@ import {
   deriveEnginePickerAvailability,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
-import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
+import {
+  Menu,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuItem,
+  MenuRadioGroup,
+  MenuSub,
+  MenuSubTrigger,
+  MenuTrigger,
+} from "../ui/menu";
 import { BrainIcon } from "~/lib/icons";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";
 import { EngineIcon } from "../EngineIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
-import { EngineModelOptionGroupList } from "./EngineModelOptionGroupList";
+import { EngineModelOptionGroupList, EngineModelRadioItem } from "./EngineModelOptionGroupList";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import {
   COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME,
@@ -31,12 +40,17 @@ import { ShortcutKbd } from "../ui/shortcut-kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
   groupEngineModelOptions,
-  groupEngineModelOptionsWithFavorites,
   shouldUseCollapsibleModelGroups,
   type EngineModelOption,
 } from "../../engineModelOptions";
 import { useStarredModels } from "../../hooks/useStarredModels";
-import { resolveStarredToggleEntry, starredModelSlugsForEngine } from "../../lib/starredModels";
+import {
+  isModelStarred,
+  buildStarredModelEntry,
+  starredModelKey,
+  type StarredModel,
+} from "../../lib/starredModels";
+import { canRestoreStarredComposerTraits } from "./composerTraits";
 import { Skeleton } from "../ui/skeleton";
 import { useI18n } from "~/i18n";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
@@ -106,7 +120,8 @@ type EngineModelMenuItemsProps = {
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
-  onEngineModelChange: (engine: EngineKind, model: ModelSlug) => void;
+  onEngineModelChange: (engine: EngineKind, model: ModelSlug, starred?: StarredModel) => void;
+  isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   /** Reports an explicitly opened engine submenu before model selection. */
   onEngineBrowse?: (engine: EngineKind) => void;
   // Invoked after a model selection commits so callers can close ancestor
@@ -146,25 +161,27 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   const handleModelChange = (engine: EngineKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
+    const starred = starredModels.find((entry) => `starred:${starredModelKey(entry)}` === value);
+    if (starred && !(props.isStarredAvailable ?? canRestoreStarredComposerTraits)(starred)) return;
     const resolvedModel = resolveSelectableModel(
       engine,
-      value,
+      starred?.model ?? value,
       props.modelOptionsByEngine[engine] ?? [],
     );
     if (!resolvedModel) return;
-    props.onEngineModelChange(engine, resolvedModel);
+    if (starred) props.onEngineModelChange(engine, resolvedModel, starred);
+    else props.onEngineModelChange(engine, resolvedModel);
     onAfterSelection?.();
   };
   const toggleFavoriteModel = (engine: EngineKind, slug: string) => {
+    const live = engine === activeEngine && slug === props.model;
     toggleStarredModel(
-      resolveStarredToggleEntry({
-        models: starredModels,
+      buildStarredModelEntry({
         engine,
         model: slug,
-        live: engine === activeEngine && slug === (props.model ?? ""),
-        effort: props.starredEffort ?? null,
-        fastMode: props.starredFastMode ?? null,
-        thinking: props.starredThinking ?? null,
+        effort: live ? (props.starredEffort ?? null) : null,
+        fastMode: live ? (props.starredFastMode ?? null) : null,
+        thinking: live ? (props.starredThinking ?? null) : null,
       }),
     );
   };
@@ -194,28 +211,112 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             buildModelSearchText(option).includes(normalizedModelSearchQuery),
           )
         : engineOptions;
-    const favoriteModelSlugSet = new Set(starredModelSlugsForEngine(starredModels, engine));
-    const groupedOptions =
-      favoriteModelSlugSet.size > 0
-        ? groupEngineModelOptionsWithFavorites({
-            options: filteredOptions,
-            favoriteSlugs: favoriteModelSlugSet,
-            favoriteLabel: t("composer.favorites"),
-          })
-        : groupEngineModelOptions(filteredOptions);
+    const favorites = starredModels.filter(
+      (entry) =>
+        entry.engine === engine &&
+        (!normalizedModelSearchQuery ||
+          `${entry.model} ${entry.effort ?? ""}`
+            .toLowerCase()
+            .includes(normalizedModelSearchQuery) ||
+          filteredOptions.some((option) => option.slug === entry.model)),
+    );
+    const activeComboSlugs = new Set(
+      engineOptions
+        .filter((option) =>
+          isModelStarred(starredModels, engine, option.slug, {
+            effort:
+              engine === activeEngine && option.slug === props.model
+                ? (props.starredEffort ?? null)
+                : null,
+            fastMode:
+              engine === activeEngine && option.slug === props.model
+                ? (props.starredFastMode ?? null)
+                : null,
+            thinking:
+              engine === activeEngine && option.slug === props.model
+                ? (props.starredThinking ?? null)
+                : null,
+          }),
+        )
+        .map((option) => option.slug),
+    );
+    const groupedOptions = groupEngineModelOptions(
+      filteredOptions.filter(
+        (option) =>
+          !favorites.some(
+            (entry) =>
+              entry.model === option.slug &&
+              entry.effort === null &&
+              entry.fastMode === null &&
+              entry.thinking === null,
+          ),
+      ),
+    );
+    const selectedFavorite = favorites.find(
+      (entry) =>
+        entry.model === props.model &&
+        entry.effort === (props.starredEffort ?? null) &&
+        entry.fastMode === (props.starredFastMode ?? null) &&
+        entry.thinking === (props.starredThinking ?? null),
+    );
 
     const content =
-      groupedOptions.length > 0 ? (
+      groupedOptions.length > 0 || favorites.length > 0 ? (
         <MenuRadioGroup
-          value={activeEngine === engine ? (props.model ?? "") : ""}
+          value={
+            activeEngine === engine
+              ? selectedFavorite
+                ? `starred:${starredModelKey(selectedFavorite)}`
+                : (props.model ?? "")
+              : ""
+          }
           onValueChange={(value) => handleModelChange(engine, value)}
         >
+          {favorites.length > 0 ? (
+            <MenuGroup>
+              <MenuGroupLabel>{t("composer.favorites")}</MenuGroupLabel>
+              {favorites.map((entry) => {
+                const option = engineOptions.find((candidate) => candidate.slug === entry.model);
+                const available =
+                  Boolean(resolveSelectableModel(engine, entry.model, engineOptions)) &&
+                  (props.isStarredAvailable ?? canRestoreStarredComposerTraits)(entry);
+                const unchanged = t("composer.favoriteUnchanged");
+                const detail =
+                  [
+                    `${t("composer.effort")}: ${entry.effort ?? unchanged}`,
+                    entry.fastMode === null
+                      ? `${t("composer.fast")}: ${unchanged}`
+                      : entry.fastMode
+                        ? t("composer.fastModeOn")
+                        : t("composer.fastModeOff"),
+                    entry.thinking === null
+                      ? `${t("composer.thinking")}: ${unchanged}`
+                      : entry.thinking
+                        ? t("composer.thinkingOn")
+                        : t("composer.thinkingOff"),
+                  ].join(" · ") + (available ? "" : ` · ${t("composer.favoriteUnavailable")}`);
+                return (
+                  <EngineModelRadioItem
+                    key={starredModelKey(entry)}
+                    value={`starred:${starredModelKey(entry)}`}
+                    engine={engine}
+                    modelOption={option ?? { slug: entry.model, name: entry.model }}
+                    detail={detail}
+                    disabled={!available}
+                    isFavorite
+                    showProvenance
+                    onToggleFavorite={() => toggleStarredModel(entry)}
+                  />
+                );
+              })}
+            </MenuGroup>
+          ) : null}
           <EngineModelOptionGroupList
             groupedOptions={groupedOptions}
             engine={engine}
             activeModel={props.model ?? ""}
             isSearching={normalizedModelSearchQuery.length > 0}
-            favoriteModelSlugSet={favoriteModelSlugSet}
+            favoriteModelSlugSet={activeComboSlugs}
             onToggleFavorite={toggleFavoriteModel}
             {...(onAfterSelection ? { onAfterSelection } : {})}
           />
@@ -379,7 +480,8 @@ type EngineModelPickerProps = {
   onOpenChange?: (open: boolean) => void;
   onSelectionCommitted?: () => void;
   shortcutLabel?: string | null;
-  onEngineModelChange: (engine: EngineKind, model: ModelSlug) => void;
+  onEngineModelChange: (engine: EngineKind, model: ModelSlug, starred?: StarredModel) => void;
+  isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   onEngineBrowse?: (engine: EngineKind) => void;
   starredEffort?: string | null;
   starredFastMode?: boolean | null;
@@ -511,9 +613,14 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
           {...(props.engineOrder ? { engineOrder: props.engineOrder } : {})}
           {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
           {...(props.starredEffort !== undefined ? { starredEffort: props.starredEffort } : {})}
-          {...(props.starredFastMode !== undefined ? { starredFastMode: props.starredFastMode } : {})}
-          {...(props.starredThinking !== undefined ? { starredThinking: props.starredThinking } : {})}
+          {...(props.starredFastMode !== undefined
+            ? { starredFastMode: props.starredFastMode }
+            : {})}
+          {...(props.starredThinking !== undefined
+            ? { starredThinking: props.starredThinking }
+            : {})}
           onEngineModelChange={props.onEngineModelChange}
+          isStarredAvailable={props.isStarredAvailable}
           {...(props.onEngineBrowse ? { onEngineBrowse: props.onEngineBrowse } : {})}
           onAfterSelection={handleAfterSelection}
         />

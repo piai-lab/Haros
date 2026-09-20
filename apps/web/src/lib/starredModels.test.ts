@@ -4,13 +4,43 @@ import {
   buildStarredModelEntry,
   isModelStarred,
   normalizeStarredModels,
-  resolveStarredToggleEntry,
-  starredModelSlugsForEngine,
-  starredTraitsForModel,
+  resolveCycledStarredModel,
   toggleStarredModel,
 } from "./starredModels";
 
 describe("starredModels", () => {
+  it("cycles both directions between efforts on the same model and skips unavailable models", () => {
+    const low = buildStarredModelEntry({ engine: "codex", model: "gpt-5.5", effort: "low" });
+    const high = { ...low, effort: "high" };
+    const models = [low, { ...low, model: "removed-model" }, high];
+    expect(
+      resolveCycledStarredModel({
+        models,
+        current: low,
+        availableModels: [low.model],
+        direction: "next",
+      }),
+    ).toEqual(high);
+    expect(
+      resolveCycledStarredModel({
+        models,
+        current: low,
+        availableModels: [low.model],
+        direction: "previous",
+      }),
+    ).toEqual(high);
+    expect(
+      resolveCycledStarredModel({
+        models,
+        current: high,
+        availableModels: [low.model],
+        direction: "next",
+      }),
+    ).toEqual(low);
+    expect(
+      resolveCycledStarredModel({ models, current: low, availableModels: [], direction: "next" }),
+    ).toBeNull();
+  });
   it("toggles a combo without duplicating it", () => {
     const entry = {
       engine: "codex" as const,
@@ -24,25 +54,27 @@ describe("starredModels", () => {
     expect(toggleStarredModel(added, entry)).toEqual([]);
   });
 
-  it("keeps slug cycling unique per engine", () => {
+  it("matches exact combinations without discarding explicit false values", () => {
     const models = normalizeStarredModels([
       { engine: "codex", model: "gpt-5.4", effort: "high", fastMode: null, thinking: null },
       { engine: "codex", model: "gpt-5.4", effort: "low", fastMode: null, thinking: null },
       { engine: "claude", model: "claude-opus-4-6", effort: null, fastMode: null, thinking: null },
     ]);
-    expect(starredModelSlugsForEngine(models, "codex")).toEqual(["gpt-5.4"]);
     expect(isModelStarred(models, "claude", "claude-opus-4-6")).toBe(true);
-    expect(isModelStarred(models, "codex", "gpt-5.4", { effort: "high", fastMode: null, thinking: null })).toBe(
-      true,
-    );
-    expect(isModelStarred(models, "codex", "gpt-5.4", { effort: "medium", fastMode: null, thinking: null })).toBe(
-      false,
-    );
-    expect(starredTraitsForModel(models, "codex", "gpt-5.4")).toEqual({
-      effort: "high",
-      fastMode: null,
-      thinking: null,
-    });
+    expect(
+      isModelStarred(models, "codex", "gpt-5.4", {
+        effort: "high",
+        fastMode: null,
+        thinking: null,
+      }),
+    ).toBe(true);
+    expect(
+      isModelStarred(models, "codex", "gpt-5.4", {
+        effort: "medium",
+        fastMode: null,
+        thinking: null,
+      }),
+    ).toBe(false);
     expect(
       buildStarredModelEntry({
         engine: "claude",
@@ -57,37 +89,6 @@ describe("starredModels", () => {
       effort: "high",
       fastMode: false,
       thinking: true,
-    });
-    expect(
-      resolveStarredToggleEntry({
-        models,
-        engine: "codex",
-        model: "gpt-5.4",
-        live: true,
-        effort: "xhigh",
-        fastMode: true,
-        thinking: null,
-      }),
-    ).toEqual({
-      engine: "codex",
-      model: "gpt-5.4",
-      effort: "xhigh",
-      fastMode: true,
-      thinking: null,
-    });
-    expect(
-      resolveStarredToggleEntry({
-        models,
-        engine: "codex",
-        model: "gpt-5.4",
-        live: false,
-      }),
-    ).toEqual({
-      engine: "codex",
-      model: "gpt-5.4",
-      effort: "high",
-      fastMode: null,
-      thinking: null,
     });
   });
 });
