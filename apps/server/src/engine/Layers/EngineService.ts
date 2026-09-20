@@ -28,6 +28,7 @@ import {
   EngineSessionStartInput,
   EngineStopSessionInput,
   EngineStartOptions,
+  DEFAULT_ENGINE_KIND,
   TurnId,
   type EngineRuntimeEvent,
   type EngineSession,
@@ -1973,7 +1974,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         const input = {
           ...parsed,
           threadId,
-          engine: parsed.engine ?? "codex",
+          engine: parsed.engine ?? DEFAULT_ENGINE_KIND,
         };
         yield* validateRuntimeModeStructure(
           "EngineService.startSession",

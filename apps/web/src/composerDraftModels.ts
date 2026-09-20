@@ -5,6 +5,7 @@
 import {
   DEEPSEEK_REASONING_EFFORT_OPTIONS,
   GROK_REASONING_EFFORT_OPTIONS,
+  DEFAULT_ENGINE_KIND,
   ENGINE_KINDS,
   type EngineKind,
   decodePersistedEngineKind,
@@ -805,7 +806,7 @@ export function resolvePreferredComposerEngineSelection(input: {
       input.threadEngineSelection?.engine,
       input.projectEngineSelection?.engine,
       input.defaultEngine,
-    ) ?? "codex";
+    ) ?? DEFAULT_ENGINE_KIND;
 
   return selectionFor(preferredEngine);
 }
@@ -829,6 +830,6 @@ export function resolvePreferredComposerEngine(input: {
       input.threadEngineSelection?.engine,
       input.projectEngineSelection?.engine,
       input.defaultEngine,
-    ) ?? "codex"
+    ) ?? DEFAULT_ENGINE_KIND
   );
 }

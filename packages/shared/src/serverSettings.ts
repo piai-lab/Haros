@@ -1,5 +1,6 @@
 import {
   BUILT_IN_TOOL_SURFACES,
+  DEFAULT_ENGINE_KIND,
   type BuiltInToolGroupOverrides,
   type EngineKind,
   type EngineSelection,
@@ -92,7 +93,9 @@ export function normalizeBuiltInGroupOverrides(
 export function normalizeServerSettings(settings: ServerSettings): ServerSettings {
   return {
     ...settings,
-    defaultEngine: isRunnableEngine(settings.defaultEngine) ? settings.defaultEngine : "codex",
+    defaultEngine: isRunnableEngine(settings.defaultEngine)
+      ? settings.defaultEngine
+      : DEFAULT_ENGINE_KIND,
     agentTools: {
       ...settings.agentTools,
       builtInGroupOverrides: normalizeBuiltInGroupOverrides(

@@ -4,6 +4,7 @@
 // Exports: PluginLibrary
 
 import {
+  DEFAULT_ENGINE_KIND,
   ENGINE_KINDS,
   type ThreadId,
   type EngineKind,
@@ -420,9 +421,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   );
   const contextThread = activeThread ?? sourceThread ?? null;
   const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
-
-  const preferredEngine = contextThread?.engineSelection.engine ?? "codex";
-
+  const preferredEngine = contextThread?.engineSelection.engine ?? DEFAULT_ENGINE_KIND;
   const [selectedEngine, setSelectedEngine] = useState<EngineKind>(preferredEngine);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");

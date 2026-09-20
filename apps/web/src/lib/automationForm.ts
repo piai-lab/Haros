@@ -6,6 +6,8 @@
 import {
   DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS,
   DEFAULT_AUTOMATION_MINIMUM_INTERVAL_SECONDS,
+  DEFAULT_ENGINE_KIND,
+  DEFAULT_MODEL_BY_ENGINE,
 } from "@harnessos/contracts";
 import type {
   AutomationCreateInput,
@@ -46,8 +48,8 @@ import {
 import { resolveModelPresentationIdentity } from "../engineModelOptions";
 
 export const defaultEngineSelection: EngineSelection = {
-  engine: "codex",
-  model: "gpt-5-codex",
+  engine: DEFAULT_ENGINE_KIND,
+  model: DEFAULT_MODEL_BY_ENGINE.pi,
 };
 
 export const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;

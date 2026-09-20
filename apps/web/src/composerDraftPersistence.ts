@@ -11,6 +11,7 @@ import {
   OrchestrationThreadPullRequest,
   ProjectId,
   EngineInteractionMode,
+  DEFAULT_ENGINE_KIND,
   EngineKind,
   EngineMentionReference,
   EngineModelOptions,
@@ -1601,7 +1602,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
     const normalizedStickyEngineSelection = normalizeEngineSelection(
       normalizedPersistedState.stickyEngineSelection,
       {
-        engine: normalizedPersistedState.stickyProvider ?? "codex",
+        engine: normalizedPersistedState.stickyProvider ?? DEFAULT_ENGINE_KIND,
         model: normalizedPersistedState.stickyModel,
         modelOptions: stickyModelOptions,
       },

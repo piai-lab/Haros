@@ -87,17 +87,18 @@ describe("applyServerSettingsPatch", () => {
     ).toBeNull();
   });
 
-  it("refuses a engine-only switch to a runtime-catalog-only engine", () => {
+  it("fills the default DeepSeek model when switching Git writing onto Pi without an explicit slug", () => {
     const patch = {
       textGenerationEngineSelection: { engine: "pi" as const },
     };
 
-    expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toContain(
-      "requires an explicit model",
-    );
+    expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toBeNull();
     expect(
       applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationEngineSelection,
-    ).toEqual(DEFAULT_SERVER_SETTINGS.textGenerationEngineSelection);
+    ).toEqual({
+      engine: "pi",
+      model: "deepseek/deepseek-v4-flash",
+    });
   });
 
   it("preserves an explicit runtime-catalog model selection exactly", () => {

@@ -67,7 +67,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
     ).toEqual(cursorSelection);
   });
 
-  it("keeps an unbound Pi intent fail-closed instead of falling back to Codex", () => {
+  it("binds an unbound Pi intent to the default DeepSeek model instead of falling back to Codex", () => {
     expect(
       resolvePreferredComposerEngineSelection({
         draft: {
@@ -78,7 +78,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
         projectEngineSelection: null,
         defaultEngine: "codex",
       }),
-    ).toBeNull();
+    ).toEqual(engineSelection("pi", "deepseek/deepseek-v4-flash"));
   });
 });
 

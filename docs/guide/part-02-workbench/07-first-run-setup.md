@@ -15,8 +15,9 @@ source_anchors:
 # Chapter 7 — First-Run Setup {#chapter-07}
 
 Current source correction: a welcome tour lives in `apps/web/src/onboarding/**`. It can show on a
-fresh install with no ordinary projects, and Settings can replay it. The tour never silently
-selects an Engine or freezes a model. Engine and exact-model readiness still live in Settings, the
+fresh install with no ordinary projects, and Settings can replay it. Fresh installs default to Pi
+with DeepSeek as the model service. The tour never silently freezes a model. Engine and exact-model
+readiness still live in Settings, the
 Composer, and `resolveEngineExecutionCapabilities`. AppSnap welcome remains a separate optional
 overlay, not Engine setup. The older first-run _readiness_ dialog that guessed a default Engine is
 retired; treat those dialog states below as historical edition evidence for readiness layers, not

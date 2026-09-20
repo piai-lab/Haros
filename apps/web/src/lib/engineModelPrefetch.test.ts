@@ -37,7 +37,7 @@ function makeSettings(
   } = {},
 ): EngineModelPrefetchSettings {
   return {
-    defaultEngine: overrides.defaultEngine ?? "codex",
+    defaultEngine: overrides.defaultEngine ?? DEFAULT_SERVER_SETTINGS_VIEW.defaultEngine,
     engines: {
       ...DEFAULT_SERVER_SETTINGS_VIEW.engines,
       claude: {

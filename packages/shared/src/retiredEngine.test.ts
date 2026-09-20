@@ -20,7 +20,7 @@ import {
 } from "./serverSettings";
 
 describe("engine identity", () => {
-  it("exposes ten runnable engines including independent Pi and DeepSeek, and defaults new work to Codex", () => {
+  it("exposes ten runnable engines including independent Pi and DeepSeek, and defaults new work to Pi", () => {
     expect(RUNNABLE_ENGINE_DESCRIPTORS.map((x) => x.kind)).toEqual([
       "codex",
       "claude",
@@ -37,8 +37,10 @@ describe("engine identity", () => {
     expect(engineOwnsProviderModelServices("deepseek")).toBe(false);
     expect(engineConsumesHarosModelServiceCredentials("deepseek")).toBe(true);
     expect(engineOpensModelServicesSettings("deepseek")).toBe(true);
-    expect(DEFAULT_ENGINE_KIND).toBe("codex");
-    expect(DEFAULT_SERVER_SETTINGS.defaultEngine).toBe("codex");
+    expect(DEFAULT_ENGINE_KIND).toBe("pi");
+    expect(DEFAULT_SERVER_SETTINGS.defaultEngine).toBe("pi");
+    expect(DEFAULT_SERVER_SETTINGS.modelServices.added).toEqual({ deepseek: true });
+    expect(DEFAULT_SERVER_SETTINGS.textGenerationEngineSelection.engine).toBe("codex");
     expect(firstRunnableEngine("codex")).toBe("codex");
     expect(firstRunnableEngine(null, "claude")).toBe("claude");
     expect(firstRunnableEngine()).toBeNull();

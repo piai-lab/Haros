@@ -142,9 +142,14 @@ describe("resolveModelSlug", () => {
 
   it("requires an explicit Engine for defaults and model options", () => {
     expect(getDefaultModel("codex")).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
-    expect(getDefaultModel("pi")).toBeNull();
+    expect(getDefaultModel("pi")).toBe(DEFAULT_MODEL_BY_ENGINE.pi);
     expect(getModelOptions("codex")).toEqual(MODEL_OPTIONS_BY_ENGINE.codex);
     expect(getModelOptions("claude")).toEqual(MODEL_OPTIONS_BY_ENGINE.claude);
+  });
+
+  it("keeps Pi live catalog slugs instead of coercing them onto an empty built-in list", () => {
+    expect(resolveModelSlug("pi", undefined)).toBe(DEFAULT_MODEL_BY_ENGINE.pi);
+    expect(resolveModelSlug("pi", "openai/gpt-5")).toBe("openai/gpt-5");
   });
 });
 

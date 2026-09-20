@@ -42,6 +42,8 @@ describe("ServerSettingsService", () => {
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
     expect(settings.agentTools.builtInGroupOverrides).toEqual({});
+    expect(settings.defaultEngine).toBe("pi");
+    expect(settings.modelServices.added).toEqual({ deepseek: true });
     expect(result.settingsFileExists).toBe(false);
   });
 
@@ -393,28 +395,28 @@ describe("ServerSettingsService", () => {
     expect(result.persisted).toMatchObject({ revision: 11, migrationVersion: 1 });
   });
 
-  it("rejects engine-only runtime-catalog switches before persistence", async () => {
+  it("fills the default DeepSeek model when switching Git writing onto Pi without an explicit slug", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
         yield* service.start;
-        const updateExit = yield* Effect.exit(
-          service.updateSettings({
-            textGenerationEngineSelection: { engine: "pi" },
-          }),
-        );
+        const settings = yield* service.updateSettings({
+          textGenerationEngineSelection: { engine: "pi" },
+        });
         return {
-          updateExit,
+          settings,
           snapshot: yield* service.getSnapshot,
         };
       }),
     );
 
-    expect(result.updateExit._tag).toBe("Failure");
-    expect(result.snapshot.revision).toBe(0);
+    expect(result.settings.textGenerationEngineSelection).toEqual({
+      engine: "pi",
+      model: "deepseek/deepseek-v4-flash",
+    });
     expect(result.snapshot.settings.textGenerationEngineSelection).toEqual({
-      engine: "codex",
-      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+      engine: "pi",
+      model: "deepseek/deepseek-v4-flash",
     });
   });
 
@@ -648,7 +650,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultEngine).toBe("codex");
+    expect(result.reset.defaultEngine).toBe("pi");
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);

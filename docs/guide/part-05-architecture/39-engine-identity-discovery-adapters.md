@@ -75,8 +75,8 @@ admitted model for this Turn. A Provider can supply models inside an Engine with
 complete agent runtime. Clear wording matters because fallback or UI behavior based on the wrong
 fact can silently change execution.
 
-Haros's built-in default Engine is selected for a fresh setup through the canonical Engine identity
-contract. Its internal model-service configuration remains inside that Engine domain. The Web
+Haros's built-in default Engine is Pi. Fresh setup selects it through the canonical Engine identity
+contract, and its default model service is DeepSeek. Its internal model-service configuration remains inside that Engine domain. The Web
 workbench sees a typed, credential-blind projection; it does not become a second model package,
 credential, or catalog owner.
 

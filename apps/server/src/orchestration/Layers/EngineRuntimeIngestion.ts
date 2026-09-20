@@ -15,6 +15,7 @@ import {
   type OrchestrationThreadActivity,
   type OrchestrationThread,
   type OrchestrationThreadShell,
+  DEFAULT_ENGINE_KIND,
   type EngineKind,
   decodePersistedEngineKind,
   type EngineRuntimeEvent,
@@ -3259,7 +3260,7 @@ const make = Effect.gen(function* () {
       const flushEvent: EngineRuntimeEvent = {
         type: "turn.started",
         eventId: event.eventId,
-        engine: (steerEngine ?? "codex") as EngineKind,
+        engine: (steerEngine ?? DEFAULT_ENGINE_KIND) as EngineKind,
         createdAt: event.payload.createdAt,
         threadId: event.payload.threadId,
         turnId: deliveryTurnId,

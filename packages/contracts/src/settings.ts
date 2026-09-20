@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 import { IsoDateTime, TrimmedString } from "./baseSchemas";
+import { DEFAULT_ENGINE_KIND } from "./engineIdentity";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { EngineKind, EngineSelection, ThreadEnvironmentMode } from "./orchestration";
 
@@ -114,13 +115,13 @@ const ModelServiceFlags = Schema.Record(
 );
 export const ModelServicesServerSettings = Schema.Struct({
   autoSync: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
-  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
+  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({ deepseek: true }))),
 });
 export type ModelServicesServerSettings = typeof ModelServicesServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
   modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => DEFAULT_ENGINE_KIND)),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -153,7 +154,7 @@ export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerS
 
 export const ServerSettingsView = Schema.Struct({
   modelServices: ModelServicesServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "codex")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => DEFAULT_ENGINE_KIND)),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),

@@ -1108,6 +1108,7 @@ export const DEFAULT_MODEL_BY_ENGINE = {
   droid: "claude-opus-4-8",
   kilo: "kilo/kilo-auto/free",
   opencode: "openai/gpt-5",
+  pi: "deepseek/deepseek-v4-flash",
   deepseek: "deepseek-v4-flash",
 } as const satisfies Partial<Record<EngineKind, ModelSlug>>;
 export type EngineWithDefaultModel = keyof typeof DEFAULT_MODEL_BY_ENGINE;

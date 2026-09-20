@@ -103,6 +103,10 @@ Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching 
 local setup. The local app is not Developer ID signed or notarized and is not an official release.
 The local build does not publish artifacts or create updater metadata.
 
+Fresh installs default to Pi with DeepSeek as the model service. Configure the selected Engine in
+Settings before sending. Settings → Model services configures credentials and custom models for the
+independent Pi Engine; other Engines retain their native configuration.
+
 ## Go deeper
 
 - Start with the [Haros Guidebook](docs/guide/README.md) for the complete, junior-friendly tour.

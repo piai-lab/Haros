@@ -65,7 +65,6 @@ function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
   return Object.prototype.hasOwnProperty.call(DEFAULT_MODEL_BY_ENGINE, engine);
 }
 
-export function getDefaultModel(engine: "pi"): null;
 export function getDefaultModel(engine: EngineWithDefaultModel): ModelSlug;
 export function getDefaultModel(engine: EngineKind): ModelSlug | null;
 export function getDefaultModel(engine: EngineKind): ModelSlug | null {
@@ -546,9 +545,12 @@ export function resolveModelSlug(
     return DEFAULT_MODEL_BY_ENGINE[engine];
   }
 
-  return MODEL_SLUG_SET_BY_ENGINE[engine]?.has(normalized)
-    ? normalized
-    : DEFAULT_MODEL_BY_ENGINE[engine];
+  const known = MODEL_SLUG_SET_BY_ENGINE[engine];
+  if (!known || known.size === 0) {
+    return normalized;
+  }
+
+  return known.has(normalized) ? normalized : DEFAULT_MODEL_BY_ENGINE[engine];
 }
 
 /** Trim a string, returning null for empty/missing values. */
