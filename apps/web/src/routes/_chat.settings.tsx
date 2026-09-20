@@ -121,6 +121,7 @@ import {
   BEHAVIOR_SETTINGS_SEARCH,
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
+import { parseModelServiceSetupIntent } from "~/lib/modelServiceSetup";
 import {
   normalizeSettingsSection,
   SETTINGS_SECTION_BY_ID,
@@ -146,6 +147,7 @@ function SettingsRouteView() {
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
+  const modelServiceSetupIntent = parseModelServiceSetupIntent(routeSearch.intent);
   const {
     isDefaultActiveTheme,
     resetAllThemes,
@@ -1613,7 +1615,11 @@ function SettingsRouteView() {
                 <AppSnapSettingsPanel active={activeSection === "appsnap"} />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
-                <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
+                <ModelsSettingsPanel
+                  active={activeSection === "models"}
+                  resetEpoch={resetEpoch}
+                  setupIntent={modelServiceSetupIntent}
+                />
 
                 <EnginesSettingsPanel
                   active={activeSection === "engines"}

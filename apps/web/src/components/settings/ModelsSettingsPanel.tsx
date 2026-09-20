@@ -84,6 +84,7 @@ import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ArrowLeftIcon, ChevronRightIcon, EyeIcon, PlusIcon } from "~/lib/icons";
 import { ModelServiceIcon } from "../ModelServiceIcon";
 import { useSettingsRestoreSignal } from "./SettingControls";
+import { type ModelServiceSetupIntent } from "~/lib/modelServiceSetup";
 import {
   SettingsCard,
   SettingsEmptyState,
@@ -822,6 +823,7 @@ export function ModelsSettingsPanel({
   presentation = "settings",
   onServicePrepared,
   onSetupReady,
+  setupIntent = null,
   resetEpoch,
 }: {
   readonly resetEpoch: number;
@@ -830,6 +832,7 @@ export function ModelsSettingsPanel({
   readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: EngineSelection) => void;
+  readonly setupIntent?: ModelServiceSetupIntent | null;
 }) {
   if (!active) return null;
   return (
@@ -839,6 +842,7 @@ export function ModelsSettingsPanel({
       presentation={presentation}
       {...(onServicePrepared ? { onServicePrepared } : {})}
       {...(onSetupReady ? { onSetupReady } : {})}
+      setupIntent={setupIntent}
       resetEpoch={resetEpoch}
     />
   );
@@ -851,6 +855,7 @@ function ActiveModelsSettingsPanel({
   presentation,
   onServicePrepared,
   onSetupReady,
+  setupIntent,
 }: {
   readonly resetEpoch: number;
   readonly active: boolean;
@@ -858,6 +863,7 @@ function ActiveModelsSettingsPanel({
   readonly presentation: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: EngineSelection) => void;
+  readonly setupIntent: ModelServiceSetupIntent | null;
 }) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
@@ -892,6 +898,9 @@ function ActiveModelsSettingsPanel({
   } | null>(null);
   const modelServiceDetailShouldFocusRef = useRef(false);
   const customServiceEditorInitialFingerprintRef = useRef<string | null>(null);
+  const appliedSetupIntentRef = useRef<ModelServiceSetupIntent | null>(null);
+  const openDeepSeekKeyRef = useRef<((service: HarosModelServiceDescriptor) => void) | null>(null);
+  const openCustomEndpointRef = useRef<(() => void) | null>(null);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -1863,6 +1872,9 @@ function ActiveModelsSettingsPanel({
     },
     [selectedModelService?.authSource],
   );
+  openCustomEndpointRef.current = () => {
+    openCustomServiceEditor();
+  };
 
   const closeCustomServiceEditor = useCallback(() => {
     customTestControllerRef.current?.abort();
@@ -2253,12 +2265,32 @@ function ActiveModelsSettingsPanel({
   const quickDeepSeek = connectableModelServices.find(
     (service) => service.serviceId === "deepseek",
   );
+  const configuredDeepSeek = configuredModelServices.find(
+    (service) => service.serviceId === "deepseek",
+  );
   const customApiCapability =
     modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty"
       ? modelServicesQuery.data.customApiConfiguration
       : undefined;
   const canAddModelService =
     modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty";
+  useEffect(() => {
+    if (!active || !setupIntent) {
+      appliedSetupIntentRef.current = null;
+      return;
+    }
+    if (appliedSetupIntentRef.current === setupIntent) return;
+    if (setupIntent === "custom-endpoint") {
+      if (!canAddModelService) return;
+      appliedSetupIntentRef.current = setupIntent;
+      openCustomEndpointRef.current?.();
+      return;
+    }
+    const deepSeek = quickDeepSeek ?? configuredDeepSeek;
+    if (!deepSeek) return;
+    appliedSetupIntentRef.current = setupIntent;
+    openDeepSeekKeyRef.current?.(deepSeek);
+  }, [active, canAddModelService, configuredDeepSeek, quickDeepSeek, setupIntent]);
   const filteredConnectableModelServices = useMemo(() => {
     const query = modelServiceSearch.trim().toLocaleLowerCase();
     if (!query) return connectableModelServices;
@@ -2352,6 +2384,10 @@ function ActiveModelsSettingsPanel({
     },
     [],
   );
+  openDeepSeekKeyRef.current = (service) => {
+    openModelServiceDetails(service.serviceId, "browser");
+    void beginModelServiceLogin(service, "api_key");
+  };
 
   const openModelServiceBrowser = useCallback(() => {
     modelServiceBrowserRestoreRef.current = null;

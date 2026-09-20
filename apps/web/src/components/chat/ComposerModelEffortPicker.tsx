@@ -12,6 +12,8 @@ import {
 } from "@harnessos/contracts";
 import { useState } from "react";
 
+import { composerNeedsModelServiceSetup } from "~/lib/modelServiceSetup";
+
 import { useI18n } from "~/i18n";
 import { ChevronDownIcon, FastModeIcon, RefreshCwIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -49,6 +51,8 @@ type ComposerModelEffortPickerProps = {
   isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   onRefreshModels: () => void;
   onOpenSettings: () => void;
+  onAddDeepSeekKey?: () => void;
+  onAddCustomEndpoint?: () => void;
   onSelectionCommitted?: () => void;
   threadId: ThreadId;
   runtimeModel?: EngineModelDescriptor | undefined;
@@ -104,6 +108,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const hasSelectableModels = props.engine
     ? (props.modelOptionsByEngine[props.engine]?.length ?? 0) > 0
     : false;
+  const needsModelServiceSetup = composerNeedsModelServiceSetup(props.engine, props.catalogState);
   const closeAndRefocus = () => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();
@@ -131,6 +136,12 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     Boolean(props.engine) &&
     Boolean(props.model) &&
     (liveStarredTraits?.effortLevels.length ?? 0) > 0;
+  const openModelServiceSetup = (intent: "deepseek-key" | "custom-endpoint") => {
+    if (intent === "deepseek-key") props.onAddDeepSeekKey?.();
+    else props.onAddCustomEndpoint?.();
+    if (!props.onAddDeepSeekKey && !props.onAddCustomEndpoint) props.onOpenSettings();
+    closeAndRefocus();
+  };
   const traitsContent = props.model
     ? renderEngineTraitsMenuContent({
         engine: props.engine,
@@ -277,15 +288,26 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   </MenuItem>
                 ) : null}
                 {catalogIsError || catalogIsIdle ? (
-                  <MenuItem
-                    onClick={() => {
-                      props.onOpenSettings();
-                      closeAndRefocus();
-                    }}
-                  >
-                    <SettingsIcon aria-hidden="true" className="size-3.5" />
-                    {t("composer.openEngineSettings")}
-                  </MenuItem>
+                  needsModelServiceSetup ? (
+                    <>
+                      <MenuItem onClick={() => openModelServiceSetup("deepseek-key")}>
+                        {t("composer.addDeepSeekKey")}
+                      </MenuItem>
+                      <MenuItem onClick={() => openModelServiceSetup("custom-endpoint")}>
+                        {t("composer.addCustomEndpoint")}
+                      </MenuItem>
+                    </>
+                  ) : (
+                    <MenuItem
+                      onClick={() => {
+                        props.onOpenSettings();
+                        closeAndRefocus();
+                      }}
+                    >
+                      <SettingsIcon aria-hidden="true" className="size-3.5" />
+                      {t("composer.openEngineSettings")}
+                    </MenuItem>
+                  )
                 ) : null}
                 <MenuSeparator />
               </>
@@ -401,17 +423,28 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     {t("composer.refreshModels")}
                   </MenuItem>
                 ) : null}
-                <MenuItem
-                  onClick={() => {
-                    props.onOpenSettings();
-                    closeAndRefocus();
-                  }}
-                >
-                  <SettingsIcon aria-hidden="true" className="size-3.5" />
-                  {props.engine === "codex"
-                    ? t("composer.openModelServices")
-                    : t("composer.openEngineSettings")}
-                </MenuItem>
+                {needsModelServiceSetup ? (
+                  <>
+                    <MenuItem onClick={() => openModelServiceSetup("deepseek-key")}>
+                      {t("composer.addDeepSeekKey")}
+                    </MenuItem>
+                    <MenuItem onClick={() => openModelServiceSetup("custom-endpoint")}>
+                      {t("composer.addCustomEndpoint")}
+                    </MenuItem>
+                  </>
+                ) : (
+                  <MenuItem
+                    onClick={() => {
+                      props.onOpenSettings();
+                      closeAndRefocus();
+                    }}
+                  >
+                    <SettingsIcon aria-hidden="true" className="size-3.5" />
+                    {props.engine === "codex"
+                      ? t("composer.openModelServices")
+                      : t("composer.openEngineSettings")}
+                  </MenuItem>
+                )}
               </>
             ) : null}
           </>

@@ -128,6 +128,11 @@ import {
   resolveEngineSendAvailabilityWithRefresh,
 } from "~/lib/engineAvailability";
 import {
+  modelServiceSetupSearch,
+  notifyMissingComposerModel,
+  type ModelServiceSetupIntent,
+} from "~/lib/modelServiceSetup";
+import {
   loadConfirmedCustomBinaryPaths,
   saveConfirmedCustomBinaryPaths,
 } from "../confirmedCustomBinaryPathStore";
@@ -2560,6 +2565,23 @@ export default function ChatView({
     cwd: engineModelDiscoveryCwd,
     modelHintByEngine: composerModelHintByEngine,
   });
+  const openModelServiceSetup = useCallback(
+    (intent: ModelServiceSetupIntent) => {
+      void navigate({
+        to: "/settings",
+        search: modelServiceSetupSearch(intent),
+      });
+    },
+    [navigate],
+  );
+  const notifyMissingModel = useCallback(() => {
+    notifyMissingComposerModel({
+      engine: selectedEngine,
+      catalogState: selectedEngine ? catalogStateByEngine[selectedEngine] : undefined,
+      t,
+      onAddDeepSeekKey: () => openModelServiceSetup("deepseek-key"),
+    });
+  }, [catalogStateByEngine, openModelServiceSetup, selectedEngine, t]);
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedEngine,
@@ -5165,10 +5187,7 @@ export default function ChatView({
         if (serverThread) {
           const nextEngineSelection = nextMode === "auto" ? selectedEngineSelection : undefined;
           if (nextMode === "auto" && !nextEngineSelection) {
-            toastManager.add({
-              type: "warning",
-              title: t("composer.modelRequiredToSend"),
-            });
+            notifyMissingModel();
             return false;
           }
           const api = readNativeApi();
@@ -5220,7 +5239,7 @@ export default function ChatView({
         return true;
       });
     },
-    [runtimeMode, selectedEngineSelection, serverThread, t, threadId],
+    [notifyMissingModel, runtimeMode, selectedEngineSelection, serverThread, t, threadId],
   );
   const setNextTurnRuntimeMode = useCallback(
     (mode: RuntimeMode) => {
@@ -7263,10 +7282,7 @@ export default function ChatView({
       // Draft review can keep the local draft ID in the form; promote it only when
       // the automation is actually submitted so cancelling review leaves no empty thread.
       if (!selectedEngineSelection) {
-        toastManager.add({
-          type: "warning",
-          title: t("composer.modelRequiredToSend"),
-        });
+        notifyMissingModel();
         return null;
       }
       const targetThreadId = await ensureAutomationTargetThread({
@@ -7289,6 +7305,7 @@ export default function ChatView({
       interactionMode,
       isServerThread,
       runtimeMode,
+      notifyMissingModel,
       selectedEngineSelection,
       t,
     ],
@@ -7767,10 +7784,7 @@ export default function ChatView({
     // with attachments must use the normal send path so references are preserved.
     if (isLivePlanFollowUpSubmission) {
       if (!selectedEngineSelectionForSend) {
-        toastManager.add({
-          type: "warning",
-          title: t("composer.modelRequiredToSend"),
-        });
+        notifyMissingModel();
         return false;
       }
       const followUp = resolvePlanFollowUpSubmission({
@@ -7852,10 +7866,7 @@ export default function ChatView({
       return false;
     }
     if (!selectedEngineSelectionForSend) {
-      toastManager.add({
-        type: "warning",
-        title: t("composer.modelRequiredToSend"),
-      });
+      notifyMissingModel();
       return false;
     }
     const sourceProposedPlanForSend =
@@ -9251,10 +9262,7 @@ export default function ChatView({
     }
     const engineSelectionForPlanDispatch = queuedTurn?.engineSelection ?? selectedEngineSelection;
     if (!engineSelectionForPlanDispatch) {
-      toastManager.add({
-        type: "warning",
-        title: t("composer.modelRequiredToSend"),
-      });
+      notifyMissingModel();
       return false;
     }
     const modelPresentationIdentityForPlanDispatch =
@@ -9412,10 +9420,7 @@ export default function ChatView({
         return false;
       }
       if (!selectedEngineSelection) {
-        toastManager.add({
-          type: "warning",
-          title: t("composer.modelRequiredToSend"),
-        });
+        notifyMissingModel();
         return false;
       }
 
@@ -9475,6 +9480,7 @@ export default function ChatView({
       engineOptionsForDispatch,
       runtimeMode,
       selectedModel,
+      notifyMissingModel,
       selectedEngineSelection,
       selectedPromptEffort,
       selectedEngine,
@@ -9513,10 +9519,7 @@ export default function ChatView({
     const lateSendHandlers = lateComposerSendHandlersRef.current;
     if (!lateSendHandlers) return;
     if (!selectedEngineSelection || !selectedEngine) {
-      toastManager.add({
-        type: "warning",
-        title: t("composer.modelRequiredToSend"),
-      });
+      notifyMissingModel();
       return;
     }
     const { workflowTaskId } = workflowRunState;
@@ -9557,6 +9560,7 @@ export default function ChatView({
     engineOptionsForDispatch,
     runtimeMode,
     selectedModel,
+    notifyMissingModel,
     selectedEngineSelection,
     selectedPromptEffort,
     selectedEngine,
@@ -10015,6 +10019,8 @@ export default function ChatView({
         }
         onRefreshModels={refreshSelectedEngineModels}
         onOpenSettings={openSelectedEngineSettings}
+        onAddDeepSeekKey={() => openModelServiceSetup("deepseek-key")}
+        onAddCustomEndpoint={() => openModelServiceSetup("custom-endpoint")}
         onSelectionCommitted={scheduleComposerFocus}
         open={isComposerModelEffortPickerOpen}
         onOpenChange={handleComposerModelEffortPickerOpenChange}
@@ -10277,7 +10283,8 @@ export default function ChatView({
         throw new Error(t("composer.local.connecting"));
       }
       if (!selectedEngineSelection) {
-        throw new Error(t("composer.modelRequiredToSend"));
+        notifyMissingModel();
+        throw new Error(t("composer.addModelServiceToSend"));
       }
       const existingProject = useStore
         .getState()
@@ -10312,6 +10319,7 @@ export default function ChatView({
       handleSelectProjectForEmptyDraft,
       isLocalDraftThread,
       moveEmptyDraftToLocalProject,
+      notifyMissingModel,
       selectedEngineSelection,
       syncServerShellSnapshot,
       t,
@@ -10331,7 +10339,8 @@ export default function ChatView({
         throw new Error(t("error.prepareAgent"));
       }
       if (!selectedEngineSelection) {
-        throw new Error(t("composer.modelRequiredToSend"));
+        notifyMissingModel();
+        throw new Error(t("composer.addModelServiceToSend"));
       }
       const attemptKey = `${activeThread.id}:${projectId}`;
       let attempt = chatToAgentAttemptsRef.current.get(attemptKey);
@@ -10443,6 +10452,7 @@ export default function ChatView({
       canSendToAgent,
       navigate,
       runtimeMode,
+      notifyMissingModel,
       selectedEngineSelection,
       syncServerShellSnapshot,
       t,
@@ -10457,7 +10467,8 @@ export default function ChatView({
         throw new Error(t("composer.local.connecting"));
       }
       if (!selectedEngineSelection) {
-        throw new Error(t("composer.modelRequiredToSend"));
+        notifyMissingModel();
+        throw new Error(t("composer.addModelServiceToSend"));
       }
       const existingProject = useStore
         .getState()
@@ -10488,7 +10499,13 @@ export default function ChatView({
       }
       await handleSendToAgentProject(creationResult.project.id);
     },
-    [handleSendToAgentProject, selectedEngineSelection, syncServerShellSnapshot, t],
+    [
+      handleSendToAgentProject,
+      notifyMissingModel,
+      selectedEngineSelection,
+      syncServerShellSnapshot,
+      t,
+    ],
   );
 
   const applyPromptReplacement = useCallback(
@@ -10766,6 +10783,7 @@ export default function ChatView({
     selectedEngine,
     currentEngineModelOptions,
     selectedEngineSelection,
+    notifyMissingModel,
     environmentMode: envMode ?? null,
     runtimeMode,
     interactionMode,

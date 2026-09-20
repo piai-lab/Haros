@@ -143,6 +143,7 @@ export function useComposerSlashCommands(input: {
   selectedEngine: EngineKind | null;
   currentEngineModelOptions: EngineOptions | undefined;
   selectedEngineSelection: EngineSelection | null;
+  notifyMissingModel?: () => void;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
   interactionMode: EngineInteractionMode;
@@ -197,6 +198,7 @@ export function useComposerSlashCommands(input: {
     selectedEngine,
     currentEngineModelOptions,
     selectedEngineSelection,
+    notifyMissingModel,
     environmentMode,
     runtimeMode,
     interactionMode,
@@ -443,7 +445,10 @@ export function useComposerSlashCommands(input: {
     }) => {
       const retainedHistoryOnlyCommand = inputOptions?.historyOnlyFlight?.command;
       if (!retainedHistoryOnlyCommand && !selectedEngineSelection) {
-        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        notifyMissingModel?.();
+        if (!notifyMissingModel) {
+          toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        }
         return true;
       }
       const api = readNativeApi();
@@ -553,6 +558,7 @@ export function useComposerSlashCommands(input: {
       interactionMode,
       isServerThread,
       navigateToThread,
+      notifyMissingModel,
       runtimeMode,
       selectedEngineSelection,
       syncServerShellSnapshot,
@@ -621,7 +627,10 @@ export function useComposerSlashCommands(input: {
   const createSidechatFromSlashCommand = useCallback(
     (inputOptions?: { initialPrompt?: string; targetEngine?: EngineKind }): Promise<true> => {
       if (!selectedEngineSelection) {
-        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        notifyMissingModel?.();
+        if (!notifyMissingModel) {
+          toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        }
         return Promise.resolve(true);
       }
       const api = readNativeApi();
@@ -707,6 +716,7 @@ export function useComposerSlashCommands(input: {
       activeProject,
       activeThread,
       isServerThread,
+      notifyMissingModel,
       selectedEngineSelection,
       syncServerShellSnapshot,
       t,
@@ -725,7 +735,10 @@ export function useComposerSlashCommands(input: {
   const runCodexReviewStart = useCallback(
     async (target: "changes" | "base-branch") => {
       if (!selectedEngineSelection) {
-        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        notifyMissingModel?.();
+        if (!notifyMissingModel) {
+          toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        }
         return false;
       }
       const api = readNativeApi();
@@ -832,6 +845,7 @@ export function useComposerSlashCommands(input: {
       activeRootBranch,
       activeThread,
       navigateToThread,
+      notifyMissingModel,
       runtimeMode,
       selectedEngineSelection,
       syncServerShellSnapshot,

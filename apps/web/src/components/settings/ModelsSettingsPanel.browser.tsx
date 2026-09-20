@@ -246,6 +246,7 @@ async function renderPanel(input: {
   readonly active?: boolean;
   readonly startInAddFlow?: boolean;
   readonly presentation?: "settings" | "first-run";
+  readonly setupIntent?: "deepseek-key" | "custom-endpoint" | null;
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: EngineSelection) => void;
   readonly list: (
@@ -289,6 +290,7 @@ async function renderPanel(input: {
           resetEpoch={0}
           startInAddFlow={input.startInAddFlow ?? false}
           presentation={input.presentation ?? "settings"}
+          setupIntent={input.setupIntent ?? null}
           {...(input.onServicePrepared ? { onServicePrepared: input.onServicePrepared } : {})}
           {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
         />
@@ -750,6 +752,56 @@ describe("ModelsSettingsPanel model services", () => {
       .toContain("settings.modelServiceAuthentication");
     expect(mounted.screen.getByRole("button", { name: "settings.addApiKey" })).toBeTruthy();
     expect(document.body.textContent).toContain("settings.modelServiceModelDetailsUnavailable");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("opens the DeepSeek API key prompt from a Composer setup intent", async () => {
+    const connectable = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 0,
+      availableModelCount: 0,
+      catalogState: "empty",
+      catalogErrorCode: null,
+    });
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId: "00000000-0000-4000-8000-000000000021",
+      prompt: {
+        promptId: "00000000-0000-4000-8000-000000000022",
+        type: "secret" as const,
+        message: "Enter DeepSeek API key",
+        placeholder: "API key",
+      },
+      events: [],
+    }));
+    const mounted = await renderPanel({
+      setupIntent: "deepseek-key",
+      beginLogin,
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [connectable],
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === connectable.serviceId
+          ? { state: "ready", service: connectable, errorCode: null }
+          : { state: "empty", service: null, errorCode: null },
+    });
+
+    await expect
+      .poll(() => beginLogin)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({ serviceId: "deepseek", authType: "api_key" }),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceAuthentication");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

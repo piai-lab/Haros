@@ -226,7 +226,10 @@ describe("ComposerModelEffortPicker", () => {
         .toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "Refresh models" })).toBeVisible();
       await expect
-        .element(page.getByRole("menuitem", { name: "Open engine settings" }))
+        .element(page.getByRole("menuitem", { name: "Add DeepSeek API key" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("menuitem", { name: "Add custom endpoint" }))
         .toBeVisible();
     } finally {
       await errorScreen.unmount();
@@ -371,14 +374,20 @@ describe("ComposerModelEffortPicker", () => {
         .toBeVisible();
       await expect
         .element(
-          page.getByText("Open settings to enable or configure this engine.", {
+          page.getByText("Add a DeepSeek API key or a custom endpoint in Model services.", {
             exact: true,
           }),
         )
         .toBeVisible();
       await expect
-        .element(page.getByRole("menuitem", { name: "Open engine settings" }))
+        .element(page.getByRole("menuitem", { name: "Add DeepSeek API key" }))
         .toBeVisible();
+      await expect
+        .element(page.getByRole("menuitem", { name: "Add custom endpoint" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("menuitem", { name: "Open Model services" }))
+        .not.toBeInTheDocument();
       await expect
         .element(page.getByRole("menuitem", { name: "Refresh models" }))
         .not.toBeInTheDocument();
@@ -551,7 +560,10 @@ describe("ComposerModelEffortPicker", () => {
       await trigger.click();
       await expect.element(page.getByText("当前没有可用模型", { exact: true })).toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "刷新模型" })).toBeVisible();
-      await expect.element(page.getByRole("menuitem", { name: "打开引擎设置" })).toBeVisible();
+      await expect
+        .element(page.getByRole("menuitem", { name: "添加 DeepSeek API Key" }))
+        .toBeVisible();
+      await expect.element(page.getByRole("menuitem", { name: "添加自定义接口" })).toBeVisible();
     } finally {
       await screen.unmount();
       harness.settings.localePreference = "en";
