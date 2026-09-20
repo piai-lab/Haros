@@ -3660,9 +3660,9 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         }),
       );
 
-    const getClaudeCacheObservation: NonNullable<EngineServiceShape["getClaudeCacheObservation"]> = (
-      threadId,
-    ) =>
+    const getClaudeCacheObservation: NonNullable<
+      EngineServiceShape["getClaudeCacheObservation"]
+    > = (threadId) =>
       Effect.gen(function* () {
         const routed = yield* resolveRoutableSession({
           threadId,

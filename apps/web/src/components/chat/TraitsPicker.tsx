@@ -283,10 +283,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // effort section exists; fast-only models (no effort levels) keep the
   // standalone radio section instead.
   const showsFastModeEffortToggle =
-    includeFastMode &&
-    supportsFastModeControl &&
-    effortLevels.length > 0 &&
-    !hideEffortControls;
+    includeFastMode && supportsFastModeControl && effortLevels.length > 0 && !hideEffortControls;
   const agentOptions = getAgentOptions(engine, runtimeAgents);
   const defaultAgent = defaultAgentForProvider(engine);
   const selectedAgent = getSelectedAgentValue(engine, modelOptions);

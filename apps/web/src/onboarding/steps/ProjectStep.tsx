@@ -200,9 +200,7 @@ export function ProjectStep(props: {
               setPath(event.target.value);
               setError(null);
             }}
-            placeholder={
-              homeDir ? `${homeDir}/code/my-repo` : t("firstRun.projectPathPlaceholder")
-            }
+            placeholder={homeDir ? `${homeDir}/code/my-repo` : t("firstRun.projectPathPlaceholder")}
             aria-label={t("firstRun.projectPath")}
             spellCheck={false}
             autoCorrect="off"

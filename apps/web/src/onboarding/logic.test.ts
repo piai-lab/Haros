@@ -88,16 +88,10 @@ describe("resolveOnboardingGate", () => {
 describe("resolveLocalOnboardingCompletion", () => {
   it("only counts a local marker for the current installation", () => {
     expect(
-      resolveLocalOnboardingCompletion(
-        { completedAt: COMPLETED_AT, installationKey: "/a" },
-        "/a",
-      ),
+      resolveLocalOnboardingCompletion({ completedAt: COMPLETED_AT, installationKey: "/a" }, "/a"),
     ).toBe(COMPLETED_AT);
     expect(
-      resolveLocalOnboardingCompletion(
-        { completedAt: COMPLETED_AT, installationKey: "/a" },
-        "/b",
-      ),
+      resolveLocalOnboardingCompletion({ completedAt: COMPLETED_AT, installationKey: "/a" }, "/b"),
     ).toBeNull();
   });
 });
@@ -126,9 +120,9 @@ describe("resolveOnboardingCompletionToReconcile", () => {
 describe("classifyEngineSetup", () => {
   it("classifies disabled, missing, unauthenticated, and usable engines", () => {
     expect(classifyEngineSetup({ status: null, disabled: true })).toBe("disabled");
-    expect(classifyEngineSetup({ status: { available: false, authStatus: "unknown" }, disabled: false })).toBe(
-      "not-installed",
-    );
+    expect(
+      classifyEngineSetup({ status: { available: false, authStatus: "unknown" }, disabled: false }),
+    ).toBe("not-installed");
     expect(
       classifyEngineSetup({
         status: { available: true, authStatus: "unauthenticated" },

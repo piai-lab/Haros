@@ -1449,19 +1449,19 @@ export const makeGitManager = Effect.gen(function* () {
       return yield* gitCore
         .readDiffStats(input.cwd, input.scope ?? "workingTree", input.compareRef)
         .pipe(
-        Effect.catch(() =>
-          readWorkingTreeDiff(input).pipe(
-            Effect.map(
-              ({ patch }) =>
-                summarizeUnifiedPatchTotals(patch) ?? {
-                  additions: 0,
-                  deletions: 0,
-                  fileCount: 0,
-                },
+          Effect.catch(() =>
+            readWorkingTreeDiff(input).pipe(
+              Effect.map(
+                ({ patch }) =>
+                  summarizeUnifiedPatchTotals(patch) ?? {
+                    additions: 0,
+                    deletions: 0,
+                    fileCount: 0,
+                  },
+              ),
             ),
           ),
-        ),
-      );
+        );
     },
   );
 

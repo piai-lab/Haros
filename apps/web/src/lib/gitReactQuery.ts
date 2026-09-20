@@ -468,7 +468,8 @@ export function gitWorkingTreeDiffStatsQueryOptions(input: {
         ...(compareRef ? { compareRef } : {}),
       });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
+    enabled:
+      (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
     staleTime: GIT_WORKING_TREE_DIFF_STALE_TIME_MS,
     ...(refetchInterval !== undefined ? { refetchInterval } : {}),
     refetchOnWindowFocus: true,
@@ -500,7 +501,8 @@ export function gitWorkingTreeDiffQueryOptions(input: {
         ...(compareRef ? { compareRef } : {}),
       });
     },
-    enabled: (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
+    enabled:
+      (input.enabled ?? true) && input.cwd !== null && (scope !== "ref" || compareRef !== null),
     staleTime: GIT_WORKING_TREE_DIFF_STALE_TIME_MS,
     ...(refetchInterval !== undefined ? { refetchInterval } : {}),
     refetchOnWindowFocus: true,

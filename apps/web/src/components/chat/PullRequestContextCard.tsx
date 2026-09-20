@@ -35,7 +35,9 @@ function PullRequestContextCardShell(props: {
       className={cn("w-64", props.className)}
       icon={<Icon className="size-4" />}
       title={props.title}
-      subtitle={props.subtitle.length > 0 ? <span className="truncate">{props.subtitle}</span> : undefined}
+      subtitle={
+        props.subtitle.length > 0 ? <span className="truncate">{props.subtitle}</span> : undefined
+      }
       {...(props.onRemove
         ? {
             onRemove: props.onRemove,

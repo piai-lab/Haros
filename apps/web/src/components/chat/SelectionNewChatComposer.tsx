@@ -16,10 +16,7 @@ interface SelectionNewChatComposerProps {
   onClose: () => void;
 }
 
-function selectionChatErrorMessage(
-  t: ReturnType<typeof useI18n>["t"],
-  cause: unknown,
-): string {
+function selectionChatErrorMessage(t: ReturnType<typeof useI18n>["t"], cause: unknown): string {
   if (cause instanceof SelectionChatError) {
     switch (cause.code) {
       case "empty-prompt":
@@ -59,7 +56,8 @@ export function SelectionNewChatComposer({
     if (!surface) return;
     const position = () => {
       const { width, height } = surface.getBoundingClientRect();
-      const top = action.placement === "top" ? action.selectionTop - height : action.selectionBottom;
+      const top =
+        action.placement === "top" ? action.selectionTop - height : action.selectionBottom;
       surface.style.left = `${Math.max(8, Math.min(action.anchorX - width / 2, window.innerWidth - width - 8))}px`;
       surface.style.top = `${Math.max(8, Math.min(top, window.innerHeight - height - 8))}px`;
     };

@@ -14,7 +14,10 @@ import {
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
-import { parseWindowsWslUncPath, prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
+import {
+  parseWindowsWslUncPath,
+  prepareWindowsSafeProcess,
+} from "@harnessos/shared/windowsProcess";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import { ServerConfig } from "../../config.ts";

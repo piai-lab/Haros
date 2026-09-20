@@ -359,7 +359,9 @@ export function deriveDisplayedUserMessageState(
   const extractedPullRequestContexts = extractTrailingPullRequestContexts(
     extractedPastedTexts.promptText,
   );
-  const extractedFileComments = extractTrailingFileComments(extractedPullRequestContexts.promptText);
+  const extractedFileComments = extractTrailingFileComments(
+    extractedPullRequestContexts.promptText,
+  );
   const extractedContexts = extractTrailingTerminalContexts(extractedFileComments.promptText);
   const extractedAssistantSelections = extractTrailingAssistantSelections(
     extractedContexts.promptText,

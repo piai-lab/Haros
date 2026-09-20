@@ -1,13 +1,6 @@
 import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
 
-export const ONBOARDING_STEPS = [
-  "welcome",
-  "tour",
-  "engines",
-  "theme",
-  "project",
-  "done",
-] as const;
+export const ONBOARDING_STEPS = ["welcome", "tour", "engines", "theme", "project", "done"] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 export function nextOnboardingStep(step: OnboardingStep): OnboardingStep {

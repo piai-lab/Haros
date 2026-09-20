@@ -3,11 +3,7 @@ import { useRadioGroupKeyboardNav } from "~/hooks/useRadioGroupKeyboardNav";
 import { useTheme } from "~/hooks/useTheme";
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
-import {
-  THEME_PRESET_OPTIONS,
-  getThemePresetSeed,
-  type ThemeVariant,
-} from "~/theme/theme.logic";
+import { THEME_PRESET_OPTIONS, getThemePresetSeed, type ThemeVariant } from "~/theme/theme.logic";
 
 const ONBOARDING_THEME_PACKS = THEME_PRESET_OPTIONS.filter(
   (option) => option.variants.includes("light") && option.variants.includes("dark"),

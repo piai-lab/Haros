@@ -110,12 +110,18 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                     onClick={() => appSnapWindows.captureWindow(entry.windowId)}
                   >
                     {entry.appIconDataUrl ? (
-                      <img src={entry.appIconDataUrl} alt="" className="size-4 shrink-0 rounded-[4px]" />
+                      <img
+                        src={entry.appIconDataUrl}
+                        alt=""
+                        className="size-4 shrink-0 rounded-[4px]"
+                      />
                     ) : (
                       <WindowIcon className="size-4 shrink-0" />
                     )}
                     <span className="min-w-0 truncate">
-                      {entry.windowTitle?.trim() || entry.appName?.trim() || t("composer.appSnapUntitledWindow")}
+                      {entry.windowTitle?.trim() ||
+                        entry.appName?.trim() ||
+                        t("composer.appSnapUntitledWindow")}
                     </span>
                   </MenuItem>
                 ))

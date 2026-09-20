@@ -77,9 +77,9 @@ describe("shouldAutoDispatchQueuedComposerTurn", () => {
     expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, pendingUserInputCount: 1 })).toBe(
       false,
     );
-    expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, hasClaudeCacheReview: true })).toBe(
-      false,
-    );
+    expect(
+      shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, hasClaudeCacheReview: true }),
+    ).toBe(false);
     expect(shouldAutoDispatchQueuedComposerTurn({ ...OPEN_GATES, queuedTurnCount: 0 })).toBe(false);
   });
 });

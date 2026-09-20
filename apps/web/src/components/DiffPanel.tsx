@@ -217,16 +217,16 @@ function EditorDiffOptionsMenu(props: {
             <MenuRadioItem value="lastTurn">
               <span className="min-w-0 flex-1 truncate">{t("diff.lastTurn")}</span>
             </MenuRadioItem>
-            </MenuRadioGroup>
-          </MenuGroup>
-          <DiffPanelCompareRefMenuSection
-            cwd={props.activeCwd}
-            open={optionsOpen}
-            compareRef={props.compareRef}
-            scopeIsRef={props.scopePickerValue?.startsWith("ref:") === true}
-            iconClassName={EDITOR_DIFF_OPTIONS_MENU_ICON_CLASS_NAME}
-            onSelectCompareRef={props.onSelectCompareRef}
-          />
+          </MenuRadioGroup>
+        </MenuGroup>
+        <DiffPanelCompareRefMenuSection
+          cwd={props.activeCwd}
+          open={optionsOpen}
+          compareRef={props.compareRef}
+          scopeIsRef={props.scopePickerValue?.startsWith("ref:") === true}
+          iconClassName={EDITOR_DIFF_OPTIONS_MENU_ICON_CLASS_NAME}
+          onSelectCompareRef={props.onSelectCompareRef}
+        />
 
         {props.orderedTurnDiffSummaries.length > 0 ? (
           <MenuGroup>

@@ -69,8 +69,7 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
               if (sideInFlightRef.current) return;
               sideInFlightRef.current = true;
               setSideBusy(true);
-              void props
-                .onAddToSide!(action.selection)
+              void props.onAddToSide!(action.selection)
                 .then(() => {
                   props.onDismiss?.();
                   window.getSelection()?.removeAllRanges();

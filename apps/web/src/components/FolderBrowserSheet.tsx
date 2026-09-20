@@ -29,7 +29,9 @@ export function FolderBrowserSheet(props: {
   readonly onSelect: (path: string) => void;
 }) {
   const { t } = useI18n();
-  const [currentPath, setCurrentPath] = useState(() => toFolderBrowserBrowsePath(props.initialPath));
+  const [currentPath, setCurrentPath] = useState(() =>
+    toFolderBrowserBrowsePath(props.initialPath),
+  );
   const [result, setResult] = useState<FilesystemBrowseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

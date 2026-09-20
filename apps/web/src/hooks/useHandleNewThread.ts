@@ -72,7 +72,9 @@ export function useHandleNewThread() {
     const options: NewThreadOptions = {
       ...requestedOptions,
       envMode:
-        requestedOptions?.envMode ?? rememberedEnvMode ?? authoritativeSettings.defaultThreadEnvMode,
+        requestedOptions?.envMode ??
+        rememberedEnvMode ??
+        authoritativeSettings.defaultThreadEnvMode,
     };
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;

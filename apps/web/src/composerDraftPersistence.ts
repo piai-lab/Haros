@@ -591,7 +591,9 @@ function normalizePersistedPullRequestContextDraft(
   return normalized;
 }
 
-function toPersistedPullRequestContext(context: PullRequestContextDraft): PersistedPullRequestContextDraft {
+function toPersistedPullRequestContext(
+  context: PullRequestContextDraft,
+): PersistedPullRequestContextDraft {
   return {
     id: context.id,
     createdAt: context.createdAt,
@@ -1464,10 +1466,9 @@ export function partializeComposerDraftStoreState(
                 : {}),
               ...(draft.promptHistorySavedDraft.pullRequestContexts.length > 0
                 ? {
-                    pullRequestContexts:
-                      draft.promptHistorySavedDraft.pullRequestContexts.map(
-                        toPersistedPullRequestContext,
-                      ),
+                    pullRequestContexts: draft.promptHistorySavedDraft.pullRequestContexts.map(
+                      toPersistedPullRequestContext,
+                    ),
                   }
                 : {}),
               ...(draft.promptHistorySavedDraft.pastedTexts.length > 0

@@ -8,11 +8,7 @@ export interface WorkspaceFileEditorFormat {
   lineEnding: Exclude<ProjectFileLineEnding, "mixed">;
 }
 
-export type WorkspaceFileEditorReadOnlyReason =
-  | "truncated"
-  | "symlink"
-  | "mixed"
-  | "format";
+export type WorkspaceFileEditorReadOnlyReason = "truncated" | "symlink" | "mixed" | "format";
 
 export interface WorkspaceFileEditorSource {
   truncated: boolean;

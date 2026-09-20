@@ -9,7 +9,18 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { Deferred, Duration, Effect, Exit, Fiber, Layer, Result, Scope, Sink, Stream } from "effect";
+import {
+  Deferred,
+  Duration,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Result,
+  Scope,
+  Sink,
+  Stream,
+} from "effect";
 import { type ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
 import type { ChatAttachment } from "@harnessos/contracts";

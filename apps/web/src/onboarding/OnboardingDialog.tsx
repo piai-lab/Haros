@@ -145,7 +145,9 @@ function OnboardingFlow(props: {
             {t("firstRun.stepOf", { current: stepIndex + 1, total: ONBOARDING_STEPS.length })}
           </span>
         )}
-        <DialogTitle className="text-[22px] tracking-[-0.01em]">{t(STEP_TITLE_KEYS[step])}</DialogTitle>
+        <DialogTitle className="text-[22px] tracking-[-0.01em]">
+          {t(STEP_TITLE_KEYS[step])}
+        </DialogTitle>
         {description ? (
           <DialogDescription className="max-w-[560px] text-[length:var(--app-font-size-ui-lg,13px)] leading-normal">
             {description}

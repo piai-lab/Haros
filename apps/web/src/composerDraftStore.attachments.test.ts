@@ -1245,12 +1245,12 @@ describe("composerDraftStore syncPersistedAttachments", () => {
       subtitle: "Test",
       text: "Fix the failing checks on PR #7.",
     });
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts).toHaveLength(
-      1,
-    );
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts,
+    ).toHaveLength(1);
     store.clearComposerContent(threadId);
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts ?? []).toEqual(
-      [],
-    );
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.pullRequestContexts ?? [],
+    ).toEqual([]);
   });
 });

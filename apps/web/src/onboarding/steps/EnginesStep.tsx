@@ -18,15 +18,16 @@ import { ONBOARDING_TILE_CLASS_NAME } from "../layout";
 import { classifyEngineSetup, summarizeEngineSetup, type EngineSetupState } from "../logic";
 import { EngineConnectTerminal } from "./EngineConnectTerminal";
 
-const STATE_PRESENTATION: Record<
-  EngineSetupState,
-  { labelKey: MessageKey; dotClassName: string }
-> = {
-  connected: { labelKey: "firstRun.engineConnected", dotClassName: "bg-status-success" },
-  "needs-sign-in": { labelKey: "firstRun.engineNeedsSignIn", dotClassName: "bg-warning" },
-  "not-installed": { labelKey: "firstRun.engineNotInstalled", dotClassName: "bg-muted-foreground/40" },
-  disabled: { labelKey: "firstRun.engineHidden", dotClassName: "bg-muted-foreground/40" },
-};
+const STATE_PRESENTATION: Record<EngineSetupState, { labelKey: MessageKey; dotClassName: string }> =
+  {
+    connected: { labelKey: "firstRun.engineConnected", dotClassName: "bg-status-success" },
+    "needs-sign-in": { labelKey: "firstRun.engineNeedsSignIn", dotClassName: "bg-warning" },
+    "not-installed": {
+      labelKey: "firstRun.engineNotInstalled",
+      dotClassName: "bg-muted-foreground/40",
+    },
+    disabled: { labelKey: "firstRun.engineHidden", dotClassName: "bg-muted-foreground/40" },
+  };
 
 const INLINE_ACTION_CLASS_NAME =
   "cursor-pointer text-foreground underline decoration-foreground/40 underline-offset-[3px] transition-colors hover:decoration-foreground motion-reduce:transition-none";

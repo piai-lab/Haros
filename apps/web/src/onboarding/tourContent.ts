@@ -9,8 +9,7 @@ import {
   type LucideIcon,
 } from "~/lib/icons";
 
-export const HAROS_GUIDE_URL =
-  "https://github.com/piai-lab/Haros/blob/main/docs/guide";
+export const HAROS_GUIDE_URL = "https://github.com/piai-lab/Haros/blob/main/docs/guide";
 
 export interface TourCard {
   readonly id: string;

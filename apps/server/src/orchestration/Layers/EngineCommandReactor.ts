@@ -3381,11 +3381,7 @@ const make = Effect.gen(function* () {
         yield* bindPendingQueuedDispatchToTurn(startedTurn.turnId);
       }
       if (startedTurn && acceptedCacheReview) {
-        yield* setClaudeCacheReview(
-          event.payload.threadId,
-          null,
-          acceptedCacheReview.reviewId,
-        );
+        yield* setClaudeCacheReview(event.payload.threadId, null, acceptedCacheReview.reviewId);
       }
     }).pipe(
       Effect.onExit((exit) =>
@@ -3807,7 +3803,9 @@ const make = Effect.gen(function* () {
             ...(source.payload.engineSelection
               ? { engineSelection: source.payload.engineSelection }
               : {}),
-            ...(source.payload.engineOptions ? { engineOptions: source.payload.engineOptions } : {}),
+            ...(source.payload.engineOptions
+              ? { engineOptions: source.payload.engineOptions }
+              : {}),
             runtimeMode: source.payload.runtimeMode,
           });
           const observation = engineService.getClaudeCacheObservation
@@ -3938,11 +3936,7 @@ const make = Effect.gen(function* () {
     const thread = yield* resolveThread(event.threadId);
     const review = thread?.claudeCacheReview;
     if (!review?.compactionTurnId || review.compactionTurnId !== event.turnId) return;
-    if (
-      !review ||
-      (review.status !== "compacting" && review.status !== "uncertain")
-    )
-      return;
+    if (!review || (review.status !== "compacting" && review.status !== "uncertain")) return;
     if (
       event.type !== "turn.completed" ||
       event.payload.state !== "completed" ||

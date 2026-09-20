@@ -1,14 +1,12 @@
 import type { DesktopAppSnapCapture, ThreadId } from "@harnessos/contracts";
 
 import { persistAppSnapIcon, readAppSnapIcon } from "./lib/appSnapIconStore";
+import { deleteComposerImageBlob, persistComposerImageBlob } from "./lib/composerImageBlobStore";
+import { type ComposerAppSnapSource } from "./lib/composerImageSource";
 import {
-  deleteComposerImageBlob,
-  persistComposerImageBlob,
-} from "./lib/composerImageBlobStore";
-import {
-  type ComposerAppSnapSource,
-} from "./lib/composerImageSource";
-import { effectiveComposerAttachmentCount, prepareComposerImageAttachmentsFromFiles } from "./lib/composerSend";
+  effectiveComposerAttachmentCount,
+  prepareComposerImageAttachmentsFromFiles,
+} from "./lib/composerSend";
 import { useComposerDraftStore } from "./composerDraftStore";
 
 async function sourceWithCachedIcon(source: ComposerAppSnapSource): Promise<ComposerAppSnapSource> {

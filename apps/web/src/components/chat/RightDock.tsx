@@ -442,7 +442,11 @@ export function RightDock(props: RightDockProps) {
                 className={DOCK_HEADER_ICON_BUTTON_CLASS}
                 onClick={() => props.onUserMaximizedChange?.(!userMaximized)}
               >
-                {userMaximized ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                {userMaximized ? (
+                  <Minimize2 className="size-3.5" />
+                ) : (
+                  <Maximize2 className="size-3.5" />
+                )}
               </IconButton>
             ) : null}
             {props.state.panes.length > 0 && props.addMenuKinds.length > 0 ? (

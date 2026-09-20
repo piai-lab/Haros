@@ -9,10 +9,7 @@ import { useComposerDraftStore } from "../composerDraftStore";
 import { requestComposerFocus } from "../composerFocusRequestStore";
 import { formatComposerMentionToken } from "./composerMentions";
 import { createFileCommentDraft, type FileCommentSelection } from "./fileComments";
-import {
-  createPullRequestContextDraft,
-  type PullRequestContextDraft,
-} from "./pullRequestContext";
+import { createPullRequestContextDraft, type PullRequestContextDraft } from "./pullRequestContext";
 
 export interface ChatFileReference {
   path: string;

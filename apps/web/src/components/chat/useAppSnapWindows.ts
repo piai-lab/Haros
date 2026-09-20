@@ -1,4 +1,8 @@
-import type { DesktopAppSnapState, DesktopAppSnapWindowEntry, ThreadId } from "@harnessos/contracts";
+import type {
+  DesktopAppSnapState,
+  DesktopAppSnapWindowEntry,
+  ThreadId,
+} from "@harnessos/contracts";
 import { useEffect, useRef, useState } from "react";
 
 import { insertAppSnapCaptureIntoDraft } from "~/appSnapIntake";
