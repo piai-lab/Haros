@@ -68,31 +68,26 @@ describe("Desktop startup splash", () => {
     initializeStartupSplash();
     reportStartupShellReadiness({ settled: true, expectsComposer: true });
 
-    await wait(1_450);
+    await wait(20);
     expect(document.documentElement.dataset.startupReady).toBeUndefined();
     expect(isStartupSplashActive()).toBe(true);
 
     reportFocusedComposerReadiness(true);
     await wait(10);
     expect(document.documentElement.dataset.startupReady).toBe("true");
-    await wait(1_150);
+    await wait(180);
 
     expect(isStartupSplashActive()).toBe(false);
     expect(document.getElementById("startup-splash")).toBeNull();
   });
 
-  it("cancels a pending exit when the focused Engine changes back to checking", async () => {
+  it("reveals content immediately and never hides the workbench for a later Engine check", async () => {
     initializeStartupSplash();
-    reportStartupShellReadiness({ settled: true, expectsComposer: true });
-    reportFocusedComposerReadiness(true);
-
-    await wait(150);
-    reportFocusedComposerReadiness(false);
-    await wait(1_300);
-    expect(document.documentElement.dataset.startupReady).toBeUndefined();
-
-    reportFocusedComposerReadiness(true);
-    await wait(10);
+    reportStartupShellReadiness({ settled: true, expectsComposer: false });
     expect(document.documentElement.dataset.startupReady).toBe("true");
+    reportFocusedComposerReadiness(false);
+    expect(document.documentElement.dataset.startupReady).toBe("true");
+    await wait(180);
+    expect(isStartupSplashActive()).toBe(false);
   });
 });

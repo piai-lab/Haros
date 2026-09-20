@@ -91,8 +91,8 @@ const EN_MESSAGES = {
   "settings.chatWidthFull": "Full",
   "settings.effortSlider": "Effort slider",
   "settings.effortSliderDescription":
-    "Show a stepped effort slider in the Composer model menu. Turn this off to use radio buttons instead.",
-  "settings.effortSliderAria": "Show Composer effort as a slider",
+    "Show a stepped effort slider in the message input model menu. Turn this off to use radio buttons instead.",
+  "settings.effortSliderAria": "Show reasoning effort as a slider",
 } as const;
 
 const ZH_CN_MESSAGES = {
@@ -180,8 +180,8 @@ const ZH_CN_MESSAGES = {
   "settings.chatWidthFull": "全宽",
   "settings.effortSlider": "推理强度滑杆",
   "settings.effortSliderDescription":
-    "在 Composer 模型菜单里用步进滑杆调节推理强度。关闭后改回单选项。",
-  "settings.effortSliderAria": "以滑杆显示 Composer 推理强度",
+    "在输入框模型菜单里用步进滑杆调节推理强度。关闭后改回单选项。",
+  "settings.effortSliderAria": "以滑杆显示输入框推理强度",
 } as const;
 
 export const SETTINGS_APPEARANCE_MESSAGES = defineMessageSlice(EN_MESSAGES, ZH_CN_MESSAGES);

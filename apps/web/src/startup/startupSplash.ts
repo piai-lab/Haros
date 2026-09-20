@@ -7,18 +7,13 @@
 
 import { createStartupSplashDom } from "./startupSplashDom";
 
-const FULL_MIN_DISPLAY_MS = 1_400;
-const FULL_EXIT_MS = 1_100;
-const REDUCED_MIN_DISPLAY_MS = 300;
-const REDUCED_EXIT_MS = 220;
+const EXIT_MS = 160;
 
 let active = false;
 let shellSettled = false;
 let expectsComposer = true;
 let focusedComposerTerminal = false;
 let finishing = false;
-let startedAt = 0;
-let finishTimer: number | null = null;
 let removeTimer: number | null = null;
 
 function clearTimer(timer: number | null): void {
@@ -30,9 +25,7 @@ function isReducedMotion(): boolean {
 }
 
 function removeSplash(): void {
-  clearTimer(finishTimer);
   clearTimer(removeTimer);
-  finishTimer = null;
   removeTimer = null;
   document.getElementById("startup-splash")?.remove();
   delete document.documentElement.dataset.startupSplash;
@@ -43,29 +36,15 @@ function removeSplash(): void {
 function finishStartupSplash(): void {
   if (!active || finishing) return;
   finishing = true;
-  const reduced = isReducedMotion();
-  const minimum = reduced ? REDUCED_MIN_DISPLAY_MS : FULL_MIN_DISPLAY_MS;
-  const wait = Math.max(0, minimum - (performance.now() - startedAt));
-  finishTimer = window.setTimeout(() => {
-    document.documentElement.dataset.startupReady = "true";
-    const exitMs = reduced ? REDUCED_EXIT_MS : FULL_EXIT_MS;
-    removeTimer = window.setTimeout(removeSplash, exitMs);
-  }, wait);
+  document.documentElement.dataset.startupReady = "true";
+  if (isReducedMotion()) removeSplash();
+  else removeTimer = window.setTimeout(removeSplash, EXIT_MS);
 }
 
 function maybeFinish(): void {
   if (!shellSettled) return;
   if (expectsComposer && !focusedComposerTerminal) return;
   finishStartupSplash();
-}
-
-function cancelPendingFinishIfReadinessRegressed(): void {
-  if (!finishing || document.documentElement.dataset.startupReady === "true") return;
-  const ready = shellSettled && (!expectsComposer || focusedComposerTerminal);
-  if (ready) return;
-  clearTimer(finishTimer);
-  finishTimer = null;
-  finishing = false;
 }
 
 export function initializeStartupSplash(): void {
@@ -75,7 +54,6 @@ export function initializeStartupSplash(): void {
   expectsComposer = true;
   focusedComposerTerminal = false;
   finishing = false;
-  startedAt = performance.now();
 
   document.documentElement.dataset.startupSplash = "active";
   createStartupSplashDom();
@@ -88,14 +66,12 @@ export function reportStartupShellReadiness(input: {
   if (!active) return;
   shellSettled = input.settled;
   expectsComposer = input.expectsComposer;
-  cancelPendingFinishIfReadinessRegressed();
   maybeFinish();
 }
 
 export function reportFocusedComposerReadiness(terminal: boolean): void {
   if (!active) return;
   focusedComposerTerminal = terminal;
-  cancelPendingFinishIfReadinessRegressed();
   maybeFinish();
 }
 

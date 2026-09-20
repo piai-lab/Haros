@@ -351,6 +351,11 @@ function StartupSplashShellBridge() {
   useEffect(() => {
     const snapshotsSettled = !configQuery.isPending && !settingsQuery.isPending;
     const deterministicRecovery = configQuery.isError || settingsQuery.isError;
+    document.documentElement.dataset.shellState = deterministicRecovery
+      ? "recovery"
+      : transportState === "open" && snapshotsSettled
+        ? "ready"
+        : "connecting";
     reportStartupShellReadiness({
       settled: transportState === "open" && snapshotsSettled,
       expectsComposer:
