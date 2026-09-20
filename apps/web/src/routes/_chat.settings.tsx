@@ -121,6 +121,7 @@ import {
   BEHAVIOR_SETTINGS_SEARCH,
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
+import { parseEngineSetupKind } from "~/lib/engineSetup";
 import { parseModelServiceSetupIntent } from "~/lib/modelServiceSetup";
 import {
   normalizeSettingsSection,
@@ -148,6 +149,7 @@ function SettingsRouteView() {
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const modelServiceSetupIntent = parseModelServiceSetupIntent(routeSearch.intent);
+  const focusEngine = parseEngineSetupKind(routeSearch.engine);
   const {
     isDefaultActiveTheme,
     resetAllThemes,
@@ -1624,6 +1626,7 @@ function SettingsRouteView() {
                 <EnginesSettingsPanel
                   active={activeSection === "engines"}
                   resetEpoch={resetEpoch}
+                  focusEngine={focusEngine}
                 />
                 <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />
 

@@ -15,6 +15,7 @@ import type {
   RuntimeMode,
 } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getEngineStartOptions } from "~/engineSettings";
@@ -62,6 +63,7 @@ import { useI18n } from "~/i18n";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { findEngineStatus } from "~/lib/engineAvailability";
+import { engineSetupSearch } from "~/lib/engineSetup";
 import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
@@ -111,6 +113,7 @@ export function KanbanNewTaskDialog({
   initialSendAsDraft: initialSendAsDraftProp,
 }: KanbanNewTaskDialogProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const initialSendAsDraft = initialSendAsDraftProp ?? false;
   const { preferences } = useLocalPreferences();
   const { settings, defaults, fetchSettings } = useServerSettings();
@@ -608,6 +611,12 @@ export function KanbanNewTaskDialog({
                             current.includes(engine) ? current : [...current, engine],
                           );
                           if (engine === "pi") setPiDiscoveryRequested(true);
+                        }}
+                        onEngineSetup={(engine) => {
+                          void navigate({
+                            to: "/settings",
+                            search: engineSetupSearch(engine),
+                          });
                         }}
                       />
                       <TraitsPicker

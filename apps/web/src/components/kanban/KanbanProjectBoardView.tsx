@@ -16,6 +16,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import { getEngineStartOptions, resolveAssistantDeliveryMode } from "~/engineSettings";
@@ -25,7 +26,11 @@ import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/Ru
 import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
-import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import {
+  deriveEnginePickerAvailability,
+  resolveEngineSendAvailabilityWithRefresh,
+} from "~/lib/engineAvailability";
+import { engineSetupSearch, notifyBlockedEngineSend } from "~/lib/engineSetup";
 import { dispatchKanbanDraftCard } from "../../lib/kanbanDispatch";
 import { KanbanCardView, type KanbanCardPrLookup } from "./KanbanCardView";
 import { KanbanColumn, parseKanbanColumnDropId } from "./KanbanColumn";
@@ -70,6 +75,7 @@ export function KanbanProjectBoardView({
   nowMs?: number;
 }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { fetchSettings } = useServerSettings();
   const engineStatuses = useEngineStatusesForLocalConfig();
   const refreshEngineStatuses = useRefreshEngineStatusesNow();
@@ -118,9 +124,17 @@ export function KanbanProjectBoardView({
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (!sendAvailability.usable) {
-      toastManager.add({
-        type: "error",
+      notifyBlockedEngineSend({
+        engine: targetEngine,
         title: sendAvailability.unavailableReason,
+        t,
+        state: deriveEnginePickerAvailability(sendAvailability.status).state,
+        onOpenEngineSettings: (engine) => {
+          void navigate({
+            to: "/settings",
+            search: engineSetupSearch(engine),
+          });
+        },
       });
       return;
     }

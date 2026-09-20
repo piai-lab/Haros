@@ -171,6 +171,7 @@ async function mountPicker(props: {
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   onSelectionCommitted?: () => void;
   onEngineBrowse?: (engine: EngineKind) => void;
+  onEngineSetup?: (engine: EngineKind) => void;
   modelOptionsByEngine?: Partial<
     Record<EngineKind, ReadonlyArray<EngineModelOption & { slug: ModelSlug }>>
   >;
@@ -196,6 +197,7 @@ async function mountPicker(props: {
           ? { onSelectionCommitted: props.onSelectionCommitted }
           : {})}
         {...(props.onEngineBrowse ? { onEngineBrowse: props.onEngineBrowse } : {})}
+        {...(props.onEngineSetup ? { onEngineSetup: props.onEngineSetup } : {})}
         onEngineModelChange={onEngineModelChange}
       />
     </I18nProvider>,
@@ -832,6 +834,45 @@ describe("EngineModelPicker", () => {
       await expect
         .element(page.getByRole("menuitemradio", { name: "Composer 2" }))
         .not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("opens engine setup from an uninstalled CLI Engine row", async () => {
+    const onEngineSetup = vi.fn<(engine: EngineKind) => void>();
+    const mounted = await mountPicker({
+      engine: "codex",
+      model: "gpt-5-codex",
+      lockedEngine: null,
+      onEngineSetup,
+      engines: [
+        {
+          engine: "codex",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+        {
+          engine: "cursor",
+          status: "error",
+          available: false,
+          authStatus: "unknown",
+          unavailableReason: "not_installed",
+          checkedAt: "2026-04-10T10:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await expect
+        .element(page.getByRole("menuitem", { name: /Cursor.*Install engine/ }))
+        .toBeVisible();
+      await page.getByRole("menuitem", { name: /Cursor.*Install engine/ }).click();
+      expect(onEngineSetup).toHaveBeenCalledWith("cursor");
+      expect(mounted.onEngineModelChange).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }

@@ -13,6 +13,7 @@ import {
   deriveEnginePickerAvailability,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
+import { engineSetupActionKey } from "../../lib/engineSetup";
 import {
   Menu,
   MenuGroup,
@@ -124,6 +125,7 @@ type EngineModelMenuItemsProps = {
   isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   /** Reports an explicitly opened engine submenu before model selection. */
   onEngineBrowse?: (engine: EngineKind) => void;
+  onEngineSetup?: (engine: EngineKind) => void;
   // Invoked after a model selection commits so callers can close ancestor
   // menus and refocus the composer.
   onAfterSelection?: () => void;
@@ -374,16 +376,19 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
       {visibleEngineOptions.map((option) => {
         const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
         const availability = deriveEnginePickerAvailability(liveEngine);
-        const availabilityLabel = (
-          {
-            checking: t("composer.engineChecking"),
-            sign_in: t("composer.engineSignIn"),
-            not_installed: t("composer.engineNotInstalled"),
-            unavailable: t("composer.engineUnavailable"),
-            limited: t("composer.engineLimited"),
-            ready: null,
-          } satisfies Record<EnginePickerAvailabilityState, string | null>
-        )[availability.state];
+        const setupKey = engineSetupActionKey(option.value, availability.state);
+        const availabilityLabel = setupKey
+          ? t(setupKey)
+          : (
+              {
+                checking: t("composer.engineChecking"),
+                sign_in: t("composer.engineSignIn"),
+                not_installed: t("composer.engineNotInstalled"),
+                unavailable: t("composer.engineUnavailable"),
+                limited: t("composer.engineLimited"),
+                ready: null,
+              } satisfies Record<EnginePickerAvailabilityState, string | null>
+            )[availability.state];
         if (availability.disabled) {
           return (
             <MenuItem key={option.value} disabled>
@@ -399,6 +404,31 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
               <span className="ms-auto text-[11px] text-muted-foreground/80">
                 {availabilityLabel}
               </span>
+            </MenuItem>
+          );
+        }
+        if (setupKey) {
+          return (
+            <MenuItem
+              key={option.value}
+              onClick={() => {
+                props.onEngineSetup?.(option.value);
+              }}
+            >
+              <EngineIcon
+                engine={option.value}
+                aria-hidden="true"
+                className={cn(
+                  "size-3 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                )}
+              />
+              <span className="min-w-0 truncate">{option.label}</span>
+              {availabilityLabel ? (
+                <span className="ms-auto text-[11px] text-muted-foreground/80">
+                  {availabilityLabel}
+                </span>
+              ) : null}
             </MenuItem>
           );
         }
@@ -483,6 +513,7 @@ type EngineModelPickerProps = {
   onEngineModelChange: (engine: EngineKind, model: ModelSlug, starred?: StarredModel) => void;
   isStarredAvailable?: ((entry: StarredModel) => boolean) | undefined;
   onEngineBrowse?: (engine: EngineKind) => void;
+  onEngineSetup?: (engine: EngineKind) => void;
   starredEffort?: string | null;
   starredFastMode?: boolean | null;
   starredThinking?: boolean | null;
@@ -622,6 +653,7 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
           onEngineModelChange={props.onEngineModelChange}
           isStarredAvailable={props.isStarredAvailable}
           {...(props.onEngineBrowse ? { onEngineBrowse: props.onEngineBrowse } : {})}
+          {...(props.onEngineSetup ? { onEngineSetup: props.onEngineSetup } : {})}
           onAfterSelection={handleAfterSelection}
         />
       </ComposerPickerMenuPopup>

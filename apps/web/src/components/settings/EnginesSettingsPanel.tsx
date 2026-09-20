@@ -1261,7 +1261,10 @@ function EngineToolRow(props: {
 
   return (
     <Collapsible open={props.open} onOpenChange={props.onOpenChange}>
-      <div className="border-t border-border/70 first:border-t-0">
+      <div
+        id={`engine-setup-${props.config.engine}`}
+        className="border-t border-border/70 first:border-t-0"
+      >
         <div className="flex min-h-11 items-center gap-2 px-3 py-2">
           <CollapsibleTrigger
             type="button"
@@ -1407,9 +1410,14 @@ function EngineToolRow(props: {
 export type EnginesSettingsPanelProps = {
   readonly active: boolean;
   readonly resetEpoch: number;
+  readonly focusEngine?: EngineKind | null;
 };
 
-export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPanelProps) {
+export function EnginesSettingsPanel({
+  active,
+  resetEpoch,
+  focusEngine = null,
+}: EnginesSettingsPanelProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const { preferences, defaults: preferenceDefaults, updatePreferences } = useLocalPreferences();
@@ -1454,6 +1462,24 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
   const [openInstallEngines, setOpenInstallEngines] = useState<Record<EngineKind, boolean>>(() =>
     createEngineInstallDisclosureState(settings ?? defaults, defaults),
   );
+  const appliedFocusEngineRef = useRef<EngineKind | null>(null);
+  useEffect(() => {
+    if (!active || !focusEngine) {
+      appliedFocusEngineRef.current = null;
+      return;
+    }
+    if (appliedFocusEngineRef.current === focusEngine) return;
+    appliedFocusEngineRef.current = focusEngine;
+    setOpenInstallEngines((existing) => ({
+      ...existing,
+      [focusEngine]: true,
+    }));
+    requestAnimationFrame(() => {
+      document.getElementById(`engine-setup-${focusEngine}`)?.scrollIntoView({
+        block: "nearest",
+      });
+    });
+  }, [active, focusEngine]);
   const [updatingEngines, setUpdatingEngines] = useState<ReadonlySet<EngineKind>>(() => new Set());
   const hiddenEngineSet = useMemo(
     () => new Set<EngineKind>(preferences.hiddenEngines),

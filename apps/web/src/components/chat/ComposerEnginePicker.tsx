@@ -14,6 +14,7 @@ import {
   findEngineStatus,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
+import { engineSetupActionKey } from "../../lib/engineSetup";
 import { compareEnginesByOrder, filterEngineOptionsByVisibility } from "../../engineOrdering";
 import { Button } from "../ui/button";
 import { Menu, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "../ui/menu";
@@ -31,13 +32,19 @@ type ComposerEnginePickerProps = {
   onOpenChange?: (open: boolean) => void;
   onEngineChange: (engine: EngineKind) => void;
   onEngineIntent?: (engine: EngineKind) => void;
+  onEngineSetup?: (engine: EngineKind) => void;
   onSelectionCommitted?: () => void;
 };
 
 function statusLabel(
+  engine: EngineKind,
   state: Exclude<EnginePickerAvailabilityState, "ready"> | "coming_soon",
   t: ReturnType<typeof useI18n>["t"],
 ): string {
+  if (state !== "coming_soon") {
+    const setupKey = engineSetupActionKey(engine, state);
+    if (setupKey) return t(setupKey);
+  }
   switch (state) {
     case "checking":
       return t("composer.engineChecking");
@@ -152,6 +159,11 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
             }
             props.onEngineIntent?.(nextEngine);
             props.onEngineChange(nextEngine);
+            const liveStatus = findEngineStatus(props.engines, nextEngine);
+            const availability = deriveEnginePickerAvailability(liveStatus);
+            if (engineSetupActionKey(nextEngine, availability.state)) {
+              props.onEngineSetup?.(nextEngine);
+            }
             setOpen(false);
             props.onSelectionCommitted?.();
           }}
@@ -162,7 +174,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
             const trailing =
               availability.state === "ready" ? null : (
                 <span className="text-[11px] text-muted-foreground/80">
-                  {statusLabel(availability.state, t)}
+                  {statusLabel(option.value, availability.state, t)}
                 </span>
               );
             return (
@@ -173,6 +185,13 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
                 preserveChildLayout
                 className="grid-cols-[minmax(0,1fr)_auto]"
                 trailing={trailing}
+                onClick={() => {
+                  if (option.value !== props.engine) return;
+                  if (!engineSetupActionKey(option.value, availability.state)) return;
+                  props.onEngineSetup?.(option.value);
+                  setOpen(false);
+                  props.onSelectionCommitted?.();
+                }}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <EngineIcon

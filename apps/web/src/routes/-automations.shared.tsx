@@ -20,6 +20,7 @@ import {
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 import { isEngineRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 
 import { useLocalPreferences } from "~/localPreferences";
@@ -99,6 +100,7 @@ import {
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
+import { engineSetupSearch } from "~/lib/engineSetup";
 import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
 import { engineExecutionCapabilitiesQueryOptions } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
@@ -1003,6 +1005,7 @@ export function AutomationModelPicker({
   readonly onAutoModeSupportChange?: (supported: boolean) => void;
 }) {
   const { preferences: settings } = useLocalPreferences();
+  const navigate = useNavigate();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const engineStatuses = useEngineStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
@@ -1061,6 +1064,12 @@ export function AutomationModelPicker({
       hiddenEngines={settings.hiddenEngines}
       engineOrder={settings.engineOrder}
       open={open}
+      onEngineSetup={(engine) => {
+        void navigate({
+          to: "/settings",
+          search: engineSetupSearch(engine),
+        });
+      }}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (!nextOpen) {

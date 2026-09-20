@@ -23,7 +23,11 @@ import { useComposerDraftStore } from "~/composerDraftStore";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
-import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import {
+  deriveEnginePickerAvailability,
+  resolveEngineSendAvailabilityWithRefresh,
+} from "~/lib/engineAvailability";
+import { engineSetupSearch, notifyBlockedEngineSend } from "~/lib/engineSetup";
 import { buildEngineSelection } from "~/engineModelOptions";
 import { getEngineStartOptions, resolveAssistantDeliveryMode } from "~/engineSettings";
 import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
@@ -142,9 +146,17 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (!sendAvailability.usable) {
-      toastManager.add({
-        type: "error",
+      notifyBlockedEngineSend({
+        engine: engineSelection.engine,
         title: sendAvailability.unavailableReason,
+        t,
+        state: deriveEnginePickerAvailability(sendAvailability.status).state,
+        onOpenEngineSettings: (engine) => {
+          void navigate({
+            to: "/settings",
+            search: engineSetupSearch(engine),
+          });
+        },
       });
       isCreatingRef.current = false;
       return;

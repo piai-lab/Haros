@@ -36,7 +36,10 @@ import {
   type PendingClaudeCacheReview,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
-import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
+import {
+  engineOpensModelServicesSettings,
+  mapEngineDescriptors,
+} from "@harnessos/shared/engineMetadata";
 import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
@@ -122,11 +125,13 @@ import {
 import { joinProjectPath } from "~/lib/projectPaths";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
+  deriveEnginePickerAvailability,
   findEngineStatus,
   normalizeCustomBinaryPath,
   normalizeEngineStatusForLocalConfig,
   resolveEngineSendAvailabilityWithRefresh,
 } from "~/lib/engineAvailability";
+import { engineSetupSearch, notifyBlockedEngineSend } from "~/lib/engineSetup";
 import {
   modelServiceSetupSearch,
   notifyMissingComposerModel,
@@ -2565,6 +2570,15 @@ export default function ChatView({
     cwd: engineModelDiscoveryCwd,
     modelHintByEngine: composerModelHintByEngine,
   });
+  const openEngineSetup = useCallback(
+    (engine: EngineKind) => {
+      void navigate({
+        to: "/settings",
+        search: engineSetupSearch(engine),
+      });
+    },
+    [navigate],
+  );
   const openModelServiceSetup = useCallback(
     (intent: ModelServiceSetupIntent) => {
       void navigate({
@@ -8038,9 +8052,12 @@ export default function ChatView({
       sendPreflightInFlightRef.current = false;
     });
     if (!sendEngineAvailability.usable) {
-      toastManager.add({
-        type: "error",
+      notifyBlockedEngineSend({
+        engine: selectedEngineSelectionForSend.engine,
         title: sendEngineAvailability.unavailableReason,
+        t,
+        state: deriveEnginePickerAvailability(sendEngineAvailability.status).state,
+        onOpenEngineSettings: openEngineSetup,
       });
       return false;
     }
@@ -9972,9 +9989,12 @@ export default function ChatView({
   const openSelectedEngineSettings = useCallback(() => {
     void navigate({
       to: "/settings",
-      search: {
-        section: selectedEngine === "codex" ? "models" : "engines",
-      },
+      search:
+        selectedEngine && engineOpensModelServicesSettings(selectedEngine)
+          ? { section: "models" }
+          : selectedEngine
+            ? engineSetupSearch(selectedEngine)
+            : { section: "engines" },
     });
   }, [navigate, selectedEngine]);
   const composerPickerControls = (
@@ -9986,6 +10006,7 @@ export default function ChatView({
         engineOrder={settings.engineOrder}
         onEngineChange={onComposerEngineSelect}
         onEngineIntent={handleEngineBrowse}
+        onEngineSetup={openEngineSetup}
         onSelectionCommitted={scheduleComposerFocus}
         open={isEnginePickerOpen}
         onOpenChange={handleEnginePickerOpenChange}

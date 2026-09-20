@@ -54,6 +54,7 @@ async function mountPicker(input: {
   harness.settings.localePreference = input.locale ?? "en";
   const onEngineChange = vi.fn<(engine: EngineKind) => void>();
   const onEngineIntent = vi.fn<(engine: EngineKind) => void>();
+  const onEngineSetup = vi.fn<(engine: EngineKind) => void>();
   const host = document.createElement("div");
   document.body.append(host);
 
@@ -71,6 +72,7 @@ async function mountPicker(input: {
             setEngine(nextEngine);
           }}
           onEngineIntent={onEngineIntent}
+          onEngineSetup={onEngineSetup}
         />
       </I18nProvider>
     );
@@ -80,6 +82,7 @@ async function mountPicker(input: {
   return {
     onEngineChange,
     onEngineIntent,
+    onEngineSetup,
     cleanup: async () => {
       await screen.unmount();
       host.remove();
@@ -179,7 +182,7 @@ describe("ComposerEnginePicker", () => {
         .element(page.getByRole("menuitemradio", { name: /Claude.*Sign in/ }))
         .not.toHaveAttribute("aria-disabled", "true");
       await expect
-        .element(page.getByRole("menuitemradio", { name: /Cursor.*Not installed/ }))
+        .element(page.getByRole("menuitemradio", { name: /Cursor.*Install engine/ }))
         .not.toHaveAttribute("aria-disabled", "true");
       await expect
         .element(page.getByRole("menuitemradio", { name: /Antigravity.*Unavailable/ }))
@@ -193,6 +196,19 @@ describe("ComposerEnginePicker", () => {
       await expect
         .element(page.getByRole("menuitemradio", { name: "Codex" }))
         .not.toHaveAttribute("aria-disabled", "true");
+      await page.getByRole("menuitemradio", { name: /Claude.*Sign in/ }).click();
+      expect(mounted.onEngineSetup).toHaveBeenCalledWith("claude");
+      expect(mounted.onEngineChange).toHaveBeenCalledWith("claude");
+      await page.getByRole("button", { name: "Change engine. Current: Claude" }).click();
+      await page.getByRole("menuitemradio", { name: /Cursor.*Install engine/ }).click();
+      expect(mounted.onEngineSetup).toHaveBeenCalledWith("cursor");
+      expect(mounted.onEngineChange).toHaveBeenCalledWith("cursor");
+      await page.getByRole("button", { name: "Change engine. Current: Cursor" }).click();
+      await page.getByRole("menuitemradio", { name: /Cursor.*Install engine/ }).click();
+      expect(mounted.onEngineSetup).toHaveBeenLastCalledWith("cursor");
+      await page.getByRole("button", { name: "Change engine. Current: Cursor" }).click();
+      await page.getByRole("menuitemradio", { name: "Codex" }).click();
+      expect(mounted.onEngineSetup).toHaveBeenCalledTimes(3);
     } finally {
       await mounted.cleanup();
     }
@@ -213,11 +229,11 @@ describe("ComposerEnginePicker", () => {
     });
     try {
       await page.getByRole("button", { name: "更改引擎。当前：Codex" }).click();
-      const row = page.getByRole("menuitemradio", { name: /Cursor.*未安装/ });
+      const row = page.getByRole("menuitemradio", { name: /Cursor.*安装引擎/ });
       await expect.element(row).toBeVisible();
       expect(row.element().className).toContain("grid-cols-[minmax(0,1fr)_auto]");
       const status = row.element().querySelector<HTMLElement>(".text-muted-foreground\\/80");
-      expect(status?.textContent).toBe("未安装");
+      expect(status?.textContent).toBe("安装引擎");
       expect(status?.className).toContain("text-[11px]");
       await expect
         .element(page.getByRole("menuitemradio", { name: /Antigravity.*不可用/ }))

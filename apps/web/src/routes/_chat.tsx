@@ -56,7 +56,6 @@ import {
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
-import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
@@ -72,6 +71,11 @@ import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
 import { getLocalStorageItem } from "~/hooks/useLocalStorage";
 import { Schema } from "effect";
+import {
+  deriveEnginePickerAvailability,
+  resolveEngineSendAvailabilityWithRefresh,
+} from "~/lib/engineAvailability";
+import { engineSetupSearch, notifyBlockedEngineSend } from "~/lib/engineSetup";
 import {
   resolveThreadSidebarAutoSuppressed,
   resolveThreadSidebarPresentation,
@@ -273,6 +277,7 @@ function isRecentViewSwitcherCommitKey(event: KeyboardEvent): boolean {
 }
 
 function ChatRouteGlobalShortcuts() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const isStudioRoute = useLocation({
     select: (location) => location.pathname.startsWith("/studio"),
@@ -504,9 +509,17 @@ function ChatRouteGlobalShortcuts() {
             refreshStatuses: () => refreshEngineStatuses({ silent: true }),
           });
           if (!engineAvailability.usable) {
-            toastManager.add({
-              type: "error",
+            notifyBlockedEngineSend({
+              engine,
               title: engineAvailability.unavailableReason,
+              t,
+              state: deriveEnginePickerAvailability(engineAvailability.status).state,
+              onOpenEngineSettings: (nextEngine) => {
+                void navigate({
+                  to: "/settings",
+                  search: engineSetupSearch(nextEngine),
+                });
+              },
             });
             return;
           }
