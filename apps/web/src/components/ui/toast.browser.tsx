@@ -75,6 +75,31 @@ describe("status toast visible timing", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["light", "dark"])(
+    "keeps an actionable error description visible in %s theme without extra buttons",
+    async (theme) => {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      const { cleanup } = await mountToastSurface();
+      try {
+        toastManager.add({
+          type: "error",
+          title: "无法安装 DeepSeek",
+          description: "请检查 Node.js 和 npm，然后重试。",
+          timeout: 0,
+          data: { statusMotion: true },
+        });
+        const root = await waitForStatusToast("无法安装 DeepSeek");
+        const description = root.querySelector<HTMLElement>('[data-slot="toast-description"]');
+        expect(description?.textContent).toBe("请检查 Node.js 和 npm，然后重试。");
+        expect(description!.getBoundingClientRect().height).toBeGreaterThan(0);
+        expect(description!.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+      } finally {
+        await cleanup();
+        document.documentElement.classList.remove("dark");
+      }
+    },
+  );
+
   it("does not let hover prolong success and pauses while the page is hidden", async () => {
     vi.spyOn(document, "hasFocus").mockReturnValue(true);
     let visibilityState: DocumentVisibilityState = "visible";

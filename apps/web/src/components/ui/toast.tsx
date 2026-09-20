@@ -72,7 +72,12 @@ function shouldUseCompactToast(toast: ToastObject<ThreadToastData>): boolean {
   if (toast.data?.compactContextual) {
     return true;
   }
-  return !toast.data?.copyText && !toast.actionProps && !toast.data?.secondaryActionProps;
+  return (
+    !toast.description &&
+    !toast.data?.copyText &&
+    !toast.actionProps &&
+    !toast.data?.secondaryActionProps
+  );
 }
 
 function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {

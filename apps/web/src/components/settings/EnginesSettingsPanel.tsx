@@ -26,6 +26,7 @@ import {
 } from "@harnessos/contracts";
 import {
   ENGINE_DISPLAY_NAMES,
+  engineMaintenanceOperation,
   ENGINE_DESCRIPTOR_BY_KIND,
   RUNNABLE_ENGINE_DESCRIPTORS,
 } from "@harnessos/shared/engineMetadata";
@@ -795,12 +796,43 @@ function formatEngineVersion(value: string | null | undefined): string | null {
   return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
 }
 
+const ENGINE_OPERATION_COPY = {
+  install: {
+    action: "settings.install",
+    running: "settings.engineInstalling",
+    failed: "settings.engineInstallFailed",
+    succeeded: "settings.engineInstalled",
+    toastRunning: "settings.installingNamedEngine",
+    toastFailed: "settings.couldNotInstallEngine",
+    toastSucceeded: "settings.installedNamedEngine",
+  },
+  update: {
+    action: "settings.update",
+    running: "settings.updatingEngine",
+    failed: "settings.updateFailed",
+    succeeded: "settings.updatedEngine",
+    toastRunning: "updater.updatingEngine",
+    toastFailed: "settings.couldNotUpdateEngine",
+    toastSucceeded: "updater.engineUpdated",
+  },
+  repair: {
+    action: "settings.repairEngine",
+    running: "settings.repairingEngine",
+    failed: "settings.engineRepairFailed",
+    succeeded: "settings.engineRepaired",
+    toastRunning: "settings.repairingNamedEngine",
+    toastFailed: "settings.couldNotRepairEngine",
+    toastSucceeded: "settings.repairedNamedEngine",
+  },
+} as const;
+
 function engineUpdateStatusLabel(engine: ServerEngineStatus, t: SettingsTranslator): string | null {
   const state = engine.updateState?.status;
+  const copy = ENGINE_OPERATION_COPY[engine.updateState?.operation ?? "update"];
   if (state === "queued") return t("settings.updateQueued");
-  if (state === "running") return t("settings.updatingEngine");
-  if (state === "succeeded") return t("settings.updatedEngine");
-  if (state === "failed") return t("settings.updateFailed");
+  if (state === "running") return t(copy.running);
+  if (state === "succeeded") return t(copy.succeeded);
+  if (state === "failed") return t(copy.failed);
   if (state === "unchanged") return t("settings.stillOutdated");
   const advisory = engine.versionAdvisory;
   if (advisory?.status === "behind_latest" && advisory.latestVersion) {
@@ -836,6 +868,13 @@ function EngineUpdateAction(props: {
 }) {
   const { t } = useI18n();
   const advisory = props.engineStatus.versionAdvisory;
+  const copy =
+    ENGINE_OPERATION_COPY[
+      props.active
+        ? (props.engineStatus.updateState?.operation ??
+          engineMaintenanceOperation(props.engineStatus))
+        : engineMaintenanceOperation(props.engineStatus)
+    ];
   return (
     <Button
       type="button"
@@ -843,6 +882,7 @@ function EngineUpdateAction(props: {
       variant="outline"
       disabled={props.disabled}
       title={
+        !ENGINE_DESCRIPTOR_BY_KIND[props.engineStatus.engine].installation &&
         advisory?.updateCommand
           ? t("settings.runUpdateCommand", { command: advisory.updateCommand })
           : undefined
@@ -858,8 +898,10 @@ function EngineUpdateAction(props: {
         <DownloadIcon className="size-3.5" />
       )}
       {props.active
-        ? t("settings.engineInstalling")
-        : t(props.engineStatus.available ? "settings.update" : "settings.install")}
+        ? t(copy.running)
+        : props.engineStatus.updateState?.status === "failed"
+          ? t("common.retry")
+          : t(copy.action)}
     </Button>
   );
 }
@@ -1196,13 +1238,15 @@ function EngineToolRow(props: {
     updateAdvisory?.status === "behind_latest" && !showEngineUpdateStatus;
   const currentEngineVersion = formatEngineVersion(props.engineStatus?.version);
   const engineUpdateLabel = props.engineStatus
-    ? !props.settings.enableEngineUpdateChecks
-      ? currentEngineVersion
-        ? t("settings.currentVersion", { version: currentEngineVersion })
-        : null
-      : engineUpdateSuppressed
-        ? null
-        : engineUpdateStatusLabel(props.engineStatus, t)
+    ? props.engineStatus.updateState
+      ? engineUpdateStatusLabel(props.engineStatus, t)
+      : !props.settings.enableEngineUpdateChecks
+        ? currentEngineVersion
+          ? t("settings.currentVersion", { version: currentEngineVersion })
+          : null
+        : engineUpdateSuppressed
+          ? null
+          : engineUpdateStatusLabel(props.engineStatus, t)
     : null;
   const updateActive = Boolean(
     (props.engineStatus && isEngineUpdateActive(props.engineStatus)) ||
@@ -1270,9 +1314,7 @@ function EngineToolRow(props: {
               ) : null}
               {props.engineStatus?.updateState ? (
                 <div role="status" className="text-xs text-muted-foreground" aria-live="polite">
-                  {updateActive
-                    ? t("settings.engineInstalling")
-                    : engineUpdateStatusLabel(props.engineStatus, t)}
+                  {engineUpdateStatusLabel(props.engineStatus, t)}
                   {updateActive &&
                   props.engineStatus.updateState.message?.startsWith("Downloading ") ? (
                     <p className="mt-1">
@@ -1280,9 +1322,21 @@ function EngineToolRow(props: {
                     </p>
                   ) : null}
                   {props.engineStatus.updateState.status === "failed" ? (
-                    <p className="mt-1 whitespace-pre-wrap">
-                      {props.engineStatus.updateState.message}
-                    </p>
+                    <>
+                      <p className="mt-1 whitespace-pre-wrap break-words">
+                        {props.engineStatus.updateState.message}
+                      </p>
+                      {props.engineStatus.updateState.output ? (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer">
+                            {t("settings.engineInstallDiagnostics")}
+                          </summary>
+                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all">
+                            {props.engineStatus.updateState.output}
+                          </pre>
+                        </details>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
               ) : null}
@@ -1494,9 +1548,13 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
         progressToastDismissed = true;
       };
       const engineLabel = ENGINE_DISPLAY_NAMES[engine];
+      const initialStatus = serverConfigQuery.data?.engines.find(
+        (status) => status.engine === engine,
+      );
+      const copy = ENGINE_OPERATION_COPY[engineMaintenanceOperation(initialStatus)];
       const toastId = toastManager.add({
         type: "loading",
-        title: t("updater.updatingEngine", { engine: engineLabel }),
+        title: t(copy.toastRunning, { engine: engineLabel }),
         data: createEngineUpdateToastData({
           stage: "progress",
           closeLabel: t("updater.hideProgress"),
@@ -1522,7 +1580,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             if (progressToastDismissed) return;
             toastManager.update(toastId, {
               type: "error",
-              title: t("settings.couldNotUpdateEngine", {
+              title: t(copy.toastFailed, {
                 engine: engineLabel,
               }),
               description: manualCommand
@@ -1540,7 +1598,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           if (progressToastDismissed) return;
           toastManager.update(toastId, {
             type: "success",
-            title: t("updater.engineUpdated", { engine: engineLabel }),
+            title: t(copy.toastSucceeded, { engine: engineLabel }),
             description: t("updater.refreshedDescription"),
             data: createEngineUpdateToastData({
               stage: "success",
@@ -1553,7 +1611,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           if (progressToastDismissed) return;
           toastManager.update(toastId, {
             type: "error",
-            title: t("settings.couldNotUpdateEngine", {
+            title: t(copy.toastFailed, {
               engine: engine,
             }),
             description:
@@ -1582,7 +1640,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           });
         });
     },
-    [queryClient, t, updatingEngines],
+    [queryClient, t, updatingEngines, serverConfigQuery.data?.engines],
   );
 
   if (!active) return null;

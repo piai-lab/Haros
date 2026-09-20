@@ -195,6 +195,112 @@ describe("EnginesSettingsPanel engine update feedback", () => {
     queryClient.clear();
   });
 
+  it.each([
+    {
+      locale: "en",
+      missing: true,
+      action: "Install",
+      failed: "Installation failed",
+      retry: "Retry",
+      title: "Could not install DeepSeek",
+    },
+    {
+      locale: "zh-CN",
+      missing: false,
+      action: "修复",
+      failed: "修复失败",
+      retry: "重试",
+      title: "无法修复 DeepSeek",
+    },
+  ])(
+    "distinguishes installation from repair and makes failure retryable in $locale",
+    async (testCase) => {
+      localStorage.setItem(
+        LOCAL_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({ localePreference: testCase.locale }),
+      );
+      const initial: ServerEngineStatus = {
+        engine: "deepseek",
+        status: "error",
+        available: false,
+        authStatus: "unknown",
+        checkedAt,
+        ...(testCase.missing ? { unavailableReason: "not_installed" as const } : {}),
+      };
+      const failed: ServerEngineStatus = {
+        ...initial,
+        updateState: {
+          operation: testCase.missing ? "install" : "repair",
+          status: "failed",
+          startedAt: checkedAt,
+          finishedAt: checkedAt,
+          message: "Check Node.js and npm, then retry.",
+          output: "npm diagnostic fixture",
+        },
+      };
+      let engines = [initial];
+      const getConfig = vi.fn(async () => ({
+        ...createBrowserTestServerConfig(checkedAt),
+        engines,
+      }));
+      const updateEngine = vi.fn(async () => {
+        engines = [failed];
+        return { engines };
+      });
+      window.nativeApi = {
+        server: {
+          getConfig,
+          getSettings: vi.fn().mockResolvedValue({
+            ...DEFAULT_SERVER_SETTINGS_VIEW,
+            enableEngineUpdateChecks: false,
+          }),
+          updateEngine,
+        },
+      } as unknown as NativeApi;
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData(serverQueryKeys.config(), await getConfig());
+      queryClient.setQueryData(serverQueryKeys.settings(), {
+        ...DEFAULT_SERVER_SETTINGS_VIEW,
+        enableEngineUpdateChecks: false,
+      });
+      const updateToast = vi.spyOn(toastManager, "update");
+      const screen = await render(
+        <QueryClientProvider client={queryClient}>
+          <I18nProvider>
+            <EnginesSettingsPanel active resetEpoch={0} />
+          </I18nProvider>
+        </QueryClientProvider>,
+      );
+      try {
+        await screen.getByRole("button", { name: testCase.action, exact: true }).click();
+        await expect.element(screen.getByText(testCase.failed, { exact: true })).toBeVisible();
+        await expect
+          .element(screen.getByRole("button", { name: testCase.retry, exact: true }))
+          .toBeEnabled();
+        expect(updateToast).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            title: testCase.title,
+            description: "Check Node.js and npm, then retry.",
+          }),
+        );
+        await screen.getByRole("button", { name: testCase.retry, exact: true }).click();
+        await expect.poll(() => updateEngine.mock.calls.length).toBe(2);
+        await screen
+          .getByRole("button", { name: new RegExp(`^DeepSeek ${testCase.failed}`) })
+          .click();
+        const details = document.querySelector<HTMLDetailsElement>("details");
+        expect(details).toBeTruthy();
+        details!.querySelector("summary")!.click();
+        expect(details!.open).toBe(true);
+        expect(details!.textContent).toContain("npm diagnostic fixture");
+      } finally {
+        await screen.unmount();
+        queryClient.clear();
+      }
+    },
+  );
+
   it("moves a single Engine update from loading to success", async () => {
     const updatedCodex: ServerEngineStatus = {
       ...outdatedCodex(),
