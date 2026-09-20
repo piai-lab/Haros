@@ -284,8 +284,8 @@ const GROK_4_5_CAPABILITIES = grokCapabilities([
 const GROK_4_6_CAPABILITIES = grokCapabilities([
   grokCliEffortOption("low"),
   grokCliEffortOption("medium"),
-  grokCliEffortOption("high", { isDefault: true }),
-  grokCliEffortOption("xhigh"),
+  grokCliEffortOption("high"),
+  grokCliEffortOption("xhigh", { isDefault: true }),
 ]);
 
 // Cursor's live catalog is discovered per session (see CursorAdapter.listModels);

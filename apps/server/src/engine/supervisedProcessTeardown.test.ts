@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -8,6 +9,7 @@ import type {
 } from "../platform/processTreeController";
 import {
   EngineProcessExitUnprovenError,
+  teardownEffectProcessTree,
   teardownEngineProcessTree,
 } from "./supervisedProcessTeardown";
 
@@ -22,6 +24,54 @@ function deterministicClock() {
 }
 
 describe("teardownEngineProcessTree", () => {
+  it("uses Windows descendant inspection for an exited Effect ACP child", async () => {
+    const processTreeKiller: ProcessTreeKiller = {
+      capture: () => ({ descendants: [], captureComplete: false }),
+      signal: () => undefined,
+    };
+
+    await expect(
+      teardownEffectProcessTree(
+        { pid: 801, exitCode: Effect.succeed(undefined) },
+        teardownEngineProcessTree,
+        {
+          platform: "win32",
+          captureWindowsChildren: async () => new Map(),
+          processTreeKiller,
+          graceMs: 10,
+          timeoutMs: 20,
+          pollIntervalMs: 1,
+        },
+      ),
+    ).resolves.toEqual({ escalated: false, signalErrors: [] });
+  });
+
+  it("does not accept an exited Effect ACP child when Windows descendant capture fails", async () => {
+    const failure = await teardownEffectProcessTree(
+      { pid: 802, exitCode: Effect.succeed(undefined) },
+      teardownEngineProcessTree,
+      {
+        platform: "win32",
+        captureWindowsChildren: async () => null,
+        processTreeKiller: {
+          capture: () => ({ descendants: [], captureComplete: false }),
+          signal: () => undefined,
+        },
+        graceMs: 10,
+        timeoutMs: 20,
+        pollIntervalMs: 1,
+      },
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      name: "EngineProcessExitUnprovenError",
+      rootPid: 802,
+      rootExited: true,
+      captureComplete: false,
+      remainingDescendantPids: null,
+    });
+  });
+
   it("escalates ignored TERM and returns only after root and descendants prove exit", async () => {
     const tree: CapturedProcessTree = {
       descendants: [{ pid: 102, command: "engine-worker" }],

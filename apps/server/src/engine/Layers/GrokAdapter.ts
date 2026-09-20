@@ -697,10 +697,17 @@ export function resolveGrokRuntimeModelSettings(
     | undefined,
 ): GrokAcpRuntimeSettings {
   if (!engineSelection) return {};
+  const capabilities = getModelCapabilities("grok", engineSelection.model);
   const options = normalizeGrokModelOptions(engineSelection.model, engineSelection.options);
+  // Grok's selected default is normalized out of persisted options. ACP receives
+  // effort only at process start, so pass the selected model family's default
+  // again instead of relying on whichever local CLI config happens to be present.
+  const reasoningEffort = options?.reasoningEffort ?? getDefaultEffort(capabilities);
   return {
     model: engineSelection.model,
-    ...(options?.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {}),
+    ...(reasoningEffort
+      ? { reasoningEffort: reasoningEffort as GrokModelOptions["reasoningEffort"] }
+      : {}),
   };
 }
 
