@@ -513,12 +513,21 @@ function isOutsideTurnProcessWork(entry: WorkLogEntry): boolean {
   );
 }
 
-// A tool/process event after an assistant segment invalidates that provisional
-// tail immediately. A later assistant segment becomes the new terminal result.
-// Explicit result receipts do not invalidate an already-final answer.
+// Terminal assistant ids are derived per response segment.
+//
+// Non-settled (running / waiting): a tool/process event after an assistant
+// segment invalidates that provisional tail immediately so intermediate
+// commentary is not shown as a final answer. A later assistant segment
+// becomes the new terminal result.
+// Settled: the last assistant in the segment remains terminal even if process
+// work follows. Earlier assistants lose terminal status only when a later
+// assistant appears, not when work appears. Explicit result receipts never
+// invalidate an already-final answer.
 function deriveTerminalAssistantMessageIdsFromTimeline(
   entries: ReadonlyArray<TimelineEntry>,
+  options?: { invalidateCandidateOnProcessWork?: boolean },
 ): Set<string> {
+  const invalidateCandidateOnProcessWork = options?.invalidateCandidateOnProcessWork ?? true;
   const result = new Set<string>();
   let candidate: string | null = null;
   const commit = () => {
@@ -535,7 +544,11 @@ function deriveTerminalAssistantMessageIdsFromTimeline(
       }
       continue;
     }
-    if (entry.kind === "work" && !isOutsideTurnProcessWork(entry.entry)) {
+    if (
+      invalidateCandidateOnProcessWork &&
+      entry.kind === "work" &&
+      !isOutsideTurnProcessWork(entry.entry)
+    ) {
       candidate = null;
     }
   }
@@ -563,9 +576,6 @@ export function deriveMessagesTimelineRows(input: {
     entry.kind === "message" ? [entry.message] : [],
   );
   const durationStartByMessageId = computeMessageDurationStart(timelineMessages);
-  const terminalAssistantMessageIds = deriveTerminalAssistantMessageIdsFromTimeline(
-    input.timelineEntries,
-  );
   const configuredPhase =
     input.turnProcessPhase ??
     (input.isWorking
@@ -663,6 +673,7 @@ export function deriveMessagesTimelineRows(input: {
       inProgress?: boolean;
       turnWorkEntries?: WorkLogEntry[];
       turnDiffSummary?: TurnDiffSummary;
+      terminalAssistantMessageIds?: ReadonlySet<string>;
     },
   ): Extract<MessagesTimelineRow, { kind: "message" }> => {
     const message = entry.message;
@@ -674,7 +685,8 @@ export function deriveMessagesTimelineRows(input: {
       ...(options?.turnWorkEntries?.length ? { turnWorkEntries: options.turnWorkEntries } : {}),
       durationStart: durationStartByMessageId.get(message.id) ?? message.createdAt,
       showAssistantCopyButton:
-        message.role === "assistant" && terminalAssistantMessageIds.has(message.id),
+        message.role === "assistant" &&
+        (options?.terminalAssistantMessageIds?.has(message.id) ?? false),
       assistantCopyStreaming: message.streaming || options?.inProgress === true,
       ...(entry.assistantCopyText !== undefined
         ? { assistantCopyText: entry.assistantCopyText }
@@ -699,6 +711,10 @@ export function deriveMessagesTimelineRows(input: {
     const segment = part.segment;
     const segmentIsActive = segment === activeSegment && configuredPhase.kind !== "settled";
     const segmentPhase = segmentIsActive ? configuredPhase.kind : "settled";
+    const terminalAssistantMessageIds = deriveTerminalAssistantMessageIdsFromTimeline(
+      segment.entries,
+      { invalidateCandidateOnProcessWork: segmentPhase !== "settled" },
+    );
     const processItems: TurnProcessItem[] = [];
     const resultRows: MessagesTimelineRow[] = [];
     const segmentRows: MessagesTimelineRow[] = [];
@@ -764,6 +780,7 @@ export function deriveMessagesTimelineRows(input: {
       const row = makeMessageRow(entry, {
         inProgress: segmentIsActive,
         turnWorkEntries: allWorkEntries,
+        terminalAssistantMessageIds,
       });
       if (message.role === "assistant") {
         const summary = input.turnDiffSummaryByAssistantMessageId.get(message.id);

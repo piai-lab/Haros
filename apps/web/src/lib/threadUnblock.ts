@@ -24,7 +24,9 @@ export type ThreadUnblockResult =
   /** Nothing was blocking the thread anymore. */
   | { readonly kind: "already-clear" }
   /** Every blocker changed state concurrently (another client or a restart settled it). */
-  | { readonly kind: "resolved-elsewhere" };
+  | { readonly kind: "resolved-elsewhere" }
+  /** Reconciliation completed but the server still reports a blocker. */
+  | { readonly kind: "still-blocked"; readonly blockerCount: number };
 
 /**
  * The reconciliation conflict is expected, not exceptional: two clients (or a
@@ -52,7 +54,7 @@ export async function unblockThreadFromClient(
   api: ThreadUnblockApi,
   threadId: ThreadId,
 ): Promise<ThreadUnblockResult> {
-  const blockers = await api.listEngineDeliveryBlockers({ threadId });
+  const blockers = await api.listEngineDeliveryBlockers({ threadId, limit: 500 });
   if (blockers.length === 0) return { kind: "already-clear" };
 
   const ordered = blockers.toSorted((left, right) => left.eventSequence - right.eventSequence);
@@ -74,12 +76,16 @@ export async function unblockThreadFromClient(
     }
   }
 
+  const remainingBlockers = await api.listEngineDeliveryBlockers({ threadId, limit: 500 });
+  if (remainingBlockers.length > 0) {
+    return { kind: "still-blocked", blockerCount: remainingBlockers.length };
+  }
   if (reconciledCount > 0) return { kind: "unblocked", reconciledCount };
   return conflictCount > 0 ? { kind: "resolved-elsewhere" } : { kind: "already-clear" };
 }
 
 export type ThreadUnblockNotice = {
-  readonly type: "success" | "info";
+  readonly type: "error" | "success" | "info";
   readonly title: string;
   readonly description: string;
 };
@@ -110,6 +116,12 @@ export function describeThreadUnblockResult(
         type: "info",
         title: t("conversation.unblockTaskAlreadyClear"),
         description: t("conversation.unblockTaskAlreadyClearDescription"),
+      };
+    case "still-blocked":
+      return {
+        type: "error",
+        title: t("conversation.unblockTaskStillBlocked"),
+        description: t("conversation.unblockTaskStillBlockedDescription"),
       };
   }
 }

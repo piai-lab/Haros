@@ -23,7 +23,7 @@ import {
 } from "./engineUpdates";
 
 describe("createEngineUpdateToastData", () => {
-  it("keeps progress and failure persistent while giving success one visible-time owner", () => {
+  it("keeps progress persistent while giving terminal states one visible-time owner", () => {
     const onClose = vi.fn();
 
     expect(
@@ -46,7 +46,9 @@ describe("createEngineUpdateToastData", () => {
     expect(
       createEngineUpdateToastData({ stage: "error", copyText: "npm update", onClose }),
     ).toEqual({
+      compactContextual: true,
       copyText: "npm update",
+      dismissAfterVisibleMs: ENGINE_UPDATE_SUCCESS_VISIBLE_MS,
       onClose,
       statusMotion: true,
     });
@@ -303,8 +305,8 @@ describe("isEngineUpdateActive", () => {
 });
 
 describe("engine update feedback timing", () => {
-  it("keeps successful update feedback to three visible seconds", () => {
-    expect(ENGINE_UPDATE_SUCCESS_VISIBLE_MS).toBe(3_000);
+  it("keeps terminal update feedback to the shared eight-second lifetime", () => {
+    expect(ENGINE_UPDATE_SUCCESS_VISIBLE_MS).toBe(8_000);
   });
 });
 

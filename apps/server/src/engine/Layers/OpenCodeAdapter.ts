@@ -2104,8 +2104,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 return;
               }
 
-              const message =
-                "OpenCode did not produce any activity for this prompt. The session may be stuck; try sending again or restart OpenCode.";
+              const message = `${adapterConfig.displayName} did not produce any activity for this prompt. The session may be stuck; try sending again or restart ${adapterConfig.displayName}.`;
               const completed = yield* completeOpenCodeTurn(context, {
                 turnId: input.turnId,
                 raw: { source: "harnessos.opencode.prompt.watchdog" },
@@ -2122,6 +2121,20 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 payload: {
                   message,
                   class: "transport_error",
+                },
+              });
+              // A prompt that reached the provider but produced no activity
+              // leaves the native session untrusted. Retire it before another
+              // turn can reuse the same OpenCode/Kilo session.
+              yield* stopOpenCodeContext(context);
+              sessions.delete(context.session.threadId);
+              yield* emit(context, {
+                ...buildEventBase({ threadId: context.session.threadId }),
+                type: "session.exited",
+                payload: {
+                  reason: message,
+                  recoverable: false,
+                  exitKind: "error",
                 },
               });
             }),

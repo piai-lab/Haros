@@ -2,12 +2,14 @@ import { assert, describe, it } from "vitest";
 import {
   buildVisibleToastLayout,
   DEFAULT_TOAST_TIMEOUT_MS,
+  STATUS_TOAST_TIMEOUT_MS,
   shouldHideCollapsedToastContent,
 } from "./toast.logic";
 
 describe("DEFAULT_TOAST_TIMEOUT_MS", () => {
-  it("auto-dismisses standard toasts after ten seconds", () => {
-    assert.equal(DEFAULT_TOAST_TIMEOUT_MS, 10_000);
+  it("auto-dismisses standard toasts after eight seconds", () => {
+    assert.equal(DEFAULT_TOAST_TIMEOUT_MS, 8_000);
+    assert.equal(STATUS_TOAST_TIMEOUT_MS, DEFAULT_TOAST_TIMEOUT_MS);
   });
 });
 

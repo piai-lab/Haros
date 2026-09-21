@@ -665,7 +665,7 @@ describe("getComposerEngineState", () => {
       "high",
       "xhigh",
     ]);
-    expect(grok46.defaultEffort).toBe("high");
+    expect(grok46.defaultEffort).toBe("xhigh");
     expect(grok46.effortLevels.find((effort) => effort.value === "xhigh")?.label).toBe(
       "Extra High",
     );

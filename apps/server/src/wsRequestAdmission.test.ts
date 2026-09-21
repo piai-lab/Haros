@@ -12,6 +12,7 @@ describe("WsRequestAdmission", () => {
     );
     expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getTurnDiff)).toBe("expensive-read");
     expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
+    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers)).toBe("control");
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");

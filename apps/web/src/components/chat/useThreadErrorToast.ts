@@ -5,10 +5,11 @@
 
 import type { ThreadId } from "@harnessos/contracts";
 import { isEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef } from "react";
 
 import { useI18n } from "../../i18n";
 import { toastManager } from "../ui/toast";
+import { STATUS_TOAST_TIMEOUT_MS } from "../ui/toast.logic";
 
 type ThreadErrorToastOptions = Parameters<typeof toastManager.add>[0];
 
@@ -18,9 +19,23 @@ export function threadErrorToastId(threadId: ThreadId): string {
   return `thread-error:${threadId}`;
 }
 
+export function shouldNotifyThreadErrorToast(input: {
+  readonly previous: {
+    readonly threadId: ThreadId;
+    readonly error: string | null;
+    readonly unblocking: boolean;
+  } | null;
+  readonly threadId: ThreadId;
+  readonly error: string | null;
+  readonly unblocking: boolean;
+}): boolean {
+  if (input.error === null || input.previous === null) return false;
+  if (input.previous.threadId !== input.threadId) return false;
+  return input.previous.error !== input.error || input.previous.unblocking !== input.unblocking;
+}
+
 export function buildThreadErrorToastOptions(input: {
   error: string;
-  onClose: () => void;
   onUnblock: () => void;
   threadId: ThreadId;
   unblocking: boolean;
@@ -36,10 +51,10 @@ export function buildThreadErrorToastOptions(input: {
     id: threadErrorToastId(input.threadId),
     type: "error",
     title,
-    timeout: 0,
+    timeout: input.unblocking ? 0 : STATUS_TOAST_TIMEOUT_MS,
     priority: "high",
-    onClose: input.onClose,
-    data: { copyText: title, threadId: input.threadId },
+    description: canUnblock ? input.error : undefined,
+    data: { copyText: input.error, compactContextual: true, threadId: input.threadId },
     ...(canUnblock
       ? {
           actionProps: {
@@ -52,14 +67,6 @@ export function buildThreadErrorToastOptions(input: {
   };
 }
 
-/** Closing the toast on our own behalf (error cleared, thread switched, unmount)
- *  must not report a user dismissal, which would clear thread state we still need. */
-function closeSilently(threadId: ThreadId, silentRef: RefObject<boolean>): void {
-  silentRef.current = true;
-  toastManager.close(threadErrorToastId(threadId));
-  silentRef.current = false;
-}
-
 /**
  * Mirrors the thread-level error of `threadId` into a floating toast. Errors used
  * to render as an inline banner above the transcript, which pushed the whole chat
@@ -67,26 +74,40 @@ function closeSilently(threadId: ThreadId, silentRef: RefObject<boolean>): void 
  */
 export function useThreadErrorToast(input: {
   error: string | null;
-  onDismiss: () => void;
   onUnblock: () => void;
   threadId: ThreadId | null;
   unblocking: boolean;
 }): void {
-  const { error, onDismiss, onUnblock, threadId, unblocking } = input;
+  const { error, onUnblock, threadId, unblocking } = input;
   const { t } = useI18n();
-  const callbacksRef = useRef({ onDismiss, onUnblock });
-  const closingSilentlyRef = useRef(false);
+  const callbacksRef = useRef({ onUnblock });
+  const observedRef = useRef<{
+    readonly threadId: ThreadId;
+    readonly error: string | null;
+    readonly unblocking: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    callbacksRef.current = { onDismiss, onUnblock };
-  }, [onDismiss, onUnblock]);
+    callbacksRef.current = { onUnblock };
+  }, [onUnblock]);
 
   useEffect(() => {
     if (!threadId) return;
-    if (!error) {
-      closeSilently(threadId, closingSilentlyRef);
+    const previous = observedRef.current;
+    if (previous?.threadId !== threadId) {
+      // A persisted error is historical state. Mark it observed on first mount so
+      // reopening or switching back to a failed thread does not replay an old toast.
+      observedRef.current = { threadId, error, unblocking };
+      toastManager.close(threadErrorToastId(threadId));
       return;
     }
+    if (!error) {
+      observedRef.current = { threadId, error: null, unblocking };
+      toastManager.close(threadErrorToastId(threadId));
+      return;
+    }
+    observedRef.current = { threadId, error, unblocking };
+    if (!shouldNotifyThreadErrorToast({ previous, threadId, error, unblocking })) return;
     toastManager.add(
       buildThreadErrorToastOptions({
         error,
@@ -96,10 +117,6 @@ export function useThreadErrorToast(input: {
           deliveryFailed: t("conversation.engineDeliveryFailed"),
           unblock: t("conversation.unblockTask"),
           unblocking: t("conversation.unblockingTask"),
-        },
-        onClose: () => {
-          if (closingSilentlyRef.current) return;
-          callbacksRef.current.onDismiss();
         },
         onUnblock: () => {
           callbacksRef.current.onUnblock();
@@ -113,7 +130,7 @@ export function useThreadErrorToast(input: {
   useEffect(() => {
     if (!threadId) return;
     return () => {
-      closeSilently(threadId, closingSilentlyRef);
+      toastManager.close(threadErrorToastId(threadId));
     };
   }, [threadId]);
 }

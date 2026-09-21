@@ -63,10 +63,16 @@ import {
 } from "../engineRuntimeEventIngress.ts";
 import { teardownChildProcessTree } from "../supervisedProcessTeardown.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
+import { resolveAcpTurnIdleTimeoutMs } from "../acp/AcpTurnIdleWatchdog.ts";
 
 const ENGINE = "antigravity" as const;
 const DEFAULT_MODEL = "Gemini 3.5 Flash";
 const PRINT_TIMEOUT = "30m";
+const ANTIGRAVITY_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
+  envVar: "HARNESSOS_ANTIGRAVITY_TURN_IDLE_TIMEOUT_MS",
+  defaultMs: 600_000,
+});
+const ANTIGRAVITY_TURN_WATCHDOG_INTERVAL_MS = 15_000;
 const POLL_INTERVAL_MS = 75;
 const MODEL_DISCOVERY_TIMEOUT_MS = 30_000;
 const PLUGIN_INSTALL_TIMEOUT_MS = 45_000;
@@ -2196,15 +2202,50 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           context.activeTurnId === turnId;
         let stdout = "";
         let stderr = "";
+        let lastActivityAt = Date.now();
+        let timedOut = false;
         child.stdout.setEncoding("utf8");
         child.stderr.setEncoding("utf8");
-        child.stdout.on("data", (chunk) => (stdout += chunk));
-        child.stderr.on("data", (chunk) => (stderr += chunk));
+        child.stdout.on("data", (chunk) => {
+          lastActivityAt = Date.now();
+          stdout += chunk;
+        });
+        child.stderr.on("data", (chunk) => {
+          lastActivityAt = Date.now();
+          stderr += chunk;
+        });
         const timer = setInterval(() => {
-          if (ownsTurn()) void pollHookFile(context);
+          if (!ownsTurn()) return;
+          const previousHookBytes = context.processedHookBytes;
+          void pollHookFile(context).then(() => {
+            if (context.processedHookBytes !== previousHookBytes) {
+              lastActivityAt = Date.now();
+            }
+          });
         }, POLL_INTERVAL_MS);
+        const watchdog = setInterval(() => {
+          if (!ownsTurn()) {
+            clearInterval(watchdog);
+            return;
+          }
+          const idleMs = Date.now() - lastActivityAt;
+          if (idleMs < ANTIGRAVITY_TURN_IDLE_TIMEOUT_MS || timedOut) return;
+          timedOut = true;
+          void Effect.runPromise(teardownActiveProcess(context, "turn/idle-timeout")).catch(
+            (cause) => {
+              if (!ownsTurn()) return;
+              settleActiveTurn(context, {
+                state: "failed",
+                stopReason: "error",
+                errorMessage: `Antigravity stopped responding (no activity for ${Math.round(idleMs / 1000)}s); the turn was timed out.`,
+                raw: raw("turn-idle-timeout", { idleMs, cause }),
+              });
+            },
+          );
+        }, ANTIGRAVITY_TURN_WATCHDOG_INTERVAL_MS);
         child.once("error", (cause) => {
           clearInterval(timer);
+          clearInterval(watchdog);
           if (!ownsTurn()) return;
           offer({
             ...base(context, { includeTurn: false }),
@@ -2218,6 +2259,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         });
         child.once("close", (code, signal) => {
           clearInterval(timer);
+          clearInterval(watchdog);
           void (async () => {
             if (!ownsTurn()) {
               releaseTurnGatewayLease(context, gatewaySessionLease);
@@ -2268,8 +2310,19 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               await cleanupTurnRunDirectory(context, runDir);
               return;
             }
-            const interrupted = context.interrupted || signal !== null;
-            const failed = !interrupted && (code ?? 1) !== 0;
+            const timeoutMessage = timedOut
+              ? `Antigravity stopped responding (no activity for ${Math.round((Date.now() - lastActivityAt) / 1000)}s); the turn was timed out.`
+              : undefined;
+            const interrupted = context.interrupted || (signal !== null && !timedOut);
+            const failed = timedOut || (!interrupted && (code ?? 1) !== 0);
+            if (timedOut && timeoutMessage) {
+              offer({
+                ...base(context, { includeTurn: false }),
+                type: "runtime.error",
+                payload: { message: timeoutMessage, class: "transport_error" },
+                raw: raw("turn-idle-timeout", { idleMs: Date.now() - lastActivityAt }),
+              } satisfies EngineRuntimeEvent);
+            }
             if (failed && stderr.trim()) {
               offer({
                 ...base(context, { includeTurn: false }),
@@ -2286,7 +2339,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               stopReason: interrupted ? "interrupted" : failed ? "error" : "model_stop",
               ...(failed
                 ? {
-                    errorMessage: stderr.trim() || `Antigravity CLI exited with code ${code ?? 1}.`,
+                    errorMessage:
+                      timeoutMessage ??
+                      (stderr.trim() || `Antigravity CLI exited with code ${code ?? 1}.`),
                   }
                 : {}),
               raw: raw("process-exit", { code, signal, stdout, stderr }),

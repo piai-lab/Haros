@@ -36,13 +36,17 @@ import {
 } from "./GrokAdapter.ts";
 
 describe("Grok runtime model settings", () => {
-  it("keeps only reasoning efforts supported by the selected model family", () => {
+  it("passes the selected model family's effective effort at ACP process start", () => {
     expect(
       resolveGrokRuntimeModelSettings({
         model: "grok-build",
         options: { reasoningEffort: "xhigh" },
       }),
-    ).toEqual({ model: "grok-build" });
+    ).toEqual({ model: "grok-build", reasoningEffort: "low" });
+    expect(resolveGrokRuntimeModelSettings({ model: "grok-4.6-latest" })).toEqual({
+      model: "grok-4.6-latest",
+      reasoningEffort: "xhigh",
+    });
     expect(
       resolveGrokRuntimeModelSettings({
         model: "grok-4.6",
@@ -384,7 +388,7 @@ describe("GrokAdapter runtime event scoping", () => {
 
   it("stamps Grok 4.6 with Extra High instead of the grok-build None ladder", () => {
     const [model] = mergeGrokModelDescriptors([[{ slug: "grok-4.6", name: "Grok 4.6" }]]);
-    expect(model?.defaultReasoningEffort).toBe("high");
+    expect(model?.defaultReasoningEffort).toBe("xhigh");
     expect(model?.supportedReasoningEfforts).toEqual([
       {
         value: "low",

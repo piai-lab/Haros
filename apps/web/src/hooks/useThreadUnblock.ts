@@ -43,15 +43,26 @@ export function useThreadUnblock(input: {
         const api = readNativeApi();
         if (!api) throw new Error("Not connected to the Haros server.");
         const result = await unblockThreadFromClient(api.orchestration, threadId);
-        onUnblocked(threadId);
-        toastManager.add(describeThreadUnblockResult(result, t));
+        if (mountedRef.current) {
+          if (result.kind !== "still-blocked") {
+            onUnblocked(threadId);
+          }
+          toastManager.add(describeThreadUnblockResult(result, t));
+        }
       } catch (error) {
         console.error("Could not unblock Engine delivery", error);
-        toastManager.add({
-          type: "error",
-          title: t("conversation.unblockTaskFailed"),
-          description: t("conversation.unblockTaskFailedDescription"),
-        });
+        const description =
+          error instanceof Error
+            ? `${t("conversation.unblockTaskFailedDescription")} ${error.message}`
+            : t("conversation.unblockTaskFailedDescription");
+        if (mountedRef.current) {
+          toastManager.add({
+            type: "error",
+            title: t("conversation.unblockTaskFailed"),
+            description,
+            data: { copyText: description, threadId },
+          });
+        }
       } finally {
         inFlightThreadIdRef.current = null;
         if (mountedRef.current) setUnblockingThreadId(null);

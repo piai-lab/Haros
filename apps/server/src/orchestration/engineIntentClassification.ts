@@ -79,4 +79,4 @@ export const isClaimedEngineIntent = (event: EngineIntentEvent): boolean =>
  * running (or keeps showing as running) with no other way out for the user.
  */
 export const isQuarantineExemptEngineIntent = (event: EngineIntentEvent): boolean =>
-  event.type === "thread.turn-interrupt-requested";
+  event.type === "thread.turn-interrupt-requested" || event.type === "thread.task-stop-requested";

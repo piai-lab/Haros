@@ -114,23 +114,14 @@ export interface WindowsOwnedProcessTeardownOptions {
   readonly processTreeKiller?: ProcessTreeKiller;
 }
 
-/**
- * Windows twin of the supervised teardown. The synchronous killer cannot
- * capture descendants on win32, so `teardownEngineProcessTree` can never prove
- * exit there; this variant drives the async Windows process-table observer
- * (`terminateProcessTree`) while keeping the same prove-or-fail-closed
- * contract as the POSIX flow.
- */
-export async function teardownWindowsOwnedProcessTree(
-  process: ProcessExitHandle,
+async function teardownWindowsProcessTree(
+  rootPid: number,
+  rootExited: () => boolean,
   options: WindowsOwnedProcessTeardownOptions = {},
 ): Promise<SupervisedProcessTeardownResult> {
-  if (process.pid === undefined) {
-    throw new Error("Cannot prove process exit because the spawned process has no PID.");
-  }
   const signalErrors: Error[] = [];
-  const termination = await terminateProcessTree(process.pid, {
-    rootExited: () => process.exitCode !== null || process.signalCode !== null,
+  const termination = await terminateProcessTree(rootPid, {
+    rootExited,
     graceMs: options.graceMs ?? DEFAULT_TERM_GRACE_MS,
     timeoutMs: options.timeoutMs ?? DEFAULT_TERM_GRACE_MS + DEFAULT_FORCE_EXIT_MS,
     ...(options.pollIntervalMs !== undefined ? { pollIntervalMs: options.pollIntervalMs } : {}),
@@ -146,7 +137,7 @@ export async function teardownWindowsOwnedProcessTree(
 
   if (!termination.rootExited || !termination.verified || termination.survivors.length > 0) {
     throw new EngineProcessExitUnprovenError({
-      rootPid: process.pid,
+      rootPid,
       rootExited: termination.rootExited,
       remainingDescendantPids: termination.verified
         ? termination.survivors.map((descendant) => descendant.pid)
@@ -155,6 +146,27 @@ export async function teardownWindowsOwnedProcessTree(
     });
   }
   return { escalated: termination.forced, signalErrors };
+}
+
+/**
+ * Windows twin of the supervised teardown. The synchronous killer cannot
+ * capture descendants on win32, so `teardownEngineProcessTree` can never prove
+ * exit there; this variant drives the async Windows process-table observer
+ * (`terminateProcessTree`) while keeping the same prove-or-fail-closed
+ * contract as the POSIX flow.
+ */
+export async function teardownWindowsOwnedProcessTree(
+  process: ProcessExitHandle,
+  options: WindowsOwnedProcessTeardownOptions = {},
+): Promise<SupervisedProcessTeardownResult> {
+  if (process.pid === undefined) {
+    throw new Error("Cannot prove process exit because the spawned process has no PID.");
+  }
+  return teardownWindowsProcessTree(
+    process.pid,
+    () => process.exitCode !== null || process.signalCode !== null,
+    options,
+  );
 }
 
 export async function teardownChildProcessTree(
@@ -183,7 +195,16 @@ export async function teardownChildProcessTree(
 export function teardownEffectProcessTree(
   process: EffectProcessExitHandle,
   teardownProcessTree: typeof teardownEngineProcessTree = teardownEngineProcessTree,
+  windowsOptions?: WindowsOwnedProcessTeardownOptions,
 ): Promise<SupervisedProcessTeardownResult> {
+  const platform = windowsOptions?.platform ?? globalThis.process.platform;
+  if (platform === "win32" && teardownProcessTree === teardownEngineProcessTree) {
+    let rootExited = false;
+    void Effect.runPromise(Effect.exit(process.exitCode)).then(() => {
+      rootExited = true;
+    });
+    return teardownWindowsProcessTree(process.pid, () => rootExited, windowsOptions);
+  }
   return teardownProcessTree({
     rootPid: Number(process.pid),
     rootExited: Effect.runPromise(Effect.exit(process.exitCode)),

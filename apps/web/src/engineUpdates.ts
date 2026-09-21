@@ -5,11 +5,13 @@
 
 import type { EngineKind, ServerEngineStatus, ServerSettingsView } from "@harnessos/contracts";
 
+import { STATUS_TOAST_TIMEOUT_MS } from "./components/ui/toast.logic";
+
 export const ENGINE_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const ENGINE_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
 // Count only foreground-visible time. The engine toast routes this through the
 // shared visible timer so hovering never turns a completed update into a sticky chip.
-export const ENGINE_UPDATE_SUCCESS_VISIBLE_MS = 3_000;
+export const ENGINE_UPDATE_SUCCESS_VISIBLE_MS = STATUS_TOAST_TIMEOUT_MS;
 // Homebrew updates may spend time refreshing taps and downloading release assets; the server
 // gives that path one hour while retaining the shorter bound for other engine commands.
 // This slightly longer client watchdog only owns a transport that outlives the server bound.
@@ -32,7 +34,7 @@ type EngineUpdateToastDataInput = {
 export function createEngineUpdateToastData(input: EngineUpdateToastDataInput) {
   return {
     statusMotion: true as const,
-    ...(input.stage === "success"
+    ...(input.stage === "success" || input.stage === "error"
       ? {
           compactContextual: true as const,
           dismissAfterVisibleMs: ENGINE_UPDATE_SUCCESS_VISIBLE_MS,

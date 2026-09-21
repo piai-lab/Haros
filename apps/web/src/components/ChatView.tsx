@@ -11438,10 +11438,6 @@ export default function ChatView({
     },
     [runProjectScript],
   );
-  const dismissActiveThreadError = useCallback(() => {
-    if (!activeThread) return;
-    setThreadError(activeThread.id, null);
-  }, [activeThread, setThreadError]);
   const clearThreadErrorAfterUnblock = useCallback(
     (unblockedThreadId: ThreadId) => {
       setThreadError(unblockedThreadId, null);
@@ -11456,7 +11452,6 @@ export default function ChatView({
   useThreadErrorToast({
     threadId: activeThread?.id ?? null,
     error: activeThread?.error ?? null,
-    onDismiss: dismissActiveThreadError,
     onUnblock: unblockActiveThread,
     unblocking: unblockingActiveThread,
   });
