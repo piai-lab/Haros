@@ -44,11 +44,6 @@ import {
   type EngineAdapterError,
 } from "../Errors.ts";
 import { CodexAdapter, type CodexAdapterShape } from "../Services/CodexAdapter.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
-import {
-  loadHarosModelServiceBinding,
-  resolveCodexModelServiceSpawn,
-} from "../harosModelServiceBinding.ts";
 import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
 import {
   CodexAppServerManager,
@@ -1767,7 +1762,6 @@ function mapToRuntimeEvents(
 const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* Effect.service(ServerConfig);
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the harnessos_* MCP tools.
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -1981,27 +1975,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       };
 
       return Effect.tryPromise({
-        try: async () => {
-          const settings = serverSettings
-            ? await Effect.runPromise(
-                serverSettings.getSettings.pipe(Effect.catch(() => Effect.succeed(null))),
-              )
-            : null;
-          const spawn = resolveCodexModelServiceSpawn(
-            await loadHarosModelServiceBinding({
-              engine: ENGINE,
-              model: managerInput.model,
-              requestedAgentDir: settings?.engines.pi.agentDir,
-              serverBaseDir: serverConfig.baseDir,
-            }),
-          );
-          return manager.startSession({
-            ...managerInput,
-            ...(spawn.overlayId ? { modelServiceOverlayId: spawn.overlayId } : {}),
-            ...(spawn.extraConfigToml ? { modelServiceConfigToml: spawn.extraConfigToml } : {}),
-            ...(spawn.env ? { modelServiceEnv: spawn.env } : {}),
-          });
-        },
+        try: () => manager.startSession(managerInput),
         catch: (cause) =>
           new EngineAdapterProcessError({
             engine: ENGINE,

@@ -744,21 +744,6 @@ describe("resolveApiModelId", () => {
       }),
     ).toBe("claude-opus-4-6");
   });
-
-  it("strips Haros model-service prefixes before native Engine spawn", () => {
-    expect(
-      resolveApiModelId({
-        engine: "claude",
-        model: "deepseek/deepseek-chat",
-      }),
-    ).toBe("deepseek-chat");
-    expect(
-      resolveApiModelId({
-        engine: "codex",
-        model: "deepseek/deepseek-chat",
-      }),
-    ).toBe("deepseek-chat");
-  });
 });
 
 describe("claudeSelectionRequiresRestart", () => {

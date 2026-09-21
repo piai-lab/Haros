@@ -109,16 +109,15 @@ export function makeServerEngineLayer(
       Layer.provide(engineSessionDirectoryLayer),
       Layer.provide(EngineRuntimeEventRepositoryLive),
     );
-    const modelServicesLayer = HarosModelServicesLive.pipe(
-      Layer.provide(engineServiceLayer),
-      Layer.provide(ServerSettingsLive),
-    );
     const engineDiscoveryLayer = EngineDiscoveryServiceLive.pipe(
       Layer.provide(adapterRegistryLayer),
       Layer.provide(OrchestrationProjectionSnapshotQueryLive),
-      Layer.provide(modelServicesLayer),
       // Skill toggles live in server settings; the shared ServerSettingsLive
       // layer is memoized so this reuses the instance built at the top level.
+      Layer.provide(ServerSettingsLive),
+    );
+    const modelServicesLayer = HarosModelServicesLive.pipe(
+      Layer.provide(engineServiceLayer),
       Layer.provide(ServerSettingsLive),
     );
     const modelCatalogSyncLayer = HarosModelCatalogSyncLive.pipe(

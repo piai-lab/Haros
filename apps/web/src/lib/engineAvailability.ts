@@ -1,9 +1,5 @@
 import { type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
-import {
-  ENGINE_DISPLAY_NAMES,
-  engineOverlaysHarosModelServiceCatalog,
-  parseHarosModelServiceComposerSlug,
-} from "@harnessos/shared/engineMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 
 export interface EngineSendAvailability {
   readonly engine: EngineKind;
@@ -131,21 +127,10 @@ export function normalizeEngineStatusForLocalConfig(input: {
   };
 }
 
-export function isEngineUsable(
-  status: ServerEngineStatus | null | undefined,
-  selectedModel?: string | null,
-): boolean {
+export function isEngineUsable(status: ServerEngineStatus | null | undefined): boolean {
   if (!status) {
     // Missing status means the health check has not confirmed an installed engine yet.
     return false;
-  }
-  if (
-    status.available &&
-    status.authStatus === "unauthenticated" &&
-    engineOverlaysHarosModelServiceCatalog(status.engine) &&
-    parseHarosModelServiceComposerSlug(selectedModel?.trim() ?? "")
-  ) {
-    return true;
   }
   return status.available && status.authStatus !== "unauthenticated";
 }
@@ -176,7 +161,6 @@ export function findEngineStatus(
 export function resolveEngineSendAvailability(input: {
   readonly engine: EngineKind | null;
   readonly statuses: readonly ServerEngineStatus[];
-  readonly selectedModel?: string | null;
 }): EngineSendAvailability {
   if (!input.engine) {
     return {
@@ -190,7 +174,7 @@ export function resolveEngineSendAvailability(input: {
   return {
     engine: input.engine,
     status,
-    usable: isEngineUsable(status, input.selectedModel),
+    usable: isEngineUsable(status),
     unavailableReason: engineUnavailableReason(status),
   };
 }
@@ -204,7 +188,6 @@ export async function resolveEngineSendAvailabilityWithRefresh(input: {
   readonly engine: EngineKind | null;
   readonly statuses: readonly ServerEngineStatus[];
   readonly refreshStatuses: EngineStatusRefresh;
-  readonly selectedModel?: string | null;
 }): Promise<EngineSendAvailability> {
   const initial = resolveEngineSendAvailability(input);
   if (initial.usable || !shouldRefreshBeforeBlocking(initial.status)) {
@@ -224,6 +207,5 @@ export async function resolveEngineSendAvailabilityWithRefresh(input: {
   return resolveEngineSendAvailability({
     engine: input.engine,
     statuses: refreshedStatuses,
-    ...(input.selectedModel !== undefined ? { selectedModel: input.selectedModel } : {}),
   });
 }

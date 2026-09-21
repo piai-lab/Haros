@@ -1,11 +1,7 @@
 // FILE: engineMetadata.ts
 // Purpose: The exhaustive, credential-blind identity owner for top-level Agent Engines.
 
-import type {
-  EngineKind,
-  HarosCustomModelServiceApi,
-  ServerEngineStatus,
-} from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
 
 export function engineMaintenanceOperation(
   status: Pick<ServerEngineStatus, "available" | "unavailableReason"> | undefined,
@@ -30,21 +26,6 @@ export interface EngineDescriptor {
   readonly ownsProviderModelServices?: boolean;
   /** Spawn/auth may use the Haros model-service store without owning picker slugs. */
   readonly consumesHarosModelServiceCredentials?: boolean;
-  /**
-   * Native protocols this Engine can consume without conversion.
-   * Matching uses the Model service `api` field only.
-   */
-  readonly harosModelServiceProtocols?: readonly HarosCustomModelServiceApi[];
-  /**
-   * Known Model-service ids this Engine can consume even when `api` is absent
-   * (builtin catalogs such as xAI / Gemini).
-   */
-  readonly harosModelServiceKnownIds?: readonly string[];
-  /**
-   * Composer catalog may include `serviceId/modelId` slugs from matching
-   * Haros model services. Native catalog remains authoritative for collisions.
-   */
-  readonly overlaysHarosModelServiceCatalog?: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -65,8 +46,6 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     kind: "codex",
     installation: { binary: "codex", npm: "@openai/codex" },
     displayName: "Codex",
-    harosModelServiceProtocols: ["openai-completions", "openai-responses"],
-    overlaysHarosModelServiceCatalog: true,
     usage: {
       signInCommand: "codex login",
       learnMoreHref: "https://platform.openai.com/usage",
@@ -76,8 +55,6 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     kind: "claude",
     installation: { binary: "claude", npm: "@anthropic-ai/claude-code" },
     displayName: "Claude Code",
-    harosModelServiceProtocols: ["anthropic-messages"],
-    overlaysHarosModelServiceCatalog: true,
     usage: {
       signInCommand: "claude",
       learnMoreHref: "https://docs.anthropic.com/en/docs/about-claude/models#rate-limits",
@@ -96,9 +73,6 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     kind: "antigravity",
     installation: { binary: "agy" },
     displayName: "Antigravity",
-    harosModelServiceKnownIds: ["google", "gemini"],
-    harosModelServiceProtocols: ["google-generative-ai"],
-    overlaysHarosModelServiceCatalog: true,
     usage: {
       signInCommand: "agy",
       learnMoreHref: "https://antigravity.google",
@@ -108,8 +82,6 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
     kind: "grok",
     installation: { binary: "grok", npm: "@xai-official/grok" },
     displayName: "Grok Build",
-    harosModelServiceKnownIds: ["xai", "grok"],
-    overlaysHarosModelServiceCatalog: true,
     usage: {
       signInCommand: "grok login",
       learnMoreHref: "https://console.x.ai",
@@ -196,63 +168,8 @@ export function engineConsumesHarosModelServiceCredentials(engine: EngineKind): 
 
 export function engineOpensModelServicesSettings(engine: EngineKind): boolean {
   return (
-    engineOwnsProviderModelServices(engine) ||
-    engineConsumesHarosModelServiceCredentials(engine) ||
-    engineOverlaysHarosModelServiceCatalog(engine)
+    engineOwnsProviderModelServices(engine) || engineConsumesHarosModelServiceCredentials(engine)
   );
-}
-
-export function engineOverlaysHarosModelServiceCatalog(engine: EngineKind): boolean {
-  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
-  return descriptor.overlaysHarosModelServiceCatalog === true;
-}
-
-export function engineHarosModelServiceProtocols(
-  engine: EngineKind,
-): ReadonlyArray<HarosCustomModelServiceApi> {
-  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
-  return descriptor.harosModelServiceProtocols ?? [];
-}
-
-export function engineHarosModelServiceKnownIds(engine: EngineKind): ReadonlyArray<string> {
-  const descriptor: EngineDescriptor = ENGINE_DESCRIPTOR_BY_KIND[engine];
-  return descriptor.harosModelServiceKnownIds ?? [];
-}
-
-export function engineMatchesHarosModelService(input: {
-  readonly engine: EngineKind;
-  readonly serviceId: string;
-  readonly api?: string;
-}): boolean {
-  if (engineOwnsProviderModelServices(input.engine)) return true;
-  if (
-    engineConsumesHarosModelServiceCredentials(input.engine) &&
-    !engineOverlaysHarosModelServiceCatalog(input.engine)
-  ) {
-    return true;
-  }
-  const knownIds = engineHarosModelServiceKnownIds(input.engine);
-  if (knownIds.includes(input.serviceId)) return true;
-  if (input.api === undefined) return false;
-  return engineHarosModelServiceProtocols(input.engine).includes(
-    input.api as HarosCustomModelServiceApi,
-  );
-}
-
-export function harosModelServiceComposerSlug(serviceId: string, modelId: string): string {
-  return `${serviceId}/${modelId}`;
-}
-
-export function parseHarosModelServiceComposerSlug(slug: string): {
-  readonly serviceId: string;
-  readonly modelId: string;
-} | null {
-  const separator = slug.indexOf("/");
-  if (separator <= 0 || separator === slug.length - 1) return null;
-  return {
-    serviceId: slug.slice(0, separator),
-    modelId: slug.slice(separator + 1),
-  };
 }
 
 export const RUNNABLE_ENGINE_DESCRIPTORS = ENGINE_DESCRIPTORS;

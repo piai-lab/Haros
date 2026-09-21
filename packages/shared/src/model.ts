@@ -612,17 +612,6 @@ export function normalizeClaudeModelOptions(
 }
 
 export function resolveApiModelId(engineSelection: EngineSelection): string {
-  if (
-    engineSelection.engine === "claude" ||
-    engineSelection.engine === "codex" ||
-    engineSelection.engine === "grok" ||
-    engineSelection.engine === "antigravity"
-  ) {
-    const separator = engineSelection.model.indexOf("/");
-    if (separator > 0 && separator < engineSelection.model.length - 1) {
-      return engineSelection.model.slice(separator + 1);
-    }
-  }
   return engineSelection.model;
 }
 

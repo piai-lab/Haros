@@ -8048,7 +8048,6 @@ export default function ChatView({
       engine: selectedEngineSelectionForSend.engine,
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
-      selectedModel: selectedEngineSelectionForSend.model,
     }).finally(() => {
       sendPreflightInFlightRef.current = false;
     });

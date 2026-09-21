@@ -29,7 +29,7 @@ const EN_MESSAGES = {
   "settings.modelServicesAvailable": "Currently available",
   "settings.modelServiceCount": "{count} services",
   "settings.modelsDescription":
-    "Configure model services, credentials, and catalogs. API engines (Pi, DeepSeek, OpenCode, Kilo) use these keys directly. Compatible Engines can also pick matching models: Completions/Responses for Codex, Anthropic Messages for Claude, xAI for Grok, and Gemini for Antigravity. Cursor and Droid keep native sign-in.",
+    "Configure model services, credentials, and catalogs used by API engines (Pi, DeepSeek, OpenCode, Kilo). Sign in, save an API key, or connect a custom endpoint. Codex and Claude keep their native sign-in.",
   "settings.configuredModelServices": "Added services",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
@@ -489,7 +489,7 @@ const ZH_CN_MESSAGES = {
   "settings.modelServicesAvailable": "当前提供",
   "settings.modelServiceCount": "{count} 个服务",
   "settings.modelsDescription":
-    "配置模型服务、凭据与目录。API 引擎（Pi、DeepSeek、OpenCode、Kilo）直接使用这些密钥。兼容引擎也可选择匹配协议的模型：Completions/Responses 给 Codex，Anthropic Messages 给 Claude，xAI 给 Grok，Gemini 给 Antigravity。Cursor 与 Droid 仍使用原生登录。",
+    "配置 API 引擎（Pi、DeepSeek、OpenCode、Kilo）共用的模型服务、凭据与目录。可登录、填入 Key，或连接自定义中转。Codex 与 Claude 仍使用各自的原生登录。",
   "settings.configuredModelServices": "已添加",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",

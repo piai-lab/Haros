@@ -38,13 +38,7 @@ import {
   withHostGatewayTurnCancellation,
 } from "../../hostGateway/sessionLease.ts";
 import { ServerConfig } from "../../config.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
 import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
-import {
-  loadHarosModelServiceBinding,
-  resolveAntigravityModelServiceEnv,
-} from "../harosModelServiceBinding.ts";
-import { resolveApiModelId } from "@harnessos/shared/model";
 import {
   EngineAdapterRequestError,
   EngineAdapterSessionNotFoundError,
@@ -393,7 +387,7 @@ function appendBoundedOutput(current: string, chunk: unknown): string {
 export async function runAntigravityHelperProcess(
   command: string,
   args: string[],
-  options: { cwd?: string; timeoutMs?: number; envOverrides?: NodeJS.ProcessEnv } = {},
+  options: { cwd?: string; timeoutMs?: number } = {},
 ): Promise<{
   stdout: string;
   stderr: string;
@@ -402,12 +396,7 @@ export async function runAntigravityHelperProcess(
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: buildEngineChildEnvironment({
-        engine: ENGINE,
-        ...(options.envOverrides && Object.keys(options.envOverrides).length > 0
-          ? { overrides: options.envOverrides }
-          : {}),
-      }),
+      env: buildEngineChildEnvironment({ engine: ENGINE }),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -665,9 +654,8 @@ export function resolveAntigravityCliModelLabel(
   options?: AntigravityModelOptions,
   discoveredDefaultEffort?: string,
 ): string {
-  const nativeModel = resolveApiModelId({ engine: "antigravity", model });
-  const parsed = parseAntigravityCliModelLabel(nativeModel);
-  if (!parsed) return nativeModel;
+  const parsed = parseAntigravityCliModelLabel(model);
+  if (!parsed) return model;
   const effort =
     parsed.effort ??
     options?.reasoningEffort?.trim().toLowerCase() ??
@@ -924,7 +912,6 @@ export interface AntigravityAdapterDependencies {
 const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {}) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
     const readCompleteLines = dependencies.readCompleteLines ?? readCompleteAntigravityLines;
     const teardownProcessTree = dependencies.teardownProcessTree ?? teardownChildProcessTree;
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -2085,29 +2072,11 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           input.engineSelection?.engine === ENGINE ? input.engineSelection : undefined;
         const model = engineSelection?.model ?? context.session.model ?? DEFAULT_MODEL;
         const modelOptions = engineSelection?.options ?? context.modelOptions;
-        const nativeModel = resolveApiModelId({ engine: ENGINE, model });
         const cliModel = resolveAntigravityCliModelLabel(
-          nativeModel,
+          model,
           modelOptions,
-          defaultEffortByModel.get(nativeModel) ?? defaultEffortByModel.get(model),
+          defaultEffortByModel.get(model),
         );
-        const antigravityOverlay = yield* Effect.tryPromise({
-          try: async () => {
-            const settings = serverSettings
-              ? await Effect.runPromise(
-                  serverSettings.getSettings.pipe(Effect.catch(() => Effect.succeed(null))),
-                )
-              : null;
-            const binding = await loadHarosModelServiceBinding({
-              engine: ENGINE,
-              model,
-              requestedAgentDir: settings?.engines.pi.agentDir,
-              serverBaseDir: serverConfig.baseDir,
-            });
-            return resolveAntigravityModelServiceEnv(binding);
-          },
-          catch: () => ({}),
-        }).pipe(Effect.catch(() => Effect.succeed({} as NodeJS.ProcessEnv)));
         const runDir = yield* Effect.tryPromise({
           try: () => fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-")),
           catch: (cause) =>
@@ -2207,9 +2176,6 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             cwd: context.session.cwd ?? serverConfig.cwd,
             env: buildAntigravityTurnProcessEnvironment({
               eventFile,
-              ...(Object.keys(antigravityOverlay).length > 0
-                ? { baseEnv: { ...process.env, ...antigravityOverlay } }
-                : {}),
               ...(gatewaySessionLease && gatewayBootstrapToken
                 ? {
                     gatewayConnection: gatewaySessionLease.connection,

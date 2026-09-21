@@ -59,20 +59,6 @@ describe("Haros model-services contracts", () => {
     expect(decoded.services[0]).toEqual(descriptor);
   });
 
-  it("admits a credential-blind protocol field for Engine matching", () => {
-    const decoded = Schema.decodeUnknownSync(HarosModelServiceDescriptor)({
-      ...descriptor,
-      api: "openai-completions",
-    });
-    expect(decoded.api).toBe("openai-completions");
-    expect(() =>
-      Schema.decodeUnknownSync(HarosModelServiceDescriptor)({
-        ...descriptor,
-        api: "secret-protocol",
-      }),
-    ).toThrow();
-  });
-
   it("only admits the explicit add-service intent and a bounded extension outcome", () => {
     expect(
       Schema.decodeUnknownSync(HarosModelServicesListInput)({ intent: "add_service" }),

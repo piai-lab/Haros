@@ -144,7 +144,6 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
       engine: engineSelection.engine,
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
-      selectedModel: engineSelection.model,
     });
     if (!sendAvailability.usable) {
       notifyBlockedEngineSend({

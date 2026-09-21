@@ -9,7 +9,6 @@ type EngineChildKind = EngineKind | "acp";
 const ENGINE_CREDENTIAL_KEYS = new Set([
   "ANTHROPIC_API_KEY",
   "ANTHROPIC_AUTH_TOKEN",
-  "ANTHROPIC_BASE_URL",
   "CLAUDE_CODE_OAUTH_TOKEN",
   "AWS_ACCESS_KEY_ID",
   "AWS_SECRET_ACCESS_KEY",
@@ -43,7 +42,6 @@ const ENGINE_CREDENTIAL_GRANTS: Record<EngineChildKind, "all" | ReadonlySet<stri
   claude: new Set([
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_AUTH_TOKEN",
-    "ANTHROPIC_BASE_URL",
     "CLAUDE_CODE_OAUTH_TOKEN",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",

@@ -33,11 +33,7 @@ import {
   type UserInputQuestion,
 } from "@harnessos/contracts";
 import { prewarmChatGptVoiceTranscriptionConnection } from "@harnessos/shared/chatGptVoiceTranscription";
-import {
-  getEngineSelectionBooleanOptionValue,
-  normalizeModelSlug,
-  resolveApiModelId,
-} from "@harnessos/shared/model";
+import { getEngineSelectionBooleanOptionValue, normalizeModelSlug } from "@harnessos/shared/model";
 import { decodeSubagentReceiverThreadIds } from "@harnessos/shared/subagents";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
@@ -282,9 +278,6 @@ export interface CodexAppServerStartSessionInput {
   readonly forkSourceResumeCursor?: unknown;
   readonly engineOptions?: EngineSessionStartInput["engineOptions"];
   readonly runtimeMode: RuntimeMode;
-  readonly modelServiceOverlayId?: string;
-  readonly modelServiceConfigToml?: string;
-  readonly modelServiceEnv?: NodeJS.ProcessEnv;
 }
 
 export interface CodexThreadTurnSnapshot {
@@ -727,11 +720,7 @@ export function normalizeCodexModelSlug(
   model: string | undefined | null,
   preferredId?: string,
 ): string | undefined {
-  const nativeModel =
-    typeof model === "string" && model.includes("/")
-      ? resolveApiModelId({ engine: "codex", model })
-      : model;
-  const normalized = normalizeModelSlug(nativeModel);
+  const normalized = normalizeModelSlug(model);
   if (!normalized) {
     return undefined;
   }
@@ -1058,29 +1047,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private async buildSessionProcessEnv(
     homePath: string | undefined,
     gatewayBearerToken: string | undefined,
-    modelService?: {
-      readonly overlayId?: string;
-      readonly extraConfigToml?: string;
-      readonly env?: NodeJS.ProcessEnv;
-    },
   ) {
-    const managedToml = [
-      this.hostGatewayMcp ? buildCodexMcpConfigToml(this.hostGatewayMcp.endpointUrl()) : undefined,
-      modelService?.extraConfigToml,
-    ]
-      .filter((section): section is string => Boolean(section))
-      .join("\n\n");
     const env = await buildCodexProcessEnv({
       ...(homePath ? { homePath } : {}),
-      ...(modelService?.overlayId ? { overlayId: modelService.overlayId } : {}),
-      ...(managedToml ? { appendConfigToml: managedToml } : {}),
-      ...(modelService?.env ? { env: { ...process.env, ...modelService.env } } : {}),
+      ...(this.hostGatewayMcp
+        ? { appendConfigToml: buildCodexMcpConfigToml(this.hostGatewayMcp.endpointUrl()) }
+        : {}),
     });
     if (gatewayBearerToken) {
       env[HARNESSOS_HOST_GATEWAY_TOKEN_ENV] = gatewayBearerToken;
-    }
-    if (modelService?.env) {
-      Object.assign(env, modelService.env);
     }
     return env;
   }
@@ -1147,13 +1122,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         env: await this.buildSessionProcessEnv(
           codexHomePath,
           gatewaySessionLease?.connection.bearerToken,
-          {
-            ...(input.modelServiceOverlayId ? { overlayId: input.modelServiceOverlayId } : {}),
-            ...(input.modelServiceConfigToml
-              ? { extraConfigToml: input.modelServiceConfigToml }
-              : {}),
-            ...(input.modelServiceEnv ? { env: input.modelServiceEnv } : {}),
-          },
         ),
       });
 
@@ -1979,13 +1947,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         env: await this.buildSessionProcessEnv(
           codexHomePath,
           gatewaySessionLease?.connection.bearerToken,
-          {
-            ...(input.modelServiceOverlayId ? { overlayId: input.modelServiceOverlayId } : {}),
-            ...(input.modelServiceConfigToml
-              ? { extraConfigToml: input.modelServiceConfigToml }
-              : {}),
-            ...(input.modelServiceEnv ? { env: input.modelServiceEnv } : {}),
-          },
         ),
       });
 

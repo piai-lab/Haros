@@ -23,7 +23,6 @@ import {
   getDefaultEffort,
   getModelCapabilities,
   normalizeGrokModelOptions,
-  resolveApiModelId,
 } from "@harnessos/shared/model";
 import {
   decodeOutboundJson,
@@ -65,13 +64,6 @@ import {
   withHostGatewayTurnCancellation,
 } from "../../hostGateway/sessionLease.ts";
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
-import {
-  loadHarosModelServiceBinding,
-  loadHarosModelServiceSnapshotForEngine,
-  resolveGrokModelServiceEnv,
-  resolveKnownGrokModelServiceEnv,
-} from "../harosModelServiceBinding.ts";
 import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
@@ -705,15 +697,14 @@ export function resolveGrokRuntimeModelSettings(
     | undefined,
 ): GrokAcpRuntimeSettings {
   if (!engineSelection) return {};
-  const nativeModel = resolveApiModelId({ engine: "grok", model: engineSelection.model });
-  const capabilities = getModelCapabilities("grok", nativeModel);
-  const options = normalizeGrokModelOptions(nativeModel, engineSelection.options);
+  const capabilities = getModelCapabilities("grok", engineSelection.model);
+  const options = normalizeGrokModelOptions(engineSelection.model, engineSelection.options);
   // Grok's selected default is normalized out of persisted options. ACP receives
   // effort only at process start, so pass the selected model family's default
   // again instead of relying on whichever local CLI config happens to be present.
   const reasoningEffort = options?.reasoningEffort ?? getDefaultEffort(capabilities);
   return {
-    model: nativeModel,
+    model: engineSelection.model,
     ...(reasoningEffort
       ? { reasoningEffort: reasoningEffort as GrokModelOptions["reasoningEffort"] }
       : {}),
@@ -739,7 +730,6 @@ export function makeGrokAdapter(
     const fileSystem = yield* FileSystem.FileSystem;
     const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const serverConfig = yield* Effect.service(ServerConfig);
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the harnessos_* MCP tools.
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -1159,28 +1149,11 @@ export function makeGrokAdapter(
             binaryPath: effectiveGrokSettings.binaryPath ?? "grok",
           });
 
-          const grokBinding = yield* Effect.tryPromise({
-            try: async () => {
-              const settings = serverSettings
-                ? await Effect.runPromise(
-                    serverSettings.getSettings.pipe(Effect.catch(() => Effect.succeed(null))),
-                  )
-                : null;
-              return loadHarosModelServiceBinding({
-                engine: ENGINE,
-                model: grokEngineSelection?.model,
-                requestedAgentDir: settings?.engines.pi.agentDir,
-                serverBaseDir: serverConfig.baseDir,
-              });
-            },
-            catch: () => undefined,
-          }).pipe(Effect.catch(() => Effect.succeed(null)));
           const acp = yield* makeGrokAcpRuntime({
             grokSettings: effectiveGrokSettings,
             childProcessSpawner,
             cwd,
             runtimeMode: input.runtimeMode,
-            ...(grokBinding ? { envOverrides: resolveGrokModelServiceEnv(grokBinding) } : {}),
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: "Haros", version: "0.0.0" },
             // Grok registers client hooks from session setup metadata, not
@@ -2497,25 +2470,7 @@ export function makeGrokAdapter(
         let cliError: unknown;
         let apiError: EngineAdapterRequestError | undefined;
         const cliModels = yield* Effect.gen(function* () {
-          const grokOverlay = yield* Effect.tryPromise({
-            try: async () => {
-              const settings = serverSettings
-                ? await Effect.runPromise(
-                    serverSettings.getSettings.pipe(Effect.catch(() => Effect.succeed(null))),
-                  )
-                : null;
-              const snapshot = await loadHarosModelServiceSnapshotForEngine({
-                requestedAgentDir: settings?.engines.pi.agentDir,
-                serverBaseDir: serverConfig.baseDir,
-              });
-              return snapshot ? resolveKnownGrokModelServiceEnv(snapshot) : {};
-            },
-            catch: () => ({}),
-          }).pipe(Effect.catch(() => Effect.succeed({} as NodeJS.ProcessEnv)));
-          const childEnv = buildEngineChildEnvironment({
-            engine: "grok",
-            ...(Object.keys(grokOverlay).length > 0 ? { overrides: grokOverlay } : {}),
-          });
+          const childEnv = buildEngineChildEnvironment({ engine: "grok" });
           const prepared = prepareWindowsSafeProcess(binaryPath, ["models"], { env: childEnv });
           const child = yield* childProcessSpawner.spawn(
             ChildProcess.make(prepared.command, prepared.args, {

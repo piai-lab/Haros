@@ -304,7 +304,6 @@ const HarosModelServiceDescriptorFields = {
   knownModelCount: NonNegativeInt,
   availableModelCount: NonNegativeInt,
   supportsNetworkRefresh: Schema.Boolean,
-  api: Schema.optional(HarosCustomModelServiceApi),
 } as const;
 
 export const HarosModelServiceDescriptor = Schema.Union([
