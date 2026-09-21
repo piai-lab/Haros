@@ -290,11 +290,8 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                 {catalogIsError || catalogIsIdle ? (
                   needsModelServiceSetup ? (
                     <>
-                      <MenuItem onClick={() => openModelServiceSetup("deepseek-key")}>
-                        {t("composer.addDeepSeekKey")}
-                      </MenuItem>
                       <MenuItem onClick={() => openModelServiceSetup("custom-endpoint")}>
-                        {t("composer.addCustomEndpoint")}
+                        {t("composer.openModelServices")}
                       </MenuItem>
                     </>
                   ) : (
@@ -425,11 +422,8 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                 ) : null}
                 {needsModelServiceSetup ? (
                   <>
-                    <MenuItem onClick={() => openModelServiceSetup("deepseek-key")}>
-                      {t("composer.addDeepSeekKey")}
-                    </MenuItem>
                     <MenuItem onClick={() => openModelServiceSetup("custom-endpoint")}>
-                      {t("composer.addCustomEndpoint")}
+                      {t("composer.openModelServices")}
                     </MenuItem>
                   </>
                 ) : (

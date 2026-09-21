@@ -48,7 +48,7 @@ export function notifyMissingComposerModel(input: {
     ...(needsSetup && input.onAddDeepSeekKey
       ? {
           actionProps: {
-            children: input.t("composer.addDeepSeekKey"),
+            children: input.t("composer.openModelServices"),
             onClick: input.onAddDeepSeekKey,
           },
         }

@@ -76,7 +76,7 @@ complete agent runtime. Clear wording matters because fallback or UI behavior ba
 fact can silently change execution.
 
 Haros's built-in default Engine is Pi. Fresh setup selects it through the canonical Engine identity
-contract, and its default model service is DeepSeek. Its internal model-service configuration remains inside that Engine domain. The Web
+contract. Its internal model-service configuration remains inside that Engine domain. The Web
 workbench sees a typed, credential-blind projection; it does not become a second model package,
 credential, or catalog owner.
 

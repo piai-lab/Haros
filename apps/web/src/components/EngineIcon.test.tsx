@@ -21,6 +21,7 @@ describe("EngineIcon", () => {
     const markup = renderToStaticMarkup(<EngineIcon engine="deepseek" />);
     expect(markup).toContain('viewBox="0 0 24 24"');
     expect(markup).toContain("M23.748 4.482");
+    expect(markup).toContain("#4D6BFE");
     expect(markup).not.toContain("M12.04 2.16");
   });
 

@@ -106,9 +106,9 @@ the Unsigned GitHub Distribution workflow to stage unsigned macOS and Windows in
 Creating a GitHub Release from that workflow stays opt-in and is a download channel only; it
 is not signing, notarization, an update feed, or paid support.
 
-Fresh installs default to Pi with DeepSeek as the model service. Configure the selected Engine in
-Settings before sending. Settings → Model services configures credentials and custom models for the
-independent Pi Engine; other Engines retain their native configuration.
+Fresh installs default to Pi. Configure the selected Engine in Settings before sending. Settings →
+Model services configures credentials and catalogs; add a service before sending with Pi or another
+API Engine. Other Engines retain their native configuration.
 
 ## Go deeper
 

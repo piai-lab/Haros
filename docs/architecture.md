@@ -12,7 +12,7 @@ same orchestration owner with different workspace lifecycles.
 
 An Engine is a complete agent runtime. `ENGINE_DESCRIPTORS` is the single owner of Engine identity,
 display name, registration, capability projection, and Settings discovery. Pi is the default for a
-fresh setup. Its default model service is DeepSeek. A welcome tour can introduce Engines, appearance,
+fresh setup. A welcome tour can introduce Engines, appearance,
 and the first project, but it does not freeze a model. The user still chooses one in Settings or
 Composer before sending.
 

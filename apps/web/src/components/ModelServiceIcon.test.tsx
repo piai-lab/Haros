@@ -61,6 +61,7 @@ describe("ModelServiceIcon", () => {
     expect(deepSeekMarkup).toContain('data-model-service-icon="brand"');
     expect(deepSeekMarkup).toContain('viewBox="0 0 24 24"');
     expect(deepSeekMarkup).toContain("M23.748 4.482");
+    expect(deepSeekMarkup).toContain("#4D6BFE");
     expect(deepSeekMarkup).not.toContain("deepseek-color.svg");
     const markup = renderToStaticMarkup(<ModelServiceIcon serviceId="openai-codex" />);
     expect(markup).toContain('data-model-service-icon="brand"');

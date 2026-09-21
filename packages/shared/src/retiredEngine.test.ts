@@ -43,7 +43,7 @@ describe("engine identity", () => {
     expect(engineOpensModelServicesSettings("deepseek")).toBe(true);
     expect(DEFAULT_ENGINE_KIND).toBe("pi");
     expect(DEFAULT_SERVER_SETTINGS.defaultEngine).toBe("pi");
-    expect(DEFAULT_SERVER_SETTINGS.modelServices.added).toEqual({ deepseek: true });
+    expect(DEFAULT_SERVER_SETTINGS.modelServices.added).toEqual({});
     expect(DEFAULT_SERVER_SETTINGS.textGenerationEngineSelection.engine).toBe("codex");
     expect(firstRunnableEngine("codex")).toBe("codex");
     expect(firstRunnableEngine(null, "claude")).toBe("claude");

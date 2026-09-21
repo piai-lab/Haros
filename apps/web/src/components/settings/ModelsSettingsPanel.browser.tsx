@@ -736,7 +736,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
-    expect(document.body.textContent).toContain("settings.addDeepSeek");
+    expect(document.body.textContent).not.toContain("settings.addDeepSeek");
     expect(document.body.textContent).not.toContain(
       'settings.viewDetailsNamed:{"name":"DeepSeek"}',
     );
@@ -1041,8 +1041,8 @@ describe("ModelsSettingsPanel model services", () => {
     expect(results?.className).not.toContain("grid-cols");
     expect(document.body.textContent).toContain("settings.recommendedModelServices");
     expect(document.body.textContent).toContain("settings.otherModelServices");
-    expect(document.body.textContent?.indexOf("DeepSeek")).toBeLessThan(
-      document.body.textContent?.indexOf("Service 0") ?? Number.MAX_SAFE_INTEGER,
+    expect(document.body.textContent?.indexOf("Service 0")).toBeLessThan(
+      document.body.textContent?.indexOf("DeepSeek") ?? Number.MAX_SAFE_INTEGER,
     );
     expect(document.body.textContent).toContain("settings.modelServiceAuthMethodApiKey");
     expect(document.body.textContent).not.toContain("DeepSeek API key");
