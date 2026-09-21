@@ -43,7 +43,7 @@ describe("ServerSettingsService", () => {
     });
     expect(settings.agentTools.builtInGroupOverrides).toEqual({});
     expect(settings.defaultEngine).toBe("pi");
-    expect(settings.modelServices.added).toEqual({ deepseek: true });
+    expect(settings.modelServices.added).toEqual({});
     expect(result.settingsFileExists).toBe(false);
   });
 

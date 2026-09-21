@@ -115,7 +115,7 @@ const ModelServiceFlags = Schema.Record(
 );
 export const ModelServicesServerSettings = Schema.Struct({
   autoSync: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
-  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({ deepseek: true }))),
+  added: ModelServiceFlags.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type ModelServicesServerSettings = typeof ModelServicesServerSettings.Type;
 

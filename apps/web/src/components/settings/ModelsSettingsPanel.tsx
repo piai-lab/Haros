@@ -211,7 +211,6 @@ const CUSTOM_MODEL_COMPAT_LABEL_KEYS: Record<CustomModelBooleanCompatField, Mess
 // whether a service exists and what it can do; unknown and Extension services stay
 // in the complete searchable result set below.
 const PREFERRED_MODEL_SERVICE_IDS = [
-  "deepseek",
   "openai",
   "openai-codex",
   "anthropic",
@@ -2259,9 +2258,7 @@ function ActiveModelsSettingsPanel({
     addModelServicesQuery.data?.services,
     modelServicesQuery.data?.connectableServices,
   ]);
-  const configuredModelServices = (modelServicesQuery.data?.services ?? []).toSorted(
-    (left, right) => Number(right.serviceId === "deepseek") - Number(left.serviceId === "deepseek"),
-  );
+  const configuredModelServices = modelServicesQuery.data?.services ?? [];
   const quickDeepSeek = connectableModelServices.find(
     (service) => service.serviceId === "deepseek",
   );
@@ -2597,18 +2594,6 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState>
                 <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
                 <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
-                {quickDeepSeek ? (
-                  <Button
-                    className="mt-4 mr-2"
-                    onClick={() => {
-                      openModelServiceDetails(quickDeepSeek.serviceId, "browser");
-                      void beginModelServiceLogin(quickDeepSeek, "api_key");
-                    }}
-                  >
-                    <ModelServiceIcon serviceId="deepseek" origin="builtin" className="size-4" />
-                    {t("settings.addDeepSeek")}
-                  </Button>
-                ) : null}
                 {canAddModelService ? (
                   <Button
                     ref={addModelServiceButtonRef}
@@ -2756,11 +2741,6 @@ function ActiveModelsSettingsPanel({
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
                                 {instanceLabel}
-                                {service.serviceId === "deepseek" ? (
-                                  <span className="ml-2 text-[10px] font-normal text-muted-foreground">
-                                    {t("settings.modelServiceCommon")}
-                                  </span>
-                                ) : null}
                               </span>
                               <span className="mt-0.5 block truncate text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground">
                                 {modelServiceAuthMethodsLabel(service)}

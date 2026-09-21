@@ -22,7 +22,7 @@ describe("modelServiceSetup", () => {
     expect(composerNeedsModelServiceSetup("pi", "empty")).toBe(true);
     expect(composerNeedsModelServiceSetup("pi", "idle")).toBe(true);
     expect(composerNeedsModelServiceSetup("opencode", "error")).toBe(true);
-    expect(composerNeedsModelServiceSetup("codex", "empty")).toBe(false);
+    expect(composerNeedsModelServiceSetup("codex", "empty")).toBe(true);
     expect(composerNeedsModelServiceSetup("pi", "ready")).toBe(false);
   });
 });

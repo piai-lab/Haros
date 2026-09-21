@@ -42,7 +42,7 @@ const EN_MESSAGES = {
     "Haros couldn’t read model services. Check the local configuration and try again.",
   "settings.noModelServices": "Add a key to get started",
   "settings.noModelServicesDescription":
-    "Connect DeepSeek or choose from the full service directory. Services only appear here after you add them.",
+    "Choose a service from the directory. Services only appear here after you add them.",
   "settings.addModelService": "Add model service",
   "settings.customApiNotFoundPrompt": "Can’t find your service?",
   "settings.connectByApiAddress": "Connect with an API endpoint →",
@@ -501,7 +501,7 @@ const ZH_CN_MESSAGES = {
   "settings.modelServicesUnavailable": "Haros 无法读取模型服务，请检查本地配置后重试。",
   "settings.noModelServices": "填入 Key，开始使用模型",
   "settings.noModelServicesDescription":
-    "直接连接 DeepSeek，也可在完整目录中选择其他服务。这里只显示你已添加的服务。",
+    "从目录中选择服务。这里只显示你已添加的服务。",
   "settings.addModelService": "添加模型服务",
   "settings.customApiNotFoundPrompt": "没有找到你的服务？",
   "settings.connectByApiAddress": "通过 API 地址连接 →",
