@@ -75,6 +75,9 @@ export interface CheckpointStoreShape {
    * Capture a checkpoint commit and store it at the provided checkpoint ref.
    *
    * Uses an isolated temporary Git index and writes a hidden ref.
+   * Unborn empty repositories and workspaces whose previous `git add -A`
+   * failed snapshot the current index only, so a pathological worktree cannot
+   * stall the turn.
    */
   readonly captureCheckpoint: (
     input: CaptureCheckpointInput,
