@@ -15,6 +15,7 @@ import {
   SunIcon,
 } from "~/lib/icons";
 import { type FilesystemBrowseResult, type EngineKind } from "@harnessos/contracts";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { BsChat } from "react-icons/bs";
 import { HiOutlineFolderOpen } from "react-icons/hi2";
@@ -485,15 +486,9 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     matchedThreads.length > 0;
   const importFieldLabel = importEngine === "codex" ? t("search.threadId") : t("search.sessionId");
   const importPlaceholder =
-    importEngine === "claude"
-      ? t("search.pasteSessionId", { engine: "Claude" })
-      : importEngine === "cursor"
-        ? t("search.pasteSessionId", { engine: "Cursor" })
-        : importEngine === "kilo"
-          ? t("search.pasteSessionId", { engine: "Kilo" })
-          : importEngine === "opencode"
-            ? t("search.pasteSessionId", { engine: "OpenCode" })
-            : t("search.pasteThreadId", { engine: "Codex" });
+    importEngine === "codex"
+      ? t("search.pasteThreadId", { engine: ENGINE_DISPLAY_NAMES.codex })
+      : t("search.pasteSessionId", { engine: ENGINE_DISPLAY_NAMES[importEngine] });
 
   const hasHighlightedFolderItem =
     highlightedItemValue !== null && highlightedItemValue.startsWith("folder:");
@@ -647,15 +642,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                       onClick={() => setImportEngine(engine)}
                     >
                       <EngineIcon engine={engine} />
-                      {engine === "claude"
-                        ? "Claude"
-                        : engine === "cursor"
-                          ? "Cursor"
-                          : engine === "kilo"
-                            ? "Kilo"
-                            : engine === "opencode"
-                              ? "OpenCode"
-                              : "Codex"}
+                      {ENGINE_DISPLAY_NAMES[engine]}
                     </Button>
                   ))}
                 </div>
@@ -680,15 +667,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {importEngine === "claude"
-                    ? t("search.engineSessionResume", { engine: "Claude" })
-                    : importEngine === "cursor"
-                      ? t("search.engineSessionResume", { engine: "Cursor" })
-                      : importEngine === "kilo"
-                        ? t("search.engineSessionResume", { engine: "Kilo" })
-                        : importEngine === "opencode"
-                          ? t("search.engineSessionResume", { engine: "OpenCode" })
-                          : t("search.engineThreadResume", { engine: "Codex" })}
+                  {importEngine === "codex"
+                    ? t("search.engineThreadResume", { engine: ENGINE_DISPLAY_NAMES.codex })
+                    : t("search.engineSessionResume", {
+                        engine: ENGINE_DISPLAY_NAMES[importEngine],
+                      })}
                 </p>
               </div>
               {importError ? (

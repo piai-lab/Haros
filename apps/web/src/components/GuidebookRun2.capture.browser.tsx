@@ -125,7 +125,7 @@ describe("Haros Guidebook Run 2 captures", () => {
       </I18nProvider>,
     );
     await expect
-      .element(page.getByRole("menuitemradio", { name: /Claude.*Sign in/ }))
+      .element(page.getByRole("menuitemradio", { name: /Claude Code.*Sign in/ }))
       .toBeVisible();
     await settleLayout();
     await page.screenshot({ path: `${CAPTURE_ROOT}/capture-04-engine-availability.png` });

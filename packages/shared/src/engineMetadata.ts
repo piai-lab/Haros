@@ -54,7 +54,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "claude",
     installation: { binary: "claude", npm: "@anthropic-ai/claude-code" },
-    displayName: "Claude",
+    displayName: "Claude Code",
     usage: {
       signInCommand: "claude",
       learnMoreHref: "https://docs.anthropic.com/en/docs/about-claude/models#rate-limits",
@@ -81,7 +81,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "grok",
     installation: { binary: "grok", npm: "@xai-official/grok" },
-    displayName: "Grok",
+    displayName: "Grok Build",
     usage: {
       signInCommand: "grok login",
       learnMoreHref: "https://console.x.ai",
@@ -128,7 +128,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "deepseek",
     installation: { binary: "dsh", npm: "@deepseek-ai/dsh", npmDistribution: "node-package" },
-    displayName: "DeepSeek",
+    displayName: "DeepSeek Harness",
     // SDK has no model-list RPC; the static catalog is global and sendable.
     globalOnlyModelCatalog: true,
     consumesHarosModelServiceCredentials: true,

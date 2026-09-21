@@ -10,7 +10,7 @@ import type {
 } from "@harnessos/contracts";
 import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
 import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
-import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
+import { ENGINE_DISPLAY_NAMES, mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import {
   getDefaultModel,
   getModelOptions,
@@ -40,70 +40,70 @@ const BUILT_IN_MODEL_SLUGS_BY_ENGINE = mapEngineDescriptors(
 export const MODEL_PROVIDER_SETTINGS: readonly EngineCustomModelConfig[] = [
   {
     engine: "codex",
-    title: "Codex",
+    title: ENGINE_DISPLAY_NAMES.codex,
     description: "Save additional Codex model slugs for the picker and `/model` command.",
     placeholder: "your-codex-model-slug",
     example: "gpt-6.7-codex-ultra-preview",
   },
   {
     engine: "claude",
-    title: "Claude",
+    title: ENGINE_DISPLAY_NAMES.claude,
     description: "Save additional Claude model slugs for the picker and `/model` command.",
     placeholder: "your-claude-model-slug",
     example: "claude-custom-model",
   },
   {
     engine: "cursor",
-    title: "Cursor",
+    title: ENGINE_DISPLAY_NAMES.cursor,
     description: "Save additional Cursor model slugs for the picker and engine runtime.",
     placeholder: "cursor-model-slug",
     example: "composer-2",
   },
   {
     engine: "antigravity",
-    title: "Antigravity",
+    title: ENGINE_DISPLAY_NAMES.antigravity,
     description: "Save additional Antigravity CLI base model names for the picker.",
     placeholder: "Model Name",
     example: "Gemini 4 Pro",
   },
   {
     engine: "grok",
-    title: "Grok",
+    title: ENGINE_DISPLAY_NAMES.grok,
     description: "Save additional Grok model slugs for the picker and `/model` command.",
     placeholder: "your-grok-model-slug",
     example: "grok-4.6",
   },
   {
     engine: "droid",
-    title: "Droid",
+    title: ENGINE_DISPLAY_NAMES.droid,
     description: "Save additional Droid model slugs for the picker and engine runtime.",
     placeholder: "your-droid-model-slug",
     example: "claude-opus-4-8",
   },
   {
     engine: "kilo",
-    title: "Kilo",
+    title: ENGINE_DISPLAY_NAMES.kilo,
     description: "Save additional Kilo model slugs for the picker and engine runtime.",
     placeholder: "engine/model",
     example: "kilo/kilo-auto/free",
   },
   {
     engine: "opencode",
-    title: "OpenCode",
+    title: ENGINE_DISPLAY_NAMES.opencode,
     description: "Save additional OpenCode model slugs for the picker and engine runtime.",
     placeholder: "engine/model",
     example: "openai/gpt-5",
   },
   {
     engine: "pi",
-    title: "Pi",
+    title: ENGINE_DISPLAY_NAMES.pi,
     description: "Save additional Pi model slugs for the picker and engine runtime.",
     placeholder: "engine/model",
     example: "anthropic/claude-sonnet-4-5",
   },
   {
     engine: "deepseek",
-    title: "DeepSeek",
+    title: ENGINE_DISPLAY_NAMES.deepseek,
     description: "Save additional DeepSeek model slugs for the picker and engine runtime.",
     placeholder: "deepseek-v4-flash",
     example: "deepseek-v4-pro",

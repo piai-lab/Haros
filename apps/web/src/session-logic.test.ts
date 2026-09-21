@@ -938,19 +938,19 @@ describe("ENGINE_OPTIONS", () => {
     const deepseek = ENGINE_OPTIONS.find((option) => option.value === "deepseek");
     expect(ENGINE_OPTIONS).toEqual([
       { value: "codex", label: "Codex" },
-      { value: "claude", label: "Claude" },
+      { value: "claude", label: "Claude Code" },
       { value: "cursor", label: "Cursor" },
       { value: "antigravity", label: "Antigravity" },
-      { value: "grok", label: "Grok" },
+      { value: "grok", label: "Grok Build" },
       { value: "droid", label: "Droid" },
       { value: "kilo", label: "Kilo" },
       { value: "opencode", label: "OpenCode" },
       { value: "pi", label: "Pi" },
-      { value: "deepseek", label: "DeepSeek" },
+      { value: "deepseek", label: "DeepSeek Harness" },
     ]);
     expect(claude).toEqual({
       value: "claude",
-      label: "Claude",
+      label: "Claude Code",
     });
     expect(cursor).toEqual({
       value: "cursor",
@@ -958,7 +958,7 @@ describe("ENGINE_OPTIONS", () => {
     });
     expect(grok).toEqual({
       value: "grok",
-      label: "Grok",
+      label: "Grok Build",
     });
     expect(droid).toEqual({
       value: "droid",
@@ -978,7 +978,7 @@ describe("ENGINE_OPTIONS", () => {
     });
     expect(deepseek).toEqual({
       value: "deepseek",
-      label: "DeepSeek",
+      label: "DeepSeek Harness",
     });
   });
 });

@@ -118,7 +118,7 @@ describe("ComposerEnginePicker", () => {
       await expect
         .element(page.getByRole("menuitemradio", { name: "Codex" }))
         .toHaveAttribute("aria-checked", "true");
-      page.getByRole("menuitemradio", { name: "Claude" }).element().focus();
+      page.getByRole("menuitemradio", { name: "Claude Code" }).element().focus();
       await userEvent.keyboard("{Enter}");
       expect(mounted.onEngineChange).toHaveBeenCalledTimes(1);
       await vi.waitFor(() => expect(document.activeElement).toBe(triggerElement));
@@ -155,7 +155,7 @@ describe("ComposerEnginePicker", () => {
       const labels = Array.from(document.querySelectorAll('[role="menuitemradio"]')).map((node) =>
         node.textContent?.trim(),
       );
-      expect(labels.slice(0, 3)).toEqual(["Pi", "Codex", "Claude"]);
+      expect(labels.slice(0, 3)).toEqual(["Pi", "Codex", "Claude Code"]);
       expect(labels).not.toContain("Cursor");
     } finally {
       await mounted.cleanup();
@@ -179,7 +179,7 @@ describe("ComposerEnginePicker", () => {
     try {
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await expect
-        .element(page.getByRole("menuitemradio", { name: /Claude.*Sign in/ }))
+        .element(page.getByRole("menuitemradio", { name: /Claude Code.*Sign in/ }))
         .not.toHaveAttribute("aria-disabled", "true");
       await expect
         .element(page.getByRole("menuitemradio", { name: /Cursor.*Install engine/ }))
@@ -191,15 +191,15 @@ describe("ComposerEnginePicker", () => {
         .element(page.getByRole("menuitemradio", { name: /Droid.*Checking/ }))
         .not.toHaveAttribute("aria-disabled", "true");
       await expect
-        .element(page.getByRole("menuitemradio", { name: /Grok.*Limited/ }))
+        .element(page.getByRole("menuitemradio", { name: /Grok Build.*Limited/ }))
         .toBeVisible();
       await expect
         .element(page.getByRole("menuitemradio", { name: "Codex" }))
         .not.toHaveAttribute("aria-disabled", "true");
-      await page.getByRole("menuitemradio", { name: /Claude.*Sign in/ }).click();
+      await page.getByRole("menuitemradio", { name: /Claude Code.*Sign in/ }).click();
       expect(mounted.onEngineSetup).toHaveBeenCalledWith("claude");
       expect(mounted.onEngineChange).toHaveBeenCalledWith("claude");
-      await page.getByRole("button", { name: "Change engine. Current: Claude" }).click();
+      await page.getByRole("button", { name: "Change engine. Current: Claude Code" }).click();
       await page.getByRole("menuitemradio", { name: /Cursor.*Install engine/ }).click();
       expect(mounted.onEngineSetup).toHaveBeenCalledWith("cursor");
       expect(mounted.onEngineChange).toHaveBeenCalledWith("cursor");

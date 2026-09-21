@@ -2633,16 +2633,7 @@ export default function Sidebar() {
       const authoritativeSettings = await fetchSettings();
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
-      const engineLabel =
-        engine === "claude"
-          ? "Claude"
-          : engine === "cursor"
-            ? "Cursor"
-            : engine === "kilo"
-              ? "Kilo"
-              : engine === "opencode"
-                ? "OpenCode"
-                : "Codex";
+      const engineLabel = ENGINE_DISPLAY_NAMES[engine];
       const title = t("import.taskTitle", {
         engine: engineLabel,
         suffix: suffix ? ` ${suffix}` : "",
