@@ -46,7 +46,7 @@ describe("packaged app version tags", () => {
         explicitVersion: "0.1.0-alpha.9",
         headTags: ["v0.1.0-alpha.1"],
         allowPackageFallback: false,
-        packageVersion: "0.1.0-alpha.0",
+        packageVersion: "0.1.0",
       }),
     ).toBe("0.1.0-alpha.9");
     expect(
@@ -54,7 +54,7 @@ describe("packaged app version tags", () => {
         explicitVersion: undefined,
         headTags: ["v0.1.0-alpha.1"],
         allowPackageFallback: false,
-        packageVersion: "0.1.0-alpha.0",
+        packageVersion: "0.1.0",
       }),
     ).toBe("0.1.0-alpha.1");
     expect(
@@ -62,15 +62,15 @@ describe("packaged app version tags", () => {
         explicitVersion: undefined,
         headTags: [],
         allowPackageFallback: true,
-        packageVersion: "0.1.0-alpha.0",
+        packageVersion: "0.1.0",
       }),
-    ).toBe("0.1.0-alpha.0");
+    ).toBe("0.1.0");
     expect(() =>
       resolvePackagedAppVersion({
         explicitVersion: "not-a-version",
         headTags: [],
         allowPackageFallback: false,
-        packageVersion: "0.1.0-alpha.0",
+        packageVersion: "0.1.0",
       }),
     ).toThrow("semver packaged version");
   });

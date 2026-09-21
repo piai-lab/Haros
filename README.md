@@ -99,9 +99,12 @@ bun run dev          # Server and web workbench in the browser
 bun run dev:desktop  # Desktop development with live rebuilds
 ```
 
-Haros is currently `0.1.0-alpha.0`. Engine availability depends on the matching CLI, account, and
+Haros is currently `0.1.0`. Engine availability depends on the matching CLI, account, and
 local setup. The local app is not Developer ID signed or notarized and is not an official release.
-The local build does not publish artifacts or create updater metadata.
+The local build does not publish artifacts or create updater metadata. Maintainers can run
+the Unsigned GitHub Distribution workflow to stage unsigned macOS and Windows installers.
+Creating a GitHub Release from that workflow stays opt-in and is a download channel only; it
+is not signing, notarization, an update feed, or paid support.
 
 Fresh installs default to Pi with DeepSeek as the model service. Configure the selected Engine in
 Settings before sending. Settings → Model services configures credentials and custom models for the

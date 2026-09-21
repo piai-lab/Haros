@@ -1,0 +1,275 @@
+name: Unsigned GitHub Distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_github_release:
+        description: Create a GitHub prerelease with unsigned Mac and Windows installers
+        type: boolean
+        default: false
+      tag:
+        description: Existing version tag to publish, for example v0.1.0. Required only when creating a GitHub Release.
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unsigned-github-distribution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    name: Freeze source identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      source_commit: ${{ steps.identity.outputs.source_commit }}
+      lockfile_sha256: ${{ steps.identity.outputs.lockfile_sha256 }}
+      publish_github_release: ${{ steps.identity.outputs.publish_github_release }}
+      release_tag: ${{ steps.identity.outputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - id: identity
+        name: Record immutable build inputs
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          PUBLISH_GITHUB_RELEASE: ${{ inputs.publish_github_release }}
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          lockfile_sha256="$(sha256sum bun.lock | cut -d' ' -f1)"
+          publish_github_release="false"
+          if [[ "${PUBLISH_GITHUB_RELEASE}" == "true" ]]; then
+            publish_github_release="true"
+          fi
+          release_tag=""
+          if [[ "${publish_github_release}" == "true" ]]; then
+            release_tag="${REQUESTED_TAG}"
+            if [[ ! "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+              echo "Creating a GitHub Release requires an exact version tag such as v${version}." >&2
+              exit 1
+            fi
+            expected_tag="v${version}"
+            if [[ "${release_tag}" != "${expected_tag}" ]]; then
+              echo "Release tag ${release_tag} must match package version ${expected_tag}." >&2
+              exit 1
+            fi
+          fi
+          {
+            echo "version=${version}"
+            echo "source_commit=${GITHUB_SHA}"
+            echo "lockfile_sha256=${lockfile_sha256}"
+            echo "publish_github_release=${publish_github_release}"
+            echo "release_tag=${release_tag}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.label }}
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS arm64 unsigned installer
+            runner: macos-14
+            platform: mac
+            target: dmg
+            arch: arm64
+            proof: journey
+          - label: Windows x64 unsigned installer
+            runner: windows-2022
+            platform: win
+            target: nsis
+            arch: x64
+            proof: startup
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.source.outputs.source_commit }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build unsigned artifact
+        shell: bash
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          HARNESSOS_PUBLISH_RELEASE: "false"
+          SOURCE_COMMIT: ${{ needs.source.outputs.source_commit }}
+          LOCKFILE_SHA256: ${{ needs.source.outputs.lockfile_sha256 }}
+        run: |
+          bun run dist:desktop:artifact -- \
+            --platform "${{ matrix.platform }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}" \
+            --build-version "${{ needs.source.outputs.version }}" \
+            --source-commit "$SOURCE_COMMIT" \
+            --lockfile-sha256 "$LOCKFILE_SHA256" \
+            --output-dir unsigned-distribution \
+            --verbose
+
+      - name: Collect distribution assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p distribution-assets
+          shopt -s nullglob
+          for pattern in \
+            "unsigned-distribution/*.dmg" \
+            "unsigned-distribution/*.exe"; do
+            for file in $pattern; do
+              cp "$file" distribution-assets/
+            done
+          done
+          test -n "$(find distribution-assets -maxdepth 1 -type f -print -quit)"
+          if ls distribution-assets | grep -E 'latest(-mac|-linux)?\.yml$|\.AppImage$'; then
+            echo "Distribution assets must not include updater metadata or Linux packages." >&2
+            exit 1
+          fi
+
+      - name: Verify isolated packaged behavior
+        shell: bash
+        run: |
+          node scripts/verify-packaged-desktop.ts \
+            --assets-dir distribution-assets \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --version "${{ needs.source.outputs.version }}" \
+            --source-commit "${{ needs.source.outputs.source_commit }}" \
+            --proof "${{ matrix.proof }}"
+
+      - name: Record installer checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLATFORM="${{ matrix.platform }}" ARCH="${{ matrix.arch }}" node <<'NODE'
+          const { createHash } = require("node:crypto");
+          const { readdirSync, readFileSync, statSync, writeFileSync } = require("node:fs");
+          const files = readdirSync("distribution-assets")
+            .filter((name) => {
+              const path = `distribution-assets/${name}`;
+              return statSync(path).isFile() && !name.startsWith("SHA256SUMS");
+            })
+            .sort();
+          if (files.length !== 1) {
+            throw new Error(`Expected one installer before checksums, found ${files.join(", ") || "none"}.`);
+          }
+          const lines = files.map((name) => {
+            const hash = createHash("sha256").update(readFileSync(`distribution-assets/${name}`)).digest("hex");
+            return `${hash}  ${name}`;
+          });
+          writeFileSync(
+            `distribution-assets/SHA256SUMS-${process.env.PLATFORM}-${process.env.ARCH}`,
+            `${lines.join("\n")}\n`,
+          );
+          NODE
+
+      - name: Upload unsigned distribution artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: unsigned-distribution-${{ matrix.platform }}-${{ matrix.arch }}
+          path: distribution-assets/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub prerelease
+    if: needs.source.outputs.publish_github_release == 'true'
+    needs:
+      - source
+      - build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.source.outputs.source_commit }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Confirm the requested tag points at this commit
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.source.outputs.release_tag }}
+          SOURCE_COMMIT: ${{ needs.source.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          tagged_commit="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+          if [[ "${tagged_commit}" != "${SOURCE_COMMIT}" ]]; then
+            echo "Tag ${RELEASE_TAG} points at ${tagged_commit}, not ${SOURCE_COMMIT}." >&2
+            exit 1
+          fi
+
+      - name: Download unsigned Mac and Windows assets
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: unsigned-distribution-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Confirm unsigned installer set
+        shell: bash
+        env:
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -f "release-assets/Haros-${VERSION}-arm64.dmg"
+          test -f "release-assets/Haros-${VERSION}-x64.exe"
+          test -f release-assets/SHA256SUMS-mac-arm64
+          test -f release-assets/SHA256SUMS-win-x64
+          if ls release-assets | grep -E 'latest(-mac|-linux)?\.yml$|\.AppImage$'; then
+            echo "Release assets must not include updater metadata or Linux packages." >&2
+            exit 1
+          fi
+          cat release-assets/SHA256SUMS-mac-arm64 release-assets/SHA256SUMS-win-x64 | sort > release-assets/SHA256SUMS
+          rm -f release-assets/SHA256SUMS-mac-arm64 release-assets/SHA256SUMS-win-x64
+          test -s release-assets/SHA256SUMS
+
+      - name: Create unsigned GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.source.outputs.release_tag }}
+          SOURCE_COMMIT: ${{ needs.source.outputs.source_commit }}
+          VERSION: ${{ needs.source.outputs.version }}
+        run: |
+          set -euo pipefail
+          notes="$(cat <<EOF
+          Unsigned Haros ${VERSION} download.
+
+          These files are not Developer ID signed or notarized, do not create an update feed, and are not paid support. macOS may require an explicit Gatekeeper override. Windows SmartScreen may warn on first run.
+
+          Source commit: ${SOURCE_COMMIT}
+          EOF
+          )"
+          gh release create "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${SOURCE_COMMIT}" \
+            --title "Haros ${VERSION} unsigned" \
+            --notes "${notes}" \
+            --prerelease \
+            --verify-tag \
+            release-assets/Haros-${VERSION}-arm64.dmg \
+            release-assets/Haros-${VERSION}-x64.exe \
+            release-assets/SHA256SUMS

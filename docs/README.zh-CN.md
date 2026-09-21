@@ -97,9 +97,11 @@ bun run dev          # 在浏览器中运行服务端与 Web 工作台
 bun run dev:desktop  # 带实时重新构建的桌面开发模式
 ```
 
-Haros 当前版本为 `0.1.0-alpha.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
+Haros 当前版本为 `0.1.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
 本机配置。本地 App 未经 Developer ID 签名或公证，不代表正式发行；构建过程不会发布
-产物或生成更新元数据。
+产物或生成更新元数据。维护者可运行 Unsigned GitHub Distribution workflow，暂存未签名的
+macOS 与 Windows 安装包。从该 workflow 创建 GitHub Release 必须显式选择，且只是下载通道，
+不是签名、公证、自动更新源或付费支持。
 
 首次启动默认选择 Pi，模型服务默认 DeepSeek。发送前请在设置中配置所选引擎。“设置 → 模型服务”
 可配置独立 Pi 引擎的凭据和自定义模型；其他引擎使用各自的原生配置。

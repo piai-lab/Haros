@@ -15,7 +15,7 @@ import {
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 function read(relativePath: string): string {
-  return readFileSync(resolve(repoRoot, relativePath), "utf8");
+  return readFileSync(resolve(repoRoot, relativePath), "utf8").replaceAll("\r\n", "\n");
 }
 
 function assertContains(haystack: string, needle: string, message: string): void {
@@ -32,8 +32,8 @@ function verifyCanonicalIdentity(): void {
     name?: string;
     bin?: Record<string, string>;
   };
-  if (rootPackage.name !== "@harnessos/monorepo" || rootPackage.version !== "0.1.0-alpha.0") {
-    throw new Error("Expected the canonical Haros root identity and alpha baseline version.");
+  if (rootPackage.name !== "@harnessos/monorepo" || rootPackage.version !== "0.1.0") {
+    throw new Error("Expected the canonical Haros root identity and packaged baseline version.");
   }
   if (serverPackage.name !== "@harnessos/server") {
     throw new Error("Expected the canonical Haros server package.");
@@ -55,6 +55,7 @@ function verifyCanonicalIdentity(): void {
 function verifyWorkflow(): void {
   const workflow = read(".github/workflows/packaged-proof.yml");
   const ciWorkflow = read(".github/workflows/ci.yml");
+  const distributionWorkflow = read(".github/workflows/unsigned-github-distribution.yml");
 
   assertContains(
     workflow,
@@ -102,13 +103,23 @@ function verifyWorkflow(): void {
     "node scripts/packaged-proof-smoke.ts",
     "Canonical CI must verify the proof control plane.",
   );
+  assertContains(
+    ciWorkflow,
+    "node scripts/unsigned-github-distribution-smoke.ts",
+    "Canonical CI must verify the independent distribution control plane.",
+  );
   assertNotContains(
     ciWorkflow,
     "node scripts/release-smoke.ts",
     "Legacy release smoke must be gone.",
   );
+  assertNotContains(
+    workflow,
+    "unsigned-github-distribution",
+    "Proof must not own GitHub distribution.",
+  );
 
-  for (const source of [workflow, ciWorkflow]) {
+  for (const source of [workflow, ciWorkflow, distributionWorkflow]) {
     for (const actionReference of source.matchAll(/uses:\s+([^\s#]+)/g)) {
       if (!/@[0-9a-f]{40}$/iu.test(actionReference[1] ?? "")) {
         throw new Error(`Expected a 40-character action SHA pin, got ${actionReference[1]}.`);

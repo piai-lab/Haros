@@ -27,7 +27,7 @@ const CONTEXT: FeedbackThreadContext = {
 
 const DIAGNOSTICS: FeedbackDiagnostics = {
   ...CONTEXT,
-  appVersion: "0.1.0-alpha.0",
+  appVersion: "0.1.0",
   submittedAt: "2026-07-15T18:00:00.000Z",
   userAgent: "Haros test agent",
   platform: "MacIntel",
@@ -38,7 +38,7 @@ const DIAGNOSTICS: FeedbackDiagnostics = {
 describe("formatFeedbackSummary", () => {
   it("lists only typed runtime diagnostics", () => {
     const summary = formatFeedbackSummary({ category: "bug", diagnostics: DIAGNOSTICS });
-    expect(summary).toContain("I ran into a bug in Haros 0.1.0-alpha.0");
+    expect(summary).toContain("I ran into a bug in Haros 0.1.0");
     expect(summary).toContain("Engine: codex");
     expect(summary).toContain("At submission: the thread was in an error state");
   });
