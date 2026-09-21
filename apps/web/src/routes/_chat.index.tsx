@@ -5,23 +5,28 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 
+import { HarosLogo } from "../components/HarosLogo";
 import {
   RestoreOrCreateChatRoute,
   type RestoreRouteResolver,
 } from "../components/RestoreOrCreateChatRoute";
+import { Button } from "../components/ui/button";
 import { readSidebarUiState } from "../components/Sidebar.uiState";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useI18n } from "../i18n";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
+import { useProjectDialogStore } from "../projectDialogStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import {
   collectRestorableDraftProjectIds,
   resolveChatIndexRestoreRoute,
 } from "./-chatIndexRoute.logic";
 
-function ChatIndexRouteView() {
+export function ChatIndexRouteView() {
   const { t } = useI18n();
+  const threadsHydrated = useStore((state) => state.threadsHydrated);
+  const setProjectDialogOpen = useProjectDialogStore((state) => state.setOpen);
   const { handleNewThread } = useHandleNewThread();
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
@@ -59,6 +64,16 @@ function ChatIndexRouteView() {
         : undefined,
     });
   };
+
+  if (threadsHydrated && agentProjects.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+        <HarosLogo size={64} aria-label="Haros" />
+        <p className="max-w-sm text-sm text-muted-foreground">{t("agent.projectRequired")}</p>
+        <Button onClick={() => setProjectDialogOpen(true)}>{t("nav.addProject")}</Button>
+      </div>
+    );
+  }
 
   return (
     <RestoreOrCreateChatRoute

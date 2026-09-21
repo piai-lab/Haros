@@ -122,12 +122,17 @@ function OnboardingFlow(props: {
   })();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col outline-none" tabIndex={-1}>
+    <div
+      data-onboarding-step={step}
+      className="flex min-h-0 flex-1 flex-col outline-none"
+      tabIndex={-1}
+    >
       <DialogHeader
         className={cn(
           "gap-1.5 pt-8 pb-0",
           ONBOARDING_INSET_CLASS_NAME,
           hero && "items-center text-center",
+          step === "welcome" && "pt-10 pb-6",
         )}
       >
         {step === "welcome" ? <HarosLogo size={44} aria-hidden className="mb-3.5" /> : null}
@@ -158,6 +163,7 @@ function OnboardingFlow(props: {
           "flex min-h-0 flex-1 flex-col overflow-y-auto pt-6",
           ONBOARDING_INSET_CLASS_NAME,
           hero && "justify-center pb-6",
+          step === "welcome" && "hidden",
         )}
       >
         {step === "tour" ? <FeatureTourStep /> : null}
@@ -200,7 +206,10 @@ export function OnboardingDialog() {
   };
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogPopup showCloseButton className="h-[540px] max-h-full max-w-[800px]">
+      <DialogPopup
+        showCloseButton
+        className="h-[540px] max-h-full max-w-[800px] has-[[data-onboarding-step=welcome]]:h-auto has-[[data-onboarding-step=welcome]]:max-w-[640px]"
+      >
         {isOpen ? (
           <OnboardingFlow
             onComplete={complete}

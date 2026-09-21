@@ -15,6 +15,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+
+import { useProjectDialogStore } from "../projectDialogStore";
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
@@ -1612,7 +1614,8 @@ export default function Sidebar() {
   const usageSettingsShortcutLabel = shortcutLabelForCommand(keybindings, "settings.usage");
   const { activeProjectId: focusedProjectId } = useFocusedChatContext();
   const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
-  const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
+  const createProjectDialogOpen = useProjectDialogStore((state) => state.isOpen);
+  const setCreateProjectDialogOpen = useProjectDialogStore((state) => state.setOpen);
   const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
   const openFeedbackDialog = useFeedbackDialogStore((state) => state.openDialog);
   const [searchPaletteMode, setSearchPaletteMode] = useState<SidebarSearchPaletteMode>("search");
