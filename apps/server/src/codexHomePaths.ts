@@ -11,6 +11,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 export const HARNESSOS_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
+export const HARNESSOS_CODEX_SESSION_OVERLAY_DIR = "codex-session-overlay";
 
 export interface CodexHomePathsInput {
   readonly env?: NodeJS.ProcessEnv;
@@ -32,6 +33,15 @@ export function resolveHarosCodexHomeOverlayPath(
   const overlayRoot =
     runtimeHome || path.join(path.dirname(sourceHomePath), ".harnessos", "runtime");
   return path.join(overlayRoot, HARNESSOS_CODEX_HOME_OVERLAY_DIR);
+}
+
+export function resolveHarosCodexSessionOverlayPath(
+  env: NodeJS.ProcessEnv,
+  sourceHomePath: string,
+  overlayId: string,
+): string {
+  const sharedOverlay = resolveHarosCodexHomeOverlayPath(env, sourceHomePath);
+  return path.join(path.dirname(sharedOverlay), HARNESSOS_CODEX_SESSION_OVERLAY_DIR, overlayId);
 }
 
 /**

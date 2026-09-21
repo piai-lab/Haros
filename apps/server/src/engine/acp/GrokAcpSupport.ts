@@ -30,6 +30,7 @@ export interface GrokAcpRuntimeInput extends Omit<
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly grokSettings: GrokAcpRuntimeSettings | null | undefined;
   readonly runtimeMode: RuntimeMode;
+  readonly envOverrides?: NodeJS.ProcessEnv;
 }
 
 export interface GrokAcpEngineSelectionErrorContext {
@@ -101,6 +102,7 @@ export function buildGrokAcpSpawnInput(
   grokSettings: GrokAcpRuntimeSettings | null | undefined,
   cwd: string,
   runtimeMode: RuntimeMode,
+  envOverrides?: NodeJS.ProcessEnv,
 ): AcpSpawnInput {
   // Keep Grok's request-based mode as the explicit baseline. Full Access also
   // needs the process-scoped override because some Grok builds deny before
@@ -125,7 +127,12 @@ export function buildGrokAcpSpawnInput(
     command: grokSettings?.binaryPath || "grok",
     args,
     cwd,
-    env: buildEngineChildEnvironment({ engine: "grok" }),
+    env: buildEngineChildEnvironment({
+      engine: "grok",
+      ...(envOverrides && Object.keys(envOverrides).length > 0
+        ? { overrides: envOverrides }
+        : {}),
+    }),
   };
 }
 
@@ -197,7 +204,12 @@ export const makeGrokAcpRuntime = (
     const acpContext = yield* Layer.build(
       AcpSessionRuntime.layer({
         ...input,
-        spawn: buildGrokAcpSpawnInput(input.grokSettings, input.cwd, input.runtimeMode),
+        spawn: buildGrokAcpSpawnInput(
+          input.grokSettings,
+          input.cwd,
+          input.runtimeMode,
+          input.envOverrides,
+        ),
         resolveAuthMethodId: resolveGrokAcpAuthMethodId,
         authenticateMeta: { headless: true },
         freshSessionRetry: {

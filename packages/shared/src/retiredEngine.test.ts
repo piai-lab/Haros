@@ -7,7 +7,10 @@ import { describe, expect, it } from "vitest";
 import {
   engineConsumesHarosModelServiceCredentials,
   engineHasGlobalOnlyModelCatalog,
+  engineHarosModelServiceProtocols,
+  engineMatchesHarosModelService,
   engineOpensModelServicesSettings,
+  engineOverlaysHarosModelServiceCatalog,
   engineOwnsProviderModelServices,
   firstRunnableEngine,
   isRunnableEngine,
@@ -63,7 +66,51 @@ describe("engine identity", () => {
     expect(engineConsumesHarosModelServiceCredentials("codex")).toBe(false);
     expect(engineOpensModelServicesSettings("pi")).toBe(true);
     expect(engineOpensModelServicesSettings("opencode")).toBe(true);
-    expect(engineOpensModelServicesSettings("codex")).toBe(false);
+    expect(engineOpensModelServicesSettings("codex")).toBe(true);
+    expect(engineOverlaysHarosModelServiceCatalog("codex")).toBe(true);
+    expect(engineOverlaysHarosModelServiceCatalog("claude")).toBe(true);
+    expect(engineOverlaysHarosModelServiceCatalog("cursor")).toBe(false);
+    expect(engineHarosModelServiceProtocols("codex")).toEqual([
+      "openai-completions",
+      "openai-responses",
+    ]);
+    expect(engineHarosModelServiceProtocols("claude")).toEqual(["anthropic-messages"]);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "codex",
+        serviceId: "deepseek",
+        api: "openai-completions",
+      }),
+    ).toBe(true);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "claude",
+        serviceId: "deepseek",
+        api: "openai-completions",
+      }),
+    ).toBe(false);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "claude",
+        serviceId: "deepseek-anthropic",
+        api: "anthropic-messages",
+      }),
+    ).toBe(true);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "cursor",
+        serviceId: "deepseek",
+        api: "openai-completions",
+      }),
+    ).toBe(false);
+    expect(engineMatchesHarosModelService({ engine: "grok", serviceId: "xai" })).toBe(true);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "antigravity",
+        serviceId: "custom",
+        api: "google-generative-ai",
+      }),
+    ).toBe(true);
   });
   it("preserves explicit runnable defaults", () => {
     expect(

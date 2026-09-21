@@ -15,6 +15,7 @@ import {
   type EngineSkillDescriptor,
   ThreadId,
 } from "@harnessos/contracts";
+import { engineOverlaysHarosModelServiceCatalog } from "@harnessos/shared/engineMetadata";
 import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { Effect, Layer, Option, Schema, SchemaIssue } from "effect";
 
@@ -23,7 +24,9 @@ import { ServerSettingsService } from "../../serverSettings.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { EngineValidationError } from "../Errors.ts";
+import { mergeHarosModelServiceCatalog } from "../harosModelServiceBinding.ts";
 import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
+import { HarosModelServices } from "../Services/HarosModelServices.ts";
 import {
   EngineDiscoveryService,
   type EngineDiscoveryServiceShape,
@@ -117,6 +120,7 @@ const make = Effect.gen(function* () {
   const serverConfig = yield* ServerConfig;
   const serverSettings = yield* ServerSettingsService;
   const snapshotQuery = Option.getOrUndefined(yield* Effect.serviceOption(ProjectionSnapshotQuery));
+  const modelServices = Option.getOrUndefined(yield* Effect.serviceOption(HarosModelServices));
 
   const resolveResourceScope = (input: { readonly threadId?: string | undefined }) =>
     Effect.gen(function* () {
@@ -325,18 +329,70 @@ const make = Effect.gen(function* () {
         };
       }
       const adapter = yield* registry.getByEngine(parsed.engine);
+      const overlayEligible = engineOverlaysHarosModelServiceCatalog(parsed.engine);
       if (!adapter.listModels) {
-        return {
-          models: [],
-          source: "unsupported",
-          cached: false,
-        };
+        if (!overlayEligible || !modelServices) {
+          return {
+            models: [],
+            source: "unsupported",
+            cached: false,
+          };
+        }
       }
-      const result = yield* adapter.listModels(parsed);
-      return yield* isolateMalformedModelDescriptors({
-        engine: parsed.engine,
-        result,
-      });
+      const nativeResult = adapter.listModels
+        ? yield* adapter.listModels(parsed).pipe(
+            Effect.map((result) => ({ _tag: "success" as const, result })),
+            Effect.catch((error) =>
+              overlayEligible
+                ? Effect.logWarning("engine-native model discovery failed", {
+                    engine: parsed.engine,
+                    surface: "models",
+                  }).pipe(Effect.as({ _tag: "failed" as const, error }))
+                : Effect.fail(error),
+            ),
+          )
+        : ({ _tag: "unsupported" as const } as const);
+      const sanitized =
+        nativeResult._tag === "success"
+          ? yield* isolateMalformedModelDescriptors({
+              engine: parsed.engine,
+              result: nativeResult.result,
+            })
+          : {
+              models: [],
+              source: nativeResult._tag === "failed" ? "unavailable" : "unsupported",
+              cached: false,
+            };
+      if (!overlayEligible || !modelServices) {
+        return sanitized;
+      }
+      const overlay = yield* modelServices.listMatchingModels({ engine: parsed.engine }).pipe(
+        Effect.catch(() => Effect.succeed(null)),
+      );
+      const models = overlay
+        ? mergeHarosModelServiceCatalog({
+            engine: parsed.engine,
+            nativeModels: sanitized.models,
+            services: overlay.services,
+            modelsByServiceId: overlay.modelsByServiceId,
+            ...(overlay.customConfigsByServiceId
+              ? { customConfigsByServiceId: overlay.customConfigsByServiceId }
+              : {}),
+          })
+        : sanitized.models;
+      if (models === sanitized.models) {
+        if (nativeResult._tag === "failed") {
+          return yield* Effect.fail(nativeResult.error);
+        }
+        return sanitized;
+      }
+      return {
+        ...sanitized,
+        models,
+        source: sanitized.source
+          ? `${sanitized.source}+haros.model-services`
+          : "haros.model-services",
+      };
     });
 
   const listAgents: EngineDiscoveryServiceShape["listAgents"] = (input) =>
