@@ -4,8 +4,10 @@
  * Implements hidden Git-ref checkpoint capture/restore directly with
  * Effect-native child process execution (`effect/unstable/process`).
  *
- * This layer owns filesystem/Git interactions only; it does not persist
- * checkpoint metadata and does not coordinate engine rollback semantics.
+ * Untracked `git add -A` is bounded and skipped for unborn empty worktrees so
+ * capture cannot stall engine dispatch. This layer owns filesystem/Git
+ * interactions only; it does not persist checkpoint metadata and does not
+ * coordinate engine rollback semantics.
  *
  * @module CheckpointStoreLive
  */
@@ -17,6 +19,14 @@ import { CheckpointInvariantError, type CheckpointStoreError } from "../Errors.t
 import { GitCommandError } from "../../git/Errors.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import { CheckpointStore, type CheckpointStoreShape } from "../Services/CheckpointStore.ts";
+import {
+  CHECKPOINT_TRACKED_LISTING_MAX_OUTPUT_BYTES,
+  CHECKPOINT_TRACKED_LISTING_TIMEOUT_MS,
+  CHECKPOINT_UNTRACKED_ADD_ARGS,
+  CHECKPOINT_UNTRACKED_ADD_MAX_OUTPUT_BYTES,
+  CHECKPOINT_UNTRACKED_ADD_TIMEOUT_MS,
+  shouldStageUntrackedForCheckpoint,
+} from "../CapturePolicy.ts";
 import { CheckpointRef } from "@harnessos/contracts";
 
 const CHECKPOINT_DIFF_MAX_OUTPUT_BYTES = 10_000_000;
@@ -34,6 +44,10 @@ const makeCheckpointStore = Effect.gen(function* () {
   const git = yield* GitCore;
   const captureLock = yield* Semaphore.make(1);
   const inFlightCaptures = new Map<string, Deferred.Deferred<void, CheckpointStoreError>>();
+  // Workspaces where `git add -A` already timed out, overflowed, or would
+  // import an unborn empty tree. Later captures snapshot the current index
+  // only so a pathological repo cannot stall every turn.
+  const untrackedAddUnsafeCwds = new Set<string>();
 
   // Normalize the cwd so captures for the same repo reached via differently
   // written paths (trailing slash, relative segments) share one in-flight slot.
@@ -67,6 +81,25 @@ const makeCheckpointStore = Effect.gen(function* () {
         allowNonZeroExit: true,
       })
       .pipe(Effect.map((result) => result.code === 0));
+
+  const listHasTrackedFiles = (cwd: string): Effect.Effect<boolean, never> =>
+    git
+      .execute({
+        operation: "CheckpointStore.listTrackedFiles",
+        cwd,
+        args: ["ls-files", "-z"],
+        timeoutMs: CHECKPOINT_TRACKED_LISTING_TIMEOUT_MS,
+        maxOutputBytes: CHECKPOINT_TRACKED_LISTING_MAX_OUTPUT_BYTES,
+        outputMode: "truncate",
+        allowNonZeroExit: true,
+      })
+      .pipe(
+        Effect.map((result) => result.code === 0 && result.stdout.length > 0),
+        Effect.catchTag("GitCommandError", () => {
+          untrackedAddUnsafeCwds.add(path.resolve(cwd));
+          return Effect.succeed(false);
+        }),
+      );
 
   const seedCheckpointIndex = (cwd: string, tempIndexPath: string) =>
     Effect.gen(function* () {
@@ -159,12 +192,32 @@ const makeCheckpointStore = Effect.gen(function* () {
               GIT_COMMITTER_EMAIL: "harnessos@users.noreply.github.com",
             };
 
+            const cwdKey = path.resolve(input.cwd);
+            const hasHead = yield* hasHeadCommit(input.cwd);
+            const untrackedAddPreviouslyFailed = untrackedAddUnsafeCwds.has(cwdKey);
+            const hasTrackedFiles =
+              hasHead || untrackedAddPreviouslyFailed
+                ? true
+                : yield* listHasTrackedFiles(input.cwd);
+            const stageUntracked = shouldStageUntrackedForCheckpoint({
+              hasHeadCommit: hasHead,
+              hasTrackedFiles,
+              untrackedAddPreviouslyFailed,
+            });
+            if (!stageUntracked && !hasHead && !hasTrackedFiles && !untrackedAddPreviouslyFailed) {
+              untrackedAddUnsafeCwds.add(cwdKey);
+              yield* Effect.logWarning(
+                "skipping checkpoint git add -A for unborn repository with no tracked files",
+                { cwd: input.cwd },
+              );
+            }
+
             const workingIndexInfo = yield* seedCheckpointIndex(input.cwd, tempIndexPath);
-            if (workingIndexInfo === null && (yield* hasHeadCommit(input.cwd))) {
+            if (workingIndexInfo === null) {
               yield* git.execute({
                 operation,
                 cwd: input.cwd,
-                args: ["read-tree", "HEAD"],
+                args: hasHead ? ["read-tree", "HEAD"] : ["read-tree", "--empty"],
                 env: commitEnv,
               });
             }
@@ -174,13 +227,26 @@ const makeCheckpointStore = Effect.gen(function* () {
               // Git verify those racily-clean entries and leaves changed paths
               // for the following add to hash, without discarding the cache for
               // the rest of a large workspace.
-              yield* git.execute({
-                operation,
-                cwd: input.cwd,
-                args: ["update-index", "--really-refresh"],
-                env: commitEnv,
-                allowNonZeroExit: true,
-              });
+              yield* git
+                .execute({
+                  operation,
+                  cwd: input.cwd,
+                  args: ["update-index", "--really-refresh"],
+                  env: commitEnv,
+                  allowNonZeroExit: true,
+                  timeoutMs: CHECKPOINT_UNTRACKED_ADD_TIMEOUT_MS,
+                  maxOutputBytes: CHECKPOINT_UNTRACKED_ADD_MAX_OUTPUT_BYTES,
+                  outputMode: "truncate",
+                })
+                .pipe(
+                  Effect.catchTag("GitCommandError", (error) => {
+                    untrackedAddUnsafeCwds.add(cwdKey);
+                    return Effect.logWarning(
+                      "checkpoint update-index --really-refresh failed; skipping git add -A",
+                      { cwd: input.cwd, detail: error.message },
+                    );
+                  }),
+                );
 
               // Copying or refreshing the temporary index advances its file
               // timestamp. Git uses that timestamp to decide whether an entry
@@ -197,12 +263,27 @@ const makeCheckpointStore = Effect.gen(function* () {
               }
             }
 
-            yield* git.execute({
-              operation,
-              cwd: input.cwd,
-              args: ["add", "-A", "--", "."],
-              env: commitEnv,
-            });
+            if (stageUntracked && !untrackedAddUnsafeCwds.has(cwdKey)) {
+              yield* git
+                .execute({
+                  operation,
+                  cwd: input.cwd,
+                  args: CHECKPOINT_UNTRACKED_ADD_ARGS,
+                  env: commitEnv,
+                  timeoutMs: CHECKPOINT_UNTRACKED_ADD_TIMEOUT_MS,
+                  maxOutputBytes: CHECKPOINT_UNTRACKED_ADD_MAX_OUTPUT_BYTES,
+                  outputMode: "truncate",
+                })
+                .pipe(
+                  Effect.catchTag("GitCommandError", (error) => {
+                    untrackedAddUnsafeCwds.add(cwdKey);
+                    return Effect.logWarning(
+                      "checkpoint git add -A failed; continuing with the current index snapshot",
+                      { cwd: input.cwd, detail: error.message },
+                    );
+                  }),
+                );
+            }
 
             const writeTreeResult = yield* git.execute({
               operation,

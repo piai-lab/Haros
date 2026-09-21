@@ -12,9 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CheckpointStoreLive } from "./CheckpointStore.ts";
 import { CheckpointStore } from "../Services/CheckpointStore.ts";
+import { CHECKPOINT_UNTRACKED_ADD_ARGS } from "../CapturePolicy.ts";
 import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
 import { GitCommandError } from "../../git/Errors.ts";
 import { CheckpointRef } from "@harnessos/contracts";
+
+const ADD_ALL = CHECKPOINT_UNTRACKED_ADD_ARGS.join(" ");
 
 async function waitFor(predicate: () => boolean, timeoutMs = 1_000): Promise<void> {
   const started = Date.now();
@@ -46,9 +49,12 @@ describe("CheckpointStoreLive", () => {
         return Effect.succeed({ code: 0, stdout: "/repo/.git/index\n", stderr: "" });
       }
       if (args === "rev-parse --verify HEAD") {
-        return Effect.succeed({ code: 1, stdout: "", stderr: "" });
+        return Effect.succeed({ code: 0, stdout: "head-oid\n", stderr: "" });
       }
-      if (args === "add -A -- .") {
+      if (args === "read-tree HEAD") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === ADD_ALL) {
         return Effect.promise(() => addGate).pipe(Effect.as({ code: 0, stdout: "", stderr: "" }));
       }
       if (args === "write-tree") {
@@ -78,14 +84,14 @@ describe("CheckpointStoreLive", () => {
 
         const first = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
         yield* Effect.promise(() =>
-          waitFor(() => execute.mock.calls.some(([call]) => call.args.join(" ") === "add -A -- .")),
+          waitFor(() => execute.mock.calls.some(([call]) => call.args.join(" ") === ADD_ALL)),
         );
         const second = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
         yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 25)));
 
-        expect(
-          execute.mock.calls.filter(([call]) => call.args.join(" ") === "add -A -- ."),
-        ).toHaveLength(1);
+        expect(execute.mock.calls.filter(([call]) => call.args.join(" ") === ADD_ALL)).toHaveLength(
+          1,
+        );
 
         releaseAdd?.();
         yield* Fiber.join(first);
@@ -108,13 +114,16 @@ describe("CheckpointStoreLive", () => {
       if (args === "rev-parse --git-path index") {
         return Effect.succeed({ code: 0, stdout: `${workingIndexPath}\n`, stderr: "" });
       }
+      if (args === "rev-parse --verify HEAD") {
+        return Effect.succeed({ code: 0, stdout: "head-oid\n", stderr: "" });
+      }
       if (args === "update-index --really-refresh") {
         const captureIndexPath = input.env?.GIT_INDEX_FILE ?? "";
         const refreshTime = new Date("2025-01-02T03:04:05.000Z");
         utimesSync(captureIndexPath, refreshTime, refreshTime);
         return Effect.succeed({ code: 1, stdout: "", stderr: "README.md: needs update\n" });
       }
-      if (args === "add -A -- .") {
+      if (args === ADD_ALL) {
         const captureIndexPath = input.env?.GIT_INDEX_FILE ?? "";
         capturedSeed = readFileSync(captureIndexPath, "utf8");
         capturedIndexMtimeMs = statSync(captureIndexPath).mtimeMs;
@@ -155,9 +164,9 @@ describe("CheckpointStoreLive", () => {
           ([call]) => call.args.join(" ") === "update-index --really-refresh",
         ),
       ).toBe(true);
-      expect(
-        execute.mock.calls.some(([call]) => call.args.join(" ") === "rev-parse --verify HEAD"),
-      ).toBe(false);
+      expect(execute.mock.calls.some(([call]) => call.args.join(" ") === "read-tree HEAD")).toBe(
+        false,
+      );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -171,9 +180,12 @@ describe("CheckpointStoreLive", () => {
         return Effect.succeed({ code: 0, stdout: "/repo/.git/index\n", stderr: "" });
       }
       if (args === "rev-parse --verify HEAD") {
-        return Effect.succeed({ code: 1, stdout: "", stderr: "" });
+        return Effect.succeed({ code: 0, stdout: "head-oid\n", stderr: "" });
       }
-      if (args === "add -A -- .") {
+      if (args === "read-tree HEAD") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === ADD_ALL) {
         addCalls += 1;
         if (addCalls === 1) {
           return Effect.never;
@@ -244,9 +256,12 @@ describe("CheckpointStoreLive", () => {
         return Effect.succeed({ code: 0, stdout: "/repo/.git/index\n", stderr: "" });
       }
       if (args === "rev-parse --verify HEAD") {
-        return Effect.succeed({ code: 1, stdout: "", stderr: "" });
+        return Effect.succeed({ code: 0, stdout: "head-oid\n", stderr: "" });
       }
-      if (args === "add -A -- .") {
+      if (args === "read-tree HEAD") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === ADD_ALL) {
         return Effect.succeed({ code: 0, stdout: "", stderr: "" });
       }
       if (args === "write-tree") {
@@ -277,17 +292,135 @@ describe("CheckpointStoreLive", () => {
           checkpointRef: CheckpointRef.makeUnsafe(existingRef),
           skipIfExists: true,
         });
-        expect(captureArgs("add -A -- .")).toHaveLength(0);
+        expect(captureArgs(ADD_ALL)).toHaveLength(0);
 
         yield* store.captureCheckpoint({
           cwd: "/repo",
           checkpointRef: CheckpointRef.makeUnsafe(missingRef),
           skipIfExists: true,
         });
-        expect(captureArgs("add -A -- .")).toHaveLength(1);
+        expect(captureArgs(ADD_ALL)).toHaveLength(1);
         expect(captureArgs(`update-ref ${missingRef} commit-oid`)).toHaveLength(1);
       }),
     );
+  });
+
+  it("skips git add -A for an unborn repository with no tracked files", async () => {
+    const execute = vi.fn<GitCoreShape["execute"]>((input) => {
+      const args = input.args.join(" ");
+      if (args === "rev-parse --git-path index") {
+        return Effect.succeed({ code: 0, stdout: "/repo/.git/index\n", stderr: "" });
+      }
+      if (args === "rev-parse --verify HEAD") {
+        return Effect.succeed({ code: 1, stdout: "", stderr: "" });
+      }
+      if (args === "ls-files -z") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === "read-tree --empty") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === "write-tree") {
+        return Effect.succeed({ code: 0, stdout: "tree-oid\n", stderr: "" });
+      }
+      if (args.startsWith("commit-tree ")) {
+        return Effect.succeed({ code: 0, stdout: "commit-oid\n", stderr: "" });
+      }
+      if (args.startsWith("update-ref ")) {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      throw new Error(`Unexpected git args: ${args}`);
+    });
+    const layer = CheckpointStoreLive.pipe(
+      Layer.provide(Layer.succeed(GitCore, { execute } as unknown as GitCoreShape)),
+      Layer.provide(NodeServices.layer),
+    );
+    runtime = ManagedRuntime.make(layer);
+
+    await runtime.runPromise(
+      Effect.gen(function* () {
+        const store = yield* CheckpointStore;
+        yield* store.captureCheckpoint({
+          cwd: "/repo",
+          checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/unborn"),
+        });
+        yield* store.captureCheckpoint({
+          cwd: "/repo",
+          checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/unborn-2"),
+        });
+      }),
+    );
+
+    expect(execute.mock.calls.some(([call]) => call.args.join(" ") === ADD_ALL)).toBe(false);
+    expect(
+      execute.mock.calls.filter(([call]) => call.args.join(" ") === "read-tree --empty"),
+    ).toHaveLength(2);
+    expect(
+      execute.mock.calls.filter(([call]) => call.args.join(" ") === "ls-files -z"),
+    ).toHaveLength(1);
+  });
+
+  it("continues a capture from the current index when git add -A fails, then skips later adds", async () => {
+    let addCalls = 0;
+    const execute = vi.fn<GitCoreShape["execute"]>((input) => {
+      const args = input.args.join(" ");
+      if (args === "rev-parse --git-path index") {
+        return Effect.succeed({ code: 0, stdout: "/repo/.git/index\n", stderr: "" });
+      }
+      if (args === "rev-parse --verify HEAD") {
+        return Effect.succeed({ code: 0, stdout: "head-oid\n", stderr: "" });
+      }
+      if (args === "read-tree HEAD") {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      if (args === ADD_ALL) {
+        addCalls += 1;
+        return Effect.fail(
+          new GitCommandError({
+            operation: input.operation,
+            command: args,
+            cwd: input.cwd,
+            detail: `${args} timed out.`,
+          }),
+        );
+      }
+      if (args === "write-tree") {
+        return Effect.succeed({ code: 0, stdout: "tree-oid\n", stderr: "" });
+      }
+      if (args.startsWith("commit-tree ")) {
+        return Effect.succeed({ code: 0, stdout: "commit-oid\n", stderr: "" });
+      }
+      if (args.startsWith("update-ref ")) {
+        return Effect.succeed({ code: 0, stdout: "", stderr: "" });
+      }
+      throw new Error(`Unexpected git args: ${args}`);
+    });
+    const layer = CheckpointStoreLive.pipe(
+      Layer.provide(Layer.succeed(GitCore, { execute } as unknown as GitCoreShape)),
+      Layer.provide(NodeServices.layer),
+    );
+    runtime = ManagedRuntime.make(layer);
+
+    await runtime.runPromise(
+      Effect.gen(function* () {
+        const store = yield* CheckpointStore;
+        yield* store.captureCheckpoint({
+          cwd: "/repo",
+          checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/add-timeout"),
+        });
+        yield* store.captureCheckpoint({
+          cwd: "/repo",
+          checkpointRef: CheckpointRef.makeUnsafe(
+            "refs/harnessos-checkpoints/thread/add-timeout-2",
+          ),
+        });
+      }),
+    );
+
+    expect(addCalls).toBe(1);
+    expect(
+      execute.mock.calls.filter(([call]) => call.args.join(" ") === "write-tree"),
+    ).toHaveLength(2);
   });
 
   it("restores the worktree patch when resetting the index fails during file undo", async () => {
