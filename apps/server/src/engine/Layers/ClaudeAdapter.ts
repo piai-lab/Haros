@@ -111,6 +111,11 @@ import { ServerConfig } from "../../config.ts";
 import { buildFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import { buildClaudeProcessEnv } from "../claudeProcessEnv.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
+import {
+  loadHarosModelServiceBinding,
+  resolveClaudeModelServiceEnv,
+} from "../harosModelServiceBinding.ts";
 import {
   claudeCacheContextTokens,
   claudeCacheForModel,
@@ -1845,6 +1850,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
   return Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const serverConfig = yield* ServerConfig;
+    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the harnessos_* MCP tools.
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -1967,9 +1973,34 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const nextEventId = Effect.map(Random.nextUUIDv4, (id) => EventId.makeUnsafe(id));
     const makeEventStamp = () => Effect.all({ eventId: nextEventId, createdAt: nowIso });
     const withSessionLifecycleLock = sessionLifecycleLock.withLock;
-    const resolveClaudeSdkEnv = Effect.sync(() =>
-      buildClaudeProcessEnv({ homeDir: serverConfig.homeDir }),
-    );
+    const resolveClaudeSdkEnv = (model?: string) =>
+      Effect.tryPromise({
+        try: async () => {
+          const settings = serverSettings
+            ? await Effect.runPromise(
+                serverSettings.getSettings.pipe(Effect.catch(() => Effect.succeed(null))),
+              )
+            : null;
+          const binding = await loadHarosModelServiceBinding({
+            engine: ENGINE,
+            model,
+            requestedAgentDir: settings?.engines.pi.agentDir,
+            serverBaseDir: serverConfig.baseDir,
+          });
+          const overlay = resolveClaudeModelServiceEnv(binding);
+          return buildClaudeProcessEnv({
+            homeDir: serverConfig.homeDir,
+            ...(Object.keys(overlay).length > 0 ? { env: { ...process.env, ...overlay } } : {}),
+          });
+        },
+        catch: (cause) =>
+          new EngineAdapterProcessError({
+            engine: ENGINE,
+            threadId: ThreadId.makeUnsafe("discovery"),
+            detail: toMessage(cause, "Failed to resolve Claude model-service credentials."),
+            cause,
+          }),
+      });
 
     const bindClaudeProcessOwner =
       (owner: ClaudeProcessOwner) =>
@@ -5438,7 +5469,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ...(ultracode ? { ultracode: true } : {}),
         };
         const claudeSubagents = buildClaudeSdkSubagents();
-        const claudeSdkEnv = yield* resolveClaudeSdkEnv;
+        const claudeSdkEnv = yield* resolveClaudeSdkEnv(engineSelection?.model);
         if (input.runtimeMode === "auto") {
           const binaryPath = engineOptions?.binaryPath ?? "claude";
           const installedVersion = yield* Effect.tryPromise({
@@ -6595,7 +6626,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         // 3. Spawn a temporary process for discovery (deduplicating concurrent requests).
-        const claudeSdkEnv = yield* resolveClaudeSdkEnv;
+        const claudeSdkEnv = yield* resolveClaudeSdkEnv();
         const discoveryPromise =
           pendingCommandDiscovery ??
           discoverCommandsViaTemporaryProcess(
@@ -6702,7 +6733,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         // Cold starts have no active Claude session. Discover with one
         // short-lived SDK process so the UI receives model capability flags on
         // its first request instead of caching an empty "pending" catalog.
-        const claudeSdkEnv = yield* resolveClaudeSdkEnv;
+        const claudeSdkEnv = yield* resolveClaudeSdkEnv();
         const discoveryPromise =
           pendingModelDiscovery ??
           discoverModelsViaTemporaryProcess(
