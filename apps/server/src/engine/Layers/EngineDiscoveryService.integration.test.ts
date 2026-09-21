@@ -39,6 +39,7 @@ import { EngineAdapterRequestError } from "../Errors.ts";
 import type { EngineAdapterShape } from "../Services/EngineAdapter.ts";
 import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
 import { EngineDiscoveryService } from "../Services/EngineDiscoveryService.ts";
+import { HarosModelServices } from "../Services/HarosModelServices.ts";
 import { clearSkillsCatalogCacheForTests } from "../skillsCatalog.ts";
 import { combineProviderSkills, EngineDiscoveryServiceLive } from "./EngineDiscoveryService.ts";
 
@@ -450,5 +451,76 @@ describe("EngineDiscoveryService.listModels", () => {
       source: "cursor.cli",
       cached: false,
     });
+  });
+
+  it("overlays matching Haros models when native Codex discovery fails", async () => {
+    const modelServices = {
+      listMatchingModels: () =>
+        Effect.succeed({
+          services: [
+            {
+              serviceId: "deepseek",
+              providerId: "deepseek",
+              displayName: "DeepSeek",
+              origin: "builtin" as const,
+              authMethods: [],
+              authState: "configured" as const,
+              authSource: "stored" as const,
+              storedCredentialType: "api_key" as const,
+              knownModelCount: 1,
+              availableModelCount: 1,
+              supportsNetworkRefresh: true,
+              catalogState: "ready" as const,
+              catalogErrorCode: null,
+              api: "openai-completions" as const,
+            },
+          ],
+          modelsByServiceId: new Map([
+            [
+              "deepseek",
+              [
+                {
+                  modelId: "deepseek-chat",
+                  displayName: "DeepSeek Chat",
+                  available: true,
+                  reasoning: false,
+                  input: ["text" as const],
+                  contextWindow: 0,
+                  maxTokens: 0,
+                },
+              ],
+            ],
+          ]),
+          customConfigsByServiceId: new Map(),
+        }),
+    };
+    const baseLayer = Layer.mergeAll(
+      makeConfigLayer(),
+      ServerSettingsService.layerTest(),
+      makeRegistryLayer({
+        listModels: () =>
+          Effect.fail(
+            new EngineAdapterRequestError({
+              engine: "codex",
+              method: "model/list",
+              detail: "not logged in",
+            }),
+          ),
+      }),
+      Layer.succeed(HarosModelServices, modelServices as never),
+    ).pipe(Layer.provideMerge(NodeServices.layer));
+    const testLayer = EngineDiscoveryServiceLive.pipe(Layer.provideMerge(baseLayer));
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const discovery = yield* EngineDiscoveryService;
+        return yield* discovery.listModels({ engine: "codex" });
+      }).pipe(Effect.provide(testLayer)) as unknown as Effect.Effect<
+        EngineListModelsResult,
+        never,
+        never
+      >,
+    );
+    expect(result.models.map((model) => model.slug)).toEqual(["deepseek/deepseek-chat"]);
+    expect(result.source).toBe("unavailable+haros.model-services");
   });
 });

@@ -1093,6 +1093,7 @@ async function projectModelServices(input: {
       knownModelCount,
       availableModelCount,
       supportsNetworkRefresh: provider.refreshModels !== undefined,
+      ...(isCustomApiProtocol(provider.api) ? { api: provider.api } : {}),
       ...catalogProjection,
     };
   });
@@ -1561,6 +1562,15 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
       };
 
       const service = {
+        listMatchingModels: (_input) =>
+          Effect.promise(async (signal) => {
+            const projection = await project(signal);
+            return {
+              services: projection.listed,
+              modelsByServiceId: projection.modelsByServiceId,
+              customConfigsByServiceId: projection.customConfigsByServiceId,
+            };
+          }),
         list: (input = {}) =>
           Effect.promise(async (signal) => {
             try {
@@ -2343,6 +2353,8 @@ export function makeHarosModelServicesLive(options: HarosModelServicesLiveOption
       return {
         list: (...args: Parameters<HarosModelServicesShape["list"]>) =>
           scoped(service.list(...args)),
+        listMatchingModels: (...args: Parameters<HarosModelServicesShape["listMatchingModels"]>) =>
+          scoped(service.listMatchingModels(...args)),
         get: (...args: Parameters<HarosModelServicesShape["get"]>) => scoped(service.get(...args)),
         beginLogin: (...args: Parameters<HarosModelServicesShape["beginLogin"]>) =>
           scoped(service.beginLogin(...args)),

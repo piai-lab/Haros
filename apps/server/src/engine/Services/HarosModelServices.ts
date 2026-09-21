@@ -3,6 +3,8 @@
 // Layer: Server provider service contract
 
 import type {
+  EngineKind,
+  HarosCustomModelServiceConfig,
   HarosCustomModelServiceRemoveInput,
   HarosCustomModelServiceRemoveResult,
   HarosCustomModelServiceDiscoverInput,
@@ -26,6 +28,8 @@ import type {
   HarosModelServiceTestResult,
   HarosModelServicesGetInput,
   HarosModelServicesGetResult,
+  HarosModelServiceDescriptor,
+  HarosModelServiceModel,
   HarosModelServicesListInput,
   HarosModelServicesListResult,
 } from "@harnessos/contracts";
@@ -36,6 +40,13 @@ export interface HarosModelServicesShape {
   readonly list: (
     input?: HarosModelServicesListInput,
   ) => Effect.Effect<HarosModelServicesListResult>;
+  readonly listMatchingModels: (input: {
+    readonly engine: EngineKind;
+  }) => Effect.Effect<{
+    readonly services: ReadonlyArray<HarosModelServiceDescriptor>;
+    readonly modelsByServiceId: ReadonlyMap<string, ReadonlyArray<HarosModelServiceModel>>;
+    readonly customConfigsByServiceId: ReadonlyMap<string, HarosCustomModelServiceConfig>;
+  }>;
   readonly get: (input: HarosModelServicesGetInput) => Effect.Effect<HarosModelServicesGetResult>;
   readonly beginLogin: (
     clientId: number,
