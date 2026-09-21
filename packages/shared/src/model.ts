@@ -25,6 +25,10 @@ import {
   type EngineWithDefaultModel,
   CodexReasoningEffort,
 } from "@harnessos/contracts";
+import {
+  engineMatchesHarosModelService,
+  parseHarosModelServiceComposerSlug,
+} from "./engineMetadata";
 
 const MODEL_SLUG_SET_BY_ENGINE = Object.fromEntries(
   Object.entries(MODEL_OPTIONS_BY_ENGINE).map(([engine, options]) => [
@@ -618,9 +622,15 @@ export function resolveApiModelId(engineSelection: EngineSelection): string {
     engineSelection.engine === "grok" ||
     engineSelection.engine === "antigravity"
   ) {
-    const separator = engineSelection.model.indexOf("/");
-    if (separator > 0 && separator < engineSelection.model.length - 1) {
-      return engineSelection.model.slice(separator + 1);
+    const parsed = parseHarosModelServiceComposerSlug(engineSelection.model);
+    if (
+      parsed &&
+      engineMatchesHarosModelService({
+        engine: engineSelection.engine,
+        serviceId: parsed.serviceId,
+      })
+    ) {
+      return parsed.modelId;
     }
   }
   return engineSelection.model;

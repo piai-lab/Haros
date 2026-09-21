@@ -739,7 +739,9 @@ export function makeGrokAdapter(
     const fileSystem = yield* FileSystem.FileSystem;
     const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const serverConfig = yield* Effect.service(ServerConfig);
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
+    const serverSettings = Option.getOrUndefined(
+      yield* Effect.serviceOption(ServerSettingsService),
+    );
     // Optional so adapter tests can run without the gateway layer; when
     // present, every session gets the harnessos_* MCP tools.
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -1173,8 +1175,17 @@ export function makeGrokAdapter(
                 serverBaseDir: serverConfig.baseDir,
               });
             },
-            catch: () => undefined,
-          }).pipe(Effect.catch(() => Effect.succeed(null)));
+            catch: (cause) =>
+              new EngineAdapterProcessError({
+                engine: ENGINE,
+                threadId: input.threadId,
+                detail:
+                  cause instanceof Error
+                    ? cause.message
+                    : "Failed to resolve Grok model-service credentials.",
+                cause,
+              }),
+          });
           const acp = yield* makeGrokAcpRuntime({
             grokSettings: effectiveGrokSettings,
             childProcessSpawner,

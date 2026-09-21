@@ -1,8 +1,7 @@
 import { type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import {
   ENGINE_DISPLAY_NAMES,
-  engineOverlaysHarosModelServiceCatalog,
-  parseHarosModelServiceComposerSlug,
+  isHarosOverlayComposerModel,
 } from "@harnessos/shared/engineMetadata";
 
 export interface EngineSendAvailability {
@@ -134,17 +133,24 @@ export function normalizeEngineStatusForLocalConfig(input: {
 export function isEngineUsable(
   status: ServerEngineStatus | null | undefined,
   selectedModel?: string | null,
+  catalogModelSlugs?: ReadonlyArray<string>,
 ): boolean {
   if (!status) {
     // Missing status means the health check has not confirmed an installed engine yet.
     return false;
   }
-  if (
-    status.available &&
-    status.authStatus === "unauthenticated" &&
-    engineOverlaysHarosModelServiceCatalog(status.engine) &&
-    parseHarosModelServiceComposerSlug(selectedModel?.trim() ?? "")
-  ) {
+  if (status.available && status.authStatus === "unauthenticated") {
+    if (
+      !isHarosOverlayComposerModel({
+        engine: status.engine,
+        model: selectedModel,
+      })
+    ) {
+      return false;
+    }
+    if (catalogModelSlugs) {
+      return catalogModelSlugs.includes(selectedModel?.trim() ?? "");
+    }
     return true;
   }
   return status.available && status.authStatus !== "unauthenticated";
@@ -177,6 +183,7 @@ export function resolveEngineSendAvailability(input: {
   readonly engine: EngineKind | null;
   readonly statuses: readonly ServerEngineStatus[];
   readonly selectedModel?: string | null;
+  readonly catalogModelSlugs?: ReadonlyArray<string>;
 }): EngineSendAvailability {
   if (!input.engine) {
     return {
@@ -190,7 +197,7 @@ export function resolveEngineSendAvailability(input: {
   return {
     engine: input.engine,
     status,
-    usable: isEngineUsable(status, input.selectedModel),
+    usable: isEngineUsable(status, input.selectedModel, input.catalogModelSlugs),
     unavailableReason: engineUnavailableReason(status),
   };
 }
@@ -205,6 +212,7 @@ export async function resolveEngineSendAvailabilityWithRefresh(input: {
   readonly statuses: readonly ServerEngineStatus[];
   readonly refreshStatuses: EngineStatusRefresh;
   readonly selectedModel?: string | null;
+  readonly catalogModelSlugs?: ReadonlyArray<string>;
 }): Promise<EngineSendAvailability> {
   const initial = resolveEngineSendAvailability(input);
   if (initial.usable || !shouldRefreshBeforeBlocking(initial.status)) {
@@ -225,5 +233,8 @@ export async function resolveEngineSendAvailabilityWithRefresh(input: {
     engine: input.engine,
     statuses: refreshedStatuses,
     ...(input.selectedModel !== undefined ? { selectedModel: input.selectedModel } : {}),
+    ...(input.catalogModelSlugs !== undefined
+      ? { catalogModelSlugs: input.catalogModelSlugs }
+      : {}),
   });
 }

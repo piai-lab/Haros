@@ -15,6 +15,8 @@ import {
   engineMatchesHarosModelService,
   engineOverlaysHarosModelServiceCatalog,
   harosModelServiceComposerSlug,
+  inferHarosModelServiceApi,
+  isHarosOverlayComposerModel,
   parseHarosModelServiceComposerSlug,
 } from "@harnessos/shared/engineMetadata";
 
@@ -24,17 +26,9 @@ import {
   type HarosModelServiceProviderHint,
 } from "./modelServiceChildEnv.ts";
 
-const OFFICIAL_DEEPSEEK_ORIGIN = "https://api.deepseek.com";
+const OFFICIAL_DEEPSEEK_ORIGIN = "https://api.deepseek.com/v1";
 const OFFICIAL_OPENAI_CHAT_BASE_URL = "https://api.openai.com/v1";
 const OFFICIAL_ANTHROPIC_ORIGIN = "https://api.anthropic.com";
-
-const KNOWN_SERVICE_API: Readonly<Record<string, HarosCustomModelServiceApi>> = {
-  deepseek: "openai-completions",
-  openai: "openai-completions",
-  anthropic: "anthropic-messages",
-  google: "google-generative-ai",
-  gemini: "google-generative-ai",
-};
 
 export const HARNESSOS_CODEX_MODEL_SERVICE_KEY_ENV = "CODEX_MODEL_SERVICE_API_KEY";
 
@@ -45,21 +39,6 @@ export interface HarosModelServiceBinding {
   readonly api: HarosCustomModelServiceApi | undefined;
   readonly baseUrl: string | undefined;
   readonly apiKey: string | undefined;
-}
-
-export function inferHarosModelServiceApi(
-  serviceId: string,
-  api?: string,
-): HarosCustomModelServiceApi | undefined {
-  if (
-    api === "openai-completions" ||
-    api === "openai-responses" ||
-    api === "anthropic-messages" ||
-    api === "google-generative-ai"
-  ) {
-    return api;
-  }
-  return KNOWN_SERVICE_API[serviceId];
 }
 
 export function resolveHarosModelServiceBinding(input: {
@@ -142,8 +121,34 @@ export function hasMatchingHarosModelServiceBinding(input: {
   readonly engine: EngineKind;
   readonly model: string | null | undefined;
 }): boolean {
-  if (!engineOverlaysHarosModelServiceCatalog(input.engine)) return false;
-  return parseHarosModelServiceComposerSlug(input.model?.trim() ?? "") !== null;
+  return isHarosOverlayComposerModel(input);
+}
+
+export function requireConfiguredHarosOverlayBinding(input: {
+  readonly engine: EngineKind;
+  readonly model: string | null | undefined;
+  readonly snapshot: {
+    readonly storedApiKeys: ReadonlyMap<string, string>;
+    readonly providers: ReadonlyArray<HarosModelServiceProviderHint>;
+  } | null;
+}): HarosModelServiceBinding | null {
+  if (!isHarosOverlayComposerModel(input)) return null;
+  if (!input.snapshot) {
+    throw new Error(`Could not read Haros model services to start ${input.engine}.`);
+  }
+  const binding = resolveHarosModelServiceBinding({
+    engine: input.engine,
+    model: input.model,
+    storedApiKeys: input.snapshot.storedApiKeys,
+    providers: input.snapshot.providers,
+  });
+  if (!binding?.apiKey) {
+    const parsed = parseHarosModelServiceComposerSlug(input.model?.trim() ?? "");
+    throw new Error(
+      `Haros model service '${parsed?.serviceId ?? "unknown"}' is not configured for ${input.engine}.`,
+    );
+  }
+  return binding;
 }
 
 function tomlString(value: string): string {
@@ -187,7 +192,11 @@ export function resolveCodexModelServiceSpawn(binding: HarosModelServiceBinding 
 } {
   if (!binding) return {};
   const extraConfigToml = buildCodexModelServiceConfigToml(binding);
-  if (!extraConfigToml) return {};
+  if (!extraConfigToml) {
+    throw new Error(
+      `Codex cannot consume Haros model service '${binding.serviceId}' without a Completions or Responses endpoint.`,
+    );
+  }
   return {
     overlayId: `haros-${binding.serviceId}`,
     extraConfigToml,
@@ -211,7 +220,11 @@ export function resolveClaudeModelServiceEnv(
 export function resolveGrokModelServiceEnv(
   binding: HarosModelServiceBinding | null,
 ): NodeJS.ProcessEnv {
-  if (!binding || (binding.serviceId !== "xai" && binding.serviceId !== "grok") || !binding.apiKey) {
+  if (
+    !binding ||
+    (binding.serviceId !== "xai" && binding.serviceId !== "grok") ||
+    !binding.apiKey
+  ) {
     return {};
   }
   return { XAI_API_KEY: binding.apiKey };
@@ -248,14 +261,12 @@ export async function loadHarosModelServiceBinding(input: {
   readonly requestedAgentDir?: string;
   readonly serverBaseDir: string;
 }): Promise<HarosModelServiceBinding | null> {
-  if (!hasMatchingHarosModelServiceBinding(input)) return null;
+  if (!isHarosOverlayComposerModel(input)) return null;
   const snapshot = await loadHarosModelServiceSnapshotForEngine(input);
-  if (!snapshot) return null;
-  return resolveHarosModelServiceBinding({
+  return requireConfiguredHarosOverlayBinding({
     engine: input.engine,
     model: input.model,
-    storedApiKeys: snapshot.storedApiKeys,
-    providers: snapshot.providers,
+    snapshot,
   });
 }
 

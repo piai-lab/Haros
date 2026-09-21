@@ -749,15 +749,27 @@ describe("resolveApiModelId", () => {
     expect(
       resolveApiModelId({
         engine: "claude",
+        model: "anthropic/claude-opus-4-6",
+      }),
+    ).toBe("claude-opus-4-6");
+    expect(
+      resolveApiModelId({
+        engine: "claude",
         model: "deepseek/deepseek-chat",
       }),
-    ).toBe("deepseek-chat");
+    ).toBe("deepseek/deepseek-chat");
     expect(
       resolveApiModelId({
         engine: "codex",
         model: "deepseek/deepseek-chat",
       }),
     ).toBe("deepseek-chat");
+    expect(
+      resolveApiModelId({
+        engine: "codex",
+        model: "vendor/native-model",
+      }),
+    ).toBe("vendor/native-model");
   });
 });
 

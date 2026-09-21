@@ -312,6 +312,41 @@ describe("isEngineUsable", () => {
           available: true,
           authStatus: "unauthenticated",
         },
+        "foo/bar",
+      ),
+    ).toBe(false);
+    expect(
+      isEngineUsable(
+        {
+          ...BASE_STATUS,
+          engine: "codex",
+          available: true,
+          authStatus: "unauthenticated",
+        },
+        "deepseek/deepseek-chat",
+        ["gpt-5.3-codex"],
+      ),
+    ).toBe(false);
+    expect(
+      isEngineUsable(
+        {
+          ...BASE_STATUS,
+          engine: "codex",
+          available: true,
+          authStatus: "unauthenticated",
+        },
+        "deepseek/deepseek-chat",
+        ["deepseek/deepseek-chat"],
+      ),
+    ).toBe(true);
+    expect(
+      isEngineUsable(
+        {
+          ...BASE_STATUS,
+          engine: "codex",
+          available: true,
+          authStatus: "unauthenticated",
+        },
         "gpt-5.3-codex",
       ),
     ).toBe(false);

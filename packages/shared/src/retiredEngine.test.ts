@@ -10,6 +10,7 @@ import {
   engineHarosModelServiceProtocols,
   engineMatchesHarosModelService,
   engineOpensModelServicesSettings,
+  isHarosOverlayComposerModel,
   engineOverlaysHarosModelServiceCatalog,
   engineOwnsProviderModelServices,
   firstRunnableEngine,
@@ -66,7 +67,7 @@ describe("engine identity", () => {
     expect(engineConsumesHarosModelServiceCredentials("codex")).toBe(false);
     expect(engineOpensModelServicesSettings("pi")).toBe(true);
     expect(engineOpensModelServicesSettings("opencode")).toBe(true);
-    expect(engineOpensModelServicesSettings("codex")).toBe(true);
+    expect(engineOpensModelServicesSettings("codex")).toBe(false);
     expect(engineOverlaysHarosModelServiceCatalog("codex")).toBe(true);
     expect(engineOverlaysHarosModelServiceCatalog("claude")).toBe(true);
     expect(engineOverlaysHarosModelServiceCatalog("cursor")).toBe(false);
@@ -111,6 +112,32 @@ describe("engine identity", () => {
         api: "google-generative-ai",
       }),
     ).toBe(true);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "kilo",
+        serviceId: "deepseek",
+        api: "openai-completions",
+      }),
+    ).toBe(false);
+    expect(
+      engineMatchesHarosModelService({
+        engine: "pi",
+        serviceId: "deepseek",
+        api: "openai-completions",
+      }),
+    ).toBe(false);
+    expect(
+      isHarosOverlayComposerModel({
+        engine: "codex",
+        model: "deepseek/deepseek-chat",
+      }),
+    ).toBe(true);
+    expect(
+      isHarosOverlayComposerModel({
+        engine: "codex",
+        model: "foo/bar",
+      }),
+    ).toBe(false);
   });
   it("preserves explicit runnable defaults", () => {
     expect(

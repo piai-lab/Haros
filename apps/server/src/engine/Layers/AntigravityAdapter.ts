@@ -924,7 +924,9 @@ export interface AntigravityAdapterDependencies {
 const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {}) =>
   Effect.gen(function* () {
     const serverConfig = yield* ServerConfig;
-    const serverSettings = Option.getOrUndefined(yield* Effect.serviceOption(ServerSettingsService));
+    const serverSettings = Option.getOrUndefined(
+      yield* Effect.serviceOption(ServerSettingsService),
+    );
     const readCompleteLines = dependencies.readCompleteLines ?? readCompleteAntigravityLines;
     const teardownProcessTree = dependencies.teardownProcessTree ?? teardownChildProcessTree;
     const hostGatewayCredentials = Option.getOrUndefined(
@@ -2106,8 +2108,17 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             });
             return resolveAntigravityModelServiceEnv(binding);
           },
-          catch: () => ({}),
-        }).pipe(Effect.catch(() => Effect.succeed({} as NodeJS.ProcessEnv)));
+          catch: (cause) =>
+            new EngineAdapterRequestError({
+              engine: ENGINE,
+              method: "turn/prepare",
+              detail: messageFromCause(
+                cause,
+                "Failed to resolve Antigravity model-service credentials.",
+              ),
+              cause,
+            }),
+        });
         const runDir = yield* Effect.tryPromise({
           try: () => fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-")),
           catch: (cause) =>

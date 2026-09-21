@@ -196,9 +196,7 @@ export function engineConsumesHarosModelServiceCredentials(engine: EngineKind): 
 
 export function engineOpensModelServicesSettings(engine: EngineKind): boolean {
   return (
-    engineOwnsProviderModelServices(engine) ||
-    engineConsumesHarosModelServiceCredentials(engine) ||
-    engineOverlaysHarosModelServiceCatalog(engine)
+    engineOwnsProviderModelServices(engine) || engineConsumesHarosModelServiceCredentials(engine)
   );
 }
 
@@ -219,24 +217,52 @@ export function engineHarosModelServiceKnownIds(engine: EngineKind): ReadonlyArr
   return descriptor.harosModelServiceKnownIds ?? [];
 }
 
+const KNOWN_HAROS_MODEL_SERVICE_API: Readonly<Record<string, HarosCustomModelServiceApi>> = {
+  deepseek: "openai-completions",
+  openai: "openai-completions",
+  anthropic: "anthropic-messages",
+  google: "google-generative-ai",
+  gemini: "google-generative-ai",
+};
+
+export function inferHarosModelServiceApi(
+  serviceId: string,
+  api?: string,
+): HarosCustomModelServiceApi | undefined {
+  if (
+    api === "openai-completions" ||
+    api === "openai-responses" ||
+    api === "anthropic-messages" ||
+    api === "google-generative-ai"
+  ) {
+    return api;
+  }
+  return KNOWN_HAROS_MODEL_SERVICE_API[serviceId];
+}
+
 export function engineMatchesHarosModelService(input: {
   readonly engine: EngineKind;
   readonly serviceId: string;
   readonly api?: string;
 }): boolean {
-  if (engineOwnsProviderModelServices(input.engine)) return true;
-  if (
-    engineConsumesHarosModelServiceCredentials(input.engine) &&
-    !engineOverlaysHarosModelServiceCatalog(input.engine)
-  ) {
-    return true;
-  }
   const knownIds = engineHarosModelServiceKnownIds(input.engine);
   if (knownIds.includes(input.serviceId)) return true;
-  if (input.api === undefined) return false;
-  return engineHarosModelServiceProtocols(input.engine).includes(
-    input.api as HarosCustomModelServiceApi,
-  );
+  const api = inferHarosModelServiceApi(input.serviceId, input.api);
+  if (api === undefined) return false;
+  return engineHarosModelServiceProtocols(input.engine).includes(api);
+}
+
+export function isHarosOverlayComposerModel(input: {
+  readonly engine: EngineKind;
+  readonly model: string | null | undefined;
+}): boolean {
+  if (!engineOverlaysHarosModelServiceCatalog(input.engine)) return false;
+  const parsed = parseHarosModelServiceComposerSlug(input.model?.trim() ?? "");
+  if (!parsed) return false;
+  return engineMatchesHarosModelService({
+    engine: input.engine,
+    serviceId: parsed.serviceId,
+  });
 }
 
 export function harosModelServiceComposerSlug(serviceId: string, modelId: string): string {

@@ -4,6 +4,7 @@ import {
   buildCodexModelServiceConfigToml,
   HARNESSOS_CODEX_MODEL_SERVICE_KEY_ENV,
   mergeHarosModelServiceCatalog,
+  requireConfiguredHarosOverlayBinding,
   resolveClaudeModelServiceEnv,
   resolveCodexModelServiceSpawn,
   resolveHarosModelServiceBinding,
@@ -32,6 +33,14 @@ describe("harosModelServiceBinding", () => {
       resolveHarosModelServiceBinding({
         engine: "claude",
         model: "deepseek/deepseek-chat",
+        storedApiKeys,
+        providers,
+      }),
+    ).toBeNull();
+    expect(
+      resolveHarosModelServiceBinding({
+        engine: "codex",
+        model: "foo/bar",
         storedApiKeys,
         providers,
       }),
@@ -169,5 +178,41 @@ describe("harosModelServiceBinding", () => {
         apiKey: "sk-deepseek",
       }),
     ).toEqual({});
+  });
+
+  it("fails spawn when an overlay model has no configured key", () => {
+    expect(() =>
+      requireConfiguredHarosOverlayBinding({
+        engine: "codex",
+        model: "deepseek/deepseek-chat",
+        snapshot: null,
+      }),
+    ).toThrow(/Could not read Haros model services/);
+    expect(() =>
+      requireConfiguredHarosOverlayBinding({
+        engine: "codex",
+        model: "deepseek/deepseek-chat",
+        snapshot: { storedApiKeys: new Map(), providers: [] },
+      }),
+    ).toThrow(/not configured/);
+    expect(
+      requireConfiguredHarosOverlayBinding({
+        engine: "codex",
+        model: "gpt-5.3-codex",
+        snapshot: null,
+      }),
+    ).toBeNull();
+  });
+
+  it("uses the DeepSeek /v1 root when Codex has no custom base URL", () => {
+    expect(
+      buildCodexModelServiceConfigToml({
+        engine: "codex",
+        serviceId: "deepseek",
+        modelId: "deepseek-chat",
+        api: "openai-completions",
+        apiKey: "sk-deepseek",
+      }),
+    ).toContain('base_url = "https://api.deepseek.com/v1"');
   });
 });

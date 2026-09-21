@@ -38,6 +38,7 @@ import {
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 import {
   engineOpensModelServicesSettings,
+  isHarosOverlayComposerModel,
   mapEngineDescriptors,
 } from "@harnessos/shared/engineMetadata";
 import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
@@ -8049,6 +8050,7 @@ export default function ChatView({
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
       selectedModel: selectedEngineSelectionForSend.model,
+      catalogModelSlugs: composerModelOptions.map((option) => option.slug),
     }).finally(() => {
       sendPreflightInFlightRef.current = false;
     });
@@ -9988,16 +9990,22 @@ export default function ChatView({
     });
   }, [queryClient, selectedEngine]);
   const openSelectedEngineSettings = useCallback(() => {
+    const openModelServices =
+      (selectedEngine && engineOpensModelServicesSettings(selectedEngine)) ||
+      (selectedEngine &&
+        isHarosOverlayComposerModel({
+          engine: selectedEngine,
+          model: selectedModel,
+        }));
     void navigate({
       to: "/settings",
-      search:
-        selectedEngine && engineOpensModelServicesSettings(selectedEngine)
-          ? { section: "models" }
-          : selectedEngine
-            ? engineSetupSearch(selectedEngine)
-            : { section: "engines" },
+      search: openModelServices
+        ? { section: "models" }
+        : selectedEngine
+          ? engineSetupSearch(selectedEngine)
+          : { section: "engines" },
     });
-  }, [navigate, selectedEngine]);
+  }, [navigate, selectedEngine, selectedModel]);
   const composerPickerControls = (
     <>
       <ComposerEnginePicker
