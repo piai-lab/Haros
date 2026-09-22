@@ -46,11 +46,9 @@ platform, run from source below.
 
 ### Run from source
 
-Install **Node.js 24.13.1+ within Node 24**, **Bun 1.3.9+ within Bun 1.x**, and Git.
-The repository pins Bun 1.3.12 for reproducible installs.
-
-On **macOS**, also install Apple's Command Line Tools with `xcode-select --install` and wait for
-installation to finish. The desktop helper needs Swift and the macOS SDK; full Xcode is not required.
+All platforms use the same Node.js and Bun versions: **Node.js 24.13.1+ within Node 24**,
+**Bun 1.3.9+ within Bun 1.x**, and Git. The repository pins Bun 1.3.12 for reproducible installs.
+Run these commands in a terminal on the platform where you want to use Haros:
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
@@ -59,6 +57,23 @@ bun install --frozen-lockfile
 bun run build:desktop
 bun run start:desktop
 ```
+
+#### macOS
+
+Install Apple's Command Line Tools with `xcode-select --install` and wait for installation to finish.
+The desktop helper needs Swift and the macOS SDK; full Xcode is not required.
+
+#### Windows
+
+Run the commands in PowerShell or Windows Terminal. The desktop launcher resolves the Windows
+Bun environment automatically. If a Harness is CLI-based, install and authenticate its Windows CLI
+before configuring it in Haros.
+
+#### Linux
+
+Run the commands in your distribution's terminal. The packaged desktop target is x64 AppImage;
+make sure your desktop environment can run Electron AppImages. Harness CLIs and their credentials
+must be installed separately.
 
 ### Your first task
 
@@ -139,6 +154,22 @@ For other problems, see [Support](SUPPORT.md). Include your OS, Haros commit or 
 error output when reporting a bug.
 
 </details>
+
+## Contributing
+
+Haros welcomes improvements to Harness integrations, platform support, documentation, and the workbench.
+For a small change, install dependencies, make the change, and run the relevant checks:
+
+```bash
+bun install --frozen-lockfile
+bun run fmt:check
+bun run lint
+bun run typecheck
+```
+
+Run `bun run test` for behavior changes and `bun run build:desktop` when the change affects the
+Desktop app or packaged bytes. Start with [Contributing](CONTRIBUTING.md) for issue reports,
+architecture boundaries, pull request expectations, and source or license requirements.
 
 ## Documentation
 

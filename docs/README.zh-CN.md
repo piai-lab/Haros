@@ -42,11 +42,9 @@ Haros 支持 macOS、Windows 和 Linux。请前往 [Releases](https://github.com
 
 ### 从源码运行
 
-先安装 **Node.js 24.13.1 及以上的 24.x 版本**、**Bun 1.3.9 及以上的 1.x 版本**和 Git。
-仓库固定使用 Bun 1.3.12，以便复现依赖安装。
-
-**macOS** 还需要运行 `xcode-select --install` 安装 Apple Command Line Tools，并等待安装完成。
-桌面辅助程序需要 Swift 和 macOS SDK，不需要安装完整的 Xcode。
+三个平台都使用相同的 Node.js 和 Bun 版本：**Node.js 24.13.1 及以上的 24.x 版本**、
+**Bun 1.3.9 及以上的 1.x 版本**和 Git。仓库固定使用 Bun 1.3.12，以便复现依赖安装。
+在准备使用 Haros 的目标平台终端中运行：
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
@@ -55,6 +53,21 @@ bun install --frozen-lockfile
 bun run build:desktop
 bun run start:desktop
 ```
+
+#### macOS
+
+运行 `xcode-select --install` 安装 Apple Command Line Tools，并等待安装完成。桌面辅助程序需要
+Swift 和 macOS SDK，不需要安装完整的 Xcode。
+
+#### Windows
+
+在 PowerShell 或 Windows Terminal 中运行上述命令。桌面启动器会自动处理 Windows 的 Bun 环境。
+如果使用 CLI 类型的 Harness，请先安装对应的 Windows CLI 并完成认证，再在 Haros 中配置。
+
+#### Linux
+
+在发行版的终端中运行上述命令。独立桌面包是 x64 AppImage，请确认桌面环境可以运行 Electron
+AppImage。Harness 的 CLI 和凭据需要另行安装。
 
 ### 开始第一个任务
 
@@ -128,6 +141,21 @@ xcrun --sdk macosx --show-sdk-path
 其他问题见[支持说明](../SUPPORT.md)。反馈问题时请附上操作系统、Haros 提交号或版本，以及报错信息。
 
 </details>
+
+## 参与贡献
+
+欢迎改进 Harness 接入、平台适配、文档和工作台。小型改动可以按下面的流程开始：
+
+```bash
+bun install --frozen-lockfile
+bun run fmt:check
+bun run lint
+bun run typecheck
+```
+
+行为改动请运行 `bun run test`；涉及桌面应用或打包产物时，再运行 `bun run build:desktop`。
+提交 Issue 或 Pull Request 前，请阅读[贡献指南](../CONTRIBUTING.md)，其中包含问题复现、架构边界、
+审查要求以及源码和许可证要求。
 
 ## 文档
 
