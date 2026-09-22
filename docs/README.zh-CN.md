@@ -10,7 +10,7 @@
   </p>
   <p>
     <img alt="Codex Engine" src="https://img.shields.io/badge/Codex-412991?style=flat-square&logo=openai&logoColor=white" />
-    <img alt="Claude Engine" src="https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=anthropic&logoColor=white" />
+    <img alt="Claude Code Harness" src="https://img.shields.io/badge/Claude_Code-D97757?style=flat-square&logo=anthropic&logoColor=white" />
     <img alt="Cursor Engine" src="https://img.shields.io/badge/Cursor-000000?style=flat-square&logo=cursor&logoColor=white" />
     <img alt="Antigravity Engine" src="https://img.shields.io/badge/Antigravity-4285F4?style=flat-square&logo=google&logoColor=white" />
     <img alt="Grok Engine" src="https://img.shields.io/badge/Grok-000000?style=flat-square&logo=x&logoColor=white" />
@@ -18,123 +18,125 @@
     <img alt="Kilo Engine" src="https://img.shields.io/badge/Kilo-F97316?style=flat-square" />
     <img alt="OpenCode Engine" src="https://img.shields.io/badge/OpenCode-1F6FEB?style=flat-square&logo=gnometerminal&logoColor=white" />
     <img alt="Pi Engine" src="https://img.shields.io/badge/Pi-171321?style=flat-square" />
-    <img alt="DeepSeek Engine" src="https://img.shields.io/badge/DeepSeek-4D6BFE?style=flat-square" />
+    <img alt="DeepSeek Harness" src="https://img.shields.io/badge/DeepSeek_Harness-4D6BFE?style=flat-square" />
   </p>
 </div>
 
-Haros 把 Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode、Pi 和 DeepSeek
-带进同一套工作台。每轮都能选择最合适的 Engine，而不必搬走项目、重建上下文，
-也不会失去统一的工作历史。
+Haros 是一个开源的智能体 Harness 工作台。你可以在同一段对话中使用 Codex、Claude Code 等
+Harness，为不同任务选择合适的工具，并把项目和工作历史保留在一起。我们会持续接入新的
+Harness，让你沿用熟悉的工作方式。
 
-## 所有 Engine 进入同一套工作台
+## 为什么使用 Haros？
 
-每个 Engine 保留自己的模型、参数、认证和原生 Session 语义。Haros 负责它们之外的产品
-系统：Project、Thread、Queue、Timeline、工具、权限与恢复。
+- **在同一段对话中切换 Harness。** 新的 Harness 可以接着已有对话继续工作，无需迁移项目或手动复制聊天内容。
+- **沿用熟悉的工具。** 各个 Harness 保留自己的模型、登录方式和配置，通过 Haros 的桌面界面统一使用。
+- **把工作留在一起。** 切换 Harness 时，项目、对话、排队中的任务和工作历史仍然保留在 Haros 中。
 
-这条边界是有意设计的。Haros 会冻结每个排队任务选定的 Engine、模型和参数；它不会
-伪造跨 Engine continuation，也不会在启动失败时悄悄换用另一个 Engine。
+Harness 指完整的智能体运行环境，而不只是一个模型。Haros 也将它们称为 **Engine**。
+具体可用性取决于对应 Harness 的安装、认证和平台要求。
 
-## Haros 负责什么
+## 开始使用
 
-| Haros 的唯一 owner | 始终一致的事实                           |
-| ------------------ | ---------------------------------------- |
-| 工作               | Project、Thread、消息、附件与工作区      |
-| 编排               | Queue、Timeline、中断与后续任务          |
-| 本地工具           | 文件、Git、终端、浏览器与设备            |
-| 恢复               | 可供对账和恢复的已提交 prompt 与排队任务 |
+Haros 支持 macOS、Windows 和 Linux。请前往 [Releases](https://github.com/piai-lab/Haros/releases)
+查看可下载的安装包及安装说明。如果暂时没有适合你所在平台的安装包，可以按下面的步骤从源码运行。
 
-## 进入 Haros 的三种方式
+### 从源码运行
 
-| 工作面 | 最适合                     | 工作区                 |
-| ------ | -------------------------- | ---------------------- |
-| Agent  | 属于真实项目的工作         | 用户选择的文件夹       |
-| Chat   | 无需准备项目的专注对话     | Haros 管理的工作区     |
-| Studio | 围绕具体产物持续创作与迭代 | 带独立输出的隔离工作区 |
+先安装 **Node.js 24.13.1 及以上的 24.x 版本**、**Bun 1.3.9 及以上的 1.x 版本**和 Git。
+仓库固定使用 Bun 1.3.12，以便复现依赖安装。
 
-Agent、Chat 和 Studio 共用同一套产品状态。它们改变的是工作区如何开始、工作如何呈现，
-而不是工作历史由谁拥有。
-
-## 从源码运行 Haros
-
-需要 Node.js 24.13.1 或更新的 24.x 版本，以及 Bun 1.3.9 或更新的 1.x 版本。
-仓库固定使用 Bun 1.3.12，以便复现依赖安装。支持 macOS、Linux 和 Windows。
-
-### macOS 桌面 App
-
-1. 安装 Node.js 和 Bun，然后在终端检查 `node --version` 与 `bun --version`。
-2. 如果尚未安装 Apple Command Line Tools，运行 `xcode-select --install`，等待安装完成。
-   不需要完整 Xcode。运行 `xcrun swiftc --version` 和 `xcrun --sdk macosx --show-sdk-path`
-   确认工具可用；原生 AppSnap helper 需要 Swift 编译器和 macOS SDK。
-3. 克隆仓库，**先安装依赖，再构建**：
+**macOS** 还需要运行 `xcode-select --install` 安装 Apple Command Line Tools，并等待安装完成。
+桌面辅助程序需要 Swift 和 macOS SDK，不需要安装完整的 Xcode。
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
 cd Haros
 bun install --frozen-lockfile
-bun run dist:desktop:local-app
+bun run build:desktop
+bun run start:desktop
 ```
 
-4. 打开构建好的 App（Apple Silicon）：
+### 开始第一个任务
+
+1. 打开设置，配置准备使用的 Harness。对于通过 CLI 运行的 Harness，请先在本机安装对应 CLI 并完成认证。
+2. 首次安装默认选择 Pi。使用 Pi 或其他 API Engine 前，请先在**设置 → 模型服务**中添加服务并填写凭据。
+   其他 Harness 使用各自的原生配置。
+3. 在 **Agent** 中添加项目，然后开始对话。没有现成项目时可以使用 **Chat**；需要在独立输出目录中制作交付物时可以使用 **Studio**。
+
+## 切换 Harness 时，上下文如何衔接？
+
+你可以在同一个 Haros 会话中切换 Harness。Haros 会把此前的用户消息和助手回复作为上下文传给新的
+Harness。较长的历史会按上下文预算截短，因此不能保证每个细节都完整传入，也不会转移另一个
+Harness 内部的原生会话状态。完整的对话记录仍然保留在 Haros 中。
+
+工作区数据保存在本机。根据所选 Harness 的配置，提示词和相关上下文仍可能发送到其使用的模型服务。
+
+## 参与开发
+
+安装依赖后，运行支持实时重新构建的桌面开发环境：
+
+```bash
+bun run dev:desktop
+```
+
+如果需要在浏览器中运行工作台和服务端，使用 `bun run dev`。开发检查和贡献要求见
+[贡献指南](../CONTRIBUTING.md)。欢迎一起完善 Harness 接入、平台适配、文档和工作台体验。
+
+<details>
+<summary>构建独立桌面应用</summary>
+
+安装依赖后，在目标平台的仓库根目录运行：
+
+| 平台    | 命令                             | 产物格式        |
+| ------- | -------------------------------- | --------------- |
+| macOS   | `bun run dist:desktop:local-app` | 本地 `.app`     |
+| Windows | `bun run dist:desktop:win`       | x64 NSIS 安装包 |
+| Linux   | `bun run dist:desktop:linux`     | x64 AppImage    |
+
+Apple Silicon Mac 构建完成后，运行：
 
 ```bash
 open apps/desktop/.electron-runtime/local-app/arm64/mac-arm64/Haros.app
 ```
 
-Intel Mac 请使用 `apps/desktop/.electron-runtime/local-app/x64/mac/Haros.app`。
-构建命令只生成 App，不会自动启动。重新构建前请退出 Haros。默认本地输出可以覆盖；
-显式指定的 `--output-dir` 必须为空。
+Intel Mac 对应路径为 `apps/desktop/.electron-runtime/local-app/x64/mac/Haros.app`。
+重新构建前请退出 Haros。默认本地产物目录可被替换；显式指定的 `--output-dir` 必须为空。
+本地构建没有代码签名，macOS 产物也未经过公证。
 
-如果旧版源码在已选择 Command Line Tools 的情况下报错 `xcodebuild requires Xcode`，
-请更新源码后重新构建。原因是构建脚本多余的 Xcode 版本检查，无需为此安装完整 Xcode。
-如果 Swift 或 SDK 检查失败，请先安装或更新 Command Line Tools，再重试。
-
-### 开发模式
-
-克隆仓库并运行 `bun install --frozen-lockfile` 后，按需选择：
-
-```bash
-bun run dev          # 在浏览器中运行服务端与 Web 工作台
-bun run dev:desktop  # 带实时重新构建的桌面开发模式
-```
-
-Haros 当前版本为 `0.1.0`。每个 Engine 是否可用，取决于对应的 CLI、账号与
-本机配置。本地 App 未经 Developer ID 签名或公证，不代表正式发行；构建过程不会发布
-产物或生成更新元数据。维护者可运行 Unsigned GitHub Distribution workflow，暂存未签名的
-macOS 与 Windows 安装包。从该 workflow 创建 GitHub Release 必须显式选择，且只是下载通道，
-不是签名、公证、自动更新源或付费支持。
-
-首次启动默认选择 Pi。发送前请在设置中配置所选引擎。“设置 → 模型服务”用于添加凭据和目录；
-使用 Pi 或其他 API 引擎前请先添加服务。其他引擎使用各自的原生配置。
-
-## 继续了解
-
-- 从 [Haros Guidebook（英文）](guide/README.md) 开始，完整了解产品与架构。
-- 阅读[架构说明](architecture.md)，了解 owner 边界与 runtime 设计。
-- 提交改动前请先阅读[参与贡献](../CONTRIBUTING.md)。
-- 使用[支持文档](../SUPPORT.md)获取帮助；安全问题请按[安全策略](../SECURITY.md)私下报告。
-
-<details>
-<summary>开发检查与仓库结构</summary>
-
-```bash
-bun run fmt:check
-bun run lint
-bun run typecheck
-bun run test
-bun run build:desktop
-```
-
-```text
-apps/desktop   桌面壳与操作系统集成
-apps/server    产品编排、本地能力与持久化
-apps/web       Agent、Chat 和 Studio 工作台
-packages/      类型合同、共享逻辑与 runtime 组合
-docs/          Guidebook、架构与贡献者文档
-```
+仓库为三个平台分别配置了原生打包应用的 CI 检查。不同平台的系统集成和各个 Harness 可能有不同要求，
+某个平台构建成功并不代表其他平台也已通过验证。
 
 </details>
 
+<details>
+<summary>更新与源码构建排错</summary>
+
+拉取代码后，如果依赖或锁文件有变化，运行 `bun install --frozen-lockfile`。
+已构建的桌面程序需要重新执行 `bun run build:desktop` 并重启；独立应用需要重新执行对应的打包命令。
+开发模式运行期间会自动重新构建源码改动。
+
+如果 macOS 提示 Swift 或 SDK 错误，检查：
+
+```bash
+xcrun swiftc --version
+xcrun --sdk macosx --show-sdk-path
+```
+
+检查失败时，请安装或更新 Command Line Tools。旧版代码可能因为不必要的 `xcodebuild -version`
+检查失败，请先更新源码再重试。
+
+其他问题见[支持说明](../SUPPORT.md)。反馈问题时请附上操作系统、Haros 提交号或版本，以及报错信息。
+
+</details>
+
+## 文档
+
+- [Guidebook](guide/README.md)：使用教程、核心概念和运行时架构。
+- [架构说明](architecture.md)：系统设计与开发参考。
+- [贡献指南](../CONTRIBUTING.md)：开发检查与贡献要求。
+- [安全说明](../SECURITY.md)：私下报告安全漏洞。
+
 ## 许可证
 
-Haros 使用 [Apache License 2.0](../LICENSE)。第三方代码与资产保留原始许可证及必要
-归属，详见 [NOTICE](../NOTICE) 与 [source-adoptions.json](../source-adoptions.json)。
+Haros 使用 [Apache License 2.0](../LICENSE)。第三方代码和资源保留其原始许可证及声明，
+详见 [NOTICE](../NOTICE) 和 [source-adoptions.json](../source-adoptions.json)。

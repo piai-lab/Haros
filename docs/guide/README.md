@@ -3,6 +3,10 @@ title: Haros Guidebook
 language: en
 edition_commit: 17b578d3c65d72113accc17200b9b290f80139f6
 verified_at: 2026-08-30
+entrypoint_reviewed_at: 2026-09-22
+entrypoint_review_commit: fc957bf35a93cffb7fc4315be941a281478cb26f
+entrypoint_review_version: 0.1.0
+entrypoint_review_scope: README setup, platform build targets, and cross-Engine context handoff
 ---
 
 # Haros Guidebook
@@ -22,9 +26,13 @@ Agent Engines, then reconnects them through typed orchestration and an authorize
 boundary. This Guidebook teaches that idea from the outside in: first what you can see and do, then
 the lifecycle that makes the work dependable, and finally the owners a contributor must preserve.
 
-> Edition status: Parts I–VII and Appendices A–H. This edition is pinned to Haros commit
-> `17b578d3c65d72113accc17200b9b290f80139f6`. Haros is source alpha; this Guidebook does not imply
-> an installer, release, update feed, support promise, or permanent guarantee for alpha behavior.
+> **Current setup:** Start with the [project README](../../README.md) or [简体中文说明](../README.zh-CN.md)
+> for installation and platform build commands. The Guidebook entry point was reviewed against
+> Haros `0.1.0` at commit `fc957bf35a93cffb7fc4315be941a281478cb26f` on 2026-09-22.
+>
+> **Book edition:** Parts I–VII and Appendices A–H retain their original source-alpha snapshot at
+> `17b578d3c65d72113accc17200b9b290f80139f6`, verified on 2026-08-30. The cover and chapter metadata
+> describe that historical edition; this entry-point update does not revalidate all chapters.
 
 [Read the preface](00-preface.md) or start with any completed part:
 
