@@ -26,6 +26,11 @@ Haros is an open-source workbench for agent Harnesses. Use Codex, Claude Code, a
 in the same conversation, choose the right tool for each task, and keep your projects and work
 history in one place. As new Harnesses emerge, Haros aims to bring them into the workflow you already use.
 
+## News
+
+- **2026-09-22 — Haros is officially open source.** The project is now available for everyone to
+  use, inspect, improve, and extend with new Harness integrations.
+
 ## Why Haros?
 
 - **Switch Harnesses within a conversation.** Continue with another Harness using prior conversation
@@ -46,9 +51,34 @@ platform, run from source below.
 
 ### Run from source
 
-All platforms use the same Node.js and Bun versions: **Node.js 24.13.1+ within Node 24**,
-**Bun 1.3.9+ within Bun 1.x**, and Git. The repository pins Bun 1.3.12 for reproducible installs.
-Run these commands in a terminal on the platform where you want to use Haros:
+Install Bun first, then install **Node.js 24.13.1+ within Node 24** and Git. Haros requires
+**Bun 1.3.9+ within Bun 1.x** and pins Bun 1.3.12 for reproducible installs.
+
+**macOS or Linux** (the Linux installer needs the `unzip` package):
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+To install the repository's pinned Bun version instead:
+
+```bash
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.12"
+```
+
+**Windows PowerShell:**
+
+```powershell
+irm bun.sh/install.ps1 | iex
+```
+
+To install the pinned version on Windows:
+
+```powershell
+iex "& {$(irm https://bun.sh/install.ps1)} -Version 1.3.12"
+```
+
+Open a new terminal after installing Bun, then run these commands on the platform where you want to use Haros:
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git

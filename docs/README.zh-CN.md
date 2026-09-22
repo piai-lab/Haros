@@ -26,6 +26,11 @@ Haros 是一个开源的智能体 Harness 工作台。你可以在同一段对�
 Harness，为不同任务选择合适的工具，并把项目和工作历史保留在一起。我们会持续接入新的
 Harness，让你沿用熟悉的工作方式。
 
+## News
+
+- **2026-09-22 — Haros 正式开源。** 从今天起，任何人都可以使用、查看、改进 Haros，
+  也可以为它接入新的 Harness。
+
 ## 为什么使用 Haros？
 
 - **在同一段对话中切换 Harness。** 新的 Harness 可以接着已有对话继续工作，无需迁移项目或手动复制聊天内容。
@@ -42,9 +47,34 @@ Haros 支持 macOS、Windows 和 Linux。请前往 [Releases](https://github.com
 
 ### 从源码运行
 
-三个平台都使用相同的 Node.js 和 Bun 版本：**Node.js 24.13.1 及以上的 24.x 版本**、
-**Bun 1.3.9 及以上的 1.x 版本**和 Git。仓库固定使用 Bun 1.3.12，以便复现依赖安装。
-在准备使用 Haros 的目标平台终端中运行：
+先安装 Bun，再安装 **Node.js 24.13.1 及以上的 24.x 版本**和 Git。Haros 需要
+**Bun 1.3.9 及以上的 1.x 版本**，仓库固定使用 Bun 1.3.12，以便复现依赖安装。
+
+**macOS 或 Linux**（Linux 安装脚本需要 `unzip`）：
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+如果要直接安装仓库固定的 Bun 版本：
+
+```bash
+curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.12"
+```
+
+**Windows PowerShell：**
+
+```powershell
+irm bun.sh/install.ps1 | iex
+```
+
+如果要在 Windows 安装固定版本：
+
+```powershell
+iex "& {$(irm https://bun.sh/install.ps1)} -Version 1.3.12"
+```
+
+安装 Bun 后请重新打开终端，再在准备使用 Haros 的目标平台中运行：
 
 ```bash
 git clone https://github.com/piai-lab/Haros.git
