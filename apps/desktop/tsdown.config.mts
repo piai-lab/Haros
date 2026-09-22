@@ -14,6 +14,7 @@ const shared = {
   outDir: "dist-electron",
   sourcemap: buildSourcemap,
   outExtensions: () => ({ js: ".js" }),
+  inlineOnly: false,
 };
 
 export default defineConfig([
